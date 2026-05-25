@@ -1,12 +1,14 @@
-/** Client-side matchmaking lobby with presence, polling, and ghost fallback. */
+/** Client-side matchmaking lobby with presence, polling, and timeout handling. */
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Ghost, Loader2, Users } from "lucide-react";
+import { toast } from "sonner";
 import {
+  cancelMatchSearch,
   searchForMatch,
-  startGhostMatch,
+  startBotMatch,
 } from "@/app/dashboard/matchmaking/actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +36,16 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
   const supabase = createClient();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const redirectingRef = useRef(false);
+  const cancelledRef = useRef(false);
+  const searchIntervalRef = useRef<number | null>(null);
+  const timerIntervalRef = useRef<number | null>(null);
+  const handleActiveMatchRef = useRef<
+    (
+      sessionId: string,
+      playlist: Parameters<typeof startMatch>[0]["playlist"],
+      opponent: NonNullable<Parameters<typeof startMatch>[0]["opponent"]>
+    ) => void
+  >(() => {});
 
   const gameSessionId = useGameStore((state) => state.gameSessionId);
   const setSearching = useGameStore((state) => state.setSearching);
@@ -44,6 +56,7 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
   const [secondsLeft, setSecondsLeft] = useState(GHOST_COUNTDOWN_SECONDS);
   const [onlineCount, setOnlineCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isExiting, setIsExiting] = useState(false);
   const [statusMessage, setStatusMessage] = useState(
     mode === "bot" ? "Summoning ghost opponent..." : "Searching for opponent..."
   );
@@ -52,20 +65,65 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
   const level = profile.proficiency_level!;
   const isBotMode = mode === "bot";
 
+  const clearTimers = useCallback(() => {
+    if (searchIntervalRef.current !== null) {
+      window.clearInterval(searchIntervalRef.current);
+      searchIntervalRef.current = null;
+    }
+
+    if (timerIntervalRef.current !== null) {
+      window.clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+  }, []);
+
+  const exitLobby = useCallback(
+    async (options?: { notifyNoGameFound?: boolean }) => {
+      if (redirectingRef.current || cancelledRef.current) {
+        return;
+      }
+
+      cancelledRef.current = true;
+      redirectingRef.current = true;
+      setIsExiting(true);
+      clearTimers();
+
+      const sessionId = useGameStore.getState().gameSessionId;
+      await cancelMatchSearch(sessionId);
+      reset();
+
+      if (options?.notifyNoGameFound) {
+        toast.error("No game found.");
+      }
+
+      router.replace("/dashboard");
+    },
+    [clearTimers, reset, router]
+  );
+
   const goToMatch = useCallback(
     (sessionId: string) => {
-      if (redirectingRef.current) {
+      if (redirectingRef.current || cancelledRef.current) {
         return;
       }
 
       redirectingRef.current = true;
+      clearTimers();
       router.push(`/dashboard/match/${sessionId}`);
     },
-    [router]
+    [clearTimers, router]
   );
 
   const handleActiveMatch = useCallback(
-    (sessionId: string, playlist: Parameters<typeof startMatch>[0]["playlist"], opponent: NonNullable<Parameters<typeof startMatch>[0]["opponent"]>) => {
+    (
+      sessionId: string,
+      playlist: Parameters<typeof startMatch>[0]["playlist"],
+      opponent: NonNullable<Parameters<typeof startMatch>[0]["opponent"]>
+    ) => {
+      if (cancelledRef.current) {
+        return;
+      }
+
       startMatch({ gameSessionId: sessionId, opponent, playlist });
       setStatusMessage(
         opponent.isGhost
@@ -77,8 +135,18 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
     [goToMatch, startMatch]
   );
 
+  handleActiveMatchRef.current = handleActiveMatch;
+
   const runSearch = useCallback(async () => {
+    if (cancelledRef.current || redirectingRef.current) {
+      return;
+    }
+
     const result = await searchForMatch(gameSessionId);
+
+    if (cancelledRef.current || redirectingRef.current) {
+      return;
+    }
 
     if (!result.success) {
       setError(result.error);
@@ -107,10 +175,14 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
     }
 
     runSearch();
+    searchIntervalRef.current = window.setInterval(runSearch, SEARCH_INTERVAL_MS);
 
-    const searchInterval = window.setInterval(runSearch, SEARCH_INTERVAL_MS);
-
-    return () => window.clearInterval(searchInterval);
+    return () => {
+      if (searchIntervalRef.current !== null) {
+        window.clearInterval(searchIntervalRef.current);
+        searchIntervalRef.current = null;
+      }
+    };
   }, [isBotMode, runSearch]);
 
   useEffect(() => {
@@ -118,88 +190,45 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
       return;
     }
 
-    const timer = window.setInterval(() => {
+    timerIntervalRef.current = window.setInterval(() => {
       setSecondsLeft((current) => {
         if (current <= 1) {
-          window.clearInterval(timer);
+          if (timerIntervalRef.current !== null) {
+            window.clearInterval(timerIntervalRef.current);
+            timerIntervalRef.current = null;
+          }
           return 0;
         }
         return current - 1;
       });
     }, 1000);
 
-    return () => window.clearInterval(timer);
+    return () => {
+      if (timerIntervalRef.current !== null) {
+        window.clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+    };
   }, [isBotMode]);
 
   useEffect(() => {
-    if (!isBotMode || gameSessionId) {
+    if (isBotMode || secondsLeft !== 0 || cancelledRef.current) {
+      return;
+    }
+
+    void exitLobby({ notifyNoGameFound: true });
+  }, [exitLobby, isBotMode, secondsLeft]);
+
+  useEffect(() => {
+    if (!isBotMode || cancelledRef.current) {
       return;
     }
 
     let cancelled = false;
 
     async function startInstantGhostMatch() {
-      const searchResult = await searchForMatch(null);
-      if (cancelled || !searchResult.success) {
-        if (!cancelled && !searchResult.success) {
-          setError(searchResult.error);
-        }
-        return;
-      }
-
-      setSessionId(searchResult.data.sessionId);
-
-      if (searchResult.data.status === "active" && searchResult.data.opponent) {
-        handleActiveMatch(
-          searchResult.data.sessionId,
-          searchResult.data.playlist,
-          searchResult.data.opponent
-        );
-        return;
-      }
-
-      const ghostResult = await startGhostMatch(searchResult.data.sessionId);
-      if (cancelled) {
-        return;
-      }
-
-      if (!ghostResult.success) {
-        setError(ghostResult.error);
-        return;
-      }
-
-      if (ghostResult.data.status === "active" && ghostResult.data.opponent) {
-        handleActiveMatch(
-          ghostResult.data.sessionId,
-          ghostResult.data.playlist,
-          ghostResult.data.opponent
-        );
-      }
-    }
-
-    startInstantGhostMatch();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [gameSessionId, handleActiveMatch, isBotMode, setSessionId]);
-
-  useEffect(() => {
-    if (isBotMode) {
-      return;
-    }
-
-    if (secondsLeft !== 0 || !gameSessionId) {
-      return;
-    }
-
-    let cancelled = false;
-
-    async function triggerGhostMatch() {
-      setStatusMessage("No opponent found — summoning ghost opponent...");
-      const result = await startGhostMatch(gameSessionId!);
-
-      if (cancelled) {
+      const result = await startBotMatch();
+      if (cancelled || cancelledRef.current) {
         return;
       }
 
@@ -208,24 +237,28 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
         return;
       }
 
-      if (result.data.status === "active" && result.data.opponent) {
-        handleActiveMatch(
-          result.data.sessionId,
-          result.data.playlist,
-          result.data.opponent
-        );
+      if (result.data.status !== "active" || !result.data.opponent) {
+        setError("Could not start ghost match.");
+        return;
       }
+
+      setSessionId(result.data.sessionId);
+      handleActiveMatchRef.current(
+        result.data.sessionId,
+        result.data.playlist,
+        result.data.opponent
+      );
     }
 
-    triggerGhostMatch();
+    void startInstantGhostMatch();
 
     return () => {
       cancelled = true;
     };
-  }, [gameSessionId, handleActiveMatch, isBotMode, secondsLeft]);
+  }, [isBotMode, setSessionId]);
 
   useEffect(() => {
-    if (!gameSessionId) {
+    if (!gameSessionId || cancelledRef.current) {
       return;
     }
 
@@ -240,6 +273,10 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
           filter: `id=eq.${gameSessionId}`,
         },
         async (payload) => {
+          if (cancelledRef.current || redirectingRef.current) {
+            return;
+          }
+
           const updated = payload.new as {
             id: string;
             status: string;
@@ -251,7 +288,11 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
           }
 
           const result = await searchForMatch(updated.id);
-          if (result.success && result.data.status === "active" && result.data.opponent) {
+          if (
+            result.success &&
+            result.data.status === "active" &&
+            result.data.opponent
+          ) {
             handleActiveMatch(
               result.data.sessionId,
               result.data.playlist,
@@ -268,6 +309,10 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
   }, [gameSessionId, handleActiveMatch, supabase]);
 
   useEffect(() => {
+    if (isBotMode) {
+      return;
+    }
+
     const channel = supabase.channel("waiting_room", {
       config: { presence: { key: profile.id } },
     });
@@ -300,7 +345,7 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
         supabase.removeChannel(channelRef.current);
       }
     };
-  }, [language, level, profile.id, supabase]);
+  }, [isBotMode, language, level, profile.id, supabase]);
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-6 touch-scroll sm:px-6 sm:py-12">
@@ -315,21 +360,20 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
           <div className="space-y-2">
             <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{statusMessage}</h1>
             <p className="text-sm text-muted-foreground">
-              Matching {language} players at level {level}
+              {isBotMode
+                ? `Starting a ghost match for ${language} at level ${level}.`
+                : `Matching ${language} players at level ${level}`}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <Badge variant="secondary" className="gap-1.5">
-              <Users className="size-3.5" />
-              {onlineCount} online in your bracket
-            </Badge>
-            {gameSessionId && (
-              <Badge variant="outline" className="font-mono text-xs">
-                Lobby {gameSessionId.slice(0, 8)}
+          {!isBotMode && (
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Badge variant="secondary" className="gap-1.5">
+                <Users className="size-3.5" />
+                {onlineCount} online in your bracket
               </Badge>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="space-y-3">
             {!isBotMode && (
@@ -337,7 +381,7 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-2 text-muted-foreground">
                     <Ghost className="size-4" />
-                    Ghost match in
+                    Time remaining
                   </span>
                   <span
                     className={cn(
@@ -357,8 +401,8 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  If no real player joins within 15 seconds, a ghost opponent takes
-                  their place.
+                  If no real player joins within 15 seconds, you&apos;ll return to
+                  the dashboard.
                 </p>
               </>
             )}
@@ -376,14 +420,15 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
           )}
 
           <Button
+            type="button"
             variant="outline"
             className="min-h-11 w-full sm:w-auto"
+            disabled={isExiting}
             onClick={() => {
-              reset();
-              router.push("/dashboard");
+              void exitLobby();
             }}
           >
-            Cancel search
+            {isExiting ? "Cancelling..." : isBotMode ? "Cancel" : "Cancel search"}
           </Button>
         </div>
       </div>

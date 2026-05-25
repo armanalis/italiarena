@@ -8,7 +8,7 @@ export type ResetStatsResult =
   | { success: false; error: string };
 
 export async function resetPlayerStatistics(): Promise<ResetStatsResult> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

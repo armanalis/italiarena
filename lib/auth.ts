@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/server";
 import type { UserProfile, UserRole } from "@/lib/types";
 
 async function fetchUserRow(userId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const withRole = await supabase
     .from("users")
@@ -56,7 +56,7 @@ async function fetchUserRow(userId: string) {
 }
 
 export async function getCurrentUserProfile(): Promise<UserProfile | null> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

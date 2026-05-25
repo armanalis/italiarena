@@ -1,5 +1,5 @@
 -- User profiles and auth setup for Language Quiz.
--- Paste this into the Supabase SQL Editor before running database.sql.
+-- Paste this into the Supabase SQL Editor before running database.sql in this folder.
 -- Safe to re-run: run the ENTIRE file (do not run CREATE POLICY blocks alone).
 
 -- App-level profile linked to Supabase Auth.

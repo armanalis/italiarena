@@ -8,14 +8,15 @@ import { requireOnboardingComplete } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 
 type MatchPageProps = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 export default async function MatchPage({ params }: MatchPageProps) {
   const profile = await requireOnboardingComplete();
-  const supabase = createClient();
+  const supabase = await createClient();
+  const { id: sessionIdFromRoute } = await params;
 
   const {
     data: { user },
@@ -25,7 +26,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
     redirect("/login");
   }
 
-  const result = await getMatchSession(params.id);
+  const result = await getMatchSession(sessionIdFromRoute);
 
   if (!result.success) {
     redirect("/dashboard");

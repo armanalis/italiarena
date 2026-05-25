@@ -28,8 +28,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PROFICIENCY_LEVELS, TARGET_LANGUAGES } from "@/lib/constants";
-import { writeGameplayPreferences } from "@/lib/preferences";
+import { getSoundVolume, writeGameplayPreferences } from "@/lib/preferences";
 import type { MatchHistoryEntry, UserProfile } from "@/lib/types";
+import { SoundVolumeControl } from "@/components/sound-volume-control";
 import { cn } from "@/lib/utils";
 
 const FEEDBACK_EMAIL = "support@languagequiz.app";
@@ -100,6 +101,7 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
   useEffect(() => {
     writeGameplayPreferences({
       soundEnabled: profile.sound_enabled,
+      soundVolume: getSoundVolume(),
       hapticsEnabled: profile.haptics_enabled,
     });
   }, [profile.haptics_enabled, profile.sound_enabled]);
@@ -125,6 +127,7 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
     setHapticsEnabled(nextHaptics);
     writeGameplayPreferences({
       soundEnabled: nextSound,
+      soundVolume: getSoundVolume(),
       hapticsEnabled: nextHaptics,
     });
 
@@ -250,7 +253,16 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
           <CardTitle>Gameplay</CardTitle>
           <CardDescription>Control sound and haptic feedback during matches.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
+            <div className="mb-3">
+              <p className="text-sm font-medium">Volume</p>
+              <p className="text-xs text-muted-foreground">
+                Drag to turn match sounds up or down.
+              </p>
+            </div>
+            <SoundVolumeControl showSlider />
+          </div>
           <PreferenceToggle
             label="Sound effects"
             description="Correct, wrong, and timer sounds in matches."

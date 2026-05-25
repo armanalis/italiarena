@@ -11,13 +11,13 @@ const loginErrors: Record<string, string> = {
 };
 
 type LoginPageProps = {
-  searchParams?: {
+  searchParams: Promise<{
     error?: string;
-  };
+  }>;
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -26,9 +26,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     redirect(await getPostAuthPath());
   }
 
-  const authError = searchParams?.error
-    ? loginErrors[searchParams.error] ?? null
-    : null;
+  const params = await searchParams;
+  const authError = params.error ? loginErrors[params.error] ?? null : null;
 
   return (
     <main className="relative flex min-h-[calc(100dvh-3.5rem)] items-center justify-center overflow-y-auto bg-background px-4 py-8 touch-scroll sm:py-10">

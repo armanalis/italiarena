@@ -5,11 +5,11 @@ const BOT_ACCURACY = 0.7;
 
 const OPTIONS: CorrectAnswer[] = ["A", "B", "C", "D"];
 
-/** Random delay between 4 and 18 seconds for bot answer simulation. */
-export function getBotResponseDelayMs(): number {
-  const minMs = 4000;
-  const maxMs = 18000;
-  return Math.floor(minMs + Math.random() * (maxMs - minMs));
+export const BOT_RESPONSE_TIME_MS = 10_000;
+
+/** Ghost always answers 10 seconds after the round starts. */
+export function getBotResponseDelayMs(roundStartedAt: number): number {
+  return Math.max(0, BOT_RESPONSE_TIME_MS - (Date.now() - roundStartedAt));
 }
 
 function pickWrongAnswer(correct: CorrectAnswer): CorrectAnswer {

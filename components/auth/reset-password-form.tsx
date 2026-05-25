@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import { Lock } from "lucide-react";
 import {
   resetPassword,
@@ -27,7 +28,7 @@ function SubmitButton() {
 }
 
 export function ResetPasswordForm() {
-  const [state, formAction] = useFormState(resetPassword, initialState);
+  const [state, formAction] = useActionState(resetPassword, initialState);
 
   return (
     <form action={formAction} className="space-y-4">

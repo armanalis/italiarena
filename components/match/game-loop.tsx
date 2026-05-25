@@ -6,14 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useGameLoop } from "@/hooks/useGameLoop";
 import {
-  useBothScores,
   useGameStore,
   useGameStoreHydrated,
   useLocalScore,
   useOpponentScore,
+  usePlayerAScore,
+  usePlayerBScore,
 } from "@/store/useGameStore";
 import { formatCategoryLabel, isAnswerCorrect } from "@/lib/scoring";
 import { ReportQuestionButton } from "@/components/match/report-question-button";
+import { SoundVolumeControl } from "@/components/sound-volume-control";
 import type { CorrectAnswer } from "@/types/database.types";
 import type { ProficiencyLevel } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -45,18 +47,21 @@ export function GameLoop({
   const hydrated = useGameStoreHydrated();
   const localScore = useLocalScore();
   const opponentScore = useOpponentScore();
-  const { playerAScore, playerBScore } = useBothScores();
+  const playerAScore = usePlayerAScore();
+  const playerBScore = usePlayerBScore();
   const matchWinner = useGameStore((state) => state.matchWinner);
   const lastRoundPointsA = useGameStore((state) => state.lastRoundPointsA);
   const lastRoundPointsB = useGameStore((state) => state.lastRoundPointsB);
   const localPlayerRoleStore = useGameStore((state) => state.localPlayerRole);
   const reset = useGameStore((state) => state.reset);
+  const tiebreakerUsed = useGameStore((state) => state.tiebreakerUsed);
 
   const {
     roundPhase,
     currentQuestion,
     currentQuestionIndex,
     totalQuestions,
+    isTiebreakerRound,
     timeRemaining,
     handleSelectAnswer,
     playerAAnswer,
@@ -77,10 +82,24 @@ export function GameLoop({
     );
   }
 
-  if (!currentQuestion && roundPhase !== "match_finished") {
+  if (!currentQuestion && roundPhase !== "match_finished" && roundPhase !== "tiebreaker_loading") {
     return (
       <div className="flex flex-1 items-center justify-center p-8">
         <p className="text-muted-foreground">Loading match...</p>
+      </div>
+    );
+  }
+
+  if (roundPhase === "tiebreaker_loading") {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+        <Loader2 className="size-10 animate-spin text-indigo-400" />
+        <div className="space-y-1">
+          <p className="text-lg font-semibold">Scores tied</p>
+          <p className="text-sm text-muted-foreground">
+            Picking a random tiebreaker question from any topic...
+          </p>
+        </div>
       </div>
     );
   }
@@ -118,7 +137,14 @@ export function GameLoop({
           </p>
           {isTie && (
             <p className="text-sm text-muted-foreground">
-              Tie-breaker: fastest average response time
+              {tiebreakerUsed
+                ? "Still tied after the sudden-death round — fastest average response time wins."
+                : "Tie-breaker: fastest average response time"}
+            </p>
+          )}
+          {tiebreakerUsed && !isTie && (
+            <p className="text-sm text-muted-foreground">
+              Decided by sudden-death tiebreaker.
             </p>
           )}
         </div>
@@ -143,8 +169,10 @@ export function GameLoop({
     <main className="relative flex min-h-0 flex-1 flex-col overflow-y-auto touch-scroll">
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/60 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-4">
         <div className="min-w-0 space-y-0.5 sm:space-y-1">
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground sm:text-xs">
-            Round {currentQuestionIndex + 1} / {totalQuestions}
+          <p className="text-sm font-semibold tabular-nums text-foreground sm:text-base">
+            {isTiebreakerRound
+              ? "Tiebreaker"
+              : `Question ${currentQuestionIndex + 1}/${totalQuestions}`}
           </p>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-medium sm:gap-3 sm:text-sm">
             <span className="truncate">You · {localScore}</span>
@@ -155,6 +183,7 @@ export function GameLoop({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <SoundVolumeControl className="hidden sm:flex" />
           {isBotMatch && <Badge variant="secondary">Ghost</Badge>}
           <Badge
             variant={timeRemaining <= 5 ? "destructive" : "outline"}
@@ -170,7 +199,7 @@ export function GameLoop({
           <div className="animate-in fade-in zoom-in flex min-h-[180px] w-full max-w-xl items-center justify-center rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/20 to-violet-500/10 p-6 text-center duration-300 sm:min-h-[280px] sm:p-12">
             <div>
               <p className="text-xs uppercase tracking-[0.25em] text-indigo-300 sm:text-sm sm:tracking-[0.35em]">
-                Up next
+                {isTiebreakerRound ? "Sudden death" : "Up next"}
               </p>
               <h2 className="mt-2 text-2xl font-black tracking-tight sm:mt-3 sm:text-4xl">
                 {formatCategoryLabel(currentQuestion.category)}
@@ -302,8 +331,14 @@ export function GameLoop({
         )}
       </div>
 
-      <footer className="shrink-0 border-t border-border/60 px-3 py-2 text-center text-[10px] text-muted-foreground sm:px-6 sm:py-3 sm:text-xs">
-        Player A {playerAScore} · Player B {playerBScore}
+      <footer className="flex shrink-0 flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-border/60 px-3 py-2 text-center text-[10px] text-muted-foreground sm:px-6 sm:py-3 sm:text-xs">
+        <span className="font-medium tabular-nums text-foreground">
+          {isTiebreakerRound
+            ? "Tiebreaker"
+            : `Question ${currentQuestionIndex + 1}/${totalQuestions}`}
+        </span>
+        <span className="hidden text-border sm:inline">|</span>
+        <span>Player A {playerAScore} · Player B {playerBScore}</span>
       </footer>
     </main>
   );

@@ -3,6 +3,7 @@
 
 import { redirect } from "next/navigation";
 import { getPostAuthPath } from "@/lib/auth";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
 export type AuthFormState = {
@@ -25,7 +26,7 @@ export async function signIn(
     return { error: "Email and password are required." };
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
@@ -50,7 +51,7 @@ export async function signUp(
     return { error: "Password must be at least 6 characters." };
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase.auth.signUp({ email, password });
 
   if (error) {
@@ -70,7 +71,34 @@ export async function requestPasswordReset(
     return { error: "Email is required.", success: null };
   }
 
-  const supabase = createClient();
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return {
+      error: "Password reset is temporarily unavailable. Please try again later.",
+      success: null,
+    };
+  }
+
+  const { data: registeredUser, error: lookupError } = await admin
+    .from("users")
+    .select("id")
+    .ilike("email", email)
+    .maybeSingle();
+
+  if (lookupError) {
+    return { error: lookupError.message, success: null };
+  }
+
+  if (!registeredUser) {
+    return {
+      error: "There is no registered email for this address.",
+      success: null,
+    };
+  }
+
+  const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${getSiteUrl()}/auth/callback?next=/login/reset-password`,
   });
@@ -81,8 +109,7 @@ export async function requestPasswordReset(
 
   return {
     error: null,
-    success:
-      "If an account exists for that email, you'll receive a password reset link shortly.",
+    success: "Password reset email sent. Check your inbox.",
   };
 }
 
@@ -105,7 +132,7 @@ export async function resetPassword(
     return { error: "Passwords do not match.", success: null };
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -127,7 +154,7 @@ export async function resetPassword(
 }
 
 export async function signOut() {
-  const supabase = createClient();
+  const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
 }

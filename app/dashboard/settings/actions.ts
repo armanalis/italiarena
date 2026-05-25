@@ -25,7 +25,7 @@ function isProficiencyLevel(value: string): value is ProficiencyLevel {
 }
 
 export async function getSettingsData() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -78,7 +78,7 @@ export async function updateLearningProfile(formData: FormData): Promise<Setting
     return { success: false, error: "Display name must be 2–24 characters." };
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -109,7 +109,7 @@ export async function updateGameplayPreferences(
   soundEnabled: boolean,
   hapticsEnabled: boolean
 ): Promise<SettingsActionResult> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -151,7 +151,7 @@ export async function changePassword(formData: FormData): Promise<SettingsAction
     return { success: false, error: "New passwords do not match." };
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -185,7 +185,7 @@ export async function deleteAccount(formData: FormData): Promise<SettingsActionR
     return { success: false, error: 'Type DELETE to confirm account removal.' };
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -205,7 +205,7 @@ export async function deleteAccount(formData: FormData): Promise<SettingsActionR
 }
 
 export async function getPlayerStatistics(): Promise<PlayerStats | null> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -234,7 +234,7 @@ export async function saveMatchResult(payload: {
   level: string;
   categoryProgress: CategoryProgress;
 }): Promise<SettingsActionResult> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

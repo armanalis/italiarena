@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Languages, LogOut } from "lucide-react";
 import { signOut } from "@/app/login/actions";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SoundVolumeControl } from "@/components/sound-volume-control";
 import { Button } from "@/components/ui/button";
 
 type SiteHeaderNavProps = {
@@ -30,6 +31,7 @@ export function SiteHeaderNav({
         </Link>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <SoundVolumeControl />
           <ThemeToggle className="size-10" />
 
           {!isAuthenticated ? (

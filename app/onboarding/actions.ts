@@ -27,7 +27,7 @@ export async function saveOnboarding(
     return { error: "Please select a valid language and proficiency level." };
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

@@ -1,8 +1,8 @@
 /** Email/password form with sign-in, sign-up, and forgot-password flows. */
 "use client";
 
-import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { ArrowLeft, Languages, Lock, Mail, Sparkles } from "lucide-react";
 import {
   requestPasswordReset,
@@ -48,9 +48,9 @@ function SubmitButton({ mode }: { mode: AuthMode }) {
 
 export function LoginForm() {
   const [mode, setMode] = useState<AuthMode>("signin");
-  const [signInState, signInAction] = useFormState(signIn, initialState);
-  const [signUpState, signUpAction] = useFormState(signUp, initialState);
-  const [forgotState, forgotAction] = useFormState(
+  const [signInState, signInAction] = useActionState(signIn, initialState);
+  const [signUpState, signUpAction] = useActionState(signUp, initialState);
+  const [forgotState, forgotAction] = useActionState(
     requestPasswordReset,
     initialState
   );
