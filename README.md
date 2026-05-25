@@ -113,7 +113,7 @@ public/sounds/        # Match SFX (reveal, click, correct, incorrect)
 ### 1. Clone and install
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/armanalis/language-quiz
 cd language-quiz
 npm install
 ```
