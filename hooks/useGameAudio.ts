@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { isSoundEnabled } from "@/lib/preferences";
+import { getEffectiveSoundVolume } from "@/lib/preferences";
 
 export type GameSound = "reveal" | "click" | "correct" | "incorrect";
 
@@ -17,14 +17,15 @@ function playTone(
   frequency: number,
   duration: number,
   type: OscillatorType = "sine",
-  gain = 0.08
+  gain = 0.08,
+  volumeScale = 1
 ) {
   const oscillator = audioContext.createOscillator();
   const gainNode = audioContext.createGain();
 
   oscillator.type = type;
   oscillator.frequency.value = frequency;
-  gainNode.gain.value = gain;
+  gainNode.gain.value = gain * volumeScale;
 
   oscillator.connect(gainNode);
   gainNode.connect(audioContext.destination);
@@ -33,20 +34,20 @@ function playTone(
   oscillator.stop(audioContext.currentTime + duration);
 }
 
-function playFallbackSound(audioContext: AudioContext, sound: GameSound) {
+function playFallbackSound(audioContext: AudioContext, sound: GameSound, volumeScale: number) {
   switch (sound) {
     case "reveal":
-      playTone(audioContext, 880, 0.08);
+      playTone(audioContext, 880, 0.08, "sine", 0.08, volumeScale);
       break;
     case "click":
-      playTone(audioContext, 520, 0.05, "triangle", 0.06);
+      playTone(audioContext, 520, 0.05, "triangle", 0.06, volumeScale);
       break;
     case "correct":
-      playTone(audioContext, 660, 0.1);
-      setTimeout(() => playTone(audioContext, 880, 0.12), 90);
+      playTone(audioContext, 660, 0.1, "sine", 0.08, volumeScale);
+      setTimeout(() => playTone(audioContext, 880, 0.12, "sine", 0.08, volumeScale), 90);
       break;
     case "incorrect":
-      playTone(audioContext, 220, 0.18, "sawtooth", 0.05);
+      playTone(audioContext, 220, 0.18, "sawtooth", 0.05, volumeScale);
       break;
   }
 }
@@ -88,22 +89,24 @@ export function useGameAudio() {
 
   const play = useCallback(
     (sound: GameSound) => {
-      if (!isSoundEnabled()) {
+      const volumeScale = getEffectiveSoundVolume() / 100;
+      if (volumeScale <= 0) {
         return;
       }
 
       const audio = audioMapRef.current[sound];
 
       if (audio && !failedLoadsRef.current.has(sound)) {
+        audio.volume = volumeScale;
         audio.currentTime = 0;
         void audio.play().catch(() => {
           failedLoadsRef.current.add(sound);
-          playFallbackSound(ensureFallbackContext(), sound);
+          playFallbackSound(ensureFallbackContext(), sound, volumeScale);
         });
         return;
       }
 
-      playFallbackSound(ensureFallbackContext(), sound);
+      playFallbackSound(ensureFallbackContext(), sound, volumeScale);
     },
     [ensureFallbackContext]
   );

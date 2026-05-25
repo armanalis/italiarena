@@ -5,7 +5,7 @@ import { SiteHeaderNav } from "@/components/site-header-nav";
 
 /** Top navigation bar — auth actions always visible on the right. */
 export async function SiteHeader() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

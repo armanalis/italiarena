@@ -1,8 +1,8 @@
 # Language Quiz
 
-Real-time, 1v1 language trivia for learners. Players sign in, pick a target language and CEFR level, then compete in live head-to-head matches against real opponents—or a ghost fallback when the queue is empty.
+Real-time, 1v1 language trivia for learners. Players sign in, pick a target language and CEFR level, then choose **Play vs real user** (live matchmaking) or **Play vs bot** (instant ghost match).
 
-Built with **Next.js**, **Supabase**, and **Vercel**.
+Built with **Next.js** and **Supabase**.
 
 ---
 
@@ -14,7 +14,8 @@ Language Quiz is a multiplayer learning game, not a static flashcard app. Every 
 | --- | --- |
 | **Bracket matchmaking** | Pairs players by target language and proficiency level (A1–C1) |
 | **Live sync** | Supabase Realtime broadcasts keep both clients in lockstep during a match |
-| **Ghost opponents** | If no human joins within 15 seconds, a simulated opponent fills the slot |
+| **Real-player search** | Waits up to 15 seconds for a human opponent; if none joins, returns to the dashboard |
+| **Play vs bot** | Separate mode that starts a ghost opponent immediately — no waiting room |
 | **Speed scoring** | Faster correct answers earn more points; ties break on average response time |
 | **Question quality** | Players can flag bad questions; three reports auto-quarantine a item for admin review |
 | **Resilient UX** | Global error boundary clears stale match state and retries on connection drops |
@@ -25,26 +26,49 @@ Supported languages: **English**, **Italian**, **Spanish**.
 
 ## How a match works
 
+There are two entry points from the dashboard:
+
+### Play vs real user
+
 ```mermaid
 sequenceDiagram
   participant P as Player
   participant App as Next.js App
   participant SB as Supabase
-  participant O as Opponent / Ghost
+  participant O as Human opponent
 
-  P->>App: Find Match
-  App->>SB: Search waiting sessions (language + level)
-  alt Human available
-    SB-->>App: Join existing lobby
-  else No match within 15s
-    App->>SB: Start ghost opponent
+  P->>App: Find real opponent
+  App->>SB: searchForMatch (join open lobby or create waiting session)
+  alt Human joins within 15s
+    SB-->>App: Session active
+    App->>SB: get_random_questions (10-question playlist)
+    loop Each round
+      P->>App: Lock answer
+      App->>SB: Broadcast answer_locked
+      SB-->>O: Realtime event
+      App->>App: Score round, reveal result
+    end
+    App->>P: Match finished — win / loss / tie
+  else No human within 15s
+    App->>SB: cancelMatchSearch (abandon session)
+    App->>P: Return to dashboard — "No game found"
   end
+```
+
+### Play vs bot
+
+```mermaid
+sequenceDiagram
+  participant P as Player
+  participant App as Next.js App
+  participant SB as Supabase
+
+  P->>App: Play vs ghost
+  App->>SB: Create session + startGhostMatch
   App->>SB: get_random_questions (10-question playlist)
   loop Each round
     P->>App: Lock answer
-    App->>SB: Broadcast answer_locked
-    SB-->>O: Realtime event
-    App->>App: Score round, reveal result
+    App->>App: Simulate ghost answer + score round
   end
   App->>P: Match finished — win / loss / tie
 ```
@@ -72,8 +96,7 @@ hooks/                # Game loop, audio
 store/                # Zustand match state (persisted)
 lib/                  # Auth, scoring, bots, constants
 utils/supabase/       # Browser, server, and middleware clients
-supabase/             # SQL migrations (schema, matchmaking, reports, indexes)
-database.sql          # Core game tables, RPCs, and RLS policies
+supabase/             # SQL migrations (schema, game tables, matchmaking, reports, indexes)
 public/sounds/        # Match SFX (reveal, click, correct, incorrect)
 ```
 
@@ -111,15 +134,17 @@ Find both values in Supabase → **Project Settings → API**.
 Run these SQL files **in order** in the Supabase SQL Editor:
 
 1. `supabase/schema.sql` — user profiles and auth triggers
-2. `database.sql` — questions, sessions, stats, match RPCs
+2. `supabase/database.sql` — questions, sessions, stats, match RPCs
 3. `supabase/matchmaking-migration.sql` — language/level on sessions, join policies
-4. `supabase/reports-migration.sql` — question flagging and admin role
-5. `supabase/performance-indexes.sql` — production query indexes
+4. `supabase/match-questions-migration.sql` — 10-question playlist and tiebreaker RPCs
+5. `supabase/settings-migration.sql` — display names, preferences, match history
+6. `supabase/reports-migration.sql` — question flagging and admin role
+7. `supabase/performance-indexes.sql` — production query indexes
 
 Then enable Realtime for matchmaking:
 
-- Supabase → **Database → Replication**
-- Turn on replication for the `game_sessions` table
+- Supabase → **Database → Publications**
+- Add `game_sessions` to the `supabase_realtime` publication
 
 ### 4. Seed questions
 

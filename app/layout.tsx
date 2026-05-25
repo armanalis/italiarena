@@ -1,16 +1,11 @@
 /** Root layout — fonts, global styles, and page metadata. */
 import type { Metadata, Viewport } from "next";
-import dynamic from "next/dynamic";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { AppToaster } from "@/components/app-toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
 import { cn } from "@/lib/utils";
-
-const AppToaster = dynamic(
-  () => import("@/components/app-toaster").then((mod) => mod.AppToaster),
-  { ssr: false }
-);
 
 const inter = Inter({
   subsets: ["latin"],

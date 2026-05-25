@@ -29,6 +29,19 @@ create policy "Users can join waiting sessions"
   using (status = 'waiting' and player_b_id is null)
   with check (auth.uid() = player_b_id and status = 'active');
 
+-- Let the host assign a ghost opponent on their own waiting session.
+drop policy if exists "Hosts can activate ghost opponent" on public.game_sessions;
+create policy "Hosts can activate ghost opponent"
+  on public.game_sessions
+  for update
+  to authenticated
+  using (
+    auth.uid() = player_a_id
+    and status = 'waiting'
+    and player_b_id is null
+  )
+  with check (auth.uid() = player_a_id and status = 'active');
+
 -- Ghost opponents are not real auth users, so player_b_id cannot stay FK-constrained.
 alter table public.game_sessions
   drop constraint if exists game_sessions_player_b_id_fkey;

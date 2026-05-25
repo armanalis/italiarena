@@ -21,7 +21,7 @@ export type FlaggedQuestionUpdate = {
 export async function getFlaggedQuestions() {
   await requireAdmin();
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("questions_flagged")
     .select("*")
@@ -39,7 +39,7 @@ export async function dismissFlaggedQuestion(
 ): Promise<AdminActionResult> {
   await requireAdmin();
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: flagged, error: fetchError } = await supabase
     .from("questions_flagged")
     .select("*")
@@ -96,7 +96,7 @@ export async function approveFlaggedQuestion(
 ): Promise<AdminActionResult> {
   await requireAdmin();
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: flagged, error: fetchError } = await supabase
     .from("questions_flagged")
     .select("*")
@@ -152,7 +152,7 @@ export async function deleteFlaggedQuestion(
 ): Promise<AdminActionResult> {
   await requireAdmin();
 
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { error: deleteReportsError } = await supabase
     .from("reports")

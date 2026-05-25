@@ -182,6 +182,13 @@ export type GetRandomQuestionsArgs = {
   p_user_id: string;
 };
 
+export type GetTiebreakerQuestionArgs = {
+  p_language: QuestionLanguage;
+  p_level: QuestionLevel;
+  p_user_id: string;
+  p_exclude_ids: string[];
+};
+
 export type UpdateSeenQuestionsArgs = {
   p_user_id: string;
   p_question_ids: string[];
@@ -233,12 +240,22 @@ export interface Database {
         Update: Partial<GhostMatchInsert>;
         Relationships: [];
       };
+      italian_source_text: {
+        Row: ItalianSourceText;
+        Insert: ItalianSourceTextInsert;
+        Update: Partial<ItalianSourceTextInsert>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
       get_random_questions: {
         Args: GetRandomQuestionsArgs;
         Returns: QuestionActive[];
+      };
+      get_tiebreaker_question: {
+        Args: GetTiebreakerQuestionArgs;
+        Returns: QuestionActive | null;
       };
       update_seen_questions: {
         Args: UpdateSeenQuestionsArgs;

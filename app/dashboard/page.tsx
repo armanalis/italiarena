@@ -14,14 +14,15 @@ import { formatDisplayName } from "@/lib/display-name";
 import { Ghost, ShieldAlert, Users } from "lucide-react";
 
 type DashboardPageProps = {
-  searchParams?: {
+  searchParams: Promise<{
     error?: string;
-  };
+  }>;
 };
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const profile = await requireOnboardingComplete();
-  const accessDenied = searchParams?.error === "admin_access_denied";
+  const params = await searchParams;
+  const accessDenied = params.error === "admin_access_denied";
 
   return (
     <main className="flex flex-1 flex-col">
@@ -65,8 +66,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               </div>
               <CardTitle>Play vs real user</CardTitle>
               <CardDescription>
-                Match with a live opponent at your language and level. Falls back to a
-                ghost after 15 seconds if nobody joins.
+                Match with a live opponent at your language and level. Search ends
+                after 15 seconds if nobody joins.
               </CardDescription>
             </CardHeader>
             <CardContent>

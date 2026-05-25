@@ -3,6 +3,10 @@
 import { createClient } from "@/utils/supabase/server";
 import { GHOST_PLAYER_ID, GHOST_PLAYER_NAME } from "@/lib/ghost";
 import { getPublicDisplayName } from "@/lib/display-name";
+import {
+  REGULAR_MATCH_QUESTIONS,
+  splitSessionQuestions,
+} from "@/lib/match";
 import type { QuestionActive } from "@/types/database.types";
 import type { UserProfile } from "@/lib/types";
 
@@ -24,7 +28,7 @@ type MatchmakingResult =
 async function getAuthenticatedProfile(): Promise<
   { profile: UserProfile } | { error: string }
 > {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -47,7 +51,7 @@ async function getAuthenticatedProfile(): Promise<
 }
 
 async function getOpponentDisplayName(opponentId: string): Promise<string> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data } = await supabase
     .from("users")
     .select("display_name, email")
@@ -66,7 +70,7 @@ async function fetchQuestionsByIds(ids: string[]): Promise<QuestionActive[]> {
     return [];
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("questions_active")
     .select("*")
@@ -82,12 +86,18 @@ async function fetchQuestionsByIds(ids: string[]): Promise<QuestionActive[]> {
     .filter((question): question is QuestionActive => Boolean(question));
 }
 
-async function generatePlaylist(
+async function resolveSessionQuestions(questionIds: string[]) {
+  const allQuestions = await fetchQuestionsByIds(questionIds);
+  const { regular } = splitSessionQuestions(allQuestions);
+  return regular;
+}
+
+async function generateMatchQuestions(
   userId: string,
   language: string,
   level: string
-): Promise<QuestionActive[]> {
-  const supabase = createClient();
+) {
+  const supabase = await createClient();
   const { data, error } = await supabase.rpc("get_random_questions", {
     p_language: language,
     p_level: level,
@@ -95,14 +105,30 @@ async function generatePlaylist(
   });
 
   if (error) {
+    if (error.message.includes("INSUFFICIENT_QUESTIONS")) {
+      throw new Error(
+        `Add at least ${REGULAR_MATCH_QUESTIONS} questions for ${language} / ${level} before playing.`
+      );
+    }
     throw new Error(error.message);
   }
 
-  return (data as QuestionActive[] | null) ?? [];
+  const regular = (data as QuestionActive[] | null) ?? [];
+
+  if (regular.length < REGULAR_MATCH_QUESTIONS) {
+    throw new Error(
+      `Add at least ${REGULAR_MATCH_QUESTIONS} questions for ${language} / ${level} before playing.`
+    );
+  }
+
+  return {
+    regular,
+    sessionIds: regular.map((question) => question.id),
+  };
 }
 
-function playlistIds(questions: QuestionActive[]): string[] {
-  return questions.map((question) => question.id);
+function insufficientQuestionsMessage(language: string, level: string) {
+  return `Add at least ${REGULAR_MATCH_QUESTIONS} questions for ${language} / ${level} before playing.`;
 }
 
 export async function searchForMatch(
@@ -114,7 +140,7 @@ export async function searchForMatch(
   }
 
   const { profile } = auth;
-  const supabase = createClient();
+  const supabase = await createClient();
   const language = profile.target_language!;
   const level = profile.proficiency_level!;
 
@@ -131,7 +157,7 @@ export async function searchForMatch(
 
     if (existingSession) {
       const questionIds = (existingSession.question_playlist as string[]) ?? [];
-      const playlist = await fetchQuestionsByIds(questionIds);
+      const playlist = await resolveSessionQuestions(questionIds);
 
       if (existingSession.status === "active") {
         const opponentId = existingSession.player_b_id;
@@ -208,7 +234,7 @@ export async function searchForMatch(
 
     if (joinedSession) {
       const questionIds = (joinedSession.question_playlist as string[]) ?? [];
-      const playlist = await fetchQuestionsByIds(questionIds);
+      const playlist = await resolveSessionQuestions(questionIds);
 
       return {
         success: true,
@@ -226,12 +252,17 @@ export async function searchForMatch(
     }
   }
 
-  const questions = await generatePlaylist(profile.id, language, level);
+  let matchQuestions;
 
-  if (questions.length === 0) {
+  try {
+    matchQuestions = await generateMatchQuestions(profile.id, language, level);
+  } catch (error) {
     return {
       success: false,
-      error: "No questions available for your language and level yet.",
+      error:
+        error instanceof Error
+          ? error.message
+          : insufficientQuestionsMessage(language, level),
     };
   }
 
@@ -242,7 +273,7 @@ export async function searchForMatch(
       status: "waiting",
       language,
       level,
-      question_playlist: playlistIds(questions),
+      question_playlist: matchQuestions.sessionIds,
     })
     .select("*")
     .single();
@@ -259,8 +290,71 @@ export async function searchForMatch(
     data: {
       sessionId: createdSession.id,
       status: "waiting",
-      playlist: questions,
+      playlist: matchQuestions.regular,
       opponent: null,
+    },
+  };
+}
+
+/** Creates an active session against the ghost opponent in one step (Play vs bot). */
+export async function startBotMatch(): Promise<MatchmakingResult> {
+  const auth = await getAuthenticatedProfile();
+  if ("error" in auth) {
+    return { success: false, error: auth.error };
+  }
+
+  const { profile } = auth;
+  const supabase = await createClient();
+  const language = profile.target_language!;
+  const level = profile.proficiency_level!;
+
+  let matchQuestions;
+
+  try {
+    matchQuestions = await generateMatchQuestions(profile.id, language, level);
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : insufficientQuestionsMessage(language, level),
+    };
+  }
+
+  const { data: createdSession, error: createError } = await supabase
+    .from("game_sessions")
+    .insert({
+      player_a_id: profile.id,
+      player_b_id: GHOST_PLAYER_ID,
+      status: "active",
+      language,
+      level,
+      question_playlist: matchQuestions.sessionIds,
+    })
+    .select("*")
+    .single();
+
+  if (createError || !createdSession) {
+    return {
+      success: false,
+      error:
+        createError?.message ??
+        "Could not start ghost match. Run supabase/matchmaking-migration.sql if you have not already.",
+    };
+  }
+
+  return {
+    success: true,
+    data: {
+      sessionId: createdSession.id,
+      status: "active",
+      playlist: matchQuestions.regular,
+      opponent: {
+        id: GHOST_PLAYER_ID,
+        isGhost: true,
+        displayName: GHOST_PLAYER_NAME,
+      },
     },
   };
 }
@@ -273,7 +367,7 @@ export async function startGhostMatch(
     return { success: false, error: auth.error };
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: updatedSession, error } = await supabase
     .from("game_sessions")
     .update({
@@ -299,7 +393,7 @@ export async function startGhostMatch(
 
     if (existingSession?.status === "active") {
       const questionIds = (existingSession.question_playlist as string[]) ?? [];
-      const playlist = await fetchQuestionsByIds(questionIds);
+      const playlist = await resolveSessionQuestions(questionIds);
       const opponentId = existingSession.player_b_id;
       const isGhost = opponentId === GHOST_PLAYER_ID;
 
@@ -326,7 +420,7 @@ export async function startGhostMatch(
   }
 
   const questionIds = (updatedSession.question_playlist as string[]) ?? [];
-  const playlist = await fetchQuestionsByIds(questionIds);
+  const playlist = await resolveSessionQuestions(questionIds);
 
   return {
     success: true,
@@ -343,13 +437,40 @@ export async function startGhostMatch(
   };
 }
 
+export async function cancelMatchSearch(
+  sessionId?: string | null
+): Promise<{ success: true } | { success: false; error: string }> {
+  const auth = await getAuthenticatedProfile();
+  if ("error" in auth) {
+    return { success: false, error: auth.error };
+  }
+
+  if (!sessionId) {
+    return { success: true };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("game_sessions")
+    .update({ status: "abandoned" })
+    .eq("id", sessionId)
+    .eq("player_a_id", auth.profile.id)
+    .eq("status", "waiting");
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
 export async function getMatchSession(sessionId: string) {
   const auth = await getAuthenticatedProfile();
   if ("error" in auth) {
     return { success: false as const, error: auth.error };
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: session, error } = await supabase
     .from("game_sessions")
     .select("*")
@@ -369,7 +490,7 @@ export async function getMatchSession(sessionId: string) {
   }
 
   const questionIds = (session.question_playlist as string[]) ?? [];
-  const playlist = await fetchQuestionsByIds(questionIds);
+  const playlist = await resolveSessionQuestions(questionIds);
   const opponentId =
     session.player_a_id === auth.profile.id
       ? session.player_b_id

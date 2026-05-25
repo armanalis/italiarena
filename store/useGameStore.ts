@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { ProficiencyLevel } from "@/lib/constants";
 import {
   computePoints,
   determineWinner,
@@ -17,6 +16,7 @@ export type RoundPhase =
   | "playing"
   | "waiting"
   | "round_result"
+  | "tiebreaker_loading"
   | "match_finished";
 
 export type GameOpponent = {
@@ -55,6 +55,8 @@ type GameStoreState = {
   matchWinner: MatchWinner | null;
   categoryProgress: CategoryProgress;
   matchSaved: boolean;
+  tiebreakerQuestion: QuestionActive | null;
+  tiebreakerUsed: boolean;
 };
 
 type GameStoreActions = {
@@ -66,6 +68,7 @@ type GameStoreActions = {
     opponent: GameOpponent;
     playlist: QuestionActive[];
   }) => void;
+  startTiebreakerRound: (question: QuestionActive) => void;
   initGameplay: (payload: {
     localUserId: string;
     localPlayerRole: "a" | "b";
@@ -113,6 +116,8 @@ const gameplayDefaults: Pick<
   | "matchWinner"
   | "categoryProgress"
   | "matchSaved"
+  | "tiebreakerQuestion"
+  | "tiebreakerUsed"
 > = {
   currentQuestionIndex: 0,
   playerAScore: 0,
@@ -133,6 +138,8 @@ const gameplayDefaults: Pick<
   matchWinner: null,
   categoryProgress: emptyCategoryProgress(),
   matchSaved: false,
+  tiebreakerQuestion: null,
+  tiebreakerUsed: false,
 };
 
 const initialState: GameStoreState = {
@@ -167,6 +174,20 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
           ...gameplayDefaults,
           roundPhase: "topic_reveal",
         }),
+      startTiebreakerRound: (question) =>
+        set((state) => ({
+          playlist: [...state.playlist, question],
+          tiebreakerQuestion: question,
+          tiebreakerUsed: true,
+          currentQuestionIndex: state.playlist.length,
+          roundPhase: "topic_reveal",
+          playerAAnswer: null,
+          playerBAnswer: null,
+          roundStartedAt: null,
+          timeRemaining: 25,
+          lastRoundPointsA: 0,
+          lastRoundPointsB: 0,
+        })),
       initGameplay: ({ localUserId, localPlayerRole, isBotMatch, proficiencyLevel }) =>
         set({
           localUserId,
@@ -330,6 +351,8 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
         matchWinner: state.matchWinner,
         categoryProgress: state.categoryProgress,
         matchSaved: state.matchSaved,
+        tiebreakerQuestion: state.tiebreakerQuestion,
+        tiebreakerUsed: state.tiebreakerUsed,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
@@ -366,9 +389,10 @@ export function useOpponentScore() {
   });
 }
 
-export function useBothScores() {
-  return useGameStore((state) => ({
-    playerAScore: state.playerAScore,
-    playerBScore: state.playerBScore,
-  }));
+export function usePlayerAScore() {
+  return useGameStore((state) => state.playerAScore);
+}
+
+export function usePlayerBScore() {
+  return useGameStore((state) => state.playerBScore);
 }

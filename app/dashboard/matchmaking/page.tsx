@@ -4,9 +4,9 @@ import { MatchmakingLobby } from "@/components/matchmaking/matchmaking-lobby";
 import { requireOnboardingComplete } from "@/lib/auth";
 
 type MatchmakingPageProps = {
-  searchParams?: {
+  searchParams: Promise<{
     mode?: string;
-  };
+  }>;
 };
 
 export default async function MatchmakingPage({ searchParams }: MatchmakingPageProps) {
@@ -16,7 +16,8 @@ export default async function MatchmakingPage({ searchParams }: MatchmakingPageP
     redirect("/onboarding");
   }
 
-  const mode = searchParams?.mode === "bot" ? "bot" : "real";
+  const params = await searchParams;
+  const mode = params.mode === "bot" ? "bot" : "real";
 
   return <MatchmakingLobby profile={profile} mode={mode} />;
 }
