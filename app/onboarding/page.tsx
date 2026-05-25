@@ -1,0 +1,27 @@
+/** First-time setup — pick a target language and proficiency level. */
+import { redirect } from "next/navigation";
+import { OnboardingForm } from "@/components/onboarding/onboarding-form";
+import { getCurrentUserProfile, isOnboardingComplete } from "@/lib/auth";
+
+export default async function OnboardingPage() {
+  const profile = await getCurrentUserProfile();
+
+  if (!profile) {
+    redirect("/login");
+  }
+
+  if (isOnboardingComplete(profile)) {
+    redirect("/dashboard");
+  }
+
+  return (
+    <main className="relative flex min-h-[calc(100dvh-3.5rem)] items-center justify-center overflow-y-auto bg-background px-4 py-8 touch-scroll sm:py-10">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.22),_transparent_50%)] dark:bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.35),_transparent_55%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_rgba(139,92,246,0.15),_transparent_45%)]" />
+
+      <div className="relative z-10 w-full max-w-lg">
+        <OnboardingForm />
+      </div>
+    </main>
+  );
+}
