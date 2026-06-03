@@ -1,8 +1,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { REGULAR_MATCH_QUESTIONS } from "@/lib/match";
 import {
   computePoints,
   determineWinner,
+  getOptionText,
   isAnswerCorrect,
   type MatchWinner,
 } from "@/lib/scoring";
@@ -28,6 +30,21 @@ export type GameOpponent = {
 export type LockedAnswer = {
   answer: CorrectAnswer | null;
   responseTimeMs: number | null;
+};
+
+/** One completed round, stored for end-of-match review. */
+export type MatchRoundReview = {
+  questionIndex: number;
+  isTiebreaker: boolean;
+  questionId: string;
+  category: QuestionCategory;
+  questionText: string;
+  correctAnswer: CorrectAnswer;
+  correctOptionText: string;
+  selectedAnswer: CorrectAnswer | null;
+  selectedOptionText: string | null;
+  wasCorrect: boolean;
+  pointsEarned: number;
 };
 
 type GameStoreState = {
@@ -57,6 +74,7 @@ type GameStoreState = {
   matchSaved: boolean;
   tiebreakerQuestion: QuestionActive | null;
   tiebreakerUsed: boolean;
+  roundReviews: MatchRoundReview[];
 };
 
 type GameStoreActions = {
@@ -88,12 +106,66 @@ type GameStoreActions = {
   reset: () => void;
 };
 
+const QUESTION_CATEGORIES: QuestionCategory[] = [
+  "grammar",
+  "vocabulary",
+  "fill-in-the-blank",
+  "idioms",
+];
+
 const emptyCategoryProgress = (): CategoryProgress => ({
   grammar: { correct: 0, total: 0 },
   vocabulary: { correct: 0, total: 0 },
   "fill-in-the-blank": { correct: 0, total: 0 },
   idioms: { correct: 0, total: 0 },
 });
+
+/** Ensures all category keys exist (persisted state may be partial or from older builds). */
+function normalizeCategoryProgress(
+  progress: CategoryProgress | undefined | null
+): CategoryProgress {
+  const base = emptyCategoryProgress();
+  if (!progress || typeof progress !== "object") {
+    return base;
+  }
+
+  return {
+    grammar: progress.grammar ?? base.grammar,
+    vocabulary: progress.vocabulary ?? base.vocabulary,
+    "fill-in-the-blank":
+      progress["fill-in-the-blank"] ?? base["fill-in-the-blank"],
+    idioms: progress.idioms ?? base.idioms,
+  };
+}
+
+function normalizeQuestionCategory(value: string): QuestionCategory {
+  const trimmed = value.trim();
+  if (QUESTION_CATEGORIES.includes(trimmed as QuestionCategory)) {
+    return trimmed as QuestionCategory;
+  }
+
+  const lower = trimmed.toLowerCase();
+  if (lower === "fill in the blank" || lower === "fill_in_the_blank") {
+    return "fill-in-the-blank";
+  }
+
+  if (QUESTION_CATEGORIES.includes(lower as QuestionCategory)) {
+    return lower as QuestionCategory;
+  }
+
+  return "grammar";
+}
+
+/** Gameplay reset without wiping player identity (set by initGameplay on the match page). */
+function getGameplayReset() {
+  const {
+    localPlayerRole: _role,
+    localUserId: _userId,
+    proficiencyLevel: _level,
+    ...reset
+  } = gameplayDefaults;
+  return reset;
+}
 
 const gameplayDefaults: Pick<
   GameStoreState,
@@ -118,6 +190,7 @@ const gameplayDefaults: Pick<
   | "matchSaved"
   | "tiebreakerQuestion"
   | "tiebreakerUsed"
+  | "roundReviews"
 > = {
   currentQuestionIndex: 0,
   playerAScore: 0,
@@ -140,6 +213,7 @@ const gameplayDefaults: Pick<
   matchSaved: false,
   tiebreakerQuestion: null,
   tiebreakerUsed: false,
+  roundReviews: [],
 };
 
 const initialState: GameStoreState = {
@@ -171,7 +245,8 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
           status: "playing",
           opponent,
           playlist,
-          ...gameplayDefaults,
+          ...getGameplayReset(),
+          categoryProgress: emptyCategoryProgress(),
           roundPhase: "topic_reveal",
         }),
       startTiebreakerRound: (question) =>
@@ -189,12 +264,13 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
           lastRoundPointsB: 0,
         })),
       initGameplay: ({ localUserId, localPlayerRole, isBotMatch, proficiencyLevel }) =>
-        set({
+        set((state) => ({
           localUserId,
           localPlayerRole,
           isBotMatch,
           proficiencyLevel,
-        }),
+          categoryProgress: normalizeCategoryProgress(state.categoryProgress),
+        })),
       setRoundPhase: (phase) => set({ roundPhase: phase }),
       beginRound: (startedAt) =>
         set({
@@ -270,14 +346,32 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
         const localRole = state.localPlayerRole;
         const localAnswer =
           localRole === "a" ? answerA?.answer ?? null : answerB?.answer ?? null;
-        const nextCategoryProgress = { ...state.categoryProgress };
-        const category = question.category as QuestionCategory;
+        const localPoints = localRole === "a" ? pointsA : pointsB;
+        const wasCorrect = isAnswerCorrect(localAnswer, question.correct_answer);
+        const nextCategoryProgress = normalizeCategoryProgress(
+          state.categoryProgress
+        );
+        const category = normalizeQuestionCategory(question.category);
         const categoryStats = nextCategoryProgress[category];
         nextCategoryProgress[category] = {
-          correct:
-            categoryStats.correct +
-            (isAnswerCorrect(localAnswer, question.correct_answer) ? 1 : 0),
+          correct: categoryStats.correct + (wasCorrect ? 1 : 0),
           total: categoryStats.total + 1,
+        };
+
+        const roundReview: MatchRoundReview = {
+          questionIndex: state.currentQuestionIndex,
+          isTiebreaker: state.currentQuestionIndex >= REGULAR_MATCH_QUESTIONS,
+          questionId: question.id,
+          category,
+          questionText: question.question_text,
+          correctAnswer: question.correct_answer,
+          correctOptionText: getOptionText(question, question.correct_answer),
+          selectedAnswer: localAnswer,
+          selectedOptionText: localAnswer
+            ? getOptionText(question, localAnswer)
+            : null,
+          wasCorrect,
+          pointsEarned: localPoints,
         };
 
         set({
@@ -289,6 +383,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
           lastRoundPointsA: pointsA,
           lastRoundPointsB: pointsB,
           categoryProgress: nextCategoryProgress,
+          roundReviews: [...state.roundReviews, roundReview],
         });
       },
       advanceToNextRound: () => {
@@ -353,9 +448,15 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
         matchSaved: state.matchSaved,
         tiebreakerQuestion: state.tiebreakerQuestion,
         tiebreakerUsed: state.tiebreakerUsed,
+        roundReviews: state.roundReviews,
       }),
       onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
+        if (state) {
+          state.categoryProgress = normalizeCategoryProgress(
+            state.categoryProgress
+          );
+          state.setHasHydrated(true);
+        }
       },
     }
   )
@@ -395,4 +496,10 @@ export function usePlayerAScore() {
 
 export function usePlayerBScore() {
   return useGameStore((state) => state.playerBScore);
+}
+
+export function useMatchMistakes() {
+  return useGameStore((state) =>
+    state.roundReviews.filter((round) => !round.wasCorrect)
+  );
 }

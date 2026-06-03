@@ -1,4 +1,4 @@
-import type { CorrectAnswer } from "@/types/database.types";
+import type { CorrectAnswer, QuestionActive } from "@/types/database.types";
 
 /** Speed bonus tiers — response time in milliseconds. */
 export function computePoints(
@@ -81,4 +81,18 @@ export function isAnswerCorrect(
 
 export function formatCategoryLabel(category: string): string {
   return category.replace(/-/g, " ").toUpperCase();
+}
+
+/** Text for a multiple-choice option letter on a question row. */
+export function getOptionText(
+  question: QuestionActive,
+  answer: CorrectAnswer
+): string {
+  const key = `option_${answer.toLowerCase()}` as
+    | "option_a"
+    | "option_b"
+    | "option_c"
+    | "option_d";
+
+  return question[key];
 }
