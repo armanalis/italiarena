@@ -240,12 +240,6 @@ export interface Database {
         Update: Partial<GhostMatchInsert>;
         Relationships: [];
       };
-      italian_source_text: {
-        Row: ItalianSourceText;
-        Insert: ItalianSourceTextInsert;
-        Update: Partial<ItalianSourceTextInsert>;
-        Relationships: [];
-      };
     };
     Views: Record<string, never>;
     Functions: {
