@@ -10,6 +10,7 @@ import {
 } from "@/lib/scoring";
 import type { CategoryProgress } from "@/lib/types";
 import type { CorrectAnswer, QuestionActive, QuestionCategory } from "@/types/database.types";
+export type ProficiencyLevel = string;
 
 export type GameStoreStatus = "idle" | "searching" | "playing" | "finished";
 
@@ -60,7 +61,7 @@ type GameStoreState = {
   roundPhase: RoundPhase;
   localPlayerRole: "a" | "b" | null;
   localUserId: string | null;
-  proficiencyLevel: ProficiencyLevel | null;
+  proficiencyLevel: string | null;
   playerAAnswer: LockedAnswer | null;
   playerBAnswer: LockedAnswer | null;
   playerAResponseTimes: number[];
