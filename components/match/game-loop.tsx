@@ -14,6 +14,7 @@ import {
   usePlayerBScore,
 } from "@/store/useGameStore";
 import { formatCategoryLabel, isAnswerCorrect } from "@/lib/scoring";
+import { MatchMistakesReview } from "@/components/match/match-mistakes-review";
 import { ReportQuestionButton } from "@/components/match/report-question-button";
 import { SoundVolumeControl } from "@/components/sound-volume-control";
 import type { CorrectAnswer } from "@/types/database.types";
@@ -124,41 +125,47 @@ export function GameLoop({
     const isTie = matchWinner === "tie";
 
     return (
-      <main className="flex flex-1 flex-col items-center justify-center gap-6 p-4 text-center sm:p-8">
-        <div className="rounded-full border border-indigo-500/30 bg-indigo-500/10 p-5 sm:p-6">
-          <Trophy className="size-10 text-indigo-400 sm:size-12" />
-        </div>
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            {isTie ? "It's a tie!" : didWin ? "You win!" : "You lose!"}
-          </h1>
-          <p className="text-sm text-muted-foreground sm:text-base">
-            Final score · You {localScore} — {opponentName} {opponentScore}
-          </p>
-          {isTie && (
-            <p className="text-sm text-muted-foreground">
-              {tiebreakerUsed
-                ? "Still tied after the sudden-death round — fastest average response time wins."
-                : "Tie-breaker: fastest average response time"}
+      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto touch-scroll">
+        <div className="flex flex-col items-center gap-4 px-4 py-6 text-center sm:gap-5 sm:px-8 sm:py-8">
+          <div className="rounded-full border border-indigo-500/30 bg-indigo-500/10 p-5 sm:p-6">
+            <Trophy className="size-10 text-indigo-400 sm:size-12" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              {isTie ? "It's a tie!" : didWin ? "You win!" : "You lose!"}
+            </h1>
+            <p className="text-sm text-muted-foreground sm:text-base">
+              Final score · You {localScore} — {opponentName} {opponentScore}
             </p>
-          )}
-          {tiebreakerUsed && !isTie && (
-            <p className="text-sm text-muted-foreground">
-              Decided by sudden-death tiebreaker.
-            </p>
-          )}
+            {isTie && (
+              <p className="text-sm text-muted-foreground">
+                {tiebreakerUsed
+                  ? "Still tied after the sudden-death round — fastest average response time wins."
+                  : "Tie-breaker: fastest average response time"}
+              </p>
+            )}
+            {tiebreakerUsed && !isTie && (
+              <p className="text-sm text-muted-foreground">
+                Decided by sudden-death tiebreaker.
+              </p>
+            )}
+          </div>
         </div>
-        <div className="flex w-full max-w-sm flex-col gap-3 px-2 sm:max-w-none sm:flex-row sm:justify-center">
+
+        <div className="flex flex-1 flex-col items-center px-4 pb-4 sm:px-8">
+          <MatchMistakesReview />
+        </div>
+
+        <div className="sticky bottom-0 flex shrink-0 flex-col items-center gap-3 border-t border-border/60 bg-background/95 px-4 py-4 backdrop-blur-sm sm:flex-row sm:justify-center sm:px-8">
           <Button asChild variant="outline" className="min-h-11 w-full sm:w-auto">
-            <Link
-              href="/dashboard"
-              onClick={() => reset()}
-            >
+            <Link href="/dashboard" onClick={() => reset()}>
               Back to dashboard
             </Link>
           </Button>
           <Button asChild className="min-h-11 w-full sm:w-auto">
-            <Link href="/dashboard/matchmaking">Play again</Link>
+            <Link href="/dashboard/matchmaking" onClick={() => reset()}>
+              Play again
+            </Link>
           </Button>
         </div>
       </main>
