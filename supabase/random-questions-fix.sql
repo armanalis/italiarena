@@ -1,5 +1,5 @@
--- Fix deterministic question selection in get_random_questions.
--- Run in the Supabase SQL Editor if matches keep serving the same questions.
+-- Rotate category picks between matches (3 grammar, 3 vocab, 3 fill-in-the-blank, 1 idioms).
+-- Run in the Supabase SQL Editor after deploying app changes.
 
 create or replace function public.get_random_questions(
   p_language text,
@@ -13,6 +13,8 @@ set search_path = public
 as $$
 declare
   v_seen uuid[];
+  v_recent_ids uuid[];
+  v_last_playlist jsonb;
   v_pool_count integer;
   v_selected_count integer;
   v_result json;
@@ -44,12 +46,32 @@ begin
     v_seen := '{}'::uuid[];
   end if;
 
+  select gs.question_playlist
+  into v_last_playlist
+  from public.game_sessions gs
+  where (gs.player_a_id = p_user_id or gs.player_b_id = p_user_id)
+    and jsonb_typeof(gs.question_playlist) = 'array'
+    and jsonb_array_length(gs.question_playlist) > 0
+  order by gs.created_at desc
+  limit 1;
+
+  if v_last_playlist is null then
+    v_recent_ids := '{}'::uuid[];
+  else
+    select coalesce(array_agg(elem::uuid), '{}'::uuid[])
+    into v_recent_ids
+    from jsonb_array_elements_text(v_last_playlist) as elem;
+  end if;
+
   with ranked as (
     select
       q.*,
       row_number() over (
         partition by q.category
-        order by (q.id = any (v_seen)) asc, random()
+        order by
+          (q.id = any (v_recent_ids)) asc,
+          (q.id = any (v_seen)) asc,
+          random()
       ) as category_rank
     from public.questions_active q
     where q.language = p_language
@@ -69,7 +91,10 @@ begin
     where q.language = p_language
       and q.level = p_level
       and q.id not in (select id from category_picks)
-    order by (q.id = any (v_seen)) asc, random()
+    order by
+      (q.id = any (v_recent_ids)) asc,
+      (q.id = any (v_seen)) asc,
+      random()
     limit greatest(
       0,
       10 - (select count(*)::integer from category_picks)
