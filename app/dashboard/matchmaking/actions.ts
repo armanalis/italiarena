@@ -5,6 +5,7 @@ import { GHOST_PLAYER_ID, GHOST_PLAYER_NAME } from "@/lib/ghost";
 import { getPublicDisplayName } from "@/lib/display-name";
 import {
   REGULAR_MATCH_QUESTIONS,
+  shuffleArray,
   splitSessionQuestions,
 } from "@/lib/match";
 import type { QuestionActive } from "@/types/database.types";
@@ -113,7 +114,7 @@ async function generateMatchQuestions(
     throw new Error(error.message);
   }
 
-  const regular = (data as QuestionActive[] | null) ?? [];
+  const regular = shuffleArray((data as QuestionActive[] | null) ?? []);
 
   if (regular.length < REGULAR_MATCH_QUESTIONS) {
     throw new Error(
@@ -131,6 +132,19 @@ function insufficientQuestionsMessage(language: string, level: string) {
   return `Add at least ${REGULAR_MATCH_QUESTIONS} questions for ${language} / ${level} before playing.`;
 }
 
+async function abandonOwnWaitingSession(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  sessionId: string,
+  playerId: string
+) {
+  await supabase
+    .from("game_sessions")
+    .update({ status: "abandoned" })
+    .eq("id", sessionId)
+    .eq("player_a_id", playerId)
+    .eq("status", "waiting");
+}
+
 export async function searchForMatch(
   existingSessionId?: string | null
 ): Promise<MatchmakingResult> {
@@ -143,6 +157,12 @@ export async function searchForMatch(
   const supabase = await createClient();
   const language = profile.target_language!;
   const level = profile.proficiency_level!;
+
+  let ownWaitingSession: {
+    id: string;
+    created_at: string;
+    question_playlist: unknown;
+  } | null = null;
 
   if (existingSessionId) {
     const { data: existingSession, error } = await supabase
@@ -186,20 +206,14 @@ export async function searchForMatch(
         existingSession.status === "waiting" &&
         existingSession.player_a_id === profile.id
       ) {
-        return {
-          success: true,
-          data: {
-            sessionId: existingSession.id,
-            status: "waiting",
-            playlist,
-            opponent: null,
-          },
-        };
+        ownWaitingSession = existingSession;
       }
     }
   }
 
-  const { data: openSession, error: openError } = await supabase
+  // Always look for an older open lobby to join. If both players create a session
+  // at the same time, the one with the newer session joins the older host.
+  let openSessionQuery = supabase
     .from("game_sessions")
     .select("*")
     .eq("status", "waiting")
@@ -208,8 +222,17 @@ export async function searchForMatch(
     .is("player_b_id", null)
     .neq("player_a_id", profile.id)
     .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+
+  if (ownWaitingSession) {
+    openSessionQuery = openSessionQuery.lt(
+      "created_at",
+      ownWaitingSession.created_at
+    );
+  }
+
+  const { data: openSession, error: openError } =
+    await openSessionQuery.maybeSingle();
 
   if (openError) {
     return { success: false, error: openError.message };
@@ -233,6 +256,14 @@ export async function searchForMatch(
     }
 
     if (joinedSession) {
+      if (ownWaitingSession) {
+        await abandonOwnWaitingSession(
+          supabase,
+          ownWaitingSession.id,
+          profile.id
+        );
+      }
+
       const questionIds = (joinedSession.question_playlist as string[]) ?? [];
       const playlist = await resolveSessionQuestions(questionIds);
 
@@ -250,6 +281,22 @@ export async function searchForMatch(
         },
       };
     }
+  }
+
+  if (ownWaitingSession) {
+    const questionIds =
+      (ownWaitingSession.question_playlist as string[]) ?? [];
+    const playlist = await resolveSessionQuestions(questionIds);
+
+    return {
+      success: true,
+      data: {
+        sessionId: ownWaitingSession.id,
+        status: "waiting",
+        playlist,
+        opponent: null,
+      },
+    };
   }
 
   let matchQuestions;

@@ -233,6 +233,7 @@ export async function saveMatchResult(payload: {
   language: string;
   level: string;
   categoryProgress: CategoryProgress;
+  questionIds: string[];
 }): Promise<SettingsActionResult> {
   const supabase = await createClient();
   const {
@@ -318,6 +319,13 @@ export async function saveMatchResult(payload: {
 
   if (statsError) {
     return { success: false, error: statsError.message };
+  }
+
+  if (payload.questionIds.length > 0) {
+    await supabase.rpc("update_seen_questions", {
+      p_user_id: user.id,
+      p_question_ids: payload.questionIds,
+    });
   }
 
   await supabase

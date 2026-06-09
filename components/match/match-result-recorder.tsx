@@ -50,6 +50,7 @@ export function MatchResultRecorder({ language, level }: MatchResultRecorderProp
       language,
       level,
       categoryProgress: state.categoryProgress,
+      questionIds: state.playlist.map((question) => question.id),
     }).then((response) => {
       if (response.success) {
         markMatchSaved();

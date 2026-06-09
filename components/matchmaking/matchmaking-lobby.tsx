@@ -17,7 +17,7 @@ import { useGameStore } from "@/store/useGameStore";
 import type { UserProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const SEARCH_INTERVAL_MS = 3000;
+const SEARCH_INTERVAL_MS = 1500;
 const GHOST_COUNTDOWN_SECONDS = 15;
 
 type MatchmakingLobbyProps = {

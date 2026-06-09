@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Flag, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { reportQuestion } from "@/app/dashboard/match/actions";
+import { useGameStore } from "@/store/useGameStore";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,13 +28,16 @@ type ReportQuestionButtonProps = {
   questionId: string;
   questionText: string;
   className?: string;
+  showLabel?: boolean;
 };
 
 export function ReportQuestionButton({
   questionId,
   questionText,
   className,
+  showLabel = false,
 }: ReportQuestionButtonProps) {
+  const setReportDialogOpen = useGameStore((state) => state.setReportDialogOpen);
   const [open, setOpen] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<ReportIssueType | null>(
     null
@@ -51,8 +55,7 @@ export function ReportQuestionButton({
 
       if (result.success) {
         toast.success("Report logged. Thanks for the feedback!");
-        setOpen(false);
-        setSelectedIssue(null);
+        handleOpenChange(false);
         return;
       }
 
@@ -60,20 +63,31 @@ export function ReportQuestionButton({
     });
   }
 
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+    setReportDialogOpen(nextOpen);
+    if (!nextOpen) {
+      setSelectedIssue(null);
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button
           type="button"
-          variant="ghost"
-          size="icon"
+          variant={showLabel ? "outline" : "ghost"}
+          size={showLabel ? "sm" : "icon"}
           className={cn(
-            "size-11 shrink-0 text-muted-foreground hover:text-amber-400",
+            showLabel
+              ? "shrink-0 gap-1.5 border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300"
+              : "size-11 shrink-0 text-muted-foreground hover:text-amber-400",
             className
           )}
           aria-label="Report question"
         >
           <Flag className="size-4" />
+          {showLabel ? "Report" : null}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
@@ -113,7 +127,7 @@ export function ReportQuestionButton({
             type="button"
             variant="outline"
             disabled={isPending}
-            onClick={() => setOpen(false)}
+            onClick={() => handleOpenChange(false)}
           >
             Cancel
           </Button>

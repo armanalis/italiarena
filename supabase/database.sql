@@ -263,7 +263,7 @@ begin
       q.*,
       row_number() over (
         partition by q.category
-        order by (q.id = any (v_seen)) asc, q.random_float desc, random()
+        order by (q.id = any (v_seen)) asc, random()
       ) as category_rank
     from public.questions_active q
     where q.language = p_language
@@ -283,7 +283,7 @@ begin
     where q.language = p_language
       and q.level = p_level
       and q.id not in (select id from category_picks)
-    order by (q.id = any (v_seen)) asc, q.random_float desc, random()
+    order by (q.id = any (v_seen)) asc, random()
     limit greatest(
       0,
       10 - (select count(*)::integer from category_picks)
@@ -295,7 +295,7 @@ begin
     select id from filler
     limit 10
   )
-  select coalesce(json_agg(row_to_json(q)), '[]'::json)
+  select coalesce(json_agg(row_to_json(q) order by random()), '[]'::json)
   into v_result
   from public.questions_active q
   where q.id in (select id from selected_ids);

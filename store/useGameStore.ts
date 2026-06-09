@@ -76,6 +76,7 @@ type GameStoreState = {
   tiebreakerQuestion: QuestionActive | null;
   tiebreakerUsed: boolean;
   roundReviews: MatchRoundReview[];
+  isReportDialogOpen: boolean;
 };
 
 type GameStoreActions = {
@@ -104,6 +105,7 @@ type GameStoreActions = {
   setPlaying: () => void;
   finishMatch: () => void;
   markMatchSaved: () => void;
+  setReportDialogOpen: (open: boolean) => void;
   reset: () => void;
 };
 
@@ -223,6 +225,7 @@ const initialState: GameStoreState = {
   opponent: null,
   playlist: [],
   hasHydrated: false,
+  isReportDialogOpen: false,
   ...gameplayDefaults,
 };
 
@@ -419,6 +422,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
       setPlaying: () => set({ status: "playing" }),
       finishMatch: () => set({ status: "finished", roundPhase: "match_finished" }),
       markMatchSaved: () => set({ matchSaved: true }),
+      setReportDialogOpen: (open) => set({ isReportDialogOpen: open }),
       reset: () => set({ ...initialState, hasHydrated: true }),
     }),
     {
@@ -497,6 +501,10 @@ export function usePlayerAScore() {
 
 export function usePlayerBScore() {
   return useGameStore((state) => state.playerBScore);
+}
+
+export function useMatchRoundReviews() {
+  return useGameStore((state) => state.roundReviews);
 }
 
 export function useMatchMistakes() {
