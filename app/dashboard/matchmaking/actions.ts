@@ -5,7 +5,7 @@ import { GHOST_PLAYER_ID, GHOST_PLAYER_NAME } from "@/lib/ghost";
 import { getPublicDisplayName } from "@/lib/display-name";
 import {
   REGULAR_MATCH_QUESTIONS,
-  shuffleArray,
+  buildMatchPlaylist,
   splitSessionQuestions,
 } from "@/lib/match";
 import type { QuestionActive } from "@/types/database.types";
@@ -93,28 +93,66 @@ async function resolveSessionQuestions(questionIds: string[]) {
   return regular;
 }
 
+async function markQuestionsSeen(userId: string, questionIds: string[]) {
+  if (questionIds.length === 0) {
+    return;
+  }
+
+  const supabase = await createClient();
+  await supabase.rpc("update_seen_questions", {
+    p_user_id: userId,
+    p_question_ids: questionIds,
+  });
+}
+
+async function getQuestionRotationContext(userId: string) {
+  const supabase = await createClient();
+
+  const [{ data: stats }, { data: lastSession }] = await Promise.all([
+    supabase
+      .from("player_stats")
+      .select("seen_questions")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    supabase
+      .from("game_sessions")
+      .select("question_playlist")
+      .or(`player_a_id.eq.${userId},player_b_id.eq.${userId}`)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  const seenQuestions = (stats?.seen_questions ?? []) as string[];
+  const recentPlaylist = (lastSession?.question_playlist ?? []) as string[];
+
+  return {
+    seenIds: new Set<string>(seenQuestions),
+    recentIds: new Set<string>(recentPlaylist),
+  };
+}
+
 async function generateMatchQuestions(
   userId: string,
   language: string,
   level: string
 ) {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_random_questions", {
-    p_language: language,
-    p_level: level,
-    p_user_id: userId,
-  });
+  const [{ data: pool, error: poolError }, { seenIds, recentIds }] =
+    await Promise.all([
+      supabase
+        .from("questions_active")
+        .select("*")
+        .eq("language", language)
+        .eq("level", level),
+      getQuestionRotationContext(userId),
+    ]);
 
-  if (error) {
-    if (error.message.includes("INSUFFICIENT_QUESTIONS")) {
-      throw new Error(
-        `Add at least ${REGULAR_MATCH_QUESTIONS} questions for ${language} / ${level} before playing.`
-      );
-    }
-    throw new Error(error.message);
+  if (poolError) {
+    throw new Error(poolError.message);
   }
 
-  const regular = shuffleArray((data as QuestionActive[] | null) ?? []);
+  const regular = buildMatchPlaylist(pool ?? [], recentIds, seenIds);
 
   if (regular.length < REGULAR_MATCH_QUESTIONS) {
     throw new Error(
@@ -122,9 +160,12 @@ async function generateMatchQuestions(
     );
   }
 
+  const sessionIds = regular.map((question) => question.id);
+  await markQuestionsSeen(userId, sessionIds);
+
   return {
     regular,
-    sessionIds: regular.map((question) => question.id),
+    sessionIds,
   };
 }
 
@@ -266,6 +307,7 @@ export async function searchForMatch(
 
       const questionIds = (joinedSession.question_playlist as string[]) ?? [];
       const playlist = await resolveSessionQuestions(questionIds);
+      await markQuestionsSeen(profile.id, questionIds);
 
       return {
         success: true,
