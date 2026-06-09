@@ -67,6 +67,7 @@ export function GameLoop({
     handleSelectAnswer,
     playerAAnswer,
     playerBAnswer,
+    roundResultSecondsLeft,
   } = useGameLoop({
     sessionId,
     localUserId,
@@ -153,6 +154,9 @@ export function GameLoop({
         </div>
 
         <div className="flex flex-1 flex-col items-center px-4 pb-4 sm:px-8">
+          <p className="mb-4 max-w-xl text-center text-sm text-muted-foreground">
+            Review what you missed and revisit every question to learn from this match.
+          </p>
           <MatchMistakesReview />
         </div>
 
@@ -266,13 +270,14 @@ export function GameLoop({
 
         {roundPhase === "round_result" && currentQuestion && (
           <div className="w-full max-w-xl animate-in fade-in space-y-4 duration-300 sm:space-y-6">
-            <div className="flex flex-col items-center gap-2 px-1 sm:flex-row sm:items-start sm:justify-center sm:gap-2 sm:px-2">
+            <div className="flex flex-col items-center gap-3 px-1 sm:px-2">
               <p className="text-center text-sm leading-relaxed text-muted-foreground">
                 {currentQuestion.question_text}
               </p>
               <ReportQuestionButton
                 questionId={currentQuestion.id}
                 questionText={currentQuestion.question_text}
+                showLabel
               />
             </div>
 
@@ -332,7 +337,17 @@ export function GameLoop({
             </div>
 
             <p className="text-center text-sm text-muted-foreground">
-              Next question in a moment...
+              {roundResultSecondsLeft !== null ? (
+                <>
+                  Next question in{" "}
+                  <span className="font-mono font-medium tabular-nums text-foreground">
+                    {roundResultSecondsLeft.toFixed(1)}s
+                  </span>
+                  {" — "}think the answer is wrong? Tap Report above.
+                </>
+              ) : (
+                "Next question in a moment..."
+              )}
             </p>
           </div>
         )}

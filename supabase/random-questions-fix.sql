@@ -1,5 +1,5 @@
--- Guaranteed 10-question playlists + optional tiebreaker question.
--- Run in the Supabase SQL Editor after database.sql.
+-- Fix deterministic question selection in get_random_questions.
+-- Run in the Supabase SQL Editor if matches keep serving the same questions.
 
 create or replace function public.get_random_questions(
   p_language text,
@@ -96,38 +96,3 @@ begin
   return v_result;
 end;
 $$;
-
--- Sudden-death pick: any category/topic, uniformly random (excluding main-match IDs).
-create or replace function public.get_tiebreaker_question(
-  p_language text,
-  p_level text,
-  p_user_id uuid,
-  p_exclude_ids uuid[]
-)
-returns json
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_result json;
-begin
-  if auth.uid() is distinct from p_user_id then
-    raise exception 'Unauthorized';
-  end if;
-
-  select row_to_json(q)
-  into v_result
-  from public.questions_active q
-  where q.language = p_language
-    and q.level = p_level
-    and not (q.id = any (coalesce(p_exclude_ids, '{}'::uuid[])))
-  order by random()
-  limit 1;
-
-  return v_result;
-end;
-$$;
-
-grant execute on function public.get_random_questions(text, text, uuid) to authenticated;
-grant execute on function public.get_tiebreaker_question(text, text, uuid, uuid[]) to authenticated;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchTiebreakerQuestion } from "@/app/dashboard/match/actions";
 import { createClient } from "@/utils/supabase/client";
 import { BOT_RESPONSE_TIME_MS, getBotResponseDelayMs, simulateBotAnswer } from "@/lib/bot";
@@ -12,7 +12,9 @@ import type { CorrectAnswer } from "@/types/database.types";
 import type { ProficiencyLevel } from "@/lib/constants";
 
 const TOPIC_REVEAL_MS = 750;
-const ROUND_RESULT_MS = 1500;
+/** Time on the answer reveal screen before the next question. */
+const ROUND_RESULT_MS = 2_500;
+const ROUND_RESULT_TICK_MS = 100;
 const ROUND_DURATION_SEC = 25;
 
 type AnswerLockedPayload = {
@@ -64,7 +66,11 @@ export function useGameLoop({
   const roundTimerRef = useRef<number | null>(null);
   const botTimerRef = useRef<number | null>(null);
   const resolvingRef = useRef(false);
+  const resultRemainingMsRef = useRef(0);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const [roundResultSecondsLeft, setRoundResultSecondsLeft] = useState<
+    number | null
+  >(null);
 
   const clearRoundTimers = useCallback(() => {
     if (topicTimerRef.current) {
@@ -79,7 +85,7 @@ export function useGameLoop({
 
   const clearResultTimer = useCallback(() => {
     if (resultTimerRef.current) {
-      window.clearTimeout(resultTimerRef.current);
+      window.clearInterval(resultTimerRef.current);
       resultTimerRef.current = null;
     }
   }, []);
@@ -140,19 +146,23 @@ export function useGameLoop({
 
     resolveRound();
 
-    resultTimerRef.current = window.setTimeout(() => {
+    resultRemainingMsRef.current = ROUND_RESULT_MS;
+    setRoundResultSecondsLeft(ROUND_RESULT_MS / 1000);
+
+    const advanceAfterResult = () => {
       void (async () => {
         resolvingRef.current = false;
-        const state = useGameStore.getState();
+        setRoundResultSecondsLeft(null);
+        const latest = useGameStore.getState();
         const finishedRegularRound =
-          state.currentQuestionIndex === REGULAR_MATCH_QUESTIONS - 1;
-        const isScoreTied = state.playerAScore === state.playerBScore;
+          latest.currentQuestionIndex === REGULAR_MATCH_QUESTIONS - 1;
+        const isScoreTied = latest.playerAScore === latest.playerBScore;
 
-        if (finishedRegularRound && isScoreTied && !state.tiebreakerUsed) {
+        if (finishedRegularRound && isScoreTied && !latest.tiebreakerUsed) {
           setRoundPhase("tiebreaker_loading");
 
           const result = await fetchTiebreakerQuestion(
-            state.playlist.map((question) => question.id)
+            latest.playlist.map((question) => question.id)
           );
 
           if (result.success) {
@@ -163,7 +173,31 @@ export function useGameLoop({
 
         advanceToNextRound();
       })();
-    }, ROUND_RESULT_MS);
+    };
+
+    resultTimerRef.current = window.setInterval(() => {
+      const latest = useGameStore.getState();
+
+      if (latest.roundPhase !== "round_result") {
+        clearResultTimer();
+        setRoundResultSecondsLeft(null);
+        return;
+      }
+
+      if (latest.isReportDialogOpen) {
+        return;
+      }
+
+      resultRemainingMsRef.current -= ROUND_RESULT_TICK_MS;
+      setRoundResultSecondsLeft(
+        Math.max(0, resultRemainingMsRef.current / 1000)
+      );
+
+      if (resultRemainingMsRef.current <= 0) {
+        clearResultTimer();
+        advanceAfterResult();
+      }
+    }, ROUND_RESULT_TICK_MS);
   }, [
     advanceToNextRound,
     clearTimers,
@@ -460,5 +494,6 @@ export function useGameLoop({
     handleSelectAnswer,
     playerAAnswer,
     playerBAnswer,
+    roundResultSecondsLeft,
   };
 }
