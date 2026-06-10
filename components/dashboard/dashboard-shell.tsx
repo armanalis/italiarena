@@ -10,6 +10,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { signOut } from "@/app/login/actions";
+import { GitHubLink } from "@/components/github-link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -103,6 +104,7 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
               </p>
             )}
           </div>
+          <GitHubLink showLabel className="w-full justify-start px-3" />
           <form action={signOut}>
             <Button
               type="submit"
