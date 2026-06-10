@@ -79,7 +79,10 @@ export function isAnswerCorrect(
   return selected !== null && selected === correct;
 }
 
-export function formatCategoryLabel(category: string): string {
+export function formatCategoryLabel(category: string | null | undefined): string {
+  if (!category || typeof category !== "string") {
+    return "GENERAL";
+  }
   return category.replace(/-/g, " ").toUpperCase();
 }
 

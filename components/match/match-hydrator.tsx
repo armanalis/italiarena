@@ -31,11 +31,14 @@ export function MatchHydrator({
 
     const state = useGameStore.getState();
 
-    if (
-      state.gameSessionId === sessionId &&
-      state.playlist.length > 0 &&
-      syncedSessionRef.current === sessionId
-    ) {
+    // Lobby may have already called startMatch before navigation. Never restart
+    // the same session — that wipes roundReviews, scores, and match progress.
+    if (state.gameSessionId === sessionId) {
+      syncedSessionRef.current = sessionId;
+      // After a refresh we keep session metadata in localStorage but not the playlist.
+      if (state.playlist.length === 0 && playlist.length > 0) {
+        useGameStore.setState({ playlist });
+      }
       return;
     }
 

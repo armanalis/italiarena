@@ -15,6 +15,7 @@ import {
 } from "@/store/useGameStore";
 import { formatCategoryLabel, isAnswerCorrect } from "@/lib/scoring";
 import { MatchMistakesReview } from "@/components/match/match-mistakes-review";
+import { MatchReviewBoundary } from "@/components/match/match-review-boundary";
 import { ReportQuestionButton } from "@/components/match/report-question-button";
 import { SoundVolumeControl } from "@/components/sound-volume-control";
 import type { CorrectAnswer } from "@/types/database.types";
@@ -127,11 +128,11 @@ export function GameLoop({
 
     return (
       <main className="flex min-h-0 flex-1 flex-col overflow-y-auto touch-scroll">
-        <div className="flex flex-col items-center gap-4 px-4 py-6 text-center sm:gap-5 sm:px-8 sm:py-8">
-          <div className="rounded-full border border-indigo-500/30 bg-indigo-500/10 p-5 sm:p-6">
-            <Trophy className="size-10 text-indigo-400 sm:size-12" />
+        <div className="flex flex-col items-center gap-3 px-4 py-5 text-center sm:gap-4 sm:px-8 sm:py-6">
+          <div className="rounded-full border border-indigo-500/30 bg-indigo-500/10 p-4 sm:p-5">
+            <Trophy className="size-9 text-indigo-400 sm:size-10" />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
               {isTie ? "It's a tie!" : didWin ? "You win!" : "You lose!"}
             </h1>
@@ -153,11 +154,13 @@ export function GameLoop({
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col items-center px-4 pb-4 sm:px-8">
-          <p className="mb-4 max-w-xl text-center text-sm text-muted-foreground">
-            Review what you missed and revisit every question to learn from this match.
+        <div className="flex flex-1 flex-col items-center gap-3 px-4 pb-4 sm:px-8">
+          <p className="max-w-xl text-center text-sm font-medium text-foreground">
+            Scroll down to review your mistakes and all questions from this match.
           </p>
-          <MatchMistakesReview />
+          <MatchReviewBoundary>
+            <MatchMistakesReview />
+          </MatchReviewBoundary>
         </div>
 
         <div className="sticky bottom-0 flex shrink-0 flex-col items-center gap-3 border-t border-border/60 bg-background/95 px-4 py-4 backdrop-blur-sm sm:flex-row sm:justify-center sm:px-8">

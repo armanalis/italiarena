@@ -20,10 +20,6 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
   const recoverable = isConnectionError(error);
 
   useEffect(() => {
-    useGameStore.getState().reset();
-  }, []);
-
-  useEffect(() => {
     if (!recoverable) {
       return;
     }
@@ -60,8 +56,9 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 <ShieldAlert />
                 <AlertTitle>Something went wrong</AlertTitle>
                 <AlertDescription>
-                  An unexpected error occurred. Your match progress has been
-                  cleared to prevent inconsistent state.
+                  An unexpected error occurred. Your match review is still saved
+                  in this tab until you leave — use Back to dashboard when you are
+                  ready to start fresh.
                 </AlertDescription>
               </Alert>
             )}
@@ -89,12 +86,10 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               </Button>
             </div>
 
-            {process.env.NODE_ENV === "development" && (
-              <pre className="overflow-x-auto rounded-lg border border-border/60 bg-muted/30 p-4 text-xs text-muted-foreground">
-                {error.message}
-                {error.digest ? `\nDigest: ${error.digest}` : ""}
-              </pre>
-            )}
+            <pre className="overflow-x-auto rounded-lg border border-border/60 bg-muted/30 p-4 text-xs text-muted-foreground">
+              {error.message}
+              {error.digest ? `\nDigest: ${error.digest}` : ""}
+            </pre>
           </div>
         </main>
       </body>
