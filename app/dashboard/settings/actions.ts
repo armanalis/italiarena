@@ -10,6 +10,7 @@ import {
   type TargetLanguage,
 } from "@/lib/constants";
 import type { CategoryProgress, MatchHistoryEntry } from "@/lib/types";
+import { normalizeCategoryProgress } from "@/lib/category-progress";
 import type { MatchResult, OpponentType, PlayerStats } from "@/types/database.types";
 
 export type SettingsActionResult =
@@ -235,6 +236,7 @@ export async function saveMatchResult(payload: {
   categoryProgress: CategoryProgress;
   questionIds: string[];
 }): Promise<SettingsActionResult> {
+  try {
   const supabase = await createClient();
   const {
     data: { user },
@@ -243,6 +245,8 @@ export async function saveMatchResult(payload: {
   if (!user) {
     return { success: false, error: "Not authenticated." };
   }
+
+  const categoryProgress = normalizeCategoryProgress(payload.categoryProgress);
 
   const { data: existing } = await supabase
     .from("match_history")
@@ -302,18 +306,18 @@ export async function saveMatchResult(payload: {
     matches_won: base.matches_won + won,
     matches_lost: base.matches_lost + lost,
     grammar_correct:
-      base.grammar_correct + payload.categoryProgress.grammar.correct,
-    grammar_total: base.grammar_total + payload.categoryProgress.grammar.total,
+      base.grammar_correct + categoryProgress.grammar.correct,
+    grammar_total: base.grammar_total + categoryProgress.grammar.total,
     vocab_correct:
-      base.vocab_correct + payload.categoryProgress.vocabulary.correct,
-    vocab_total: base.vocab_total + payload.categoryProgress.vocabulary.total,
+      base.vocab_correct + categoryProgress.vocabulary.correct,
+    vocab_total: base.vocab_total + categoryProgress.vocabulary.total,
     fill_blank_correct:
-      base.fill_blank_correct + payload.categoryProgress["fill-in-the-blank"].correct,
+      base.fill_blank_correct + categoryProgress["fill-in-the-blank"].correct,
     fill_blank_total:
-      base.fill_blank_total + payload.categoryProgress["fill-in-the-blank"].total,
+      base.fill_blank_total + categoryProgress["fill-in-the-blank"].total,
     idioms_correct:
-      base.idioms_correct + payload.categoryProgress.idioms.correct,
-    idioms_total: base.idioms_total + payload.categoryProgress.idioms.total,
+      base.idioms_correct + categoryProgress.idioms.correct,
+    idioms_total: base.idioms_total + categoryProgress.idioms.total,
     seen_questions: base.seen_questions,
   });
 
@@ -336,4 +340,13 @@ export async function saveMatchResult(payload: {
   revalidatePath("/dashboard/settings");
   revalidatePath("/dashboard/statistics");
   return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Could not save match result.",
+    };
+  }
 }

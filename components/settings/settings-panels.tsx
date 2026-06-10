@@ -33,7 +33,7 @@ import type { MatchHistoryEntry, UserProfile } from "@/lib/types";
 import { SoundVolumeControl } from "@/components/sound-volume-control";
 import { cn } from "@/lib/utils";
 
-const FEEDBACK_EMAIL = "support@languagequiz.app";
+const FEEDBACK_EMAIL = "armanalis1905@gmail.com";
 
 type SettingsPanelsProps = {
   profile: UserProfile;

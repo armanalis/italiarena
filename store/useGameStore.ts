@@ -1,6 +1,13 @@
+"use client";
+
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { REGULAR_MATCH_QUESTIONS } from "@/lib/match";
+import {
+  emptyCategoryProgress,
+  normalizeCategoryProgress,
+} from "@/lib/category-progress";
+import { safeLocalStorage } from "@/lib/safe-storage";
 import {
   computePoints,
   determineWinner,
@@ -116,31 +123,6 @@ const QUESTION_CATEGORIES: QuestionCategory[] = [
   "idioms",
 ];
 
-const emptyCategoryProgress = (): CategoryProgress => ({
-  grammar: { correct: 0, total: 0 },
-  vocabulary: { correct: 0, total: 0 },
-  "fill-in-the-blank": { correct: 0, total: 0 },
-  idioms: { correct: 0, total: 0 },
-});
-
-/** Ensures all category keys exist (persisted state may be partial or from older builds). */
-function normalizeCategoryProgress(
-  progress: CategoryProgress | undefined | null
-): CategoryProgress {
-  const base = emptyCategoryProgress();
-  if (!progress || typeof progress !== "object") {
-    return base;
-  }
-
-  return {
-    grammar: progress.grammar ?? base.grammar,
-    vocabulary: progress.vocabulary ?? base.vocabulary,
-    "fill-in-the-blank":
-      progress["fill-in-the-blank"] ?? base["fill-in-the-blank"],
-    idioms: progress.idioms ?? base.idioms,
-  };
-}
-
 function normalizeQuestionCategory(value: string): QuestionCategory {
   const trimmed = value.trim();
   if (QUESTION_CATEGORIES.includes(trimmed as QuestionCategory)) {
@@ -157,6 +139,21 @@ function normalizeQuestionCategory(value: string): QuestionCategory {
   }
 
   return "grammar";
+}
+
+function normalizeRoundReviews(
+  reviews: MatchRoundReview[] | undefined | null
+): MatchRoundReview[] {
+  if (!Array.isArray(reviews)) {
+    return [];
+  }
+
+  return reviews.filter(
+    (round): round is MatchRoundReview =>
+      Boolean(round) &&
+      typeof round.questionText === "string" &&
+      typeof round.questionId === "string"
+  );
 }
 
 /** Gameplay reset without wiping player identity (set by initGameplay on the match page). */
@@ -427,11 +424,13 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
     }),
     {
       name: "language-quiz-game",
-      partialize: (state) => ({
+      storage: createJSONStorage(() => safeLocalStorage),
+      // Keep persistence small — full playlists + review text can exceed localStorage
+      // quota and crash the app when the match ends.
+      partialize: (state): Partial<GameStoreState> => ({
         gameSessionId: state.gameSessionId,
         status: state.status,
         opponent: state.opponent,
-        playlist: state.playlist,
         currentQuestionIndex: state.currentQuestionIndex,
         playerAScore: state.playerAScore,
         playerBScore: state.playerBScore,
@@ -440,26 +439,16 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
         localPlayerRole: state.localPlayerRole,
         localUserId: state.localUserId,
         proficiencyLevel: state.proficiencyLevel,
-        playerAAnswer: state.playerAAnswer,
-        playerBAnswer: state.playerBAnswer,
-        playerAResponseTimes: state.playerAResponseTimes,
-        playerBResponseTimes: state.playerBResponseTimes,
-        roundStartedAt: state.roundStartedAt,
-        timeRemaining: state.timeRemaining,
-        lastRoundPointsA: state.lastRoundPointsA,
-        lastRoundPointsB: state.lastRoundPointsB,
         matchWinner: state.matchWinner,
-        categoryProgress: state.categoryProgress,
         matchSaved: state.matchSaved,
-        tiebreakerQuestion: state.tiebreakerQuestion,
         tiebreakerUsed: state.tiebreakerUsed,
-        roundReviews: state.roundReviews,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.categoryProgress = normalizeCategoryProgress(
             state.categoryProgress
           );
+          state.roundReviews = normalizeRoundReviews(state.roundReviews);
           state.setHasHydrated(true);
         }
       },
@@ -508,7 +497,6 @@ export function useMatchRoundReviews() {
 }
 
 export function useMatchMistakes() {
-  return useGameStore((state) =>
-    state.roundReviews.filter((round) => !round.wasCorrect)
-  );
+  const roundReviews = useMatchRoundReviews();
+  return roundReviews.filter((round) => !round.wasCorrect);
 }

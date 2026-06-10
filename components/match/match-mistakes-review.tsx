@@ -1,8 +1,9 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import {
   useMatchMistakes,
   useMatchRoundReviews,
@@ -19,6 +20,8 @@ const CATEGORY_ORDER: QuestionCategory[] = [
   "fill-in-the-blank",
   "idioms",
 ];
+
+type CategoryFilter = "all" | QuestionCategory;
 
 function RoundReviewCard({ round }: { round: MatchRoundReview }) {
   return (
@@ -90,11 +93,7 @@ function RoundReviewCard({ round }: { round: MatchRoundReview }) {
               : "border-border/60 bg-muted/20"
           )}
         >
-          {round.wasCorrect ? (
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-400" />
-          ) : (
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-400/80" />
-          )}
+          <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-400" />
           <div>
             <p
               className={cn(
@@ -163,10 +162,71 @@ function CategorySummary() {
   );
 }
 
+function CategoryFilterBar({
+  value,
+  onChange,
+  rounds,
+}: {
+  value: CategoryFilter;
+  onChange: (value: CategoryFilter) => void;
+  rounds: MatchRoundReview[];
+}) {
+  const categoriesInMatch = useMemo(() => {
+    const set = new Set(rounds.map((round) => round.category));
+    return CATEGORY_ORDER.filter((category) => set.has(category));
+  }, [rounds]);
+
+  if (categoriesInMatch.length <= 1) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      <button
+        type="button"
+        onClick={() => onChange("all")}
+        className={cn(
+          "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+          value === "all"
+            ? "border-indigo-500/50 bg-indigo-500/15 text-indigo-200"
+            : "border-border/60 bg-background/40 text-muted-foreground hover:text-foreground"
+        )}
+      >
+        All topics
+      </button>
+      {categoriesInMatch.map((category) => (
+        <button
+          key={category}
+          type="button"
+          onClick={() => onChange(category)}
+          className={cn(
+            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+            value === category
+              ? "border-indigo-500/50 bg-indigo-500/15 text-indigo-200"
+              : "border-border/60 bg-background/40 text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {formatCategoryLabel(category)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function filterByCategory(
+  rounds: MatchRoundReview[],
+  category: CategoryFilter
+): MatchRoundReview[] {
+  if (category === "all") {
+    return rounds;
+  }
+  return rounds.filter((round) => round.category === category);
+}
+
 function RoundList({
   rounds,
-  emptyMessage = "No mistakes",
-  emptyDescription = "You answered every question correctly this match.",
+  emptyMessage = "No mistakes in this filter",
+  emptyDescription = "Try another topic or check All questions.",
 }: {
   rounds: MatchRoundReview[];
   emptyMessage?: string;
@@ -174,10 +234,10 @@ function RoundList({
 }) {
   if (rounds.length === 0) {
     return (
-      <div className="flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-left">
-        <CheckCircle2 className="size-5 shrink-0 text-emerald-400" />
+      <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-left">
+        <CheckCircle2 className="size-5 shrink-0 text-muted-foreground" />
         <div>
-          <p className="font-medium text-emerald-100">{emptyMessage}</p>
+          <p className="font-medium text-foreground">{emptyMessage}</p>
           <p className="text-sm text-muted-foreground">{emptyDescription}</p>
         </div>
       </div>
@@ -185,7 +245,7 @@ function RoundList({
   }
 
   return (
-    <ul className="max-h-[min(50vh,28rem)] space-y-3 overflow-y-auto touch-scroll pr-1">
+    <ul className="max-h-[min(55vh,32rem)] space-y-3 overflow-y-auto touch-scroll pr-1">
       {rounds.map((round) => (
         <RoundReviewCard
           key={`${round.questionId}-${round.questionIndex}`}
@@ -196,60 +256,119 @@ function RoundList({
   );
 }
 
+type ReviewTab = "mistakes" | "all";
+
 export function MatchMistakesReview() {
   const allRounds = useMatchRoundReviews();
   const mistakes = useMatchMistakes();
+  const [activeTab, setActiveTab] = useState<ReviewTab>(
+    mistakes.length > 0 ? "mistakes" : "all"
+  );
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
 
   const regularRounds = allRounds.filter((round) => !round.isTiebreaker);
   const correctCount = regularRounds.filter((round) => round.wasCorrect).length;
   const totalRegular = regularRounds.length;
 
+  const filteredMistakes = useMemo(
+    () => filterByCategory(mistakes, categoryFilter),
+    [categoryFilter, mistakes]
+  );
+  const filteredAll = useMemo(
+    () => filterByCategory(allRounds, categoryFilter),
+    [allRounds, categoryFilter]
+  );
+
   if (allRounds.length === 0) {
-    return null;
+    return (
+      <div className="w-full max-w-xl rounded-2xl border border-border/60 bg-card/50 p-5 text-left sm:p-6">
+        <h2 className="text-base font-semibold">Match review</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Question breakdown is not available for this match. Play another round
+          and the review will appear here when the match ends.
+        </p>
+      </div>
+    );
   }
 
   return (
-    <div className="w-full max-w-xl space-y-4 text-left">
-      <div className="space-y-1 px-1">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+    <div className="w-full max-w-xl space-y-4 rounded-2xl border border-indigo-500/20 bg-card/50 p-4 text-left sm:p-5">
+      <div className="space-y-1">
+        <h2 className="text-base font-semibold tracking-tight sm:text-lg">
           Match review
         </h2>
         <p className="text-sm text-muted-foreground">
           {correctCount}/{totalRegular} correct
           {mistakes.length > 0
-            ? ` · ${mistakes.length} to practice`
+            ? ` · ${mistakes.length} mistake${mistakes.length === 1 ? "" : "s"} to review`
             : " · perfect round"}
         </p>
       </div>
 
       <CategorySummary />
 
-      <Tabs defaultValue={mistakes.length > 0 ? "mistakes" : "all"} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="mistakes">
-            Mistakes
-            {mistakes.length > 0 && (
-              <Badge variant="secondary" className="ml-1.5 tabular-nums">
-                {mistakes.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="all">
-            All questions
-            <Badge variant="outline" className="ml-1.5 tabular-nums">
-              {allRounds.length}
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          type="button"
+          variant={activeTab === "mistakes" ? "default" : "outline"}
+          className="min-h-10"
+          onClick={() => setActiveTab("mistakes")}
+        >
+          Your mistakes
+          {mistakes.length > 0 && (
+            <Badge variant="secondary" className="ml-1.5 tabular-nums">
+              {mistakes.length}
             </Badge>
-          </TabsTrigger>
-        </TabsList>
+          )}
+        </Button>
+        <Button
+          type="button"
+          variant={activeTab === "all" ? "default" : "outline"}
+          className="min-h-10"
+          onClick={() => setActiveTab("all")}
+        >
+          All questions
+          <Badge variant="outline" className="ml-1.5 tabular-nums">
+            {allRounds.length}
+          </Badge>
+        </Button>
+      </div>
 
-        <TabsContent value="mistakes" className="mt-3">
-          <RoundList rounds={mistakes} />
-        </TabsContent>
-
-        <TabsContent value="all" className="mt-3">
-          <RoundList rounds={allRounds} />
-        </TabsContent>
-      </Tabs>
+      {activeTab === "mistakes" ? (
+        <div className="space-y-3">
+          <CategoryFilterBar
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+            rounds={mistakes}
+          />
+          <RoundList
+            rounds={filteredMistakes}
+            emptyMessage={
+              mistakes.length === 0
+                ? "No mistakes"
+                : "No mistakes in this topic"
+            }
+            emptyDescription={
+              mistakes.length === 0
+                ? "You answered every question correctly this match."
+                : "Select another topic or switch to All questions."
+            }
+          />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <CategoryFilterBar
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+            rounds={allRounds}
+          />
+          <RoundList
+            rounds={filteredAll}
+            emptyMessage="No questions in this topic"
+            emptyDescription="Select another topic filter above."
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -51,12 +51,18 @@ export function MatchResultRecorder({ language, level }: MatchResultRecorderProp
       level,
       categoryProgress: state.categoryProgress,
       questionIds: state.playlist.map((question) => question.id),
-    }).then((response) => {
-      if (response.success) {
-        markMatchSaved();
-      }
-      savingRef.current = false;
-    });
+    })
+      .then((response) => {
+        if (response.success) {
+          markMatchSaved();
+        }
+      })
+      .catch(() => {
+        // saveMatchResult should always return a result; swallow stray rejections.
+      })
+      .finally(() => {
+        savingRef.current = false;
+      });
   }, [language, level, markMatchSaved, matchSaved, roundPhase]);
 
   return null;
