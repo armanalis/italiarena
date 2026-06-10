@@ -40,7 +40,11 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
   const immersive = isImmersiveRoute(pathname);
 
   if (immersive) {
-    return <div className="flex min-h-0 flex-1 flex-col">{children}</div>;
+    return (
+      <div className="flex h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px))] min-h-0 w-full flex-1 flex-col overflow-hidden">
+        {children}
+      </div>
+    );
   }
 
   return (
@@ -112,7 +116,7 @@ export function DashboardShell({ profile, children }: DashboardShellProps) {
         </div>
       </aside>
 
-      <div className="flex min-h-0 flex-1 flex-col pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] md:pb-0">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto touch-scroll pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] md:pb-0">
         {children}
       </div>
 

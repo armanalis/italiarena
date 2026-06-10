@@ -4,9 +4,10 @@ import { useState, useTransition } from "react";
 import { Loader2, Pencil, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  approveFlaggedQuestion,
-  deleteFlaggedQuestion,
-  dismissFlaggedQuestion,
+  approveReportedQuestion,
+  deleteReportedQuestion,
+  dismissReportedQuestion,
+  type AdminReviewQuestion,
   type FlaggedQuestionUpdate,
 } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
@@ -37,20 +38,26 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatCategoryLabel } from "@/lib/scoring";
-import type { CorrectAnswer, QuestionFlagged } from "@/types/database.types";
+import type { CorrectAnswer, ReportIssueType } from "@/types/database.types";
+
+const ISSUE_LABELS: Record<ReportIssueType, string> = {
+  typo: "Typo",
+  wrong_answer: "Wrong answer",
+  unnatural_phrasing: "Unnatural phrasing",
+};
 
 type FlaggedQuestionsTableProps = {
-  questions: QuestionFlagged[];
+  questions: AdminReviewQuestion[];
 };
 
 export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps) {
-  const [editingQuestion, setEditingQuestion] = useState<QuestionFlagged | null>(
+  const [editingQuestion, setEditingQuestion] = useState<AdminReviewQuestion | null>(
     null
   );
   const [form, setForm] = useState<FlaggedQuestionUpdate | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function openEditDialog(question: QuestionFlagged) {
+  function openEditDialog(question: AdminReviewQuestion) {
     setEditingQuestion(question);
     setForm({
       question_text: question.question_text,
@@ -69,7 +76,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
 
   function handleDismiss(questionId: string) {
     startTransition(async () => {
-      const result = await dismissFlaggedQuestion(questionId);
+      const result = await dismissReportedQuestion(questionId);
 
       if (result.success) {
         toast.success("Reports dismissed. Question restored to the active pool.");
@@ -82,7 +89,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
 
   function handleDelete(questionId: string) {
     startTransition(async () => {
-      const result = await deleteFlaggedQuestion(questionId);
+      const result = await deleteReportedQuestion(questionId);
 
       if (result.success) {
         toast.success("Question permanently deleted.");
@@ -110,7 +117,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
     }
 
     startTransition(async () => {
-      const result = await approveFlaggedQuestion(editingQuestion.id, form);
+      const result = await approveReportedQuestion(editingQuestion.id, form);
 
       if (result.success) {
         toast.success("Question updated and returned to the active pool.");
@@ -125,11 +132,40 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
   if (questions.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 px-6 py-16 text-center">
-        <p className="text-lg font-medium">No flagged questions</p>
+        <p className="text-lg font-medium">No reported questions</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Questions quarantined after three unique player reports will appear here.
+          Player reports appear here immediately. Questions are removed from the
+          active pool after three unique reports.
         </p>
       </div>
+    );
+  }
+
+  function renderIssueTypes(issueTypes: ReportIssueType[]) {
+    if (issueTypes.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {issueTypes.map((issueType) => (
+          <Badge key={issueType} variant="outline" className="text-[10px] uppercase">
+            {ISSUE_LABELS[issueType]}
+          </Badge>
+        ))}
+      </div>
+    );
+  }
+
+  function renderStatusBadge(question: AdminReviewQuestion) {
+    if (question.status === "quarantined") {
+      return <Badge variant="destructive">Quarantined</Badge>;
+    }
+
+    return (
+      <Badge className="border-amber-500/30 bg-amber-500/15 text-amber-200">
+        Pending review
+      </Badge>
     );
   }
 
@@ -142,13 +178,17 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
             key={question.id}
             className="rounded-xl border border-border/60 bg-card/50 p-4"
           >
-            <div className="flex items-start justify-between gap-3">
-              <Badge variant="secondary">
-                {formatCategoryLabel(question.category)}
-              </Badge>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary">
+                  {formatCategoryLabel(question.category)}
+                </Badge>
+                {renderStatusBadge(question)}
+              </div>
               <Badge variant="destructive">{question.report_count} reports</Badge>
             </div>
             <p className="mt-3 font-medium leading-snug">{question.question_text}</p>
+            {renderIssueTypes(question.issue_types)}
             <p className="mt-2 text-xs text-muted-foreground">
               {question.language} · {question.level} · Correct:{" "}
               {question.correct_answer}
@@ -198,6 +238,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
               <TableHead>Language</TableHead>
               <TableHead>Level</TableHead>
               <TableHead>Category</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Reports</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -221,6 +262,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
                       ]
                     }
                   </p>
+                  {renderIssueTypes(question.issue_types)}
                 </TableCell>
                 <TableCell>{question.language}</TableCell>
                 <TableCell>{question.level}</TableCell>
@@ -229,6 +271,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
                     {formatCategoryLabel(question.category)}
                   </Badge>
                 </TableCell>
+                <TableCell>{renderStatusBadge(question)}</TableCell>
                 <TableCell>
                   <Badge variant="destructive">{question.report_count}</Badge>
                 </TableCell>

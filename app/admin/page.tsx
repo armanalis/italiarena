@@ -1,14 +1,20 @@
 /** Admin review queue for quarantined questions. */
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
-import { getFlaggedQuestions } from "@/app/admin/actions";
+import { getAdminReviewQueue } from "@/app/admin/actions";
 import { FlaggedQuestionsTable } from "@/components/admin/flagged-questions-table";
 import { Button } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth";
 
 export default async function AdminPage() {
   await requireAdmin();
-  const flaggedQuestions = await getFlaggedQuestions();
+  const reportedQuestions = await getAdminReviewQueue();
+  const pendingCount = reportedQuestions.filter(
+    (question) => question.status === "pending"
+  ).length;
+  const quarantinedCount = reportedQuestions.filter(
+    (question) => question.status === "quarantined"
+  ).length;
 
   return (
     <main className="min-h-[calc(100dvh-3.5rem)] bg-background">
@@ -23,7 +29,8 @@ export default async function AdminPage() {
                 Admin Dashboard
               </h1>
               <p className="text-sm text-muted-foreground">
-                Review flagged questions and restore or remove them from the pool.
+                Review player reports immediately and restore, fix, or remove
+                questions from the pool.
               </p>
             </div>
           </div>
@@ -36,15 +43,21 @@ export default async function AdminPage() {
       <div className="mx-auto max-w-7xl p-4 sm:p-8">
         <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
           <div>
-            <h2 className="text-lg font-semibold">Flagged questions</h2>
+            <h2 className="text-lg font-semibold">Reported questions</h2>
             <p className="text-sm text-muted-foreground">
-              {flaggedQuestions.length} question
-              {flaggedQuestions.length === 1 ? "" : "s"} awaiting review
+              {reportedQuestions.length} report
+              {reportedQuestions.length === 1 ? "" : "s"} awaiting review
+              {reportedQuestions.length > 0 && (
+                <>
+                  {" "}
+                  · {pendingCount} pending · {quarantinedCount} quarantined
+                </>
+              )}
             </p>
           </div>
         </div>
 
-        <FlaggedQuestionsTable questions={flaggedQuestions} />
+        <FlaggedQuestionsTable questions={reportedQuestions} />
       </div>
     </main>
   );
