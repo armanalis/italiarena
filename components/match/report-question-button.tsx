@@ -29,6 +29,10 @@ type ReportQuestionButtonProps = {
   questionText: string;
   className?: string;
   showLabel?: boolean;
+  /** When false, opening the dialog does not pause the between-round timer. */
+  pauseMatchTimer?: boolean;
+  reported?: boolean;
+  onReported?: () => void;
 };
 
 export function ReportQuestionButton({
@@ -36,6 +40,9 @@ export function ReportQuestionButton({
   questionText,
   className,
   showLabel = false,
+  pauseMatchTimer = true,
+  reported = false,
+  onReported,
 }: ReportQuestionButtonProps) {
   const setReportDialogOpen = useGameStore((state) => state.setReportDialogOpen);
   const [open, setOpen] = useState(false);
@@ -55,8 +62,13 @@ export function ReportQuestionButton({
 
       if (result.success) {
         toast.success("Report logged. Thanks for the feedback!");
+        onReported?.();
         handleOpenChange(false);
         return;
+      }
+
+      if (result.error === "You already reported this question.") {
+        onReported?.();
       }
 
       toast.error(result.error);
@@ -65,10 +77,30 @@ export function ReportQuestionButton({
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
-    setReportDialogOpen(nextOpen);
+    if (pauseMatchTimer) {
+      setReportDialogOpen(nextOpen);
+    }
     if (!nextOpen) {
       setSelectedIssue(null);
     }
+  }
+
+  if (reported) {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled
+        className={cn(
+          "shrink-0 gap-1.5 border-emerald-500/30 text-emerald-400/80",
+          className
+        )}
+      >
+        <Flag className="size-4" />
+        {showLabel ? "Reported" : null}
+      </Button>
+    );
   }
 
   return (

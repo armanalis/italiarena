@@ -127,8 +127,8 @@ export function GameLoop({
     const isTie = matchWinner === "tie";
 
     return (
-      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto touch-scroll">
-        <div className="flex flex-col items-center gap-3 px-4 py-5 text-center sm:gap-4 sm:px-8 sm:py-6">
+      <main className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain touch-scroll">
+        <div className="flex shrink-0 flex-col items-center gap-3 px-4 py-5 text-center sm:gap-4 sm:px-8 sm:py-6">
           <div className="rounded-full border border-indigo-500/30 bg-indigo-500/10 p-4 sm:p-5">
             <Trophy className="size-9 text-indigo-400 sm:size-10" />
           </div>
@@ -154,26 +154,26 @@ export function GameLoop({
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col items-center gap-3 px-4 pb-4 sm:px-8">
+        <div className="flex flex-col items-center gap-6 px-4 pb-10 sm:px-8 sm:pb-12">
           <p className="max-w-xl text-center text-sm font-medium text-foreground">
             Scroll down to review your mistakes and all questions from this match.
           </p>
           <MatchReviewBoundary>
             <MatchMistakesReview />
           </MatchReviewBoundary>
-        </div>
 
-        <div className="sticky bottom-0 flex shrink-0 flex-col items-center gap-3 border-t border-border/60 bg-background/95 px-4 py-4 backdrop-blur-sm sm:flex-row sm:justify-center sm:px-8">
-          <Button asChild variant="outline" className="min-h-11 w-full sm:w-auto">
-            <Link href="/dashboard" onClick={() => reset()}>
-              Back to dashboard
-            </Link>
-          </Button>
-          <Button asChild className="min-h-11 w-full sm:w-auto">
-            <Link href="/dashboard/matchmaking" onClick={() => reset()}>
-              Play again
-            </Link>
-          </Button>
+          <div className="flex w-full max-w-xl flex-col items-center gap-3 border-t border-border/60 pt-6 sm:flex-row sm:justify-center">
+            <Button asChild variant="outline" className="min-h-11 w-full sm:w-auto">
+              <Link href="/dashboard" onClick={() => reset()}>
+                Back to dashboard
+              </Link>
+            </Button>
+            <Button asChild className="min-h-11 w-full sm:w-auto">
+              <Link href="/dashboard/matchmaking" onClick={() => reset()}>
+                Play again
+              </Link>
+            </Button>
+          </div>
         </div>
       </main>
     );

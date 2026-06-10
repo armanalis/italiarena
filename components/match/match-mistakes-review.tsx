@@ -10,6 +10,7 @@ import {
   useGameStore,
   type MatchRoundReview,
 } from "@/store/useGameStore";
+import { ReportQuestionButton } from "@/components/match/report-question-button";
 import { formatCategoryLabel } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
 import type { QuestionCategory } from "@/types/database.types";
@@ -23,7 +24,15 @@ const CATEGORY_ORDER: QuestionCategory[] = [
 
 type CategoryFilter = "all" | QuestionCategory;
 
-function RoundReviewCard({ round }: { round: MatchRoundReview }) {
+function RoundReviewCard({
+  round,
+  reported,
+  onReported,
+}: {
+  round: MatchRoundReview;
+  reported: boolean;
+  onReported: () => void;
+}) {
   return (
     <li
       className={cn(
@@ -116,6 +125,17 @@ function RoundReviewCard({ round }: { round: MatchRoundReview }) {
             </p>
           </div>
         </div>
+      </div>
+
+      <div className="mt-3 flex items-center justify-end border-t border-border/40 pt-3">
+        <ReportQuestionButton
+          questionId={round.questionId}
+          questionText={round.questionText}
+          showLabel
+          pauseMatchTimer={false}
+          reported={reported}
+          onReported={onReported}
+        />
       </div>
     </li>
   );
@@ -225,10 +245,14 @@ function filterByCategory(
 
 function RoundList({
   rounds,
+  reportedQuestionIds,
+  onQuestionReported,
   emptyMessage = "No mistakes in this filter",
   emptyDescription = "Try another topic or check All questions.",
 }: {
   rounds: MatchRoundReview[];
+  reportedQuestionIds: Set<string>;
+  onQuestionReported: (questionId: string) => void;
   emptyMessage?: string;
   emptyDescription?: string;
 }) {
@@ -245,11 +269,13 @@ function RoundList({
   }
 
   return (
-    <ul className="max-h-[min(55vh,32rem)] space-y-3 overflow-y-auto touch-scroll pr-1">
+    <ul className="space-y-3 pr-1">
       {rounds.map((round) => (
         <RoundReviewCard
           key={`${round.questionId}-${round.questionIndex}`}
           round={round}
+          reported={reportedQuestionIds.has(round.questionId)}
+          onReported={() => onQuestionReported(round.questionId)}
         />
       ))}
     </ul>
@@ -265,6 +291,13 @@ export function MatchMistakesReview() {
     mistakes.length > 0 ? "mistakes" : "all"
   );
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
+  const [reportedQuestionIds, setReportedQuestionIds] = useState<Set<string>>(
+    () => new Set()
+  );
+
+  function markQuestionReported(questionId: string) {
+    setReportedQuestionIds((current) => new Set(current).add(questionId));
+  }
 
   const regularRounds = allRounds.filter((round) => !round.isTiebreaker);
   const correctCount = regularRounds.filter((round) => round.wasCorrect).length;
@@ -302,6 +335,7 @@ export function MatchMistakesReview() {
           {mistakes.length > 0
             ? ` · ${mistakes.length} mistake${mistakes.length === 1 ? "" : "s"} to review`
             : " · perfect round"}
+          {" · "}use Report on any question to flag it for admin review
         </p>
       </div>
 
@@ -343,6 +377,8 @@ export function MatchMistakesReview() {
           />
           <RoundList
             rounds={filteredMistakes}
+            reportedQuestionIds={reportedQuestionIds}
+            onQuestionReported={markQuestionReported}
             emptyMessage={
               mistakes.length === 0
                 ? "No mistakes"
@@ -364,6 +400,8 @@ export function MatchMistakesReview() {
           />
           <RoundList
             rounds={filteredAll}
+            reportedQuestionIds={reportedQuestionIds}
+            onQuestionReported={markQuestionReported}
             emptyMessage="No questions in this topic"
             emptyDescription="Select another topic filter above."
           />

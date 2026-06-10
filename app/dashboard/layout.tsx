@@ -10,7 +10,7 @@ export default async function DashboardLayout({
   const profile = await requireOnboardingComplete();
 
   return (
-    <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col bg-background md:flex-row">
+    <div className="flex h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px))] min-h-0 flex-col overflow-hidden bg-background md:flex-row">
       <DashboardShell profile={profile}>{children}</DashboardShell>
     </div>
   );

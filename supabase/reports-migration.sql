@@ -93,6 +93,24 @@ create policy "Admins can delete active questions"
     )
   );
 
+drop policy if exists "Admins can update active questions" on public.questions_active;
+create policy "Admins can update active questions"
+  on public.questions_active
+  for update
+  to authenticated
+  using (
+    exists (
+      select 1 from public.users
+      where id = auth.uid() and role = 'admin'
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.users
+      where id = auth.uid() and role = 'admin'
+    )
+  );
+
 drop policy if exists "Admins can update flagged questions" on public.questions_flagged;
 create policy "Admins can update flagged questions"
   on public.questions_flagged
