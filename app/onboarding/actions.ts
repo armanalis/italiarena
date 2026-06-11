@@ -16,6 +16,7 @@ import { createClient } from "@/utils/supabase/server";
 
 export type OnboardingFormState = {
   error: string | null;
+  redirectTo?: string | null;
 };
 
 export async function saveOnboarding(
@@ -80,7 +81,7 @@ export async function saveOnboarding(
   revalidatePath("/dashboard");
   revalidatePath("/onboarding");
 
-  return { error: null };
+  return { error: null, redirectTo: "/dashboard" };
 }
 
 /** useFormState-compatible wrapper */

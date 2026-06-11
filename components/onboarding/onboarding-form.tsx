@@ -1,12 +1,16 @@
 /** Language and level picker shown to new users before their first match. */
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import { GraduationCap, UserRound } from "lucide-react";
-import { saveOnboarding } from "@/app/onboarding/actions";
+import {
+  completeOnboarding,
+  type OnboardingFormState,
+} from "@/app/onboarding/actions";
 import { signOut } from "@/app/login/actions";
 import { PROFICIENCY_LEVELS, TARGET_LANGUAGE } from "@/lib/constants";
+import { useActionRedirect } from "@/hooks/use-action-redirect";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -15,28 +19,25 @@ type OnboardingFormProps = {
   defaultUsername?: string | null;
 };
 
+const initialState: OnboardingFormState = { error: null };
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button
+      type="submit"
+      disabled={pending}
+      className="h-11 w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-base font-semibold shadow-lg shadow-indigo-500/25 hover:from-indigo-500 hover:to-violet-500 dark:shadow-indigo-950/50"
+    >
+      {pending ? "Saving..." : "Continue to Dashboard"}
+    </Button>
+  );
+}
+
 export function OnboardingForm({ defaultUsername = "" }: OnboardingFormProps) {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-
-    setError(null);
-    startTransition(async () => {
-      const result = await saveOnboarding(formData);
-
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-
-      router.push("/dashboard");
-      router.refresh();
-    });
-  }
+  const [state, formAction] = useActionState(completeOnboarding, initialState);
+  useActionRedirect(state?.redirectTo);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/80 shadow-2xl shadow-indigo-500/10 backdrop-blur-xl dark:border-white/10 dark:bg-card/60 dark:shadow-indigo-950/40">
@@ -52,7 +53,7 @@ export function OnboardingForm({ defaultUsername = "" }: OnboardingFormProps) {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6 px-5 py-6 sm:px-8 sm:py-7">
+      <form action={formAction} className="space-y-6 px-5 py-6 sm:px-8 sm:py-7">
         <input type="hidden" name="target_language" value={TARGET_LANGUAGE} />
 
         <div className="space-y-2">
@@ -102,22 +103,16 @@ export function OnboardingForm({ defaultUsername = "" }: OnboardingFormProps) {
           </select>
         </div>
 
-        {error && (
+        {state?.error && (
           <div
             className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
             role="alert"
           >
-            {error}
+            {state.error}
           </div>
         )}
 
-        <Button
-          type="submit"
-          disabled={isPending}
-          className="h-11 w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-base font-semibold shadow-lg shadow-indigo-500/25 hover:from-indigo-500 hover:to-violet-500 dark:shadow-indigo-950/50"
-        >
-          {isPending ? "Saving..." : "Continue to Dashboard"}
-        </Button>
+        <SubmitButton />
       </form>
 
       <form action={signOut} className="border-t border-border/60 px-5 py-4 text-center sm:px-8">

@@ -3,6 +3,7 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { useActionRedirect } from "@/hooks/use-action-redirect";
 import { ArrowLeft, Languages, Lock, Mail, Sparkles, UserRound } from "lucide-react";
 import {
   requestPasswordReset,
@@ -67,6 +68,14 @@ export function LoginForm() {
       ? signUpAction
       : forgotAction;
 
+  useActionRedirect(
+    isSignIn
+      ? signInState?.redirectTo
+      : isSignUp
+        ? signUpState?.redirectTo
+        : null
+  );
+
   return (
     <div className="w-full max-w-[420px]">
       <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/80 shadow-2xl shadow-indigo-500/10 backdrop-blur-xl dark:border-white/10 dark:bg-card/60 dark:shadow-indigo-950/40">
@@ -130,7 +139,7 @@ export function LoginForm() {
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
                   <span className="bg-card px-2 text-muted-foreground dark:bg-card/60">
-                    or continue with email / username
+                    {isSignUp ? "or continue with email" : "or continue with email / username"}
                   </span>
                 </div>
               </div>
@@ -161,29 +170,31 @@ export function LoginForm() {
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor={isForgot ? "auth-email" : "auth-login"}>
-                {isForgot ? "Email" : "Email or username"}
-              </Label>
-              <div className="relative">
-                {isForgot ? (
-                  <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                ) : (
-                  <UserRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                )}
-                <Input
-                  id={isForgot ? "auth-email" : "auth-login"}
-                  name={isForgot ? "email" : "login"}
-                  type={isForgot ? "email" : "text"}
-                  placeholder={
-                    isForgot ? "you@example.com" : "you@example.com or yourname"
-                  }
-                  required
-                  autoComplete={isForgot ? "email" : "username"}
-                  className="h-11 pl-10 dark:bg-white/5"
-                />
+            {(isForgot || isSignIn) && (
+              <div className="space-y-2">
+                <Label htmlFor={isForgot ? "auth-email" : "auth-login"}>
+                  {isForgot ? "Email" : "Email or username"}
+                </Label>
+                <div className="relative">
+                  {isForgot ? (
+                    <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  ) : (
+                    <UserRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  )}
+                  <Input
+                    id={isForgot ? "auth-email" : "auth-login"}
+                    name={isForgot ? "email" : "login"}
+                    type={isForgot ? "email" : "text"}
+                    placeholder={
+                      isForgot ? "you@example.com" : "you@example.com or yourname"
+                    }
+                    required
+                    autoComplete={isForgot ? "email" : "username"}
+                    className="h-11 pl-10 dark:bg-white/5"
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {isSignUp && (
               <div className="space-y-2">
@@ -233,21 +244,21 @@ export function LoginForm() {
               </div>
             )}
 
-            {state.error && (
+            {state?.error && (
               <div
                 className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
                 role="alert"
               >
-                {state.error}
+                {state?.error}
               </div>
             )}
 
-            {state.success && (
+            {state?.success && (
               <div
                 className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-600 dark:text-emerald-400"
                 role="status"
               >
-                {state.success}
+                {state?.success}
               </div>
             )}
 

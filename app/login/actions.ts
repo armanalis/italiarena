@@ -15,6 +15,7 @@ import { createClient } from "@/utils/supabase/server";
 export type AuthFormState = {
   error: string | null;
   success?: string | null;
+  redirectTo?: string | null;
 };
 
 function getSiteUrl() {
@@ -47,7 +48,7 @@ export async function signIn(
     return { error: error.message };
   }
 
-  redirect(await getPostAuthPath());
+  return { error: null, redirectTo: await getPostAuthPath() };
 }
 
 export async function signUp(
@@ -93,7 +94,7 @@ export async function signUp(
     }
   }
 
-  redirect(await getPostAuthPath());
+  return { error: null, redirectTo: await getPostAuthPath() };
 }
 
 export async function requestPasswordReset(
@@ -185,7 +186,7 @@ export async function resetPassword(
     return { error: error.message, success: null };
   }
 
-  redirect(await getPostAuthPath());
+  return { error: null, success: null, redirectTo: await getPostAuthPath() };
 }
 
 export async function signOut() {

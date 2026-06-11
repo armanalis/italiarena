@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { BookOpen, ClipboardList, Target, TrendingUp } from "lucide-react";
 import type { UserMistakeWithQuestion } from "@/app/dashboard/statistics/actions";
 import { MistakePracticeSession } from "@/components/statistics/mistake-practice-session";
@@ -57,7 +56,6 @@ export function StatisticsDashboard({
   stats,
   mistakes: initialMistakes,
 }: StatisticsDashboardProps) {
-  const router = useRouter();
   const [mistakes, setMistakes] = useState(initialMistakes);
   const [showMistakes, setShowMistakes] = useState(false);
   const [practiceMode, setPracticeMode] = useState(false);
@@ -113,7 +111,6 @@ export function StatisticsDashboard({
           onMistakesChange={setMistakes}
           onClose={() => {
             setPracticeMode(false);
-            router.refresh();
           }}
         />
       </main>

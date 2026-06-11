@@ -1,14 +1,21 @@
 /** Admin review queue for quarantined questions. */
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
-import { getAdminReviewQueue } from "@/app/admin/actions";
+import {
+  getAdminReviewQueue,
+  getPendingQuestionSubmissions,
+} from "@/app/admin/actions";
 import { FlaggedQuestionsTable } from "@/components/admin/flagged-questions-table";
+import { QuestionSubmissionsTable } from "@/components/admin/question-submissions-table";
 import { Button } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth";
 
 export default async function AdminPage() {
   await requireAdmin();
-  const reportedQuestions = await getAdminReviewQueue();
+  const [reportedQuestions, pendingSubmissions] = await Promise.all([
+    getAdminReviewQueue(),
+    getPendingQuestionSubmissions(),
+  ]);
   const pendingCount = reportedQuestions.filter(
     (question) => question.status === "pending"
   ).length;
@@ -29,8 +36,8 @@ export default async function AdminPage() {
                 Admin Dashboard
               </h1>
               <p className="text-sm text-muted-foreground">
-                Review player reports immediately and restore, fix, or remove
-                questions from the pool.
+                Review community submissions and player reports before questions
+                enter or return to the live pool.
               </p>
             </div>
           </div>
@@ -40,7 +47,22 @@ export default async function AdminPage() {
         </div>
       </header>
 
-      <div className="w-full p-4 sm:p-8 lg:px-10 xl:px-12">
+      <div className="w-full space-y-10 p-4 sm:p-8 lg:px-10 xl:px-12">
+        <section>
+          <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
+            <div>
+              <h2 className="text-lg font-semibold">Community submissions</h2>
+              <p className="text-sm text-muted-foreground">
+                {pendingSubmissions.length} question
+                {pendingSubmissions.length === 1 ? "" : "s"} waiting for approval
+              </p>
+            </div>
+          </div>
+
+          <QuestionSubmissionsTable submissions={pendingSubmissions} />
+        </section>
+
+        <section>
         <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
           <div>
             <h2 className="text-lg font-semibold">Reported questions</h2>
@@ -58,6 +80,7 @@ export default async function AdminPage() {
         </div>
 
         <FlaggedQuestionsTable questions={reportedQuestions} />
+        </section>
       </div>
     </main>
   );

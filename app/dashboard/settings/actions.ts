@@ -25,7 +25,7 @@ import type {
 } from "@/types/database.types";
 
 export type SettingsActionResult =
-  | { success: true }
+  | { success: true; redirectTo?: string }
   | { success: false; error: string };
 
 function isProficiencyLevel(value: string): value is ProficiencyLevel {
@@ -217,7 +217,7 @@ export async function deleteAccount(formData: FormData): Promise<SettingsActionR
   }
 
   await supabase.auth.signOut();
-  redirect("/login");
+  return { success: true, redirectTo: "/login" };
 }
 
 export async function getPlayerStatistics(): Promise<PlayerStats | null> {
