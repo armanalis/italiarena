@@ -94,6 +94,20 @@ export function GameLoop({
     );
   }
 
+  if (roundPhase === "waiting" && !isBotMatch) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+        <Loader2 className="size-10 animate-spin text-indigo-400" />
+        <div className="space-y-1">
+          <p className="text-lg font-semibold">Preparing match</p>
+          <p className="text-sm text-muted-foreground">
+            Syncing questions with your opponent...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (roundPhase === "tiebreaker_loading") {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">

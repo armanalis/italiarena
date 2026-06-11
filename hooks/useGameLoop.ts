@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchTiebreakerQuestion } from "@/app/dashboard/match/actions";
+import { updateMatchSyncState } from "@/app/dashboard/match/sync-actions";
 import { getMatchSession } from "@/app/dashboard/matchmaking/actions";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -12,9 +13,11 @@ import {
 import { pulseCountdownHaptic } from "@/lib/haptics";
 import {
   isMatchSyncPayload,
+  isMatchSyncState,
   MATCH_SYNC_EVENT,
   playlistIdsSignature,
   type MatchSyncPayload,
+  type MatchSyncState,
 } from "@/lib/match-sync";
 import { useGameAudio } from "@/hooks/useGameAudio";
 import { useGameStore } from "@/store/useGameStore";
@@ -88,7 +91,9 @@ export function useGameLoop({
   const pendingBroadcastsRef = useRef<AnswerLockedPayload[]>([]);
   const peerReadyRef = useRef({ a: isBotMatch, b: isBotMatch });
   const matchSyncStartedRef = useRef(isBotMatch);
-  const applyingSyncRef = useRef(false);
+  const syncQueueRef = useRef<MatchSyncPayload[]>([]);
+  const processingSyncQueueRef = useRef(false);
+  const lastAppliedSyncAtRef = useRef(0);
   const matchStartFallbackRef = useRef<number | null>(null);
   const syncRequestIntervalRef = useRef<number | null>(null);
   const syncPulseIntervalRef = useRef<number | null>(null);
@@ -154,6 +159,16 @@ export function useGameLoop({
     return playlistIdsSignature(useGameStore.getState().playlist);
   }, []);
 
+  const loadServerPlaylist = useCallback(async () => {
+    const result = await getMatchSession(sessionId);
+    if (!result.success || result.data.playlist.length === 0) {
+      return result;
+    }
+
+    useGameStore.setState({ playlist: result.data.playlist });
+    return result;
+  }, [sessionId]);
+
   const ensurePlaylistAligned = useCallback(
     async (expectedSig: string) => {
       const state = useGameStore.getState();
@@ -163,16 +178,34 @@ export function useGameLoop({
         return true;
       }
 
-      const result = await getMatchSession(sessionId);
+      const result = await loadServerPlaylist();
       if (!result.success || result.data.playlist.length === 0) {
         return false;
       }
 
-      useGameStore.setState({ playlist: result.data.playlist });
-      // Server playlist is authoritative — proceed even if the leader sent a stale signature.
       return true;
     },
-    [sessionId]
+    [loadServerPlaylist]
+  );
+
+  const persistLeaderSync = useCallback(
+    (
+      phase: MatchSyncState["phase"],
+      questionIndex: number,
+      roundStartedAt: number | null = null
+    ) => {
+      if (!isSyncLeader || isBotMatch) {
+        return;
+      }
+
+      void updateMatchSyncState(sessionId, {
+        questionIndex,
+        phase,
+        roundStartedAt,
+        playlistSig: getPlaylistSig(),
+      });
+    },
+    [getPlaylistSig, isBotMatch, isSyncLeader, sessionId]
   );
 
   const flushPendingBroadcasts = useCallback(() => {
@@ -424,6 +457,7 @@ export function useGameLoop({
           startedAt,
           playlistSig: getPlaylistSig(),
         });
+        persistLeaderSync("playing", questionIndex, startedAt);
         startSyncPulse();
       }
     },
@@ -432,6 +466,7 @@ export function useGameLoop({
       broadcastSync,
       getPlaylistSig,
       isSyncLeader,
+      persistLeaderSync,
       scheduleBotAnswer,
       startRoundTimer,
       startSyncPulse,
@@ -468,6 +503,7 @@ export function useGameLoop({
           at: Date.now(),
           playlistSig: getPlaylistSig(),
         });
+        persistLeaderSync("topic_reveal", questionIndex, null);
         startSyncPulse();
       }
 
@@ -487,6 +523,7 @@ export function useGameLoop({
       getPlaylistSig,
       isBotMatch,
       isSyncLeader,
+      persistLeaderSync,
       play,
       startSyncPulse,
     ]
@@ -569,89 +606,166 @@ export function useGameLoop({
     }
   }, [broadcastSync, isBotMatch, isSyncLeader, startSyncPulse]);
 
-  const handleSyncPayload = useCallback(
-    async (payload: MatchSyncPayload) => {
-      if (isBotMatch || applyingSyncRef.current) {
+  const applyMatchSyncState = useCallback(
+    async (syncState: MatchSyncState) => {
+      if (isBotMatch || isSyncLeader) {
         return;
       }
 
-      applyingSyncRef.current = true;
+      const updatedAt = syncState.updatedAt ?? 0;
+      if (updatedAt > 0 && updatedAt <= lastAppliedSyncAtRef.current) {
+        return;
+      }
 
-      try {
+      const aligned = await ensurePlaylistAligned(syncState.playlistSig);
+      if (!aligned) {
+        return;
+      }
+
+      if (updatedAt > 0) {
+        lastAppliedSyncAtRef.current = updatedAt;
+      }
+
+      const live = useGameStore.getState();
+
+      if (syncState.phase === "match_finished") {
+        clearSyncRequestInterval();
+        clearTimers();
+        setRoundPhase("match_finished");
+        return;
+      }
+
+      if (syncState.phase === "playing" && syncState.roundStartedAt) {
         if (
-          payload.type === "topic_reveal" ||
-          payload.type === "round_playing" ||
-          payload.type === "tiebreaker"
+          live.roundPhase === "playing" &&
+          live.currentQuestionIndex === syncState.questionIndex &&
+          live.roundStartedAt === syncState.roundStartedAt
         ) {
-          const aligned = await ensurePlaylistAligned(payload.playlistSig);
-          if (!aligned) {
-            return;
-          }
+          return;
         }
 
-        switch (payload.type) {
-          case "peer_ready":
-            peerReadyRef.current[payload.playerRole] = true;
-            maybeStartSyncedMatch();
-            break;
-          case "request_sync":
-            if (isSyncLeader) {
-              if (!matchSyncStartedRef.current) {
-                maybeStartSyncedMatch();
-              } else {
-                rebroadcastCurrentState();
-              }
-            }
-            break;
-          case "topic_reveal": {
-            const live = useGameStore.getState();
-            if (live.roundPhase === "playing") {
-              break;
-            }
-            if (
-              live.roundPhase === "topic_reveal" &&
-              live.currentQuestionIndex === payload.questionIndex
-            ) {
-              break;
-            }
-            if (
-              live.roundPhase === "round_result" &&
-              payload.questionIndex <= live.currentQuestionIndex
-            ) {
-              break;
-            }
-            startTopicReveal(payload.questionIndex, true);
-            break;
-          }
-          case "round_playing": {
-            clearRoundTimers();
-            clearResultTimer();
-            setRoundResultSecondsLeft(null);
-            resolvingRef.current = false;
-            const live = useGameStore.getState();
-            if (
-              live.roundPhase === "playing" &&
-              live.currentQuestionIndex === payload.questionIndex &&
-              live.roundStartedAt === payload.startedAt
-            ) {
-              break;
-            }
-            beginRoundPlaying(payload.questionIndex, payload.startedAt, true);
-            break;
-          }
-          case "tiebreaker":
-            startTiebreakerRound(payload.question);
-            break;
-          case "match_finished":
-            clearSyncRequestInterval();
-            clearTimers();
-            setRoundPhase("match_finished");
-            break;
-          default:
-            break;
+        clearRoundTimers();
+        clearResultTimer();
+        setRoundResultSecondsLeft(null);
+        resolvingRef.current = false;
+        beginRoundPlaying(
+          syncState.questionIndex,
+          syncState.roundStartedAt,
+          true
+        );
+        return;
+      }
+
+      if (syncState.phase === "topic_reveal") {
+        if (live.roundPhase === "playing") {
+          return;
         }
-      } finally {
-        applyingSyncRef.current = false;
+        if (
+          live.roundPhase === "topic_reveal" &&
+          live.currentQuestionIndex === syncState.questionIndex
+        ) {
+          return;
+        }
+        if (
+          live.roundPhase === "round_result" &&
+          syncState.questionIndex <= live.currentQuestionIndex
+        ) {
+          return;
+        }
+        startTopicReveal(syncState.questionIndex, true);
+      }
+    },
+    [
+      beginRoundPlaying,
+      clearResultTimer,
+      clearRoundTimers,
+      clearSyncRequestInterval,
+      clearTimers,
+      ensurePlaylistAligned,
+      isBotMatch,
+      isSyncLeader,
+      setRoundPhase,
+      startTopicReveal,
+    ]
+  );
+
+  const processSyncPayload = useCallback(
+    async (payload: MatchSyncPayload) => {
+      if (isBotMatch) {
+        return;
+      }
+
+      if (
+        payload.type === "topic_reveal" ||
+        payload.type === "round_playing" ||
+        payload.type === "tiebreaker"
+      ) {
+        const aligned = await ensurePlaylistAligned(payload.playlistSig);
+        if (!aligned) {
+          return;
+        }
+      }
+
+      switch (payload.type) {
+        case "peer_ready":
+          peerReadyRef.current[payload.playerRole] = true;
+          maybeStartSyncedMatch();
+          break;
+        case "request_sync":
+          if (isSyncLeader) {
+            if (!matchSyncStartedRef.current) {
+              maybeStartSyncedMatch();
+            } else {
+              rebroadcastCurrentState();
+            }
+          }
+          break;
+        case "topic_reveal": {
+          const live = useGameStore.getState();
+          if (live.roundPhase === "playing") {
+            break;
+          }
+          if (
+            live.roundPhase === "topic_reveal" &&
+            live.currentQuestionIndex === payload.questionIndex
+          ) {
+            break;
+          }
+          if (
+            live.roundPhase === "round_result" &&
+            payload.questionIndex <= live.currentQuestionIndex
+          ) {
+            break;
+          }
+          startTopicReveal(payload.questionIndex, true);
+          break;
+        }
+        case "round_playing": {
+          clearRoundTimers();
+          clearResultTimer();
+          setRoundResultSecondsLeft(null);
+          resolvingRef.current = false;
+          const live = useGameStore.getState();
+          if (
+            live.roundPhase === "playing" &&
+            live.currentQuestionIndex === payload.questionIndex &&
+            live.roundStartedAt === payload.startedAt
+          ) {
+            break;
+          }
+          beginRoundPlaying(payload.questionIndex, payload.startedAt, true);
+          break;
+        }
+        case "tiebreaker":
+          startTiebreakerRound(payload.question);
+          break;
+        case "match_finished":
+          clearSyncRequestInterval();
+          clearTimers();
+          setRoundPhase("match_finished");
+          break;
+        default:
+          break;
       }
     },
     [
@@ -669,6 +783,37 @@ export function useGameLoop({
       startTiebreakerRound,
       startTopicReveal,
     ]
+  );
+
+  const drainSyncQueue = useCallback(async () => {
+    if (processingSyncQueueRef.current) {
+      return;
+    }
+
+    processingSyncQueueRef.current = true;
+
+    try {
+      while (syncQueueRef.current.length > 0) {
+        const payload = syncQueueRef.current.shift();
+        if (payload) {
+          await processSyncPayload(payload);
+        }
+      }
+    } finally {
+      processingSyncQueueRef.current = false;
+    }
+  }, [processSyncPayload]);
+
+  const enqueueSyncPayload = useCallback(
+    (payload: MatchSyncPayload) => {
+      if (isBotMatch) {
+        return;
+      }
+
+      syncQueueRef.current.push(payload);
+      void drainSyncQueue();
+    },
+    [drainSyncQueue, isBotMatch]
   );
 
   const finalizeRound = useCallback(() => {
@@ -697,6 +842,10 @@ export function useGameLoop({
     }
 
     resolveRound();
+
+    if (!isBotMatch && isSyncLeader) {
+      persistLeaderSync("round_result", currentQuestionIndex, null);
+    }
 
     resultRemainingMsRef.current = ROUND_RESULT_MS;
     setRoundResultSecondsLeft(ROUND_RESULT_MS / 1000);
@@ -749,6 +898,11 @@ export function useGameLoop({
         const afterAdvance = useGameStore.getState();
         if (afterAdvance.roundPhase === "match_finished") {
           broadcastSync({ type: "match_finished" });
+          persistLeaderSync(
+            "match_finished",
+            afterAdvance.currentQuestionIndex,
+            null
+          );
           return;
         }
 
@@ -787,6 +941,7 @@ export function useGameLoop({
     currentQuestionIndex,
     isBotMatch,
     isSyncLeader,
+    persistLeaderSync,
     play,
     resolveRound,
     setRoundPhase,
@@ -797,8 +952,11 @@ export function useGameLoop({
   const finalizeRoundRef = useRef(finalizeRound);
   finalizeRoundRef.current = finalizeRound;
 
-  const handleSyncPayloadRef = useRef(handleSyncPayload);
-  handleSyncPayloadRef.current = handleSyncPayload;
+  const applyMatchSyncStateRef = useRef(applyMatchSyncState);
+  applyMatchSyncStateRef.current = applyMatchSyncState;
+
+  const enqueueSyncPayloadRef = useRef(enqueueSyncPayload);
+  enqueueSyncPayloadRef.current = enqueueSyncPayload;
 
   const maybeStartSyncedMatchRef = useRef(maybeStartSyncedMatch);
   maybeStartSyncedMatchRef.current = maybeStartSyncedMatch;
@@ -863,6 +1021,58 @@ export function useGameLoop({
 
   useEffect(() => {
     if (isBotMatch) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      const result = await loadServerPlaylist();
+      if (cancelled || !result.success) {
+        return;
+      }
+
+      if (!isSyncLeader && result.data.matchSync) {
+        await applyMatchSyncStateRef.current(result.data.matchSync);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isBotMatch, isSyncLeader, loadServerPlaylist, sessionId]);
+
+  useEffect(() => {
+    if (isBotMatch || isSyncLeader) {
+      return;
+    }
+
+    const dbChannel = supabase
+      .channel(`match-sync-db-${sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "game_sessions",
+          filter: `id=eq.${sessionId}`,
+        },
+        (payload) => {
+          const matchSync = (payload.new as { match_sync?: unknown }).match_sync;
+          if (isMatchSyncState(matchSync)) {
+            void applyMatchSyncStateRef.current(matchSync);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(dbChannel);
+    };
+  }, [isBotMatch, isSyncLeader, sessionId, supabase]);
+
+  useEffect(() => {
+    if (isBotMatch) {
       channelReadyRef.current = true;
       setChannelReady(true);
       return;
@@ -917,7 +1127,7 @@ export function useGameLoop({
       })
       .on("broadcast", { event: MATCH_SYNC_EVENT }, ({ payload }) => {
         if (isMatchSyncPayload(payload)) {
-          handleSyncPayloadRef.current(payload);
+          enqueueSyncPayloadRef.current(payload);
         }
       })
       .subscribe(async (status) => {
@@ -956,6 +1166,11 @@ export function useGameLoop({
                 return;
               }
               broadcastSyncRef.current({ type: "request_sync" });
+              void loadServerPlaylist().then((result) => {
+                if (result.success && result.data.matchSync) {
+                  void applyMatchSyncStateRef.current(result.data.matchSync);
+                }
+              });
             }, SYNC_REQUEST_INTERVAL_MS);
           }
         }

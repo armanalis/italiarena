@@ -53,10 +53,8 @@ export function MatchHydrator({
       // Server session playlist is authoritative — both players must use the same IDs.
       const serverPlaylistSig = playlistIdsSignature(playlist);
       const localPlaylistSig = playlistIdsSignature(state.playlist);
-      const playlistMismatch =
-        state.playlist.length === 0 || serverPlaylistSig !== localPlaylistSig;
 
-      if (playlistMismatch) {
+      if (state.playlist.length === 0 || serverPlaylistSig !== localPlaylistSig) {
         const matchInProgress =
           state.roundPhase === "playing" ||
           state.roundPhase === "round_result" ||
@@ -71,7 +69,7 @@ export function MatchHydrator({
           useGameStore.setState({
             playlist,
             currentQuestionIndex: 0,
-            roundPhase: "topic_reveal",
+            roundPhase: state.opponent?.isGhost ? "topic_reveal" : "waiting",
             playerAAnswer: null,
             playerBAnswer: null,
             roundStartedAt: null,

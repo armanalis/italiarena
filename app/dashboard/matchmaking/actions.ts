@@ -9,6 +9,8 @@ import {
   buildMatchPlaylist,
   splitSessionQuestions,
 } from "@/lib/match";
+import { isMatchSyncState } from "@/lib/match-sync";
+import type { MatchSyncState } from "@/lib/match-sync";
 import type { QuestionActive } from "@/types/database.types";
 import type { UserProfile } from "@/lib/types";
 
@@ -617,12 +619,16 @@ export async function getMatchSession(sessionId: string) {
 
   const isGhost = opponentId === GHOST_PLAYER_ID;
 
+  const rawSync = session.match_sync;
+  const matchSync = isMatchSyncState(rawSync) ? (rawSync as MatchSyncState) : null;
+
   return {
     success: true as const,
     data: {
       sessionId: session.id,
       status: session.status as "waiting" | "active" | "completed" | "abandoned",
       playlist,
+      matchSync,
       opponent: opponentId
         ? {
             id: opponentId,

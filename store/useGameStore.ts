@@ -253,7 +253,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
           playlist,
           ...getGameplayReset(),
           categoryProgress: emptyCategoryProgress(),
-          roundPhase: "topic_reveal",
+          roundPhase: opponent.isGhost ? "topic_reveal" : "waiting",
           botDifficulty: opponent.isGhost ? botDifficulty ?? "medium" : null,
         }),
       startTiebreakerRound: (question) =>
