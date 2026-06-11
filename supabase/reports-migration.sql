@@ -15,6 +15,7 @@ alter table public.users
 -- Player-submitted issue reports for active questions.
 create table if not exists public.reports (
   id uuid primary key default gen_random_uuid(),
+  -- No FK to questions_active: quarantine deletes the active row and must not cascade-delete reports.
   question_id uuid not null,
   reporter_id uuid not null references auth.users (id) on delete cascade,
   issue_type text not null,
@@ -215,3 +216,7 @@ create trigger on_report_inserted
   after insert on public.reports
   for each row
   execute function public.handle_new_report();
+
+-- Legacy databases may still have this FK; it wipes reports when a question is quarantined.
+alter table public.reports
+  drop constraint if exists reports_question_id_fkey;
