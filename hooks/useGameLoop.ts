@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchTiebreakerQuestion } from "@/app/dashboard/match/actions";
+import { getMatchSession } from "@/app/dashboard/matchmaking/actions";
 import { createClient } from "@/utils/supabase/client";
 import {
   getBotResponseDelayMs,
@@ -12,6 +13,7 @@ import { pulseCountdownHaptic } from "@/lib/haptics";
 import {
   isMatchSyncPayload,
   MATCH_SYNC_EVENT,
+  playlistIdsSignature,
   type MatchSyncPayload,
 } from "@/lib/match-sync";
 import { useGameAudio } from "@/hooks/useGameAudio";
@@ -147,6 +149,31 @@ export function useGameLoop({
 
   const isSyncLeaderRef = useRef(isSyncLeader);
   isSyncLeaderRef.current = isSyncLeader;
+
+  const getPlaylistSig = useCallback(() => {
+    return playlistIdsSignature(useGameStore.getState().playlist);
+  }, []);
+
+  const ensurePlaylistAligned = useCallback(
+    async (expectedSig: string) => {
+      const state = useGameStore.getState();
+      const localSig = playlistIdsSignature(state.playlist);
+
+      if (localSig === expectedSig && state.playlist.length > 0) {
+        return true;
+      }
+
+      const result = await getMatchSession(sessionId);
+      if (!result.success || result.data.playlist.length === 0) {
+        return false;
+      }
+
+      useGameStore.setState({ playlist: result.data.playlist });
+      // Server playlist is authoritative — proceed even if the leader sent a stale signature.
+      return true;
+    },
+    [sessionId]
+  );
 
   const flushPendingBroadcasts = useCallback(() => {
     if (!channelReadyRef.current || !channelRef.current) {
@@ -349,17 +376,21 @@ export function useGameLoop({
       const state = useGameStore.getState();
       const lastRound = lastRoundPlayingRef.current;
 
+      const playlistSig = playlistIdsSignature(state.playlist);
+
       if (state.roundPhase === "playing" && lastRound) {
         broadcastSyncRef.current({
           type: "round_playing",
           questionIndex: lastRound.questionIndex,
           startedAt: lastRound.startedAt,
+          playlistSig,
         });
       } else if (state.roundPhase === "topic_reveal") {
         broadcastSyncRef.current({
           type: "topic_reveal",
           questionIndex: state.currentQuestionIndex,
           at: Date.now(),
+          playlistSig,
         });
       } else if (state.roundPhase === "match_finished") {
         broadcastSyncRef.current({ type: "match_finished" });
@@ -391,6 +422,7 @@ export function useGameLoop({
           type: "round_playing",
           questionIndex,
           startedAt,
+          playlistSig: getPlaylistSig(),
         });
         startSyncPulse();
       }
@@ -398,6 +430,7 @@ export function useGameLoop({
     [
       beginRound,
       broadcastSync,
+      getPlaylistSig,
       isSyncLeader,
       scheduleBotAnswer,
       startRoundTimer,
@@ -408,6 +441,10 @@ export function useGameLoop({
   const startTopicReveal = useCallback(
     (questionIndex: number, fromSync = false) => {
       clearRoundTimers();
+      if (fromSync) {
+        clearResultTimer();
+        setRoundResultSecondsLeft(null);
+      }
       resolvingRef.current = false;
 
       useGameStore.setState({
@@ -429,6 +466,7 @@ export function useGameLoop({
           type: "topic_reveal",
           questionIndex,
           at: Date.now(),
+          playlistSig: getPlaylistSig(),
         });
         startSyncPulse();
       }
@@ -444,7 +482,9 @@ export function useGameLoop({
     [
       beginRoundPlaying,
       broadcastSync,
+      clearResultTimer,
       clearRoundTimers,
+      getPlaylistSig,
       isBotMatch,
       isSyncLeader,
       play,
@@ -479,6 +519,10 @@ export function useGameLoop({
       return;
     }
 
+    if (useGameStore.getState().playlist.length === 0) {
+      return;
+    }
+
     matchSyncStartedRef.current = true;
     clearMatchStartFallback();
     startTopicReveal(0, false);
@@ -505,6 +549,7 @@ export function useGameLoop({
         type: "round_playing",
         questionIndex: state.currentQuestionIndex,
         startedAt: state.roundStartedAt,
+        playlistSig: playlistIdsSignature(state.playlist),
       });
       startSyncPulse();
       return;
@@ -518,12 +563,14 @@ export function useGameLoop({
         type: "topic_reveal",
         questionIndex: state.currentQuestionIndex,
         at: Date.now(),
+        playlistSig: playlistIdsSignature(state.playlist),
       });
+      startSyncPulse();
     }
   }, [broadcastSync, isBotMatch, isSyncLeader, startSyncPulse]);
 
   const handleSyncPayload = useCallback(
-    (payload: MatchSyncPayload) => {
+    async (payload: MatchSyncPayload) => {
       if (isBotMatch || applyingSyncRef.current) {
         return;
       }
@@ -531,6 +578,17 @@ export function useGameLoop({
       applyingSyncRef.current = true;
 
       try {
+        if (
+          payload.type === "topic_reveal" ||
+          payload.type === "round_playing" ||
+          payload.type === "tiebreaker"
+        ) {
+          const aligned = await ensurePlaylistAligned(payload.playlistSig);
+          if (!aligned) {
+            return;
+          }
+        }
+
         switch (payload.type) {
           case "peer_ready":
             peerReadyRef.current[payload.playerRole] = true;
@@ -547,11 +605,18 @@ export function useGameLoop({
             break;
           case "topic_reveal": {
             const live = useGameStore.getState();
+            if (live.roundPhase === "playing") {
+              break;
+            }
             if (
-              live.roundPhase === "playing" ||
-              live.roundPhase === "round_result" ||
-              (live.roundPhase === "topic_reveal" &&
-                live.currentQuestionIndex === payload.questionIndex)
+              live.roundPhase === "topic_reveal" &&
+              live.currentQuestionIndex === payload.questionIndex
+            ) {
+              break;
+            }
+            if (
+              live.roundPhase === "round_result" &&
+              payload.questionIndex <= live.currentQuestionIndex
             ) {
               break;
             }
@@ -559,8 +624,10 @@ export function useGameLoop({
             break;
           }
           case "round_playing": {
-            clearSyncRequestInterval();
             clearRoundTimers();
+            clearResultTimer();
+            setRoundResultSecondsLeft(null);
+            resolvingRef.current = false;
             const live = useGameStore.getState();
             if (
               live.roundPhase === "playing" &&
@@ -576,6 +643,7 @@ export function useGameLoop({
             startTiebreakerRound(payload.question);
             break;
           case "match_finished":
+            clearSyncRequestInterval();
             clearTimers();
             setRoundPhase("match_finished");
             break;
@@ -588,12 +656,13 @@ export function useGameLoop({
     },
     [
       beginRoundPlaying,
+      clearResultTimer,
       clearRoundTimers,
       clearSyncRequestInterval,
       clearTimers,
+      ensurePlaylistAligned,
       isBotMatch,
       isSyncLeader,
-      localPlayerRole,
       maybeStartSyncedMatch,
       rebroadcastCurrentState,
       setRoundPhase,
@@ -659,8 +728,14 @@ export function useGameLoop({
               return;
             }
 
-            broadcastSync({ type: "tiebreaker", question: result.data });
             startTiebreakerRound(result.data);
+            broadcastSync({
+              type: "tiebreaker",
+              question: result.data,
+              playlistSig: playlistIdsSignature(
+                useGameStore.getState().playlist
+              ),
+            });
             startTopicReveal(
               useGameStore.getState().currentQuestionIndex,
               false
@@ -876,7 +951,7 @@ export function useGameLoop({
             broadcastSyncRef.current({ type: "request_sync" });
             syncRequestIntervalRef.current = window.setInterval(() => {
               const phase = useGameStore.getState().roundPhase;
-              if (phase === "playing" || phase === "round_result") {
+              if (phase === "match_finished") {
                 clearSyncRequestInterval();
                 return;
               }
