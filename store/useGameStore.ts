@@ -433,22 +433,21 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
       storage: createJSONStorage(() => safeLocalStorage),
       // Keep persistence small — full playlists + review text can exceed localStorage
       // quota and crash the app when the match ends.
+      // IMPORTANT: do NOT persist live round progress (currentQuestionIndex,
+      // roundPhase, scores). Persisting them leaks stale state across matches —
+      // each device would resume at a different question index, so the two
+      // players see different questions. The server (game_sessions) is the
+      // authoritative source for round state in real matches.
       partialize: (state): Partial<GameStoreState> => ({
         gameSessionId: state.gameSessionId,
         status: state.status,
         opponent: state.opponent,
-        currentQuestionIndex: state.currentQuestionIndex,
-        playerAScore: state.playerAScore,
-        playerBScore: state.playerBScore,
         isBotMatch: state.isBotMatch,
         botDifficulty: state.botDifficulty,
-        roundPhase: state.roundPhase,
         localPlayerRole: state.localPlayerRole,
         localUserId: state.localUserId,
         proficiencyLevel: state.proficiencyLevel,
-        matchWinner: state.matchWinner,
         matchSaved: state.matchSaved,
-        tiebreakerUsed: state.tiebreakerUsed,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
