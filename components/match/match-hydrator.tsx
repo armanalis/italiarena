@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { playlistIdsSignature } from "@/lib/match-sync";
 import { useGameStore, useGameStoreHydrated } from "@/store/useGameStore";
 import type { QuestionActive } from "@/types/database.types";
 
@@ -49,9 +50,29 @@ export function MatchHydrator({
         });
       }
 
-      // After a refresh we keep session metadata in localStorage but not the playlist.
-      if (state.playlist.length === 0 && playlist.length > 0) {
-        useGameStore.setState({ playlist });
+      const serverPlaylistSig = playlistIdsSignature(playlist);
+      const localPlaylistSig = playlistIdsSignature(state.playlist);
+
+      if (
+        playlist.length > 0 &&
+        (state.playlist.length === 0 || serverPlaylistSig !== localPlaylistSig)
+      ) {
+        useGameStore.setState({
+          playlist,
+          currentQuestionIndex: 0,
+          roundPhase: "topic_reveal",
+          playerAAnswer: null,
+          playerBAnswer: null,
+          roundStartedAt: null,
+          timeRemaining: 25,
+          playerAScore: 0,
+          playerBScore: 0,
+          lastRoundPointsA: 0,
+          lastRoundPointsB: 0,
+          matchWinner: null,
+          tiebreakerUsed: false,
+          tiebreakerQuestion: null,
+        });
       }
       return;
     }

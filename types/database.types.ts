@@ -375,6 +375,10 @@ export interface Database {
         Args: { p_display_name: string; p_exclude_user_id?: string | null };
         Returns: boolean;
       };
+      get_public_display_name: {
+        Args: { p_user_id: string };
+        Returns: string | null;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

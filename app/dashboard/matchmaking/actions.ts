@@ -54,6 +54,15 @@ async function getAuthenticatedProfile(): Promise<
 
 export async function getPlayerDisplayName(userId: string): Promise<string> {
   const supabase = await createClient();
+  const { data: rpcName, error: rpcError } = await supabase.rpc(
+    "get_public_display_name",
+    { p_user_id: userId }
+  );
+
+  if (!rpcError && typeof rpcName === "string" && rpcName.trim()) {
+    return rpcName.trim();
+  }
+
   const { data } = await supabase
     .from("users")
     .select("display_name, email")
