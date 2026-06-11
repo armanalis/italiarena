@@ -3,7 +3,7 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { ArrowLeft, Languages, Lock, Mail, Sparkles } from "lucide-react";
+import { ArrowLeft, Languages, Lock, Mail, Sparkles, UserRound } from "lucide-react";
 import {
   requestPasswordReset,
   signIn,
@@ -130,7 +130,7 @@ export function LoginForm() {
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
                   <span className="bg-card px-2 text-muted-foreground dark:bg-card/60">
-                    or continue with email
+                    or continue with email / username
                   </span>
                 </div>
               </div>
@@ -138,21 +138,70 @@ export function LoginForm() {
           )}
 
           <form action={formAction} className="space-y-4">
+            {isSignUp && (
+              <div className="space-y-2">
+                <Label htmlFor="auth-username">Username</Label>
+                <div className="relative">
+                  <UserRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="auth-username"
+                    name="username"
+                    type="text"
+                    placeholder="Your public username"
+                    required
+                    minLength={2}
+                    maxLength={24}
+                    autoComplete="username"
+                    className="h-11 pl-10 dark:bg-white/5"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  You can change this later in settings. Use it to sign in.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label htmlFor="auth-email">Email</Label>
+              <Label htmlFor={isForgot ? "auth-email" : "auth-login"}>
+                {isForgot ? "Email" : "Email or username"}
+              </Label>
               <div className="relative">
-                <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                {isForgot ? (
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                ) : (
+                  <UserRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                )}
                 <Input
-                  id="auth-email"
-                  name="email"
-                  type="email"
-                  placeholder="you@example.com"
+                  id={isForgot ? "auth-email" : "auth-login"}
+                  name={isForgot ? "email" : "login"}
+                  type={isForgot ? "email" : "text"}
+                  placeholder={
+                    isForgot ? "you@example.com" : "you@example.com or yourname"
+                  }
                   required
-                  autoComplete="email"
+                  autoComplete={isForgot ? "email" : "username"}
                   className="h-11 pl-10 dark:bg-white/5"
                 />
               </div>
             </div>
+
+            {isSignUp && (
+              <div className="space-y-2">
+                <Label htmlFor="auth-email">Email</Label>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="auth-email"
+                    name="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    required
+                    autoComplete="email"
+                    className="h-11 pl-10 dark:bg-white/5"
+                  />
+                </div>
+              </div>
+            )}
 
             {!isForgot && (
               <div className="space-y-2">

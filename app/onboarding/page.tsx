@@ -20,7 +20,7 @@ export default async function OnboardingPage() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_rgba(139,92,246,0.15),_transparent_45%)]" />
 
       <div className="relative z-10 w-full max-w-lg">
-        <OnboardingForm />
+        <OnboardingForm defaultUsername={profile.display_name} />
       </div>
     </main>
   );
