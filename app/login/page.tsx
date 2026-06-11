@@ -6,7 +6,8 @@ import { getPostAuthPath } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 
 const loginErrors: Record<string, string> = {
-  auth_callback_failed: "Could not verify your reset link. Please try again.",
+  auth_callback_failed:
+    "Sign-in failed. If you used Google, make sure it is enabled in Supabase. Otherwise try again or use email.",
   reset_link_expired: "Your reset link has expired. Request a new one below.",
 };
 

@@ -135,7 +135,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
         <p className="text-lg font-medium">No reported questions</p>
         <p className="mt-2 text-sm text-muted-foreground">
           Player reports appear here immediately. Questions are removed from the
-          active pool after three unique reports.
+          active pool after the first report.
         </p>
       </div>
     );

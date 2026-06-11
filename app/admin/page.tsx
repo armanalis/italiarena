@@ -17,9 +17,9 @@ export default async function AdminPage() {
   ).length;
 
   return (
-    <main className="min-h-[calc(100dvh-3.5rem)] bg-background">
-      <header className="border-b border-border/60 px-4 py-5 sm:px-8 sm:py-6">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <main className="min-h-[calc(100dvh-3.5rem)] w-full bg-background md:min-h-[calc(100dvh-4rem)]">
+      <header className="w-full border-b border-border/60 px-4 py-5 sm:px-8 sm:py-6 lg:px-10 xl:px-12">
+        <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2">
               <ShieldAlert className="size-5 text-amber-400" />
@@ -40,7 +40,7 @@ export default async function AdminPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl p-4 sm:p-8">
+      <div className="w-full p-4 sm:p-8 lg:px-10 xl:px-12">
         <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
           <div>
             <h2 className="text-lg font-semibold">Reported questions</h2>

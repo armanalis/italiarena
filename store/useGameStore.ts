@@ -15,6 +15,7 @@ import {
   isAnswerCorrect,
   type MatchWinner,
 } from "@/lib/scoring";
+import type { BotDifficulty } from "@/lib/bot";
 import type { ProficiencyLevel } from "@/lib/constants";
 import type { CategoryProgress } from "@/lib/types";
 import type { CorrectAnswer, QuestionActive, QuestionCategory } from "@/types/database.types";
@@ -65,6 +66,7 @@ type GameStoreState = {
   playerAScore: number;
   playerBScore: number;
   isBotMatch: boolean;
+  botDifficulty: BotDifficulty | null;
   roundPhase: RoundPhase;
   localPlayerRole: "a" | "b" | null;
   localUserId: string | null;
@@ -94,6 +96,7 @@ type GameStoreActions = {
     gameSessionId: string;
     opponent: GameOpponent;
     playlist: QuestionActive[];
+    botDifficulty?: BotDifficulty | null;
   }) => void;
   startTiebreakerRound: (question: QuestionActive) => void;
   initGameplay: (payload: {
@@ -223,6 +226,7 @@ const initialState: GameStoreState = {
   playlist: [],
   hasHydrated: false,
   isReportDialogOpen: false,
+  botDifficulty: null,
   ...gameplayDefaults,
 };
 
@@ -237,10 +241,11 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
           status: "searching",
           opponent: null,
           playlist: [],
+          botDifficulty: null,
           ...gameplayDefaults,
         }),
       setSessionId: (sessionId) => set({ gameSessionId: sessionId }),
-      startMatch: ({ gameSessionId, opponent, playlist }) =>
+      startMatch: ({ gameSessionId, opponent, playlist, botDifficulty = null }) =>
         set({
           gameSessionId,
           status: "playing",
@@ -249,6 +254,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
           ...getGameplayReset(),
           categoryProgress: emptyCategoryProgress(),
           roundPhase: "topic_reveal",
+          botDifficulty: opponent.isGhost ? botDifficulty ?? "medium" : null,
         }),
       startTiebreakerRound: (question) =>
         set((state) => ({
@@ -435,6 +441,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
         playerAScore: state.playerAScore,
         playerBScore: state.playerBScore,
         isBotMatch: state.isBotMatch,
+        botDifficulty: state.botDifficulty,
         roundPhase: state.roundPhase,
         localPlayerRole: state.localPlayerRole,
         localUserId: state.localUserId,

@@ -141,7 +141,7 @@ create policy "Admins can delete flagged questions"
     )
   );
 
--- When a question hits 3 unique reports, quarantine it atomically.
+-- When a question gets its first report, quarantine it atomically for admin review.
 create or replace function public.handle_new_report()
 returns trigger
 language plpgsql
@@ -157,7 +157,7 @@ begin
   from public.reports
   where question_id = new.question_id;
 
-  if v_count = 3 then
+  if v_count >= 1 then
     select *
     into v_question
     from public.questions_active
@@ -191,10 +191,10 @@ begin
         v_question.option_d,
         v_question.correct_answer,
         v_question.random_float,
-        3
+        v_count
       )
       on conflict (id) do update
-      set report_count = 3;
+      set report_count = excluded.report_count;
 
       delete from public.questions_active
       where id = new.question_id;

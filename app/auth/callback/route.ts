@@ -1,18 +1,20 @@
-/** Exchanges Supabase auth codes (e.g. password reset emails) for a session. */
+/** Exchanges Supabase auth codes for a session (OAuth, password reset, etc.). */
 import { NextResponse } from "next/server";
+import { getPostAuthPath } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard";
+  const explicitNext = searchParams.get("next");
 
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      const destination = explicitNext ?? (await getPostAuthPath());
+      return NextResponse.redirect(`${origin}${destination}`);
     }
   }
 

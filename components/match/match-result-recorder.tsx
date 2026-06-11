@@ -51,6 +51,12 @@ export function MatchResultRecorder({ language, level }: MatchResultRecorderProp
       level,
       categoryProgress: state.categoryProgress,
       questionIds: state.playlist.map((question) => question.id),
+      mistakes: state.roundReviews
+        .filter((round) => !round.wasCorrect && !round.isTiebreaker)
+        .map((round) => ({
+          questionId: round.questionId,
+          selectedAnswer: round.selectedAnswer,
+        })),
     })
       .then((response) => {
         if (response.success) {

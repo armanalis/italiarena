@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchTiebreakerQuestion } from "@/app/dashboard/match/actions";
 import { createClient } from "@/utils/supabase/client";
-import { BOT_RESPONSE_TIME_MS, getBotResponseDelayMs, simulateBotAnswer } from "@/lib/bot";
+import {
+  getBotResponseDelayMs,
+  getBotResponseTimeMs,
+  simulateBotAnswer,
+} from "@/lib/bot";
 import { pulseCountdownHaptic } from "@/lib/haptics";
 import { useGameAudio } from "@/hooks/useGameAudio";
 import { useGameStore } from "@/store/useGameStore";
@@ -230,7 +234,8 @@ export function useGameLoop({
       return;
     }
 
-    const delay = getBotResponseDelayMs(startedAt);
+    const botDifficulty = state.botDifficulty ?? "medium";
+    const delay = getBotResponseDelayMs(startedAt, botDifficulty);
     const questionIndex = state.currentQuestionIndex;
 
     botTimerRef.current = window.setTimeout(() => {
@@ -252,8 +257,9 @@ export function useGameLoop({
         return;
       }
 
-      const answer = simulateBotAnswer(question, proficiency);
-      const responseTimeMs = BOT_RESPONSE_TIME_MS;
+      const latestDifficulty = latest.botDifficulty ?? "medium";
+      const answer = simulateBotAnswer(question, proficiency, latestDifficulty);
+      const responseTimeMs = getBotResponseTimeMs(latestDifficulty);
 
       lockOpponentAnswer(answer, responseTimeMs);
 

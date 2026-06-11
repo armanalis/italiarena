@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { recordMatchMistakes } from "@/app/dashboard/statistics/actions";
 import { createClient } from "@/utils/supabase/server";
 import {
   PROFICIENCY_LEVELS,
@@ -11,7 +12,12 @@ import {
 } from "@/lib/constants";
 import type { CategoryProgress, MatchHistoryEntry } from "@/lib/types";
 import { normalizeCategoryProgress } from "@/lib/category-progress";
-import type { MatchResult, OpponentType, PlayerStats } from "@/types/database.types";
+import type {
+  CorrectAnswer,
+  MatchResult,
+  OpponentType,
+  PlayerStats,
+} from "@/types/database.types";
 
 export type SettingsActionResult =
   | { success: true }
@@ -235,6 +241,10 @@ export async function saveMatchResult(payload: {
   level: string;
   categoryProgress: CategoryProgress;
   questionIds: string[];
+  mistakes: Array<{
+    questionId: string;
+    selectedAnswer: CorrectAnswer | null;
+  }>;
 }): Promise<SettingsActionResult> {
   try {
   const supabase = await createClient();
@@ -255,81 +265,90 @@ export async function saveMatchResult(payload: {
     .eq("session_id", payload.sessionId)
     .maybeSingle();
 
-  if (existing) {
-    return { success: true };
-  }
+  const historyAlreadySaved = Boolean(existing);
 
-  const { error: historyError } = await supabase.from("match_history").insert({
-    user_id: user.id,
-    session_id: payload.sessionId,
-    opponent_type: payload.opponentType,
-    opponent_display_name: payload.opponentDisplayName,
-    user_score: payload.userScore,
-    opponent_score: payload.opponentScore,
-    result: payload.result,
-    language: payload.language,
-    level: payload.level,
-  });
-
-  if (historyError) {
-    return { success: false, error: historyError.message };
-  }
-
-  const { data: stats } = await supabase
-    .from("player_stats")
-    .select("*")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  const base = stats ?? {
-    user_id: user.id,
-    matches_played: 0,
-    matches_won: 0,
-    matches_lost: 0,
-    grammar_correct: 0,
-    grammar_total: 0,
-    vocab_correct: 0,
-    vocab_total: 0,
-    fill_blank_correct: 0,
-    fill_blank_total: 0,
-    idioms_correct: 0,
-    idioms_total: 0,
-    seen_questions: [],
-  };
-
-  const won = payload.result === "win" ? 1 : 0;
-  const lost = payload.result === "loss" ? 1 : 0;
-
-  const { error: statsError } = await supabase.from("player_stats").upsert({
-    user_id: user.id,
-    matches_played: base.matches_played + 1,
-    matches_won: base.matches_won + won,
-    matches_lost: base.matches_lost + lost,
-    grammar_correct:
-      base.grammar_correct + categoryProgress.grammar.correct,
-    grammar_total: base.grammar_total + categoryProgress.grammar.total,
-    vocab_correct:
-      base.vocab_correct + categoryProgress.vocabulary.correct,
-    vocab_total: base.vocab_total + categoryProgress.vocabulary.total,
-    fill_blank_correct:
-      base.fill_blank_correct + categoryProgress["fill-in-the-blank"].correct,
-    fill_blank_total:
-      base.fill_blank_total + categoryProgress["fill-in-the-blank"].total,
-    idioms_correct:
-      base.idioms_correct + categoryProgress.idioms.correct,
-    idioms_total: base.idioms_total + categoryProgress.idioms.total,
-    seen_questions: base.seen_questions,
-  });
-
-  if (statsError) {
-    return { success: false, error: statsError.message };
-  }
-
-  if (payload.questionIds.length > 0) {
-    await supabase.rpc("update_seen_questions", {
-      p_user_id: user.id,
-      p_question_ids: payload.questionIds,
+  if (!historyAlreadySaved) {
+    const { error: historyError } = await supabase.from("match_history").insert({
+      user_id: user.id,
+      session_id: payload.sessionId,
+      opponent_type: payload.opponentType,
+      opponent_display_name: payload.opponentDisplayName,
+      user_score: payload.userScore,
+      opponent_score: payload.opponentScore,
+      result: payload.result,
+      language: payload.language,
+      level: payload.level,
     });
+
+    if (historyError) {
+      return { success: false, error: historyError.message };
+    }
+
+    const { data: stats } = await supabase
+      .from("player_stats")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const base = stats ?? {
+      user_id: user.id,
+      matches_played: 0,
+      matches_won: 0,
+      matches_lost: 0,
+      grammar_correct: 0,
+      grammar_total: 0,
+      vocab_correct: 0,
+      vocab_total: 0,
+      fill_blank_correct: 0,
+      fill_blank_total: 0,
+      idioms_correct: 0,
+      idioms_total: 0,
+      seen_questions: [],
+    };
+
+    const won = payload.result === "win" ? 1 : 0;
+    const lost = payload.result === "loss" ? 1 : 0;
+
+    const { error: statsError } = await supabase.from("player_stats").upsert({
+      user_id: user.id,
+      matches_played: base.matches_played + 1,
+      matches_won: base.matches_won + won,
+      matches_lost: base.matches_lost + lost,
+      grammar_correct:
+        base.grammar_correct + categoryProgress.grammar.correct,
+      grammar_total: base.grammar_total + categoryProgress.grammar.total,
+      vocab_correct:
+        base.vocab_correct + categoryProgress.vocabulary.correct,
+      vocab_total: base.vocab_total + categoryProgress.vocabulary.total,
+      fill_blank_correct:
+        base.fill_blank_correct + categoryProgress["fill-in-the-blank"].correct,
+      fill_blank_total:
+        base.fill_blank_total + categoryProgress["fill-in-the-blank"].total,
+      idioms_correct:
+        base.idioms_correct + categoryProgress.idioms.correct,
+      idioms_total: base.idioms_total + categoryProgress.idioms.total,
+      seen_questions: base.seen_questions,
+    });
+
+    if (statsError) {
+      return { success: false, error: statsError.message };
+    }
+
+    if (payload.questionIds.length > 0) {
+      await supabase.rpc("update_seen_questions", {
+        p_user_id: user.id,
+        p_question_ids: payload.questionIds,
+      });
+    }
+  }
+
+  const mistakeResult = await recordMatchMistakes(
+    payload.sessionId,
+    payload.mistakes
+  );
+
+  if (!mistakeResult.success) {
+    return mistakeResult;
   }
 
   await supabase

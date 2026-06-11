@@ -65,6 +65,28 @@ export interface QuestionFlagged extends QuestionActive {
   report_count: number;
 }
 
+// A question the user got wrong — tracked for review and practice
+export interface UserMistake {
+  id: string;
+  user_id: string;
+  question_id: string;
+  selected_answer: CorrectAnswer | null;
+  practice_streak: number;
+  last_mistaken_at: string;
+  session_id: string | null;
+}
+
+export type UserMistakeInsert = Pick<
+  UserMistake,
+  "user_id" | "question_id"
+> &
+  Partial<
+    Pick<
+      UserMistake,
+      "id" | "selected_answer" | "practice_streak" | "last_mistaken_at" | "session_id"
+    >
+  >;
+
 // A completed match summary for history and statistics
 export interface MatchHistory {
   id: string;
@@ -226,6 +248,12 @@ export interface Database {
         Row: MatchHistory;
         Insert: MatchHistoryInsert;
         Update: Partial<MatchHistoryInsert>;
+        Relationships: [];
+      };
+      user_mistakes: {
+        Row: UserMistake;
+        Insert: UserMistakeInsert;
+        Update: Partial<UserMistakeInsert>;
         Relationships: [];
       };
       game_sessions: {

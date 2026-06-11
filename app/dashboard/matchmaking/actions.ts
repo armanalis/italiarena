@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { BOT_DIFFICULTY_LABELS, type BotDifficulty } from "@/lib/bot";
 import { GHOST_PLAYER_ID, GHOST_PLAYER_NAME } from "@/lib/ghost";
 import { getPublicDisplayName } from "@/lib/display-name";
 import {
@@ -386,7 +387,9 @@ export async function searchForMatch(
 }
 
 /** Creates an active session against the ghost opponent in one step (Play vs bot). */
-export async function startBotMatch(): Promise<MatchmakingResult> {
+export async function startBotMatch(
+  difficulty: BotDifficulty = "medium"
+): Promise<MatchmakingResult> {
   const auth = await getAuthenticatedProfile();
   if ("error" in auth) {
     return { success: false, error: auth.error };
@@ -442,7 +445,7 @@ export async function startBotMatch(): Promise<MatchmakingResult> {
       opponent: {
         id: GHOST_PLAYER_ID,
         isGhost: true,
-        displayName: GHOST_PLAYER_NAME,
+        displayName: BOT_DIFFICULTY_LABELS[difficulty],
       },
     },
   };

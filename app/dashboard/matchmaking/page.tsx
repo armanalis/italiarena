@@ -3,9 +3,12 @@ import { redirect } from "next/navigation";
 import { MatchmakingLobby } from "@/components/matchmaking/matchmaking-lobby";
 import { requireOnboardingComplete } from "@/lib/auth";
 
+import { normalizeBotDifficulty, type BotDifficulty } from "@/lib/bot";
+
 type MatchmakingPageProps = {
   searchParams: Promise<{
     mode?: string;
+    difficulty?: string;
   }>;
 };
 
@@ -18,6 +21,14 @@ export default async function MatchmakingPage({ searchParams }: MatchmakingPageP
 
   const params = await searchParams;
   const mode = params.mode === "bot" ? "bot" : "real";
+  const botDifficulty: BotDifficulty =
+    mode === "bot" ? normalizeBotDifficulty(params.difficulty) : "medium";
 
-  return <MatchmakingLobby profile={profile} mode={mode} />;
+  return (
+    <MatchmakingLobby
+      profile={profile}
+      mode={mode}
+      botDifficulty={botDifficulty}
+    />
+  );
 }
