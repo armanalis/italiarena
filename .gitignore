@@ -34,3 +34,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Database schema and migrations (private — kept locally, not published on GitHub)
+supabase/*.sql
