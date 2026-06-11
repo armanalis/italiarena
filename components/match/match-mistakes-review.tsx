@@ -10,7 +10,9 @@ import {
   useGameStore,
   type MatchRoundReview,
 } from "@/store/useGameStore";
+import { AskAiButton } from "@/components/match/ask-ai-button";
 import { ReportQuestionButton } from "@/components/match/report-question-button";
+import { MAX_AI_ASKS_PER_MATCH } from "@/lib/ai-explanations";
 import { formatCategoryLabel } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
 import type { QuestionCategory } from "@/types/database.types";
@@ -26,10 +28,16 @@ type CategoryFilter = "all" | QuestionCategory;
 
 function RoundReviewCard({
   round,
+  sessionId,
+  asksRemaining,
+  onAsksRemainingChange,
   reported,
   onReported,
 }: {
   round: MatchRoundReview;
+  sessionId: string;
+  asksRemaining: number;
+  onAsksRemainingChange: (remaining: number) => void;
   reported: boolean;
   onReported: () => void;
 }) {
@@ -127,7 +135,14 @@ function RoundReviewCard({
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-end border-t border-border/40 pt-3">
+      <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-border/40 pt-3">
+        <AskAiButton
+          round={round}
+          sessionId={sessionId}
+          asksRemaining={asksRemaining}
+          onAsksRemainingChange={onAsksRemainingChange}
+          showLabel
+        />
         <ReportQuestionButton
           questionId={round.questionId}
           questionText={round.questionText}
@@ -245,12 +260,18 @@ function filterByCategory(
 
 function RoundList({
   rounds,
+  sessionId,
+  asksRemaining,
+  onAsksRemainingChange,
   reportedQuestionIds,
   onQuestionReported,
   emptyMessage = "No mistakes in this filter",
   emptyDescription = "Try another topic or check All questions.",
 }: {
   rounds: MatchRoundReview[];
+  sessionId: string;
+  asksRemaining: number;
+  onAsksRemainingChange: (remaining: number) => void;
   reportedQuestionIds: Set<string>;
   onQuestionReported: (questionId: string) => void;
   emptyMessage?: string;
@@ -274,6 +295,9 @@ function RoundList({
         <RoundReviewCard
           key={`${round.questionId}-${round.questionIndex}`}
           round={round}
+          sessionId={sessionId}
+          asksRemaining={asksRemaining}
+          onAsksRemainingChange={onAsksRemainingChange}
           reported={reportedQuestionIds.has(round.questionId)}
           onReported={() => onQuestionReported(round.questionId)}
         />
@@ -287,6 +311,8 @@ type ReviewTab = "mistakes" | "all";
 export function MatchMistakesReview() {
   const allRounds = useMatchRoundReviews();
   const mistakes = useMatchMistakes();
+  const gameSessionId = useGameStore((state) => state.gameSessionId);
+  const [asksRemaining, setAsksRemaining] = useState(MAX_AI_ASKS_PER_MATCH);
   const [activeTab, setActiveTab] = useState<ReviewTab>(
     mistakes.length > 0 ? "mistakes" : "all"
   );
@@ -312,6 +338,10 @@ export function MatchMistakesReview() {
     [allRounds, categoryFilter]
   );
 
+  if (!gameSessionId) {
+    return null;
+  }
+
   if (allRounds.length === 0) {
     return (
       <div className="w-full max-w-xl rounded-2xl border border-border/60 bg-card/50 p-5 text-left sm:p-6">
@@ -335,7 +365,8 @@ export function MatchMistakesReview() {
           {mistakes.length > 0
             ? ` · ${mistakes.length} mistake${mistakes.length === 1 ? "" : "s"} to review`
             : " · perfect round"}
-          {" · "}use Report on any question to flag it for admin review
+          {" · "}
+          Ask AI (up to {MAX_AI_ASKS_PER_MATCH}/match) or Report to flag a question
         </p>
       </div>
 
@@ -377,6 +408,9 @@ export function MatchMistakesReview() {
           />
           <RoundList
             rounds={filteredMistakes}
+            sessionId={gameSessionId}
+            asksRemaining={asksRemaining}
+            onAsksRemainingChange={setAsksRemaining}
             reportedQuestionIds={reportedQuestionIds}
             onQuestionReported={markQuestionReported}
             emptyMessage={
@@ -400,6 +434,9 @@ export function MatchMistakesReview() {
           />
           <RoundList
             rounds={filteredAll}
+            sessionId={gameSessionId}
+            asksRemaining={asksRemaining}
+            onAsksRemainingChange={setAsksRemaining}
             reportedQuestionIds={reportedQuestionIds}
             onQuestionReported={markQuestionReported}
             emptyMessage="No questions in this topic"

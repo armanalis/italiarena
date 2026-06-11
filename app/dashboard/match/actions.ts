@@ -92,6 +92,14 @@ export async function reportQuestion(
       return { success: false, error: "You already reported this question." };
     }
 
+    if (error.code === "23503") {
+      return {
+        success: false,
+        error:
+          "Could not save your report because this question was already removed from the pool. Please try again shortly.",
+      };
+    }
+
     return { success: false, error: error.message };
   }
 

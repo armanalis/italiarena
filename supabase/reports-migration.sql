@@ -15,7 +15,7 @@ alter table public.users
 -- Player-submitted issue reports for active questions.
 create table if not exists public.reports (
   id uuid primary key default gen_random_uuid(),
-  question_id uuid not null references public.questions_active (id) on delete cascade,
+  question_id uuid not null,
   reporter_id uuid not null references auth.users (id) on delete cascade,
   issue_type text not null,
   created_at timestamptz not null default now(),
@@ -197,6 +197,10 @@ begin
       set report_count = excluded.report_count;
 
       delete from public.questions_active
+      where id = new.question_id;
+    else
+      update public.questions_flagged
+      set report_count = v_count
       where id = new.question_id;
     end if;
   end if;

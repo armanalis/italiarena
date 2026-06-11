@@ -125,9 +125,12 @@ Create `.env.local` in the project root:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+GROQ_API_KEY=your-groq-api-key
 ```
 
 Find both values in Supabase → **Project Settings → API**.
+
+For **Ask AI** on the match review screen, create a free key at [console.groq.com](https://console.groq.com) and set `GROQ_API_KEY`.
 
 ### 3. Database setup
 
@@ -140,6 +143,7 @@ Run these SQL files **in order** in the Supabase SQL Editor:
 5. `supabase/settings-migration.sql` — display names, preferences, match history
 6. `supabase/reports-migration.sql` — question flagging and admin role
 7. `supabase/performance-indexes.sql` — production query indexes
+8. `supabase/ai-explanations-migration.sql` — Ask AI cache and per-match limits (optional)
 
 Then enable Realtime for matchmaking:
 

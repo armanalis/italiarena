@@ -1,7 +1,10 @@
--- Lower auto-quarantine threshold from 3 reports to 1 report.
--- Run in the Supabase SQL Editor on existing databases.
--- Safe to re-run: replaces the trigger function.
+-- Allow reports on questions that were already quarantined (removed from questions_active).
+-- Run in the Supabase SQL Editor on existing databases after reports-migration.sql.
 
+alter table public.reports
+  drop constraint if exists reports_question_id_fkey;
+
+-- Keep report counts in sync when additional players report an already-quarantined question.
 create or replace function public.handle_new_report()
 returns trigger
 language plpgsql
