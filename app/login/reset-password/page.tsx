@@ -16,10 +16,10 @@ export default async function ResetPasswordPage() {
   }
 
   return (
-    <main className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-background touch-scroll">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.22),_transparent_50%)] dark:bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.35),_transparent_55%)]" />
+    <main className="relative w-full bg-background">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.22),_transparent_50%)] dark:bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.35),_transparent_55%)]" />
 
-      <div className="relative z-10 mx-auto w-full max-w-[420px] px-4 pb-[max(2rem,env(safe-area-inset-bottom,0px))] pt-6 sm:px-6 sm:pb-10 sm:pt-8">
+      <div className="relative z-10 mx-auto w-full max-w-[420px] px-4 pb-[max(3rem,env(safe-area-inset-bottom,0px))] pt-6 sm:px-6 sm:pb-12 sm:pt-8">
         <Link
           href="/login"
           className="mb-6 inline-flex text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
