@@ -57,22 +57,35 @@ export function MatchHydrator({
         playlist.length > 0 &&
         (state.playlist.length === 0 || serverPlaylistSig !== localPlaylistSig)
       ) {
-        useGameStore.setState({
-          playlist,
-          currentQuestionIndex: 0,
-          roundPhase: "topic_reveal",
-          playerAAnswer: null,
-          playerBAnswer: null,
-          roundStartedAt: null,
-          timeRemaining: 25,
-          playerAScore: 0,
-          playerBScore: 0,
-          lastRoundPointsA: 0,
-          lastRoundPointsB: 0,
-          matchWinner: null,
-          tiebreakerUsed: false,
-          tiebreakerQuestion: null,
-        });
+        const matchInProgress =
+          state.roundPhase === "playing" ||
+          state.roundPhase === "round_result" ||
+          state.roundStartedAt !== null ||
+          state.playerAScore > 0 ||
+          state.playerBScore > 0 ||
+          state.currentQuestionIndex > 0;
+
+        if (matchInProgress) {
+          // Realtime sync may have already advanced this client — only align playlist.
+          useGameStore.setState({ playlist });
+        } else {
+          useGameStore.setState({
+            playlist,
+            currentQuestionIndex: 0,
+            roundPhase: "topic_reveal",
+            playerAAnswer: null,
+            playerBAnswer: null,
+            roundStartedAt: null,
+            timeRemaining: 25,
+            playerAScore: 0,
+            playerBScore: 0,
+            lastRoundPointsA: 0,
+            lastRoundPointsB: 0,
+            matchWinner: null,
+            tiebreakerUsed: false,
+            tiebreakerQuestion: null,
+          });
+        }
       }
       return;
     }

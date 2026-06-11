@@ -27,6 +27,8 @@ const ROUND_RESULT_TICK_MS = 100;
 const ROUND_DURATION_SEC = 25;
 const MATCH_START_FALLBACK_MS = 1_500;
 const SYNC_REQUEST_INTERVAL_MS = 800;
+const SYNC_PULSE_INTERVAL_MS = 400;
+const SYNC_PULSE_MAX = 20;
 
 type AnswerLockedPayload = {
   playerRole: "a" | "b";
@@ -87,6 +89,11 @@ export function useGameLoop({
   const applyingSyncRef = useRef(false);
   const matchStartFallbackRef = useRef<number | null>(null);
   const syncRequestIntervalRef = useRef<number | null>(null);
+  const syncPulseIntervalRef = useRef<number | null>(null);
+  const lastRoundPlayingRef = useRef<{
+    questionIndex: number;
+    startedAt: number;
+  } | null>(null);
   const [channelReady, setChannelReady] = useState(isBotMatch);
   const [roundResultSecondsLeft, setRoundResultSecondsLeft] = useState<
     number | null
@@ -134,6 +141,12 @@ export function useGameLoop({
       payload,
     });
   }, [isBotMatch]);
+
+  const broadcastSyncRef = useRef(broadcastSync);
+  broadcastSyncRef.current = broadcastSync;
+
+  const isSyncLeaderRef = useRef(isSyncLeader);
+  isSyncLeaderRef.current = isSyncLeader;
 
   const flushPendingBroadcasts = useCallback(() => {
     if (!channelReadyRef.current || !channelRef.current) {
@@ -303,6 +316,64 @@ export function useGameLoop({
     proficiencyLevel,
   ]);
 
+  const clearMatchStartFallback = useCallback(() => {
+    if (matchStartFallbackRef.current !== null) {
+      window.clearTimeout(matchStartFallbackRef.current);
+      matchStartFallbackRef.current = null;
+    }
+  }, []);
+
+  const clearSyncRequestInterval = useCallback(() => {
+    if (syncRequestIntervalRef.current !== null) {
+      window.clearInterval(syncRequestIntervalRef.current);
+      syncRequestIntervalRef.current = null;
+    }
+  }, []);
+
+  const clearSyncPulse = useCallback(() => {
+    if (syncPulseIntervalRef.current !== null) {
+      window.clearInterval(syncPulseIntervalRef.current);
+      syncPulseIntervalRef.current = null;
+    }
+  }, []);
+
+  const startSyncPulse = useCallback(() => {
+    if (isBotMatch || !isSyncLeader) {
+      return;
+    }
+
+    clearSyncPulse();
+
+    let count = 0;
+    syncPulseIntervalRef.current = window.setInterval(() => {
+      const state = useGameStore.getState();
+      const lastRound = lastRoundPlayingRef.current;
+
+      if (state.roundPhase === "playing" && lastRound) {
+        broadcastSyncRef.current({
+          type: "round_playing",
+          questionIndex: lastRound.questionIndex,
+          startedAt: lastRound.startedAt,
+        });
+      } else if (state.roundPhase === "topic_reveal") {
+        broadcastSyncRef.current({
+          type: "topic_reveal",
+          questionIndex: state.currentQuestionIndex,
+          at: Date.now(),
+        });
+      } else if (state.roundPhase === "match_finished") {
+        broadcastSyncRef.current({ type: "match_finished" });
+        clearSyncPulse();
+        return;
+      }
+
+      count += 1;
+      if (count >= SYNC_PULSE_MAX) {
+        clearSyncPulse();
+      }
+    }, SYNC_PULSE_INTERVAL_MS);
+  }, [clearSyncPulse, isBotMatch, isSyncLeader]);
+
   const beginRoundPlaying = useCallback(
     (questionIndex: number, startedAt: number, fromSync = false) => {
       const state = useGameStore.getState();
@@ -315,14 +386,23 @@ export function useGameLoop({
       startRoundTimer();
 
       if (!fromSync && isSyncLeader) {
+        lastRoundPlayingRef.current = { questionIndex, startedAt };
         broadcastSync({
           type: "round_playing",
           questionIndex,
           startedAt,
         });
+        startSyncPulse();
       }
     },
-    [beginRound, broadcastSync, isSyncLeader, scheduleBotAnswer, startRoundTimer]
+    [
+      beginRound,
+      broadcastSync,
+      isSyncLeader,
+      scheduleBotAnswer,
+      startRoundTimer,
+      startSyncPulse,
+    ]
   );
 
   const startTopicReveal = useCallback(
@@ -344,11 +424,13 @@ export function useGameLoop({
       play("reveal");
 
       if (!fromSync && isSyncLeader) {
+        lastRoundPlayingRef.current = null;
         broadcastSync({
           type: "topic_reveal",
           questionIndex,
           at: Date.now(),
         });
+        startSyncPulse();
       }
 
       if (!isBotMatch && !isSyncLeader) {
@@ -359,22 +441,16 @@ export function useGameLoop({
         beginRoundPlaying(questionIndex, Date.now(), false);
       }, TOPIC_REVEAL_MS);
     },
-    [beginRoundPlaying, broadcastSync, clearRoundTimers, isBotMatch, isSyncLeader, play]
+    [
+      beginRoundPlaying,
+      broadcastSync,
+      clearRoundTimers,
+      isBotMatch,
+      isSyncLeader,
+      play,
+      startSyncPulse,
+    ]
   );
-
-  const clearMatchStartFallback = useCallback(() => {
-    if (matchStartFallbackRef.current !== null) {
-      window.clearTimeout(matchStartFallbackRef.current);
-      matchStartFallbackRef.current = null;
-    }
-  }, []);
-
-  const clearSyncRequestInterval = useCallback(() => {
-    if (syncRequestIntervalRef.current !== null) {
-      window.clearInterval(syncRequestIntervalRef.current);
-      syncRequestIntervalRef.current = null;
-    }
-  }, []);
 
   const countPresentPlayers = useCallback(
     (presenceState: Record<string, unknown[]>) => {
@@ -421,11 +497,16 @@ export function useGameLoop({
     }
 
     if (state.roundPhase === "playing" && state.roundStartedAt) {
+      lastRoundPlayingRef.current = {
+        questionIndex: state.currentQuestionIndex,
+        startedAt: state.roundStartedAt,
+      };
       broadcastSync({
         type: "round_playing",
         questionIndex: state.currentQuestionIndex,
         startedAt: state.roundStartedAt,
       });
+      startSyncPulse();
       return;
     }
 
@@ -439,7 +520,7 @@ export function useGameLoop({
         at: Date.now(),
       });
     }
-  }, [broadcastSync, isBotMatch, isSyncLeader]);
+  }, [broadcastSync, isBotMatch, isSyncLeader, startSyncPulse]);
 
   const handleSyncPayload = useCallback(
     (payload: MatchSyncPayload) => {
@@ -464,14 +545,33 @@ export function useGameLoop({
               }
             }
             break;
-          case "topic_reveal":
+          case "topic_reveal": {
+            const live = useGameStore.getState();
+            if (
+              live.roundPhase === "playing" ||
+              live.roundPhase === "round_result" ||
+              (live.roundPhase === "topic_reveal" &&
+                live.currentQuestionIndex === payload.questionIndex)
+            ) {
+              break;
+            }
             startTopicReveal(payload.questionIndex, true);
             break;
-          case "round_playing":
+          }
+          case "round_playing": {
             clearSyncRequestInterval();
             clearRoundTimers();
+            const live = useGameStore.getState();
+            if (
+              live.roundPhase === "playing" &&
+              live.currentQuestionIndex === payload.questionIndex &&
+              live.roundStartedAt === payload.startedAt
+            ) {
+              break;
+            }
             beginRoundPlaying(payload.questionIndex, payload.startedAt, true);
             break;
+          }
           case "tiebreaker":
             startTiebreakerRound(payload.question);
             break;
@@ -622,6 +722,24 @@ export function useGameLoop({
   const finalizeRoundRef = useRef(finalizeRound);
   finalizeRoundRef.current = finalizeRound;
 
+  const handleSyncPayloadRef = useRef(handleSyncPayload);
+  handleSyncPayloadRef.current = handleSyncPayload;
+
+  const maybeStartSyncedMatchRef = useRef(maybeStartSyncedMatch);
+  maybeStartSyncedMatchRef.current = maybeStartSyncedMatch;
+
+  const rebroadcastCurrentStateRef = useRef(rebroadcastCurrentState);
+  rebroadcastCurrentStateRef.current = rebroadcastCurrentState;
+
+  const startTopicRevealRef = useRef(startTopicReveal);
+  startTopicRevealRef.current = startTopicReveal;
+
+  const flushPendingBroadcastsRef = useRef(flushPendingBroadcasts);
+  flushPendingBroadcastsRef.current = flushPendingBroadcasts;
+
+  const lockOpponentAnswerRef = useRef(lockOpponentAnswer);
+  lockOpponentAnswerRef.current = lockOpponentAnswer;
+
   const handleSelectAnswer = useCallback(
     (answer: CorrectAnswer) => {
       const state = useGameStore.getState();
@@ -680,9 +798,13 @@ export function useGameLoop({
     pendingBroadcastsRef.current = [];
     peerReadyRef.current = { a: false, b: false };
     matchSyncStartedRef.current = false;
+    lastRoundPlayingRef.current = null;
 
     const channel = supabase.channel(`game_session:${sessionId}`, {
       config: {
+        broadcast: {
+          self: false,
+        },
         presence: {
           key: localUserId,
         },
@@ -694,10 +816,10 @@ export function useGameLoop({
         const roles = countPresentPlayers(channel.presenceState());
         peerReadyRef.current.a = roles.has("a");
         peerReadyRef.current.b = roles.has("b");
-        maybeStartSyncedMatch();
+        maybeStartSyncedMatchRef.current();
 
-        if (isSyncLeader && matchSyncStartedRef.current) {
-          rebroadcastCurrentState();
+        if (isSyncLeaderRef.current && matchSyncStartedRef.current) {
+          rebroadcastCurrentStateRef.current();
         }
       })
       .on("broadcast", { event: "answer_locked" }, ({ payload }) => {
@@ -711,7 +833,7 @@ export function useGameLoop({
           return;
         }
 
-        lockOpponentAnswer(data.answer, data.responseTimeMs);
+        lockOpponentAnswerRef.current(data.answer, data.responseTimeMs);
 
         const updated = useGameStore.getState();
         if (updated.playerAAnswer && updated.playerBAnswer) {
@@ -720,7 +842,7 @@ export function useGameLoop({
       })
       .on("broadcast", { event: MATCH_SYNC_EVENT }, ({ payload }) => {
         if (isMatchSyncPayload(payload)) {
-          handleSyncPayload(payload);
+          handleSyncPayloadRef.current(payload);
         }
       })
       .subscribe(async (status) => {
@@ -728,34 +850,37 @@ export function useGameLoop({
           channelRef.current = channel;
           channelReadyRef.current = true;
           setChannelReady(true);
-          flushPendingBroadcasts();
+          flushPendingBroadcastsRef.current();
 
           await channel.track({ playerRole: localPlayerRole });
 
           peerReadyRef.current[localPlayerRole] = true;
-          broadcastSync({ type: "peer_ready", playerRole: localPlayerRole });
-          maybeStartSyncedMatch();
+          broadcastSyncRef.current({
+            type: "peer_ready",
+            playerRole: localPlayerRole,
+          });
+          maybeStartSyncedMatchRef.current();
 
-          if (isSyncLeader) {
+          if (isSyncLeaderRef.current) {
             clearMatchStartFallback();
             matchStartFallbackRef.current = window.setTimeout(() => {
               if (!matchSyncStartedRef.current) {
                 peerReadyRef.current.a = true;
                 peerReadyRef.current.b = true;
                 matchSyncStartedRef.current = true;
-                startTopicReveal(0, false);
+                startTopicRevealRef.current(0, false);
               }
             }, MATCH_START_FALLBACK_MS);
           } else {
             clearSyncRequestInterval();
-            broadcastSync({ type: "request_sync" });
+            broadcastSyncRef.current({ type: "request_sync" });
             syncRequestIntervalRef.current = window.setInterval(() => {
               const phase = useGameStore.getState().roundPhase;
               if (phase === "playing" || phase === "round_result") {
                 clearSyncRequestInterval();
                 return;
               }
-              broadcastSync({ type: "request_sync" });
+              broadcastSyncRef.current({ type: "request_sync" });
             }, SYNC_REQUEST_INTERVAL_MS);
           }
         }
@@ -764,27 +889,21 @@ export function useGameLoop({
     return () => {
       clearMatchStartFallback();
       clearSyncRequestInterval();
+      clearSyncPulse();
       supabase.removeChannel(channel);
       channelRef.current = null;
       channelReadyRef.current = false;
       pendingBroadcastsRef.current = [];
     };
   }, [
-    broadcastSync,
     clearMatchStartFallback,
+    clearSyncPulse,
     clearSyncRequestInterval,
     countPresentPlayers,
-    flushPendingBroadcasts,
-    handleSyncPayload,
     isBotMatch,
-    isSyncLeader,
     localPlayerRole,
     localUserId,
-    lockOpponentAnswer,
-    maybeStartSyncedMatch,
-    rebroadcastCurrentState,
     sessionId,
-    startTopicReveal,
     supabase,
   ]);
 
