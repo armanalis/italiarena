@@ -43,7 +43,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={cn("font-sans", inter.variable)}>
-      <body className="flex min-h-dvh w-full flex-col antialiased">
+      <body className="flex h-dvh min-h-dvh w-full flex-col overflow-hidden antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -51,7 +51,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SiteHeader />
-          <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+          <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto touch-scroll">
+            {children}
+          </div>
           <AppToaster />
         </ThemeProvider>
       </body>
