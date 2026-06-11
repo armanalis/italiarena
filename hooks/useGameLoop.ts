@@ -319,18 +319,25 @@ export function useGameLoop({
     [beginRoundPlaying, clearRoundTimers, play]
   );
 
+  const handleNewSyncRound = useCallback(() => {
+    // A new round arrived from the server: drop all timers and per-round
+    // flags so a stale result countdown can't block the next finalize.
+    clearTimers();
+    resolvingRef.current = false;
+    setRoundResultSecondsLeft(null);
+  }, [clearTimers]);
+
   const serverSync = useServerMatchSync({
     sessionId,
     isLeader: isSyncLeader,
     serverPlaylist,
     enabled: !isBotMatch,
     onEnterPlaying: startRoundTimer,
+    onNewRound: handleNewSyncRound,
   });
 
-  const leaderShowTopicRef = useRef(serverSync.leaderShowTopic);
-  leaderShowTopicRef.current = serverSync.leaderShowTopic;
-  const leaderShowRoundResultRef = useRef(serverSync.leaderShowRoundResult);
-  leaderShowRoundResultRef.current = serverSync.leaderShowRoundResult;
+  const leaderStartRoundRef = useRef(serverSync.leaderStartRound);
+  leaderStartRoundRef.current = serverSync.leaderStartRound;
   const leaderFinishMatchRef = useRef(serverSync.leaderFinishMatch);
   leaderFinishMatchRef.current = serverSync.leaderFinishMatch;
 
@@ -361,10 +368,6 @@ export function useGameLoop({
 
     resolveRound();
 
-    if (!isBotMatch && isSyncLeader) {
-      void leaderShowRoundResultRef.current(currentQuestionIndex);
-    }
-
     resultRemainingMsRef.current = ROUND_RESULT_MS;
     setRoundResultSecondsLeft(ROUND_RESULT_MS / 1000);
 
@@ -394,8 +397,11 @@ export function useGameLoop({
             if (isBotMatch) {
               return;
             }
-            void leaderShowTopicRef.current(
-              useGameStore.getState().currentQuestionIndex
+            // Publish the tiebreaker round; the appended question id lets the
+            // opponent refetch the extended playlist.
+            void leaderStartRoundRef.current(
+              useGameStore.getState().currentQuestionIndex,
+              result.data.id
             );
             return;
           }
@@ -414,11 +420,11 @@ export function useGameLoop({
         const nextIndex = latest.currentQuestionIndex + 1;
         if (nextIndex >= latest.playlist.length) {
           advanceToNextRound();
-          void leaderFinishMatchRef.current(latest.currentQuestionIndex);
+          void leaderFinishMatchRef.current();
           return;
         }
 
-        void leaderShowTopicRef.current(nextIndex);
+        void leaderStartRoundRef.current(nextIndex);
       })();
     };
 

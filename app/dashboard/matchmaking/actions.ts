@@ -615,7 +615,9 @@ export async function getMatchSession(sessionId: string) {
   const { questionIds, sync: matchSync } = parseQuestionPlaylist(
     session.question_playlist
   );
-  const playlist = await resolveSessionQuestions(questionIds);
+  // Full playlist (no slice): a sudden-death tiebreaker question may have
+  // been appended as an 11th entry mid-match.
+  const playlist = await fetchQuestionsByIds(questionIds);
   const opponentId =
     session.player_a_id === auth.profile.id
       ? session.player_b_id
