@@ -5,17 +5,25 @@ import {
   parseQuestionPlaylist,
 } from "@/lib/session-playlist";
 import { createClient } from "@/utils/supabase/server";
-import type { MatchSyncState } from "@/lib/match-sync";
+import { TOPIC_REVEAL_MS, type MatchSyncState } from "@/lib/match-sync";
 
 /**
  * Host-only write of the authoritative round state. Optionally appends a
  * question id to the playlist (used for the sudden-death tiebreaker).
+ *
+ * For "round" records the server stamps `roundStartedAt` itself so that all
+ * sync timestamps live on ONE clock. The stamped record and the server's
+ * current time are returned so the host can apply the exact same instant the
+ * opponent will derive from polling.
  */
 export async function updateMatchSyncState(
   sessionId: string,
   state: MatchSyncState,
   appendQuestionId?: string
-): Promise<{ success: true } | { success: false; error: string }> {
+): Promise<
+  | { success: true; sync: MatchSyncState; serverNow: number }
+  | { success: false; error: string }
+> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -49,13 +57,19 @@ export async function updateMatchSyncState(
       ? [...parsed.questionIds, appendQuestionId]
       : parsed.questionIds;
 
+  // Server-clock stamp: the round becomes answerable TOPIC_REVEAL_MS from now,
+  // measured on this clock. Client-provided timestamps are ignored on purpose.
+  const stamped: MatchSyncState = {
+    ...state,
+    roundStartedAt:
+      state.phase === "round" ? Date.now() + TOPIC_REVEAL_MS : Date.now(),
+    updatedAt: Date.now(),
+  };
+
   const { data: updated, error: updateError } = await supabase
     .from("game_sessions")
     .update({
-      question_playlist: buildQuestionPlaylistPayload(questionIds, {
-        ...state,
-        updatedAt: Date.now(),
-      }),
+      question_playlist: buildQuestionPlaylistPayload(questionIds, stamped),
     })
     .eq("id", sessionId)
     .select("id")
@@ -74,7 +88,7 @@ export async function updateMatchSyncState(
     };
   }
 
-  return { success: true };
+  return { success: true, sync: stamped, serverNow: Date.now() };
 }
 
 /**
@@ -87,6 +101,8 @@ export async function getMatchSyncState(sessionId: string): Promise<
       sync: MatchSyncState | null;
       hasOpponent: boolean;
       status: string;
+      /** Server's current time; the only clock sync timestamps may be compared to. */
+      serverNow: number;
     }
   | { success: false; error: string }
 > {
@@ -122,5 +138,6 @@ export async function getMatchSyncState(sessionId: string): Promise<
     sync,
     hasOpponent: Boolean(session.player_b_id),
     status: session.status,
+    serverNow: Date.now(),
   };
 }

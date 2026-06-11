@@ -1,28 +1,38 @@
 /**
  * Server-authoritative match sync protocol.
  *
- * The host (player A) writes ONE record per round into the session row:
- * `{ questionIndex, phase: "round", roundStartedAt }` where `roundStartedAt`
- * is the wall-clock moment the question becomes answerable. Every client
- * derives the visible phase purely from its own clock:
+ * The host (player A) triggers ONE record per round into the session row:
+ * `{ questionIndex, phase: "round", roundStartedAt }`.
  *
- *   now <  roundStartedAt  →  topic reveal
- *   now >= roundStartedAt  →  question (playing)
+ * CRITICAL CLOCK RULE (v4): `roundStartedAt` is stamped by the SERVER when the
+ * write lands, and every poll response carries `serverNow` (the server's
+ * current time). Clients only ever compare `roundStartedAt` against
+ * `serverNow` — two timestamps from the SAME clock:
  *
- * Because the transition is a clock comparison instead of a second write or a
- * realtime broadcast, a client can never get stuck on the topic screen: each
- * poll re-derives the correct phase. It also makes both devices flip to the
- * question at the same wall-clock instant.
+ *   serverNow <  roundStartedAt  →  topic reveal (flip in roundStartedAt - serverNow ms)
+ *   serverNow >= roundStartedAt  →  question (playing)
+ *
+ * v3 compared the host device's wall clock against the other device's wall
+ * clock. Phones and PCs routinely disagree by seconds-to-minutes, which froze
+ * the second device on the topic screen forever while the host played alone.
+ * Device clocks are never compared against each other anymore.
  */
 
 /** Bumped on protocol changes; surfaced in the UI to verify deployed builds. */
-export const MATCH_SYNC_VERSION = "v3";
+export const MATCH_SYNC_VERSION = "v4";
+
+/** Topic reveal duration before a question becomes answerable. */
+export const TOPIC_REVEAL_MS = 750;
 
 export type MatchSyncState = {
   /** Index into the session's question playlist. */
   questionIndex: number;
   phase: "round" | "match_finished";
-  /** Wall-clock ms timestamp when answering starts for this round. */
+  /**
+   * SERVER-clock ms timestamp when answering starts for this round.
+   * Only compare against the server's `serverNow`, never against the
+   * device's own `Date.now()`.
+   */
   roundStartedAt: number;
   updatedAt?: number;
 };

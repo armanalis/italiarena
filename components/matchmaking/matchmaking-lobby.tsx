@@ -54,6 +54,7 @@ export function MatchmakingLobby({
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const redirectingRef = useRef(false);
   const cancelledRef = useRef(false);
+  const searchInFlightRef = useRef(false);
   const searchIntervalRef = useRef<number | null>(null);
   const timerIntervalRef = useRef<number | null>(null);
   const noMatchHandledRef = useRef(false);
@@ -232,28 +233,42 @@ export function MatchmakingLobby({
       return;
     }
 
-    const result = await searchForMatch(gameSessionId);
-
-    if (cancelledRef.current || redirectingRef.current) {
+    // Never let two searches overlap: on slow connections a second in-flight
+    // call doesn't know about the session the first one just created, so it
+    // would create a duplicate lobby and split the two players across
+    // different sessions (different playlists = different questions).
+    if (searchInFlightRef.current) {
       return;
     }
+    searchInFlightRef.current = true;
 
-    if (!result.success) {
-      setError(result.error);
-      return;
+    try {
+      // Read the live value, not a stale closure capture.
+      const result = await searchForMatch(useGameStore.getState().gameSessionId);
+
+      if (cancelledRef.current || redirectingRef.current) {
+        return;
+      }
+
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+
+      setError(null);
+      setSessionId(result.data.sessionId);
+
+      if (result.data.status === "active" && result.data.opponent) {
+        handleActiveMatch(
+          result.data.sessionId,
+          result.data.playlist,
+          result.data.opponent
+        );
+      }
+    } finally {
+      searchInFlightRef.current = false;
     }
-
-    setError(null);
-    setSessionId(result.data.sessionId);
-
-    if (result.data.status === "active" && result.data.opponent) {
-      handleActiveMatch(
-        result.data.sessionId,
-        result.data.playlist,
-        result.data.opponent
-      );
-    }
-  }, [gameSessionId, handleActiveMatch, setSessionId]);
+  }, [handleActiveMatch, setSessionId]);
 
   useEffect(() => {
     setSearching();
