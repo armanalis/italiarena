@@ -17,7 +17,7 @@ export default async function AdminPage() {
   ).length;
 
   return (
-    <main className="min-h-[calc(100dvh-3.5rem)] w-full bg-background md:min-h-[calc(100dvh-4rem)]">
+    <main className="min-h-app w-full flex-1 touch-scroll bg-background pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
       <header className="w-full border-b border-border/60 px-4 py-5 sm:px-8 sm:py-6 lg:px-10 xl:px-12">
         <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">

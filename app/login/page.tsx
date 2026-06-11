@@ -31,7 +31,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const authError = params.error ? loginErrors[params.error] ?? null : null;
 
   return (
-    <main className="relative flex min-h-[calc(100dvh-3.5rem)] items-center justify-center overflow-y-auto bg-background px-4 py-8 touch-scroll sm:py-10">
+    <main className="relative flex min-h-app flex-1 items-center justify-center overflow-y-auto bg-background px-4 py-8 pb-[max(2rem,env(safe-area-inset-bottom,0px))] touch-scroll sm:py-10">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.22),_transparent_50%)] dark:bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.35),_transparent_55%)]" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_rgba(139,92,246,0.15),_transparent_45%)] dark:bg-[radial-gradient(ellipse_at_bottom_right,_rgba(139,92,246,0.25),_transparent_50%)]" />
 

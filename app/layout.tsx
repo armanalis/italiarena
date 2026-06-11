@@ -15,12 +15,25 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Language Quiz",
   description: "Learn a new language through quick, playful practice with others",
+  applicationName: "Language Quiz",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Language Quiz",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8f7fc" },
+    { media: "(prefers-color-scheme: dark)", color: "#1f1b2e" },
+  ],
 };
 
 export default function RootLayout({
@@ -30,7 +43,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={cn("font-sans", inter.variable)}>
-      <body className="min-h-dvh w-full antialiased">
+      <body className="flex min-h-dvh w-full flex-col antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -38,7 +51,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SiteHeader />
-          {children}
+          <div className="flex min-h-0 flex-1 flex-col">{children}</div>
           <AppToaster />
         </ThemeProvider>
       </body>
