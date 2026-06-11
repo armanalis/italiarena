@@ -1,5 +1,9 @@
 "use server";
 
+import {
+  buildQuestionPlaylistPayload,
+  parseQuestionPlaylist,
+} from "@/lib/session-playlist";
 import { createClient } from "@/utils/supabase/server";
 import type { MatchSyncState } from "@/lib/match-sync";
 
@@ -18,7 +22,7 @@ export async function updateMatchSyncState(
 
   const { data: session, error: readError } = await supabase
     .from("game_sessions")
-    .select("player_a_id, status")
+    .select("player_a_id, status, question_playlist")
     .eq("id", sessionId)
     .maybeSingle();
 
@@ -34,13 +38,19 @@ export async function updateMatchSyncState(
     return { success: false, error: "Match is not active." };
   }
 
+  const parsed = parseQuestionPlaylist(session.question_playlist);
+  const syncPayload: MatchSyncState = {
+    ...state,
+    updatedAt: Date.now(),
+  };
+
   const { error: updateError } = await supabase
     .from("game_sessions")
     .update({
-      match_sync: {
-        ...state,
-        updatedAt: Date.now(),
-      },
+      question_playlist: buildQuestionPlaylistPayload(
+        parsed.questionIds,
+        syncPayload
+      ),
     })
     .eq("id", sessionId);
 

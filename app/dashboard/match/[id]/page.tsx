@@ -84,6 +84,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
         proficiencyLevel={profile.proficiency_level!}
         playerAName={playerAName}
         playerBName={playerBName}
+        serverPlaylist={playlist}
       />
     </>
   );

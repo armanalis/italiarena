@@ -17,7 +17,7 @@ import { MatchMistakesReview } from "@/components/match/match-mistakes-review";
 import { MatchReviewBoundary } from "@/components/match/match-review-boundary";
 import { ReportQuestionButton } from "@/components/match/report-question-button";
 import { SoundVolumeControl } from "@/components/sound-volume-control";
-import type { CorrectAnswer } from "@/types/database.types";
+import type { CorrectAnswer, QuestionActive } from "@/types/database.types";
 import type { ProficiencyLevel } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +29,7 @@ type GameLoopProps = {
   proficiencyLevel: ProficiencyLevel;
   playerAName: string;
   playerBName: string;
+  serverPlaylist: QuestionActive[];
 };
 
 const OPTIONS: { key: CorrectAnswer; label: string }[] = [
@@ -46,6 +47,7 @@ export function GameLoop({
   proficiencyLevel,
   playerAName,
   playerBName,
+  serverPlaylist,
 }: GameLoopProps) {
   const hydrated = useGameStoreHydrated();
   const playerAScore = usePlayerAScore();
@@ -76,6 +78,7 @@ export function GameLoop({
     localPlayerRole,
     isBotMatch,
     proficiencyLevel,
+    serverPlaylist,
   });
 
   if (!hydrated) {
