@@ -9,6 +9,11 @@ import {
   simulateBotAnswer,
 } from "@/lib/bot";
 import { pulseCountdownHaptic } from "@/lib/haptics";
+import {
+  isMatchSyncPayload,
+  MATCH_SYNC_EVENT,
+  type MatchSyncPayload,
+} from "@/lib/match-sync";
 import { useGameAudio } from "@/hooks/useGameAudio";
 import { useGameStore } from "@/store/useGameStore";
 import { REGULAR_MATCH_QUESTIONS } from "@/lib/match";
@@ -46,6 +51,7 @@ export function useGameLoop({
   const { play } = useGameAudio();
   const supabaseRef = useRef(createClient());
   const supabase = supabaseRef.current;
+  const isSyncLeader = !isBotMatch && localPlayerRole === "a";
 
   const roundPhase = useGameStore((state) => state.roundPhase);
   const currentQuestionIndex = useGameStore((state) => state.currentQuestionIndex);
@@ -74,7 +80,10 @@ export function useGameLoop({
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const channelReadyRef = useRef(false);
   const pendingBroadcastsRef = useRef<AnswerLockedPayload[]>([]);
-  const [channelReady, setChannelReady] = useState(!isBotMatch);
+  const peerReadyRef = useRef({ a: isBotMatch, b: isBotMatch });
+  const matchSyncStartedRef = useRef(isBotMatch);
+  const applyingSyncRef = useRef(false);
+  const [channelReady, setChannelReady] = useState(isBotMatch);
   const [roundResultSecondsLeft, setRoundResultSecondsLeft] = useState<
     number | null
   >(null);
@@ -109,6 +118,18 @@ export function useGameLoop({
     clearResultTimer();
     clearBotTimer();
   }, [clearBotTimer, clearResultTimer, clearRoundTimers]);
+
+  const broadcastSync = useCallback((payload: MatchSyncPayload) => {
+    if (isBotMatch || !channelReadyRef.current || !channelRef.current) {
+      return;
+    }
+
+    void channelRef.current.send({
+      type: "broadcast",
+      event: MATCH_SYNC_EVENT,
+      payload,
+    });
+  }, [isBotMatch]);
 
   const flushPendingBroadcasts = useCallback(() => {
     if (!channelReadyRef.current || !channelRef.current) {
@@ -148,93 +169,63 @@ export function useGameLoop({
     return Boolean(state.playerAAnswer && state.playerBAnswer);
   }, []);
 
-  const finalizeRound = useCallback(() => {
-    if (resolvingRef.current) {
-      return;
+  const startRoundTimer = useCallback(() => {
+    if (roundTimerRef.current) {
+      window.clearInterval(roundTimerRef.current);
     }
 
-    resolvingRef.current = true;
-    clearTimers();
+    roundTimerRef.current = window.setInterval(() => {
+      const state = useGameStore.getState();
+      if (state.roundPhase !== "playing") {
+        return;
+      }
 
-    const state = useGameStore.getState();
-    const question = state.playlist[currentQuestionIndex];
-    const answerA = state.playerAAnswer;
-    const answerB = state.playerBAnswer;
-    const role = state.localPlayerRole;
+      const startedAt = state.roundStartedAt ?? Date.now();
+      const elapsedSec = Math.floor((Date.now() - startedAt) / 1000);
+      const remaining = Math.max(0, ROUND_DURATION_SEC - elapsedSec);
 
-    const localCorrect =
-      question &&
-      ((role === "a" && answerA?.answer === question.correct_answer) ||
-        (role === "b" && answerB?.answer === question.correct_answer));
+      setTimeRemaining(remaining);
 
-    if (localCorrect) {
-      play("correct");
-    } else {
-      play("incorrect");
-    }
+      if (remaining > 0 && remaining <= 5) {
+        pulseCountdownHaptic();
+      }
 
-    resolveRound();
+      if (remaining === 0) {
+        window.clearInterval(roundTimerRef.current!);
+        roundTimerRef.current = null;
 
-    resultRemainingMsRef.current = ROUND_RESULT_MS;
-    setRoundResultSecondsLeft(ROUND_RESULT_MS / 1000);
+        const localRole = state.localPlayerRole;
+        const localAnswer =
+          localRole === "a" ? state.playerAAnswer : state.playerBAnswer;
 
-    const advanceAfterResult = () => {
-      void (async () => {
-        resolvingRef.current = false;
-        setRoundResultSecondsLeft(null);
-        const latest = useGameStore.getState();
-        const finishedRegularRound =
-          latest.currentQuestionIndex === REGULAR_MATCH_QUESTIONS - 1;
-        const isScoreTied = latest.playerAScore === latest.playerBScore;
+        if (!localAnswer && localRole) {
+          lockLocalAnswer(null, null);
+          broadcastAnswer({
+            playerRole: localRole,
+            questionIndex: state.currentQuestionIndex,
+            answer: null,
+            responseTimeMs: null,
+          });
+        }
 
-        if (finishedRegularRound && isScoreTied && !latest.tiebreakerUsed) {
-          setRoundPhase("tiebreaker_loading");
-
-          const result = await fetchTiebreakerQuestion(
-            latest.playlist.map((question) => question.id)
-          );
-
-          if (result.success) {
-            startTiebreakerRound(result.data);
-            return;
+        if (isBotMatch) {
+          const botRole = localRole === "a" ? "b" : "a";
+          const botAnswer =
+            botRole === "a" ? state.playerAAnswer : state.playerBAnswer;
+          if (!botAnswer) {
+            lockOpponentAnswer(null, null);
           }
         }
 
-        advanceToNextRound();
-      })();
-    };
-
-    resultTimerRef.current = window.setInterval(() => {
-      const latest = useGameStore.getState();
-
-      if (latest.roundPhase !== "round_result") {
-        clearResultTimer();
-        setRoundResultSecondsLeft(null);
-        return;
+        finalizeRoundRef.current();
       }
-
-      if (latest.isReportDialogOpen) {
-        return;
-      }
-
-      resultRemainingMsRef.current -= ROUND_RESULT_TICK_MS;
-      setRoundResultSecondsLeft(
-        Math.max(0, resultRemainingMsRef.current / 1000)
-      );
-
-      if (resultRemainingMsRef.current <= 0) {
-        clearResultTimer();
-        advanceAfterResult();
-      }
-    }, ROUND_RESULT_TICK_MS);
+    }, 250);
   }, [
-    advanceToNextRound,
-    clearTimers,
-    currentQuestionIndex,
-    play,
-    resolveRound,
-    setRoundPhase,
-    startTiebreakerRound,
+    broadcastAnswer,
+    isBotMatch,
+    lockLocalAnswer,
+    lockOpponentAnswer,
+    setTimeRemaining,
   ]);
 
   const scheduleBotAnswer = useCallback(() => {
@@ -296,78 +287,260 @@ export function useGameLoop({
       });
 
       if (bothAnswersLocked()) {
-        finalizeRound();
+        finalizeRoundRef.current();
       }
     }, delay);
   }, [
     broadcastAnswer,
     bothAnswersLocked,
-    finalizeRound,
     isBotMatch,
     localPlayerRole,
     lockOpponentAnswer,
     proficiencyLevel,
   ]);
 
-  const startRoundTimer = useCallback(() => {
-    if (roundTimerRef.current) {
-      window.clearInterval(roundTimerRef.current);
-    }
-
-    roundTimerRef.current = window.setInterval(() => {
+  const beginRoundPlaying = useCallback(
+    (questionIndex: number, startedAt: number, fromSync = false) => {
       const state = useGameStore.getState();
-      if (state.roundPhase !== "playing") {
+      if (state.currentQuestionIndex !== questionIndex) {
+        useGameStore.setState({ currentQuestionIndex: questionIndex });
+      }
+
+      beginRound(startedAt);
+      scheduleBotAnswer();
+      startRoundTimer();
+
+      if (!fromSync && isSyncLeader) {
+        broadcastSync({
+          type: "round_playing",
+          questionIndex,
+          startedAt,
+        });
+      }
+    },
+    [beginRound, broadcastSync, isSyncLeader, scheduleBotAnswer, startRoundTimer]
+  );
+
+  const startTopicReveal = useCallback(
+    (questionIndex: number, fromSync = false) => {
+      clearRoundTimers();
+      resolvingRef.current = false;
+
+      useGameStore.setState({
+        currentQuestionIndex: questionIndex,
+        roundPhase: "topic_reveal",
+        playerAAnswer: null,
+        playerBAnswer: null,
+        roundStartedAt: null,
+        timeRemaining: ROUND_DURATION_SEC,
+        lastRoundPointsA: 0,
+        lastRoundPointsB: 0,
+      });
+
+      play("reveal");
+
+      if (!fromSync && isSyncLeader) {
+        broadcastSync({
+          type: "topic_reveal",
+          questionIndex,
+          at: Date.now(),
+        });
+      }
+
+      if (!isBotMatch && !isSyncLeader) {
         return;
       }
 
-      const startedAt = state.roundStartedAt ?? Date.now();
-      const elapsedSec = Math.floor((Date.now() - startedAt) / 1000);
-      const remaining = Math.max(0, ROUND_DURATION_SEC - elapsedSec);
+      topicTimerRef.current = window.setTimeout(() => {
+        beginRoundPlaying(questionIndex, Date.now(), false);
+      }, TOPIC_REVEAL_MS);
+    },
+    [beginRoundPlaying, broadcastSync, clearRoundTimers, isBotMatch, isSyncLeader, play]
+  );
 
-      setTimeRemaining(remaining);
+  const maybeStartSyncedMatch = useCallback(() => {
+    if (matchSyncStartedRef.current || !isSyncLeader) {
+      return;
+    }
 
-      if (remaining > 0 && remaining <= 5) {
-        pulseCountdownHaptic();
+    if (!peerReadyRef.current.a || !peerReadyRef.current.b) {
+      return;
+    }
+
+    matchSyncStartedRef.current = true;
+    startTopicReveal(0, false);
+  }, [isSyncLeader, startTopicReveal]);
+
+  const handleSyncPayload = useCallback(
+    (payload: MatchSyncPayload) => {
+      if (isBotMatch || applyingSyncRef.current) {
+        return;
       }
 
-      if (remaining === 0) {
-        window.clearInterval(roundTimerRef.current!);
-        roundTimerRef.current = null;
+      applyingSyncRef.current = true;
 
-        const localRole = state.localPlayerRole;
-        const localAnswer =
-          localRole === "a" ? state.playerAAnswer : state.playerBAnswer;
+      try {
+        switch (payload.type) {
+          case "peer_ready":
+            peerReadyRef.current[payload.playerRole] = true;
+            if (payload.playerRole !== localPlayerRole) {
+              maybeStartSyncedMatch();
+            }
+            break;
+          case "topic_reveal":
+            startTopicReveal(payload.questionIndex, true);
+            break;
+          case "round_playing":
+            clearRoundTimers();
+            beginRoundPlaying(payload.questionIndex, payload.startedAt, true);
+            break;
+          case "tiebreaker":
+            startTiebreakerRound(payload.question);
+            break;
+          case "match_finished":
+            clearTimers();
+            setRoundPhase("match_finished");
+            break;
+          default:
+            break;
+        }
+      } finally {
+        applyingSyncRef.current = false;
+      }
+    },
+    [
+      beginRoundPlaying,
+      clearRoundTimers,
+      clearTimers,
+      isBotMatch,
+      isSyncLeader,
+      localPlayerRole,
+      maybeStartSyncedMatch,
+      setRoundPhase,
+      startTiebreakerRound,
+      startTopicReveal,
+    ]
+  );
 
-        if (!localAnswer && localRole) {
-          lockLocalAnswer(null, null);
-          broadcastAnswer({
-            playerRole: localRole,
-            questionIndex: state.currentQuestionIndex,
-            answer: null,
-            responseTimeMs: null,
-          });
+  const finalizeRound = useCallback(() => {
+    if (resolvingRef.current) {
+      return;
+    }
+
+    resolvingRef.current = true;
+    clearTimers();
+
+    const state = useGameStore.getState();
+    const question = state.playlist[currentQuestionIndex];
+    const answerA = state.playerAAnswer;
+    const answerB = state.playerBAnswer;
+    const role = state.localPlayerRole;
+
+    const localCorrect =
+      question &&
+      ((role === "a" && answerA?.answer === question.correct_answer) ||
+        (role === "b" && answerB?.answer === question.correct_answer));
+
+    if (localCorrect) {
+      play("correct");
+    } else {
+      play("incorrect");
+    }
+
+    resolveRound();
+
+    resultRemainingMsRef.current = ROUND_RESULT_MS;
+    setRoundResultSecondsLeft(ROUND_RESULT_MS / 1000);
+
+    const advanceAfterResult = () => {
+      void (async () => {
+        resolvingRef.current = false;
+        setRoundResultSecondsLeft(null);
+
+        if (!isBotMatch && !isSyncLeader) {
+          return;
         }
 
-        if (isBotMatch) {
-          const botRole = localRole === "a" ? "b" : "a";
-          const botAnswer =
-            botRole === "a" ? state.playerAAnswer : state.playerBAnswer;
-          if (!botAnswer) {
-            lockOpponentAnswer(null, null);
+        const latest = useGameStore.getState();
+        const finishedRegularRound =
+          latest.currentQuestionIndex === REGULAR_MATCH_QUESTIONS - 1;
+        const isScoreTied = latest.playerAScore === latest.playerBScore;
+
+        if (finishedRegularRound && isScoreTied && !latest.tiebreakerUsed) {
+          setRoundPhase("tiebreaker_loading");
+
+          const result = await fetchTiebreakerQuestion(
+            latest.playlist.map((item) => item.id)
+          );
+
+          if (result.success) {
+            if (isBotMatch) {
+              startTiebreakerRound(result.data);
+              return;
+            }
+
+            broadcastSync({ type: "tiebreaker", question: result.data });
+            startTiebreakerRound(result.data);
+            startTopicReveal(
+              useGameStore.getState().currentQuestionIndex,
+              false
+            );
+            return;
           }
         }
 
-        finalizeRound();
+        advanceToNextRound();
+
+        const afterAdvance = useGameStore.getState();
+        if (afterAdvance.roundPhase === "match_finished") {
+          broadcastSync({ type: "match_finished" });
+          return;
+        }
+
+        startTopicReveal(afterAdvance.currentQuestionIndex, false);
+      })();
+    };
+
+    resultTimerRef.current = window.setInterval(() => {
+      const latest = useGameStore.getState();
+
+      if (latest.roundPhase !== "round_result") {
+        clearResultTimer();
+        setRoundResultSecondsLeft(null);
+        return;
       }
-    }, 250);
+
+      if (latest.isReportDialogOpen) {
+        return;
+      }
+
+      resultRemainingMsRef.current -= ROUND_RESULT_TICK_MS;
+      setRoundResultSecondsLeft(
+        Math.max(0, resultRemainingMsRef.current / 1000)
+      );
+
+      if (resultRemainingMsRef.current <= 0) {
+        clearResultTimer();
+        advanceAfterResult();
+      }
+    }, ROUND_RESULT_TICK_MS);
   }, [
-    broadcastAnswer,
-    finalizeRound,
+    advanceToNextRound,
+    broadcastSync,
+    clearResultTimer,
+    clearTimers,
+    currentQuestionIndex,
     isBotMatch,
-    lockLocalAnswer,
-    lockOpponentAnswer,
-    setTimeRemaining,
+    isSyncLeader,
+    play,
+    resolveRound,
+    setRoundPhase,
+    startTiebreakerRound,
+    startTopicReveal,
   ]);
+
+  const finalizeRoundRef = useRef(finalizeRound);
+  finalizeRoundRef.current = finalizeRound;
 
   const handleSelectAnswer = useCallback(
     (answer: CorrectAnswer) => {
@@ -407,17 +580,12 @@ export function useGameLoop({
       isBotMatch,
       proficiencyLevel,
     });
-
-    if (useGameStore.getState().roundPhase === "waiting") {
-      setRoundPhase("playing");
-    }
   }, [
     initGameplay,
     isBotMatch,
     localPlayerRole,
     localUserId,
     proficiencyLevel,
-    setRoundPhase,
   ]);
 
   useEffect(() => {
@@ -430,6 +598,8 @@ export function useGameLoop({
     channelReadyRef.current = false;
     setChannelReady(false);
     pendingBroadcastsRef.current = [];
+    peerReadyRef.current = { a: false, b: false };
+    matchSyncStartedRef.current = false;
 
     const channel = supabase.channel(`game_session:${sessionId}`);
 
@@ -449,7 +619,12 @@ export function useGameLoop({
 
         const updated = useGameStore.getState();
         if (updated.playerAAnswer && updated.playerBAnswer) {
-          finalizeRound();
+          finalizeRoundRef.current();
+        }
+      })
+      .on("broadcast", { event: MATCH_SYNC_EVENT }, ({ payload }) => {
+        if (isMatchSyncPayload(payload)) {
+          handleSyncPayload(payload);
         }
       })
       .subscribe((status) => {
@@ -458,6 +633,10 @@ export function useGameLoop({
           channelReadyRef.current = true;
           setChannelReady(true);
           flushPendingBroadcasts();
+
+          peerReadyRef.current[localPlayerRole] = true;
+          broadcastSync({ type: "peer_ready", playerRole: localPlayerRole });
+          maybeStartSyncedMatch();
         }
       });
 
@@ -468,34 +647,44 @@ export function useGameLoop({
       pendingBroadcastsRef.current = [];
     };
   }, [
-    finalizeRound,
+    broadcastSync,
     flushPendingBroadcasts,
+    handleSyncPayload,
     isBotMatch,
+    localPlayerRole,
     lockOpponentAnswer,
+    maybeStartSyncedMatch,
     sessionId,
     supabase,
   ]);
 
   useEffect(() => {
-    if (
-      roundPhase === "round_result" ||
-      roundPhase === "match_finished" ||
-      roundPhase === "tiebreaker_loading"
-    ) {
-      return;
-    }
+    if (isBotMatch) {
+      if (
+        roundPhase === "round_result" ||
+        roundPhase === "match_finished" ||
+        roundPhase === "tiebreaker_loading"
+      ) {
+        return;
+      }
 
-    clearTimers();
-    resolvingRef.current = false;
+      clearTimers();
+      resolvingRef.current = false;
 
-    if (roundPhase === "topic_reveal") {
-      play("reveal");
+      if (roundPhase === "topic_reveal") {
+        play("reveal");
 
-      topicTimerRef.current = window.setTimeout(() => {
-        beginRound();
+        topicTimerRef.current = window.setTimeout(() => {
+          beginRoundPlaying(currentQuestionIndex, Date.now(), true);
+        }, TOPIC_REVEAL_MS);
+      }
+
+      if (roundPhase === "playing" && roundStartedAt) {
         scheduleBotAnswer();
         startRoundTimer();
-      }, TOPIC_REVEAL_MS);
+      }
+
+      return clearRoundTimers;
     }
 
     if (roundPhase === "playing" && roundStartedAt) {
@@ -505,10 +694,11 @@ export function useGameLoop({
 
     return clearRoundTimers;
   }, [
-    beginRound,
+    beginRoundPlaying,
     clearRoundTimers,
     clearTimers,
     currentQuestionIndex,
+    isBotMatch,
     play,
     roundPhase,
     roundStartedAt,

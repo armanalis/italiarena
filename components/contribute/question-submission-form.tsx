@@ -55,7 +55,8 @@ export function QuestionSubmissionForm({ pendingCount }: QuestionSubmissionFormP
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
 
     const input: QuestionSubmissionInput = {
       level,
@@ -78,7 +79,7 @@ export function QuestionSubmissionForm({ pendingCount }: QuestionSubmissionFormP
         toast.success(
           "Submitted for review. An admin will make the final decision after an AI pre-check."
         );
-        event.currentTarget.reset();
+        form.reset();
         setLevelConfirmed(false);
         setCategoryConfirmed(false);
         return;
