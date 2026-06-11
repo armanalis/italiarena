@@ -1,8 +1,18 @@
-/** Syncs server-fetched match data into the persisted Zustand store. */
+/**
+ * Syncs server-fetched match identity into the store.
+ *
+ * For REAL (PvP) matches this only sets identity fields (opponent, role flags).
+ * All live round state (playlist, phase, index, scores) is owned exclusively by
+ * `useServerMatchSync`, which treats the database as the single source of truth.
+ * Touching round state here previously caused a race that clobbered the synced
+ * "playing" phase and left the second player stuck on the topic screen.
+ *
+ * For BOT matches there is no server to sync against, so we set up the full
+ * match locally via `startMatch`.
+ */
 "use client";
 
 import { useEffect, useRef } from "react";
-import { playlistIdsSignature } from "@/lib/match-sync";
 import { useGameStore, useGameStoreHydrated } from "@/store/useGameStore";
 import type { QuestionActive } from "@/types/database.types";
 
@@ -23,75 +33,40 @@ export function MatchHydrator({
 }: MatchHydratorProps) {
   const hydrated = useGameStoreHydrated();
   const startMatch = useGameStore((state) => state.startMatch);
-  const syncedSessionRef = useRef<string | null>(null);
+  const setupSessionRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!hydrated || !opponent || playlist.length === 0) {
       return;
     }
 
-    const state = useGameStore.getState();
+    if (setupSessionRef.current === sessionId) {
+      return;
+    }
+    setupSessionRef.current = sessionId;
 
-    // Lobby may have already called startMatch before navigation. Never restart
-    // the same session — that wipes roundReviews, scores, and match progress.
-    if (state.gameSessionId === sessionId) {
-      syncedSessionRef.current = sessionId;
+    // Bot match: no server sync — set up the whole match locally.
+    if (opponent.isGhost) {
+      const state = useGameStore.getState();
+      const alreadyRunningThisSession =
+        state.gameSessionId === sessionId && state.playlist.length > 0;
 
-      const opponentChanged =
-        state.opponent?.id !== opponent.id ||
-        state.opponent?.isGhost !== opponent.isGhost ||
-        state.opponent?.displayName !== opponent.displayName;
-
-      if (opponentChanged) {
-        useGameStore.setState({
+      if (!alreadyRunningThisSession) {
+        startMatch({
+          gameSessionId: sessionId,
           opponent,
-          isBotMatch: opponent.isGhost,
-          botDifficulty: opponent.isGhost ? state.botDifficulty ?? "medium" : null,
+          playlist,
         });
-      }
-
-      // Server session playlist is authoritative — both players must use the same IDs.
-      const serverPlaylistSig = playlistIdsSignature(playlist);
-      const localPlaylistSig = playlistIdsSignature(state.playlist);
-
-      if (state.playlist.length === 0 || serverPlaylistSig !== localPlaylistSig) {
-        const matchInProgress =
-          state.roundPhase === "playing" ||
-          state.roundPhase === "round_result" ||
-          state.roundStartedAt !== null ||
-          state.playerAScore > 0 ||
-          state.playerBScore > 0 ||
-          state.currentQuestionIndex > 0;
-
-        if (matchInProgress) {
-          useGameStore.setState({ playlist });
-        } else {
-          useGameStore.setState({
-            playlist,
-            currentQuestionIndex: 0,
-            roundPhase: state.opponent?.isGhost ? "topic_reveal" : "waiting",
-            playerAAnswer: null,
-            playerBAnswer: null,
-            roundStartedAt: null,
-            timeRemaining: 25,
-            playerAScore: 0,
-            playerBScore: 0,
-            lastRoundPointsA: 0,
-            lastRoundPointsB: 0,
-            matchWinner: null,
-            tiebreakerUsed: false,
-            tiebreakerQuestion: null,
-          });
-        }
       }
       return;
     }
 
-    syncedSessionRef.current = sessionId;
-    startMatch({
+    // PvP match: only set identity. useServerMatchSync owns round state.
+    useGameStore.setState({
       gameSessionId: sessionId,
       opponent,
-      playlist,
+      isBotMatch: false,
+      botDifficulty: null,
     });
   }, [hydrated, opponent, playlist, sessionId, startMatch]);
 

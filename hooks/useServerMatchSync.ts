@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { updateMatchSyncState } from "@/app/dashboard/match/sync-actions";
-import { getMatchSession } from "@/app/dashboard/matchmaking/actions";
+import {
+  getMatchSyncState,
+  updateMatchSyncState,
+} from "@/app/dashboard/match/sync-actions";
 import {
   playlistIdsSignature,
   type MatchSyncState,
@@ -33,10 +35,10 @@ export function useServerMatchSync({
   const onEnterPlayingRef = useRef(onEnterPlaying);
   onEnterPlayingRef.current = onEnterPlaying;
 
-  const lastAppliedAtRef = useRef(0);
   const leaderTimerRef = useRef<number | null>(null);
   const matchStartedRef = useRef(false);
   const drivingRef = useRef(false);
+  const initializedSessionRef = useRef<string | null>(null);
 
   const getPlaylistSig = useCallback(() => {
     const playlist = useGameStore.getState().playlist;
@@ -66,18 +68,15 @@ export function useServerMatchSync({
 
   const applyServerState = useCallback(
     (sync: MatchSyncState) => {
-      const updatedAt = sync.updatedAt ?? 0;
-      if (updatedAt > 0 && updatedAt <= lastAppliedAtRef.current) {
-        return;
-      }
-
-      if (updatedAt > 0) {
-        lastAppliedAtRef.current = updatedAt;
-      }
-
+      // Self-healing: every poll re-asserts the authoritative server state.
+      // We never short-circuit on a timestamp, so if anything clobbers local
+      // state (e.g. a stale persisted value), the next poll recovers it.
       const live = useGameStore.getState();
 
       if (sync.phase === "match_finished") {
+        if (live.roundPhase === "match_finished") {
+          return;
+        }
         useGameStore.setState({ roundPhase: "match_finished" });
         return;
       }
@@ -141,24 +140,16 @@ export function useServerMatchSync({
   );
 
   const pollServer = useCallback(async () => {
-    const result = await getMatchSession(sessionId);
+    const result = await getMatchSyncState(sessionId);
     if (!result.success) {
       return null;
     }
 
-    if (result.data.playlist.length > 0) {
-      const serverSig = playlistIdsSignature(result.data.playlist);
-      const localSig = playlistIdsSignature(useGameStore.getState().playlist);
-      if (serverSig !== localSig || useGameStore.getState().playlist.length === 0) {
-        useGameStore.setState({ playlist: result.data.playlist });
-      }
+    if (result.sync) {
+      applyServerState(result.sync);
     }
 
-    if (result.data.matchSync) {
-      applyServerState(result.data.matchSync);
-    }
-
-    return result.data;
+    return result;
   }, [applyServerState, sessionId]);
 
   const startLeaderMatch = useCallback(async () => {
@@ -169,9 +160,10 @@ export function useServerMatchSync({
     drivingRef.current = true;
 
     const data = await pollServer();
-    if (!data?.opponent || data.matchSync) {
+    if (!data || !data.hasOpponent || data.sync) {
       drivingRef.current = false;
-      if (data?.matchSync) {
+      if (data?.sync) {
+        // Match already started (e.g. host refreshed) — follow server state.
         matchStartedRef.current = true;
       }
       return;
@@ -254,11 +246,20 @@ export function useServerMatchSync({
     [clearLeaderTimer, isLeader, writeSync]
   );
 
-  // Authoritative playlist from the server-rendered match page.
+  // Authoritative playlist from the server-rendered match page. Runs exactly
+  // once per session so re-renders/polls can never reset live progress.
   useEffect(() => {
     if (!enabled || serverPlaylist.length === 0) {
       return;
     }
+
+    if (initializedSessionRef.current === sessionId) {
+      // Already initialised — just keep the playlist authoritative.
+      useGameStore.setState({ playlist: serverPlaylist });
+      return;
+    }
+
+    initializedSessionRef.current = sessionId;
 
     useGameStore.setState({
       gameSessionId: sessionId,
@@ -271,6 +272,11 @@ export function useServerMatchSync({
       timeRemaining: 25,
       playerAScore: 0,
       playerBScore: 0,
+      lastRoundPointsA: 0,
+      lastRoundPointsB: 0,
+      matchWinner: null,
+      tiebreakerUsed: false,
+      tiebreakerQuestion: null,
     });
   }, [enabled, serverPlaylist, sessionId]);
 
