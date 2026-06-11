@@ -25,6 +25,8 @@ const TOPIC_REVEAL_MS = 750;
 const ROUND_RESULT_MS = 2_500;
 const ROUND_RESULT_TICK_MS = 100;
 const ROUND_DURATION_SEC = 25;
+const MATCH_START_FALLBACK_MS = 1_500;
+const SYNC_REQUEST_INTERVAL_MS = 800;
 
 type AnswerLockedPayload = {
   playerRole: "a" | "b";
@@ -83,6 +85,8 @@ export function useGameLoop({
   const peerReadyRef = useRef({ a: isBotMatch, b: isBotMatch });
   const matchSyncStartedRef = useRef(isBotMatch);
   const applyingSyncRef = useRef(false);
+  const matchStartFallbackRef = useRef<number | null>(null);
+  const syncRequestIntervalRef = useRef<number | null>(null);
   const [channelReady, setChannelReady] = useState(isBotMatch);
   const [roundResultSecondsLeft, setRoundResultSecondsLeft] = useState<
     number | null
@@ -358,6 +362,38 @@ export function useGameLoop({
     [beginRoundPlaying, broadcastSync, clearRoundTimers, isBotMatch, isSyncLeader, play]
   );
 
+  const clearMatchStartFallback = useCallback(() => {
+    if (matchStartFallbackRef.current !== null) {
+      window.clearTimeout(matchStartFallbackRef.current);
+      matchStartFallbackRef.current = null;
+    }
+  }, []);
+
+  const clearSyncRequestInterval = useCallback(() => {
+    if (syncRequestIntervalRef.current !== null) {
+      window.clearInterval(syncRequestIntervalRef.current);
+      syncRequestIntervalRef.current = null;
+    }
+  }, []);
+
+  const countPresentPlayers = useCallback(
+    (presenceState: Record<string, unknown[]>) => {
+      const roles = new Set<"a" | "b">();
+
+      for (const presences of Object.values(presenceState)) {
+        for (const presence of presences) {
+          const role = (presence as { playerRole?: string }).playerRole;
+          if (role === "a" || role === "b") {
+            roles.add(role);
+          }
+        }
+      }
+
+      return roles;
+    },
+    []
+  );
+
   const maybeStartSyncedMatch = useCallback(() => {
     if (matchSyncStartedRef.current || !isSyncLeader) {
       return;
@@ -368,8 +404,42 @@ export function useGameLoop({
     }
 
     matchSyncStartedRef.current = true;
+    clearMatchStartFallback();
     startTopicReveal(0, false);
-  }, [isSyncLeader, startTopicReveal]);
+  }, [clearMatchStartFallback, isSyncLeader, startTopicReveal]);
+
+  const rebroadcastCurrentState = useCallback(() => {
+    if (!isSyncLeader || isBotMatch) {
+      return;
+    }
+
+    const state = useGameStore.getState();
+
+    if (state.roundPhase === "match_finished") {
+      broadcastSync({ type: "match_finished" });
+      return;
+    }
+
+    if (state.roundPhase === "playing" && state.roundStartedAt) {
+      broadcastSync({
+        type: "round_playing",
+        questionIndex: state.currentQuestionIndex,
+        startedAt: state.roundStartedAt,
+      });
+      return;
+    }
+
+    if (
+      state.roundPhase === "topic_reveal" ||
+      (!matchSyncStartedRef.current && state.currentQuestionIndex === 0)
+    ) {
+      broadcastSync({
+        type: "topic_reveal",
+        questionIndex: state.currentQuestionIndex,
+        at: Date.now(),
+      });
+    }
+  }, [broadcastSync, isBotMatch, isSyncLeader]);
 
   const handleSyncPayload = useCallback(
     (payload: MatchSyncPayload) => {
@@ -383,14 +453,22 @@ export function useGameLoop({
         switch (payload.type) {
           case "peer_ready":
             peerReadyRef.current[payload.playerRole] = true;
-            if (payload.playerRole !== localPlayerRole) {
-              maybeStartSyncedMatch();
+            maybeStartSyncedMatch();
+            break;
+          case "request_sync":
+            if (isSyncLeader) {
+              if (!matchSyncStartedRef.current) {
+                maybeStartSyncedMatch();
+              } else {
+                rebroadcastCurrentState();
+              }
             }
             break;
           case "topic_reveal":
             startTopicReveal(payload.questionIndex, true);
             break;
           case "round_playing":
+            clearSyncRequestInterval();
             clearRoundTimers();
             beginRoundPlaying(payload.questionIndex, payload.startedAt, true);
             break;
@@ -411,11 +489,13 @@ export function useGameLoop({
     [
       beginRoundPlaying,
       clearRoundTimers,
+      clearSyncRequestInterval,
       clearTimers,
       isBotMatch,
       isSyncLeader,
       localPlayerRole,
       maybeStartSyncedMatch,
+      rebroadcastCurrentState,
       setRoundPhase,
       startTiebreakerRound,
       startTopicReveal,
@@ -601,9 +681,25 @@ export function useGameLoop({
     peerReadyRef.current = { a: false, b: false };
     matchSyncStartedRef.current = false;
 
-    const channel = supabase.channel(`game_session:${sessionId}`);
+    const channel = supabase.channel(`game_session:${sessionId}`, {
+      config: {
+        presence: {
+          key: localUserId,
+        },
+      },
+    });
 
     channel
+      .on("presence", { event: "sync" }, () => {
+        const roles = countPresentPlayers(channel.presenceState());
+        peerReadyRef.current.a = roles.has("a");
+        peerReadyRef.current.b = roles.has("b");
+        maybeStartSyncedMatch();
+
+        if (isSyncLeader && matchSyncStartedRef.current) {
+          rebroadcastCurrentState();
+        }
+      })
       .on("broadcast", { event: "answer_locked" }, ({ payload }) => {
         const data = payload as AnswerLockedPayload;
         const state = useGameStore.getState();
@@ -627,20 +723,47 @@ export function useGameLoop({
           handleSyncPayload(payload);
         }
       })
-      .subscribe((status) => {
+      .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
           channelRef.current = channel;
           channelReadyRef.current = true;
           setChannelReady(true);
           flushPendingBroadcasts();
 
+          await channel.track({ playerRole: localPlayerRole });
+
           peerReadyRef.current[localPlayerRole] = true;
           broadcastSync({ type: "peer_ready", playerRole: localPlayerRole });
           maybeStartSyncedMatch();
+
+          if (isSyncLeader) {
+            clearMatchStartFallback();
+            matchStartFallbackRef.current = window.setTimeout(() => {
+              if (!matchSyncStartedRef.current) {
+                peerReadyRef.current.a = true;
+                peerReadyRef.current.b = true;
+                matchSyncStartedRef.current = true;
+                startTopicReveal(0, false);
+              }
+            }, MATCH_START_FALLBACK_MS);
+          } else {
+            clearSyncRequestInterval();
+            broadcastSync({ type: "request_sync" });
+            syncRequestIntervalRef.current = window.setInterval(() => {
+              const phase = useGameStore.getState().roundPhase;
+              if (phase === "playing" || phase === "round_result") {
+                clearSyncRequestInterval();
+                return;
+              }
+              broadcastSync({ type: "request_sync" });
+            }, SYNC_REQUEST_INTERVAL_MS);
+          }
         }
       });
 
     return () => {
+      clearMatchStartFallback();
+      clearSyncRequestInterval();
       supabase.removeChannel(channel);
       channelRef.current = null;
       channelReadyRef.current = false;
@@ -648,13 +771,20 @@ export function useGameLoop({
     };
   }, [
     broadcastSync,
+    clearMatchStartFallback,
+    clearSyncRequestInterval,
+    countPresentPlayers,
     flushPendingBroadcasts,
     handleSyncPayload,
     isBotMatch,
+    isSyncLeader,
     localPlayerRole,
+    localUserId,
     lockOpponentAnswer,
     maybeStartSyncedMatch,
+    rebroadcastCurrentState,
     sessionId,
+    startTopicReveal,
     supabase,
   ]);
 
@@ -691,8 +821,6 @@ export function useGameLoop({
       scheduleBotAnswer();
       startRoundTimer();
     }
-
-    return clearRoundTimers;
   }, [
     beginRoundPlaying,
     clearRoundTimers,
