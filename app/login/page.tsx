@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/server";
 
 const loginErrors: Record<string, string> = {
   auth_callback_failed:
-    "Sign-in failed. If you used Google, make sure it is enabled in Supabase. Otherwise try again or use email.",
+    "Google sign-in did not complete. Enable Google under Supabase → Authentication → Providers, add your redirect URLs, then try again. You can still sign in with email or username.",
   reset_link_expired: "Your reset link has expired. Request a new one below.",
 };
 

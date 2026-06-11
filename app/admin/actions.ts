@@ -4,11 +4,13 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { getPrivilegedSupabase } from "@/lib/supabase-admin";
 import { createClient } from "@/utils/supabase/server";
+import { validateQuestionSubmission } from "@/lib/question-contribution";
 import type {
   CorrectAnswer,
   QuestionActive,
   QuestionCategory,
   QuestionFlagged,
+  QuestionSubmission,
   ReportIssueType,
 } from "@/types/database.types";
 
@@ -358,4 +360,187 @@ export async function approveFlaggedQuestion(
 /** @deprecated Use deleteReportedQuestion */
 export async function deleteFlaggedQuestion(questionId: string) {
   return deleteReportedQuestion(questionId);
+}
+
+export type AdminSubmissionReview = QuestionSubmission & {
+  submitter_label: string;
+};
+
+export async function getPendingQuestionSubmissions(): Promise<
+  AdminSubmissionReview[]
+> {
+  await requireAdmin();
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("question_submissions")
+    .select("*")
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const submissions = (data ?? []) as QuestionSubmission[];
+  if (submissions.length === 0) {
+    return [];
+  }
+
+  const submitterIds = [...new Set(submissions.map((row) => row.submitter_id))];
+  const { data: users } = await supabase
+    .from("users")
+    .select("id, display_name, email")
+    .in("id", submitterIds);
+
+  const labelById = new Map(
+    (users ?? []).map((user) => [
+      user.id,
+      user.display_name?.trim() || user.email || "Contributor",
+    ])
+  );
+
+  return submissions.map((submission) => ({
+    ...submission,
+    submitter_label: labelById.get(submission.submitter_id) ?? "Contributor",
+  }));
+}
+
+export type ApproveSubmissionInput = {
+  level?: QuestionSubmission["level"];
+  category?: QuestionCategory;
+  question_text?: string;
+  option_a?: string;
+  option_b?: string;
+  option_c?: string;
+  option_d?: string;
+  correct_answer?: CorrectAnswer;
+  reviewer_notes?: string;
+};
+
+export async function approveQuestionSubmission(
+  submissionId: string,
+  overrides: ApproveSubmissionInput = {}
+): Promise<AdminActionResult> {
+  await requireAdmin();
+
+  const supabase = await getPrivilegedSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: submission, error: fetchError } = await supabase
+    .from("question_submissions")
+    .select("*")
+    .eq("id", submissionId)
+    .eq("status", "pending")
+    .maybeSingle();
+
+  if (fetchError) {
+    return { success: false, error: fetchError.message };
+  }
+
+  if (!submission) {
+    return { success: false, error: "Pending submission not found." };
+  }
+
+  const row = submission as QuestionSubmission;
+  const validated = validateQuestionSubmission({
+    level: overrides.level ?? row.level,
+    category: overrides.category ?? row.category,
+    question_text: overrides.question_text ?? row.question_text,
+    option_a: overrides.option_a ?? row.option_a,
+    option_b: overrides.option_b ?? row.option_b,
+    option_c: overrides.option_c ?? row.option_c,
+    option_d: overrides.option_d ?? row.option_d,
+    correct_answer: overrides.correct_answer ?? row.correct_answer,
+    rationale: row.rationale ?? "Approved by admin.",
+    level_confirmed: true,
+    category_confirmed: true,
+  });
+
+  if (!validated.ok) {
+    return { success: false, error: validated.error };
+  }
+
+  const { error: insertError } = await supabase.from("questions_active").insert({
+    language: validated.data.language,
+    level: validated.data.level,
+    category: validated.data.category,
+    question_text: validated.data.question_text,
+    option_a: validated.data.option_a,
+    option_b: validated.data.option_b,
+    option_c: validated.data.option_c,
+    option_d: validated.data.option_d,
+    correct_answer: validated.data.correct_answer,
+  } as never);
+
+  if (insertError) {
+    return { success: false, error: insertError.message };
+  }
+
+  const { error: updateError } = await supabase
+    .from("question_submissions")
+    .update({
+      status: "approved",
+      reviewer_id: user?.id ?? null,
+      reviewer_notes: overrides.reviewer_notes?.trim() || null,
+      reviewed_at: new Date().toISOString(),
+      level: validated.data.level,
+      category: validated.data.category,
+      question_text: validated.data.question_text,
+      option_a: validated.data.option_a,
+      option_b: validated.data.option_b,
+      option_c: validated.data.option_c,
+      option_d: validated.data.option_d,
+      correct_answer: validated.data.correct_answer,
+    } as never)
+    .eq("id", submissionId);
+
+  if (updateError) {
+    return { success: false, error: updateError.message };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/dashboard/contribute");
+  return { success: true };
+}
+
+export async function rejectQuestionSubmission(
+  submissionId: string,
+  reviewerNotes?: string
+): Promise<AdminActionResult> {
+  await requireAdmin();
+
+  const supabase = await getPrivilegedSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const notes = reviewerNotes?.trim();
+  if (!notes) {
+    return {
+      success: false,
+      error: "Add a short note explaining why this submission was rejected.",
+    };
+  }
+
+  const { error } = await supabase
+    .from("question_submissions")
+    .update({
+      status: "rejected",
+      reviewer_id: user?.id ?? null,
+      reviewer_notes: notes,
+      reviewed_at: new Date().toISOString(),
+    } as never)
+    .eq("id", submissionId)
+    .eq("status", "pending");
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/dashboard/contribute");
+  return { success: true };
 }

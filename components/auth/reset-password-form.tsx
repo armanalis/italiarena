@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { useActionRedirect } from "@/hooks/use-action-redirect";
 import { Lock } from "lucide-react";
 import {
   resetPassword,
@@ -29,6 +30,7 @@ function SubmitButton() {
 
 export function ResetPasswordForm() {
   const [state, formAction] = useActionState(resetPassword, initialState);
+  useActionRedirect(state?.redirectTo);
 
   return (
     <form action={formAction} className="space-y-4">
@@ -66,12 +68,12 @@ export function ResetPasswordForm() {
         </div>
       </div>
 
-      {state.error && (
+      {state?.error && (
         <div
           className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
           role="alert"
         >
-          {state.error}
+          {state?.error}
         </div>
       )}
 

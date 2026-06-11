@@ -102,6 +102,80 @@ export interface MatchHistory {
   played_at: string;
 }
 
+// Community question waiting for admin review
+export type QuestionSubmissionStatus = "pending" | "approved" | "rejected";
+
+export type QuestionSubmissionAiPrecheckStatus =
+  | "pending"
+  | "ready"
+  | "unavailable";
+
+export type QuestionSubmissionAiRecommendation =
+  | "approve"
+  | "review_carefully"
+  | "likely_reject";
+
+export interface QuestionSubmission {
+  id: string;
+  submitter_id: string;
+  language: QuestionLanguage;
+  level: QuestionLevel;
+  category: QuestionCategory;
+  question_text: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_answer: CorrectAnswer;
+  rationale: string | null;
+  status: QuestionSubmissionStatus;
+  reviewer_id: string | null;
+  reviewer_notes: string | null;
+  reviewed_at: string | null;
+  ai_precheck_status: QuestionSubmissionAiPrecheckStatus | null;
+  ai_precheck_recommendation: QuestionSubmissionAiRecommendation | null;
+  ai_precheck_summary: string | null;
+  ai_precheck_details: Record<string, unknown> | null;
+  ai_precheck_at: string | null;
+  created_at: string;
+}
+
+export type QuestionSubmissionInsert = Pick<
+  QuestionSubmission,
+  | "submitter_id"
+  | "language"
+  | "level"
+  | "category"
+  | "question_text"
+  | "option_a"
+  | "option_b"
+  | "option_c"
+  | "option_d"
+  | "correct_answer"
+> &
+  Partial<
+    Pick<QuestionSubmission, "id" | "rationale" | "status" | "created_at">
+  >;
+
+export type QuestionSubmissionUpdate = Partial<
+  Pick<
+    QuestionSubmission,
+    | "status"
+    | "reviewer_id"
+    | "reviewer_notes"
+    | "reviewed_at"
+    | "level"
+    | "category"
+    | "question_text"
+    | "option_a"
+    | "option_b"
+    | "option_c"
+    | "option_d"
+    | "correct_answer"
+    | "rationale"
+  >
+>;
+
 // A player-submitted issue report against an active question
 export interface Report {
   id: string;
@@ -242,6 +316,12 @@ export interface Database {
         Row: Report;
         Insert: ReportInsert;
         Update: Partial<ReportInsert>;
+        Relationships: [];
+      };
+      question_submissions: {
+        Row: QuestionSubmission;
+        Insert: QuestionSubmissionInsert;
+        Update: QuestionSubmissionUpdate;
         Relationships: [];
       };
       match_history: {

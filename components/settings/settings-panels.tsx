@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useActionRedirect } from "@/hooks/use-action-redirect";
 import { Loader2, LogOut, Mail, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { signOut } from "@/app/login/actions";
@@ -96,6 +97,8 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
   const [soundEnabled, setSoundEnabled] = useState(profile.sound_enabled);
   const [hapticsEnabled, setHapticsEnabled] = useState(profile.haptics_enabled);
   const [isPending, startTransition] = useTransition();
+  const [deleteRedirectTo, setDeleteRedirectTo] = useState<string | null>(null);
+  useActionRedirect(deleteRedirectTo);
 
   useEffect(() => {
     writeGameplayPreferences({
@@ -156,6 +159,11 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
       const result = await deleteAccount(formData);
       if (!result.success) {
         toast.error(result.error);
+        return;
+      }
+
+      if ("redirectTo" in result && result.redirectTo) {
+        setDeleteRedirectTo(result.redirectTo);
       }
     });
   }

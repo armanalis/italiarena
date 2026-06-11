@@ -54,7 +54,17 @@ export function GoogleSignInButton() {
     });
 
     if (oauthError) {
-      setError(oauthError.message);
+      const message = oauthError.message.toLowerCase();
+      if (
+        message.includes("provider is not enabled") ||
+        message.includes("unsupported provider")
+      ) {
+        setError(
+          "Google sign-in is not enabled for this app yet. Use email/username and password, or ask the admin to enable Google in Supabase."
+        );
+      } else {
+        setError(oauthError.message);
+      }
       setLoading(false);
     }
   }

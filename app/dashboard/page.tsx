@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { BotMatchCard } from "@/components/dashboard/bot-match-card";
 import { requireOnboardingComplete } from "@/lib/auth";
-import { ShieldAlert, Users } from "lucide-react";
+import { PenLine, ShieldAlert, Users } from "lucide-react";
 
 type DashboardPageProps = {
   searchParams: Promise<{
@@ -78,6 +78,26 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </Card>
 
           <BotMatchCard />
+        </section>
+
+        <section className="mx-auto w-full max-w-5xl">
+          <Card className="border-border/60">
+            <CardHeader>
+              <div className="mb-2 flex size-11 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400">
+                <PenLine className="size-5" />
+              </div>
+              <CardTitle>Contribute a question</CardTitle>
+              <CardDescription>
+                Add Italian trivia to the pool. Submissions are checked for correct
+                CEFR level and category before they go live in matches.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild variant="outline" className="min-h-11 w-full sm:w-auto">
+                <Link href="/dashboard/contribute">Submit a question</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </section>
       </div>
     </main>
