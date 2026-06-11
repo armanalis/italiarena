@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
+import { getPrivilegedSupabase } from "@/lib/supabase-admin";
 import { createClient } from "@/utils/supabase/server";
 import type {
   CorrectAnswer,
+  QuestionActive,
   QuestionCategory,
   QuestionFlagged,
   ReportIssueType,
@@ -31,14 +33,29 @@ export type AdminReviewQuestion = QuestionFlagged & {
 export async function getAdminReviewQueue(): Promise<AdminReviewQuestion[]> {
   await requireAdmin();
 
-  const supabase = await createClient();
+  const supabase = await getPrivilegedSupabase();
 
-  const { data: reports, error: reportsError } = await supabase
-    .from("reports")
-    .select("question_id, issue_type");
+  const [
+    { data: reports, error: reportsError },
+    { data: flagged, error: flaggedError },
+  ] = await Promise.all([
+    supabase
+      .from("reports")
+      .select("question_id, issue_type")
+      .returns<{ question_id: string; issue_type: string }[]>(),
+    supabase
+      .from("questions_flagged")
+      .select("*")
+      .order("report_count", { ascending: false })
+      .returns<QuestionFlagged[]>(),
+  ]);
 
   if (reportsError) {
     throw new Error(reportsError.message);
+  }
+
+  if (flaggedError) {
+    throw new Error(flaggedError.message);
   }
 
   const reportCountByQuestion = new Map<string, number>();
@@ -58,23 +75,12 @@ export async function getAdminReviewQueue(): Promise<AdminReviewQuestion[]> {
     issueTypesByQuestion.set(row.question_id, issueTypes);
   }
 
-  if (reportCountByQuestion.size === 0) {
-    return [];
-  }
-
-  const { data: flagged, error: flaggedError } = await supabase
-    .from("questions_flagged")
-    .select("*")
-    .order("report_count", { ascending: false });
-
-  if (flaggedError) {
-    throw new Error(flaggedError.message);
-  }
-
   const flaggedIds = new Set((flagged ?? []).map((question) => question.id));
   const queue: AdminReviewQuestion[] = [];
+  const queuedIds = new Set<string>();
 
   for (const question of flagged ?? []) {
+    queuedIds.add(question.id);
     queue.push({
       ...question,
       category: question.category as QuestionCategory,
@@ -94,19 +100,51 @@ export async function getAdminReviewQueue(): Promise<AdminReviewQuestion[]> {
     const { data: active, error: activeError } = await supabase
       .from("questions_active")
       .select("*")
-      .in("id", pendingIds);
+      .in("id", pendingIds)
+      .returns<QuestionActive[]>();
 
     if (activeError) {
       throw new Error(activeError.message);
     }
 
     for (const question of active ?? []) {
+      queuedIds.add(question.id);
       queue.push({
         ...question,
         category: question.category as QuestionCategory,
         correct_answer: question.correct_answer as CorrectAnswer,
         report_count: reportCountByQuestion.get(question.id) ?? 0,
         status: "pending",
+        issue_types: issueTypesByQuestion.get(question.id) ?? [],
+      });
+    }
+  }
+
+  // Reports still in DB but question already removed from active (trigger lag / edge case).
+  const orphanedReportIds = pendingIds.filter((id) => !queuedIds.has(id));
+  if (orphanedReportIds.length > 0) {
+    const { data: orphanedFlagged, error: orphanedError } = await supabase
+      .from("questions_flagged")
+      .select("*")
+      .in("id", orphanedReportIds)
+      .returns<QuestionFlagged[]>();
+
+    if (orphanedError) {
+      throw new Error(orphanedError.message);
+    }
+
+    for (const question of orphanedFlagged ?? []) {
+      if (queuedIds.has(question.id)) {
+        continue;
+      }
+      queuedIds.add(question.id);
+      queue.push({
+        ...question,
+        category: question.category as QuestionCategory,
+        correct_answer: question.correct_answer as CorrectAnswer,
+        report_count:
+          reportCountByQuestion.get(question.id) ?? question.report_count,
+        status: "quarantined",
         issue_types: issueTypesByQuestion.get(question.id) ?? [],
       });
     }
@@ -148,27 +186,30 @@ export async function dismissReportedQuestion(
 ): Promise<AdminActionResult> {
   await requireAdmin();
 
-  const supabase = await createClient();
-  const { data: flagged } = await supabase
+  const supabase = await getPrivilegedSupabase();
+  const { data: flaggedRow } = await supabase
     .from("questions_flagged")
     .select("*")
     .eq("id", questionId)
     .maybeSingle();
+  const flagged = flaggedRow as QuestionFlagged | null;
 
   if (flagged) {
-    const { error: insertError } = await supabase.from("questions_active").insert({
-      id: flagged.id,
-      language: flagged.language,
-      level: flagged.level,
-      category: flagged.category,
-      question_text: flagged.question_text,
-      option_a: flagged.option_a,
-      option_b: flagged.option_b,
-      option_c: flagged.option_c,
-      option_d: flagged.option_d,
-      correct_answer: flagged.correct_answer,
-      random_float: flagged.random_float,
-    });
+    const { error: insertError } = await supabase
+      .from("questions_active")
+      .insert({
+        id: flagged.id,
+        language: flagged.language,
+        level: flagged.level,
+        category: flagged.category,
+        question_text: flagged.question_text,
+        option_a: flagged.option_a,
+        option_b: flagged.option_b,
+        option_c: flagged.option_c,
+        option_d: flagged.option_d,
+        correct_answer: flagged.correct_answer,
+        random_float: flagged.random_float,
+      } as never);
 
     if (insertError) {
       return { success: false, error: insertError.message };
@@ -209,18 +250,19 @@ export async function approveReportedQuestion(
 ): Promise<AdminActionResult> {
   await requireAdmin();
 
-  const supabase = await createClient();
-  const { data: flagged } = await supabase
+  const supabase = await getPrivilegedSupabase();
+  const { data: flaggedRow } = await supabase
     .from("questions_flagged")
     .select("*")
     .eq("id", questionId)
     .maybeSingle();
-
-  const { data: active } = await supabase
+  const { data: activeRow } = await supabase
     .from("questions_active")
     .select("*")
     .eq("id", questionId)
     .maybeSingle();
+  const flagged = flaggedRow as QuestionFlagged | null;
+  const active = activeRow as QuestionFlagged | null;
 
   const source = flagged ?? active;
 
@@ -245,7 +287,7 @@ export async function approveReportedQuestion(
   if (active) {
     const { error: updateError } = await supabase
       .from("questions_active")
-      .update(payload)
+      .update(payload as never)
       .eq("id", questionId);
 
     if (updateError) {
@@ -254,7 +296,7 @@ export async function approveReportedQuestion(
   } else {
     const { error: insertError } = await supabase
       .from("questions_active")
-      .insert(payload);
+      .insert(payload as never);
 
     if (insertError) {
       return { success: false, error: insertError.message };
@@ -286,7 +328,7 @@ export async function deleteReportedQuestion(
 ): Promise<AdminActionResult> {
   await requireAdmin();
 
-  const supabase = await createClient();
+  const supabase = await getPrivilegedSupabase();
 
   const cleared = await clearQuestionReports(supabase, questionId);
   if (!cleared.success) {
