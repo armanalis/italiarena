@@ -1,167 +1,81 @@
 # Language Quiz
 
-Real-time, 1v1 language trivia for learners. Players sign in, pick a target language and CEFR level, then choose **Play vs real user** (live matchmaking) or **Play vs bot** (instant ghost match).
+Language Quiz is a live 1v1 language trivia game for learners.
 
-Built with **Next.js** and **Supabase**.
+It is built for people who want practice that feels competitive and social — not another static flashcard app. The goal is simple: jump into a short match, answer timed questions against a real person or a bot, and actually remember what you got wrong.
+
+I started Language Quiz because most language tools feel like homework. This project is my attempt to build the kind of practice I would actually open every day: fast rounds, clear feedback, and enough pressure to stay focused without burning out.
+
+**[Play the live app →](https://language-quiz-one.vercel.app)**
 
 ---
 
-## What it does
+## Always open source
 
-Language Quiz is a multiplayer learning game, not a static flashcard app. Every match is a timed duel: ten questions across grammar, vocabulary, fill-in-the-blank, and idioms, with points awarded for both accuracy and speed.
+Language Quiz is open source because learning tools are better when people can inspect the product, fix rough edges, and improve the experience together. Contributions are welcome.
 
-| Feature | Description |
+The project is licensed under [MIT](LICENSE). If you want to contribute, start with [CONTRIBUTING.md](CONTRIBUTING.md), open an issue, or send a focused pull request.
+
+The **hosted backend and question database are not part of this repository**. That keeps the live game fair and protects the content behind the product. You can still contribute meaningfully to the app layer — UI, accessibility, match flow, settings, statistics, and client-side behavior.
+
+---
+
+## What makes it different
+
+| Idea | How it shows up in the app |
 | --- | --- |
-| **Bracket matchmaking** | Pairs players by target language and proficiency level (A1–C1) |
-| **Live sync** | Supabase Realtime broadcasts keep both clients in lockstep during a match |
-| **Real-player search** | Waits up to 15 seconds for a human opponent; if none joins, returns to the dashboard |
-| **Play vs bot** | Separate mode that starts a ghost opponent immediately — no waiting room |
-| **Speed scoring** | Faster correct answers earn more points; ties break on average response time |
-| **Question quality** | Players can flag bad questions; three reports auto-quarantine a item for admin review |
-| **Resilient UX** | Global error boundary clears stale match state and retries on connection drops |
+| **Short, focused matches** | Ten timed questions per round — grammar, vocabulary, fill-in-the-blank, and idioms |
+| **Real opponents** | Matchmaking pairs players by target language and CEFR level (A1–C1) |
+| **No dead waiting** | Play vs bot for an instant ghost match, or search for a human opponent |
+| **Speed matters** | Faster correct answers score more; ties break on response time |
+| **Learn from mistakes** | Post-match review, mistake practice, and optional AI explanations |
+| **Community quality control** | Players can report bad questions; admins review the queue |
+| **Works like an app on your phone** | Add to home screen on iOS and Android for a full-screen experience |
 
-Supported languages: **English**, **Italian**, **Spanish**.
-
----
-
-## How a match works
-
-There are two entry points from the dashboard:
-
-### Play vs real user
-
-```mermaid
-sequenceDiagram
-  participant P as Player
-  participant App as Next.js App
-  participant SB as Supabase
-  participant O as Human opponent
-
-  P->>App: Find real opponent
-  App->>SB: searchForMatch (join open lobby or create waiting session)
-  alt Human joins within 15s
-    SB-->>App: Session active
-    App->>SB: get_random_questions (10-question playlist)
-    loop Each round
-      P->>App: Lock answer
-      App->>SB: Broadcast answer_locked
-      SB-->>O: Realtime event
-      App->>App: Score round, reveal result
-    end
-    App->>P: Match finished — win / loss / tie
-  else No human within 15s
-    App->>SB: cancelMatchSearch (abandon session)
-    App->>P: Return to dashboard — "No game found"
-  end
-```
-
-### Play vs bot
-
-```mermaid
-sequenceDiagram
-  participant P as Player
-  participant App as Next.js App
-  participant SB as Supabase
-
-  P->>App: Play vs ghost
-  App->>SB: Create session + startGhostMatch
-  App->>SB: get_random_questions (10-question playlist)
-  loop Each round
-    P->>App: Lock answer
-    App->>App: Simulate ghost answer + score round
-  end
-  App->>P: Match finished — win / loss / tie
-```
-
-Each playlist is built server-side and avoids recently seen questions so repeat matches stay fresh.
-
----
-
-## Tech stack
-
-- **[Next.js 14](https://nextjs.org/)** — App Router, Server Components, Server Actions
-- **[Supabase](https://supabase.com/)** — Auth, Postgres, Row Level Security, Realtime
-- **[Zustand](https://zustand.docs.pmnd.rs/)** — Persisted in-match game state
-- **[Tailwind CSS](https://tailwindcss.com/)** + **[shadcn/ui](https://ui.shadcn.com/)** — UI components
-- **[Vercel](https://vercel.com/)** — Deployment with edge-cached static assets
+Supported languages today: **English**, **Italian**, and **Spanish**.
 
 ---
 
 ## Project structure
 
 ```
-app/                  # Routes, layouts, server actions
-components/           # UI, match loop, matchmaking lobby, admin tools
-hooks/                # Game loop, audio
-store/                # Zustand match state (persisted)
-lib/                  # Auth, scoring, bots, constants
-utils/supabase/       # Browser, server, and middleware clients
-supabase/             # SQL migrations (schema, game tables, matchmaking, reports, indexes)
-public/sounds/        # Match SFX (reveal, click, correct, incorrect)
+app/            Next.js routes, layouts, and server actions
+components/     UI, match loop, dashboard, statistics, admin tools
+hooks/          Client hooks (game loop, audio)
+lib/            Auth helpers, scoring, bots, shared constants
+store/          Zustand match state (persisted on the client)
+utils/          Supabase browser, server, and middleware clients
+public/         Static assets and match sound effects
 ```
+
+Database schema and migrations live outside this public repo. See [`supabase/README.md`](supabase/README.md).
 
 ---
 
-## Getting started
+## Development
 
 ### Prerequisites
 
 - Node.js 20+
-- A [Supabase](https://supabase.com/) project
 - npm
 
-### 1. Clone and install
+### Setup
 
 ```bash
-git clone https://github.com/armanalis/language-quiz
+git clone https://github.com/armanalis/language-quiz.git
 cd language-quiz
 npm install
 ```
 
-### 2. Environment variables
+Create `.env.local` from the example:
 
-Create `.env.local` in the project root:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-GROQ_API_KEY=your-groq-api-key
+```bash
+cp .env.example .env.local
 ```
 
-Find both values in Supabase → **Project Settings → API**.
+Fill in the Supabase values for a project you are authorized to use. For most contributions, pointing at the hosted demo backend is enough to work on UI and client behavior — ask in an issue if you are unsure.
 
-For **Ask AI** on the match review screen, create a free key at [console.groq.com](https://console.groq.com) and set `GROQ_API_KEY`.
-
-### 3. Database setup
-
-Run these SQL files **in order** in the Supabase SQL Editor:
-
-1. `supabase/schema.sql` — user profiles and auth triggers
-2. `supabase/database.sql` — questions, sessions, stats, match RPCs
-3. `supabase/matchmaking-migration.sql` — language/level on sessions, join policies
-4. `supabase/match-questions-migration.sql` — 10-question playlist and tiebreaker RPCs
-5. `supabase/settings-migration.sql` — display names, preferences, match history
-6. `supabase/reports-migration.sql` — question flagging and admin role
-7. `supabase/performance-indexes.sql` — production query indexes
-8. `supabase/ai-explanations-migration.sql` — Ask AI cache and per-match limits (optional)
-
-Then enable Realtime for matchmaking:
-
-- Supabase → **Database → Publications**
-- Add `game_sessions` to the `supabase_realtime` publication
-
-### 4. Seed questions
-
-Add rows to `questions_active` for each `(language, level, category)` combination you want to support. Categories must be one of:
-
-- `grammar`
-- `vocabulary`
-- `fill-in-the-blank`
-- `idioms`
-
-The `get_random_questions` RPC builds a 10-question playlist (3 + 3 + 3 + 1 per category).
-
-### 5. Run locally
+### Run locally
 
 ```bash
 npm run dev
@@ -169,45 +83,29 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+### Useful commands
+
+```bash
+npm run build    # production build
+npm run lint     # ESLint
+```
+
 ---
 
 ## Deployment
 
-Deploy to Vercel and add the same environment variables in the project settings. The included `vercel.json` configures long-lived edge caching for game audio and other static assets.
-
-```bash
-npm run build   # verify production build locally
-npm run lint    # ESLint
-```
+The app is deployed on [Vercel](https://vercel.com/). Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in the project environment. Optional features (for example Ask AI) may require additional keys configured only on the hosted instance.
 
 ---
 
-## Admin access
+## Contributing
 
-After running `supabase/reports-migration.sql`, promote a user in the SQL Editor:
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
-```sql
-update public.users set role = 'admin' where email = 'you@example.com';
-```
-
-Admins can review quarantined questions at `/admin`.
-
----
-
-## Scoring reference
-
-| Response time | Points (if correct) |
-| --- | --- |
-| Under 5s | 140 |
-| 5–10s | 130 |
-| 10–15s | 120 |
-| 15–25s | 100 |
-| Over 25s or wrong | 0 |
-
-Round timer: **25 seconds**. Match length: **10 questions**.
+Good first areas: mobile layout, accessibility, copy, match UX, statistics views, and bug fixes in the client.
 
 ---
 
 ## License
 
-Private project — all rights reserved unless otherwise specified.
+See [LICENSE](LICENSE).
