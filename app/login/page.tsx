@@ -31,20 +31,19 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const authError = params.error ? loginErrors[params.error] ?? null : null;
 
   return (
-    <main className="relative flex min-h-app flex-1 items-center justify-center overflow-y-auto bg-background px-4 py-8 pb-[max(2rem,env(safe-area-inset-bottom,0px))] touch-scroll sm:py-10">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.22),_transparent_50%)] dark:bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.35),_transparent_55%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_rgba(139,92,246,0.15),_transparent_45%)] dark:bg-[radial-gradient(ellipse_at_bottom_right,_rgba(139,92,246,0.25),_transparent_50%)]" />
+    <main className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-background touch-scroll">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.22),_transparent_50%)] dark:bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.35),_transparent_55%)]" />
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_rgba(139,92,246,0.15),_transparent_45%)] dark:bg-[radial-gradient(ellipse_at_bottom_right,_rgba(139,92,246,0.25),_transparent_50%)]" />
 
-      <div className="absolute left-4 top-4 sm:left-6 sm:top-6">
+      <div className="relative z-10 mx-auto w-full max-w-[420px] px-4 pb-[max(2rem,env(safe-area-inset-bottom,0px))] pt-6 sm:px-6 sm:pb-10 sm:pt-8">
         <Link
           href="/"
-          className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          className="mb-6 inline-flex text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
           ← Back to home
         </Link>
-      </div>
 
-      <div className="relative z-10 w-full max-w-[420px] space-y-4">
+        <div className="space-y-4">
         {authError && (
           <div
             className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
@@ -53,7 +52,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             {authError}
           </div>
         )}
-        <LoginForm />
+          <LoginForm />
+        </div>
       </div>
     </main>
   );

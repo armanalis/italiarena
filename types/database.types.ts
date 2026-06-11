@@ -287,6 +287,14 @@ export interface Database {
         Args: Record<string, never>;
         Returns: void;
       };
+      resolve_login_email: {
+        Args: { p_identifier: string };
+        Returns: string | null;
+      };
+      is_display_name_taken: {
+        Args: { p_display_name: string; p_exclude_user_id?: string | null };
+        Returns: boolean;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
