@@ -27,7 +27,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PROFICIENCY_LEVELS, TARGET_LANGUAGES } from "@/lib/constants";
+import { PROFICIENCY_LEVELS, TARGET_LANGUAGE } from "@/lib/constants";
 import { getSoundVolume, writeGameplayPreferences } from "@/lib/preferences";
 import type { MatchHistoryEntry, UserProfile } from "@/lib/types";
 import { SoundVolumeControl } from "@/components/sound-volume-control";
@@ -89,7 +89,6 @@ function resultLabel(result: MatchHistoryEntry["result"]) {
 }
 
 export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) {
-  const [targetLanguage, setTargetLanguage] = useState(profile.target_language ?? "");
   const [proficiencyLevel, setProficiencyLevel] = useState(
     profile.proficiency_level ?? ""
   );
@@ -109,7 +108,7 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
   function saveProfile() {
     startTransition(async () => {
       const formData = new FormData();
-      formData.set("target_language", targetLanguage);
+      formData.set("target_language", TARGET_LANGUAGE);
       formData.set("proficiency_level", proficiencyLevel);
       formData.set("display_name", displayName);
 
@@ -167,7 +166,7 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
         <CardHeader>
           <CardTitle>Learning profile</CardTitle>
           <CardDescription>
-            Update your matchmaking language, level, and public display name.
+            Update your Italian level and public display name.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -190,23 +189,12 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Target language</Label>
-              <Select
-                value={targetLanguage}
-                disabled={isPending}
-                onValueChange={setTargetLanguage}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Language" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TARGET_LANGUAGES.map((language) => (
-                    <SelectItem key={language} value={language}>
-                      {language}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="settings-language">Language</Label>
+              <Input
+                id="settings-language"
+                value={TARGET_LANGUAGE}
+                disabled
+              />
             </div>
 
             <div className="space-y-2">
@@ -233,7 +221,7 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
           <Button
             type="button"
             className="min-h-11"
-            disabled={isPending || !targetLanguage || !proficiencyLevel}
+            disabled={isPending || !proficiencyLevel}
             onClick={saveProfile}
           >
             {isPending ? (

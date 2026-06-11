@@ -6,7 +6,7 @@ import { recordMatchMistakes } from "@/app/dashboard/statistics/actions";
 import { createClient } from "@/utils/supabase/server";
 import {
   PROFICIENCY_LEVELS,
-  TARGET_LANGUAGES,
+  TARGET_LANGUAGE,
   type ProficiencyLevel,
   type TargetLanguage,
 } from "@/lib/constants";
@@ -22,10 +22,6 @@ import type {
 export type SettingsActionResult =
   | { success: true }
   | { success: false; error: string };
-
-function isTargetLanguage(value: string): value is TargetLanguage {
-  return TARGET_LANGUAGES.includes(value as TargetLanguage);
-}
 
 function isProficiencyLevel(value: string): value is ProficiencyLevel {
   return PROFICIENCY_LEVELS.includes(value as ProficiencyLevel);
@@ -73,12 +69,11 @@ export async function getSettingsData() {
 }
 
 export async function updateLearningProfile(formData: FormData): Promise<SettingsActionResult> {
-  const targetLanguage = String(formData.get("target_language") ?? "");
   const proficiencyLevel = String(formData.get("proficiency_level") ?? "");
   const displayName = String(formData.get("display_name") ?? "").trim();
 
-  if (!isTargetLanguage(targetLanguage) || !isProficiencyLevel(proficiencyLevel)) {
-    return { success: false, error: "Choose a valid language and level." };
+  if (!isProficiencyLevel(proficiencyLevel)) {
+    return { success: false, error: "Choose a valid proficiency level." };
   }
 
   if (displayName && (displayName.length < 2 || displayName.length > 24)) {
@@ -97,7 +92,7 @@ export async function updateLearningProfile(formData: FormData): Promise<Setting
   const { error } = await supabase
     .from("users")
     .update({
-      target_language: targetLanguage,
+      target_language: TARGET_LANGUAGE,
       proficiency_level: proficiencyLevel,
       display_name: displayName || null,
     })
