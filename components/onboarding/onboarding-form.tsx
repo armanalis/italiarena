@@ -3,10 +3,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { GraduationCap, Languages } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import { saveOnboarding } from "@/app/onboarding/actions";
 import { signOut } from "@/app/login/actions";
-import { PROFICIENCY_LEVELS, TARGET_LANGUAGES } from "@/lib/constants";
+import { PROFICIENCY_LEVELS, TARGET_LANGUAGE } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -44,38 +44,12 @@ export function OnboardingForm() {
           Let&apos;s set up your profile
         </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Pick your target language and level so we can match you with the right
-          opponents.
+          Choose your Italian level so we can match you with the right opponents.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6 px-5 py-6 sm:px-8 sm:py-7">
-        <div className="space-y-2">
-          <Label htmlFor="target_language" className="flex items-center gap-2">
-            <Languages className="size-4 text-muted-foreground" />
-            Target Language
-          </Label>
-          <select
-            id="target_language"
-            name="target_language"
-            required
-            defaultValue=""
-            className={cn(
-              "flex h-11 w-full rounded-lg border border-input bg-transparent px-3 text-sm shadow-sm",
-              "focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-              "dark:bg-white/5"
-            )}
-          >
-            <option value="" disabled>
-              Select a language
-            </option>
-            {TARGET_LANGUAGES.map((language) => (
-              <option key={language} value={language}>
-                {language}
-              </option>
-            ))}
-          </select>
-        </div>
+        <input type="hidden" name="target_language" value={TARGET_LANGUAGE} />
 
         <div className="space-y-2">
           <Label htmlFor="proficiency_level">Proficiency Level</Label>

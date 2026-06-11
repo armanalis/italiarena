@@ -1,5 +1,6 @@
-/** Languages and proficiency levels shown during onboarding and used for matchmaking. */
-export const TARGET_LANGUAGES = ["English", "Italian", "Spanish"] as const;
+/** App currently supports Italian only. */
+export const TARGET_LANGUAGE = "Italian" as const;
+export const TARGET_LANGUAGES = [TARGET_LANGUAGE] as const;
 
 export const PROFICIENCY_LEVELS = [
   "A1",
