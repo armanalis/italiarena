@@ -5,9 +5,19 @@ export const MATCH_SYNC_EVENT = "match_sync";
 export type MatchSyncPayload =
   | { type: "peer_ready"; playerRole: "a" | "b" }
   | { type: "request_sync" }
-  | { type: "topic_reveal"; questionIndex: number; at: number }
-  | { type: "round_playing"; questionIndex: number; startedAt: number }
-  | { type: "tiebreaker"; question: QuestionActive }
+  | {
+      type: "topic_reveal";
+      questionIndex: number;
+      at: number;
+      playlistSig: string;
+    }
+  | {
+      type: "round_playing";
+      questionIndex: number;
+      startedAt: number;
+      playlistSig: string;
+    }
+  | { type: "tiebreaker"; question: QuestionActive; playlistSig: string }
   | { type: "match_finished" };
 
 export function isMatchSyncPayload(value: unknown): value is MatchSyncPayload {
@@ -25,15 +35,20 @@ export function isMatchSyncPayload(value: unknown): value is MatchSyncPayload {
     case "topic_reveal":
       return (
         typeof payload.questionIndex === "number" &&
-        typeof payload.at === "number"
+        typeof payload.at === "number" &&
+        typeof payload.playlistSig === "string"
       );
     case "round_playing":
       return (
         typeof payload.questionIndex === "number" &&
-        typeof payload.startedAt === "number"
+        typeof payload.startedAt === "number" &&
+        typeof payload.playlistSig === "string"
       );
     case "tiebreaker":
-      return Boolean(payload.question?.id && payload.question?.question_text);
+      return (
+        Boolean(payload.question?.id && payload.question?.question_text) &&
+        typeof payload.playlistSig === "string"
+      );
     case "match_finished":
       return true;
     default:

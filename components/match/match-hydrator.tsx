@@ -50,13 +50,13 @@ export function MatchHydrator({
         });
       }
 
+      // Server session playlist is authoritative — both players must use the same IDs.
       const serverPlaylistSig = playlistIdsSignature(playlist);
       const localPlaylistSig = playlistIdsSignature(state.playlist);
+      const playlistMismatch =
+        state.playlist.length === 0 || serverPlaylistSig !== localPlaylistSig;
 
-      if (
-        playlist.length > 0 &&
-        (state.playlist.length === 0 || serverPlaylistSig !== localPlaylistSig)
-      ) {
+      if (playlistMismatch) {
         const matchInProgress =
           state.roundPhase === "playing" ||
           state.roundPhase === "round_result" ||
@@ -66,7 +66,6 @@ export function MatchHydrator({
           state.currentQuestionIndex > 0;
 
         if (matchInProgress) {
-          // Realtime sync may have already advanced this client — only align playlist.
           useGameStore.setState({ playlist });
         } else {
           useGameStore.setState({
