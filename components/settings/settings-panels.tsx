@@ -176,12 +176,12 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="settings-display-name">Display name</Label>
+            <Label htmlFor="settings-display-name">Username</Label>
             <Input
               id="settings-display-name"
               value={displayName}
               maxLength={24}
-              placeholder="Name shown to opponents"
+              placeholder="Used to sign in and shown to opponents"
               disabled={isPending}
               onChange={(event) => setDisplayName(event.target.value)}
             />
@@ -221,7 +221,7 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
           <Button
             type="button"
             className="min-h-11"
-            disabled={isPending || !proficiencyLevel}
+            disabled={isPending || !proficiencyLevel || !displayName.trim()}
             onClick={saveProfile}
           >
             {isPending ? (

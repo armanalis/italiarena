@@ -7,6 +7,11 @@ import {
   TARGET_LANGUAGE,
   type ProficiencyLevel,
 } from "@/lib/constants";
+import {
+  isUsernameTaken,
+  normalizeUsername,
+  validateUsername,
+} from "@/lib/username";
 import { createClient } from "@/utils/supabase/server";
 
 export type OnboardingFormState = {
@@ -17,9 +22,15 @@ export async function saveOnboarding(
   formData: FormData
 ): Promise<OnboardingFormState> {
   const proficiencyLevel = String(formData.get("proficiency_level") ?? "").trim();
+  const username = normalizeUsername(String(formData.get("username") ?? ""));
 
   if (!PROFICIENCY_LEVELS.includes(proficiencyLevel as ProficiencyLevel)) {
     return { error: "Please select a valid proficiency level." };
+  }
+
+  const usernameError = validateUsername(username);
+  if (usernameError) {
+    return { error: usernameError };
   }
 
   const supabase = await createClient();
@@ -31,11 +42,16 @@ export async function saveOnboarding(
     return { error: "You must be signed in to continue." };
   }
 
+  if (await isUsernameTaken(username, user.id)) {
+    return { error: "That username is already taken." };
+  }
+
   const profilePayload = {
     id: user.id,
     email: user.email ?? "",
     target_language: TARGET_LANGUAGE,
     proficiency_level: proficiencyLevel,
+    display_name: username,
   };
 
   const { data: existingProfile } = await supabase
@@ -51,6 +67,7 @@ export async function saveOnboarding(
           email: profilePayload.email,
           target_language: TARGET_LANGUAGE,
           proficiency_level: proficiencyLevel,
+          display_name: username,
         })
         .eq("id", user.id)
     : await supabase.from("users").insert(profilePayload);

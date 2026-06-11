@@ -3,6 +3,12 @@
 
 import { redirect } from "next/navigation";
 import { getPostAuthPath } from "@/lib/auth";
+import {
+  isUsernameTaken,
+  normalizeUsername,
+  resolveLoginEmail,
+  validateUsername,
+} from "@/lib/username";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
@@ -19,15 +25,23 @@ export async function signIn(
   _prevState: AuthFormState,
   formData: FormData
 ): Promise<AuthFormState> {
-  const email = String(formData.get("email") ?? "").trim();
+  const login = String(formData.get("login") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
-  if (!email || !password) {
-    return { error: "Email and password are required." };
+  if (!login || !password) {
+    return { error: "Email or username and password are required." };
+  }
+
+  const resolved = await resolveLoginEmail(login);
+  if ("error" in resolved) {
+    return { error: resolved.error };
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { error } = await supabase.auth.signInWithPassword({
+    email: resolved.email,
+    password,
+  });
 
   if (error) {
     return { error: error.message };
@@ -42,20 +56,41 @@ export async function signUp(
 ): Promise<AuthFormState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const username = normalizeUsername(String(formData.get("username") ?? ""));
 
-  if (!email || !password) {
-    return { error: "Email and password are required." };
+  if (!email || !password || !username) {
+    return { error: "Email, username, and password are required." };
+  }
+
+  const usernameError = validateUsername(username);
+  if (usernameError) {
+    return { error: usernameError };
   }
 
   if (password.length < 6) {
     return { error: "Password must be at least 6 characters." };
   }
 
+  if (await isUsernameTaken(username)) {
+    return { error: "That username is already taken." };
+  }
+
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({ email, password });
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (data.user) {
+    const { error: profileError } = await supabase
+      .from("users")
+      .update({ display_name: username })
+      .eq("id", data.user.id);
+
+    if (profileError) {
+      return { error: profileError.message };
+    }
   }
 
   redirect(await getPostAuthPath());

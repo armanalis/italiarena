@@ -3,7 +3,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, UserRound } from "lucide-react";
 import { saveOnboarding } from "@/app/onboarding/actions";
 import { signOut } from "@/app/login/actions";
 import { PROFICIENCY_LEVELS, TARGET_LANGUAGE } from "@/lib/constants";
@@ -11,7 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-export function OnboardingForm() {
+type OnboardingFormProps = {
+  defaultUsername?: string | null;
+};
+
+export function OnboardingForm({ defaultUsername = "" }: OnboardingFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -50,6 +54,29 @@ export function OnboardingForm() {
 
       <form onSubmit={handleSubmit} className="space-y-6 px-5 py-6 sm:px-8 sm:py-7">
         <input type="hidden" name="target_language" value={TARGET_LANGUAGE} />
+
+        <div className="space-y-2">
+          <Label htmlFor="username" className="flex items-center gap-2">
+            <UserRound className="size-4 text-muted-foreground" />
+            Username
+          </Label>
+          <input
+            id="username"
+            name="username"
+            type="text"
+            required
+            minLength={2}
+            maxLength={24}
+            defaultValue={defaultUsername ?? ""}
+            autoComplete="username"
+            placeholder="Used to sign in and shown to opponents"
+            className={cn(
+              "flex h-11 w-full rounded-lg border border-input bg-transparent px-3 text-sm shadow-sm",
+              "focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+              "dark:bg-white/5"
+            )}
+          />
+        </div>
 
         <div className="space-y-2">
           <Label htmlFor="proficiency_level">Proficiency Level</Label>

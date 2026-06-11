@@ -12,6 +12,11 @@ import {
 } from "@/lib/constants";
 import type { CategoryProgress, MatchHistoryEntry } from "@/lib/types";
 import { normalizeCategoryProgress } from "@/lib/category-progress";
+import {
+  isUsernameTaken,
+  normalizeUsername,
+  validateUsername,
+} from "@/lib/username";
 import type {
   CorrectAnswer,
   MatchResult,
@@ -70,14 +75,19 @@ export async function getSettingsData() {
 
 export async function updateLearningProfile(formData: FormData): Promise<SettingsActionResult> {
   const proficiencyLevel = String(formData.get("proficiency_level") ?? "");
-  const displayName = String(formData.get("display_name") ?? "").trim();
+  const displayName = normalizeUsername(String(formData.get("display_name") ?? ""));
 
   if (!isProficiencyLevel(proficiencyLevel)) {
     return { success: false, error: "Choose a valid proficiency level." };
   }
 
-  if (displayName && (displayName.length < 2 || displayName.length > 24)) {
-    return { success: false, error: "Display name must be 2–24 characters." };
+  if (!displayName) {
+    return { success: false, error: "Username is required." };
+  }
+
+  const usernameError = validateUsername(displayName);
+  if (usernameError) {
+    return { success: false, error: usernameError };
   }
 
   const supabase = await createClient();
@@ -89,12 +99,16 @@ export async function updateLearningProfile(formData: FormData): Promise<Setting
     return { success: false, error: "Not authenticated." };
   }
 
+  if (await isUsernameTaken(displayName, user.id)) {
+    return { success: false, error: "That username is already taken." };
+  }
+
   const { error } = await supabase
     .from("users")
     .update({
       target_language: TARGET_LANGUAGE,
       proficiency_level: proficiencyLevel,
-      display_name: displayName || null,
+      display_name: displayName,
     })
     .eq("id", user.id);
 
