@@ -72,6 +72,9 @@ export function useGameLoop({
   const resolvingRef = useRef(false);
   const resultRemainingMsRef = useRef(0);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const channelReadyRef = useRef(false);
+  const pendingBroadcastsRef = useRef<AnswerLockedPayload[]>([]);
+  const [channelReady, setChannelReady] = useState(!isBotMatch);
   const [roundResultSecondsLeft, setRoundResultSecondsLeft] = useState<
     number | null
   >(null);
@@ -107,15 +110,37 @@ export function useGameLoop({
     clearBotTimer();
   }, [clearBotTimer, clearResultTimer, clearRoundTimers]);
 
+  const flushPendingBroadcasts = useCallback(() => {
+    if (!channelReadyRef.current || !channelRef.current) {
+      return;
+    }
+
+    const pending = pendingBroadcastsRef.current;
+    pendingBroadcastsRef.current = [];
+
+    for (const payload of pending) {
+      void channelRef.current.send({
+        type: "broadcast",
+        event: "answer_locked",
+        payload,
+      });
+    }
+  }, []);
+
   const broadcastAnswer = useCallback(
     (payload: AnswerLockedPayload) => {
-      channelRef.current?.send({
+      if (!isBotMatch && !channelReadyRef.current) {
+        pendingBroadcastsRef.current.push(payload);
+        return;
+      }
+
+      void channelRef.current?.send({
         type: "broadcast",
         event: "answer_locked",
         payload,
       });
     },
-    []
+    [isBotMatch]
   );
 
   const bothAnswersLocked = useCallback(() => {
@@ -291,7 +316,7 @@ export function useGameLoop({
 
     roundTimerRef.current = window.setInterval(() => {
       const state = useGameStore.getState();
-      if (state.roundPhase !== "playing" && state.roundPhase !== "waiting") {
+      if (state.roundPhase !== "playing") {
         return;
       }
 
@@ -382,15 +407,30 @@ export function useGameLoop({
       isBotMatch,
       proficiencyLevel,
     });
+
+    if (useGameStore.getState().roundPhase === "waiting") {
+      setRoundPhase("playing");
+    }
   }, [
     initGameplay,
     isBotMatch,
     localPlayerRole,
     localUserId,
     proficiencyLevel,
+    setRoundPhase,
   ]);
 
   useEffect(() => {
+    if (isBotMatch) {
+      channelReadyRef.current = true;
+      setChannelReady(true);
+      return;
+    }
+
+    channelReadyRef.current = false;
+    setChannelReady(false);
+    pendingBroadcastsRef.current = [];
+
     const channel = supabase.channel(`game_session:${sessionId}`);
 
     channel
@@ -412,24 +452,31 @@ export function useGameLoop({
           finalizeRound();
         }
       })
-      .subscribe();
-
-    channelRef.current = channel;
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          channelRef.current = channel;
+          channelReadyRef.current = true;
+          setChannelReady(true);
+          flushPendingBroadcasts();
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
       channelRef.current = null;
+      channelReadyRef.current = false;
+      pendingBroadcastsRef.current = [];
     };
-  }, [finalizeRound, lockOpponentAnswer, sessionId]);
+  }, [
+    finalizeRound,
+    flushPendingBroadcasts,
+    isBotMatch,
+    lockOpponentAnswer,
+    sessionId,
+    supabase,
+  ]);
 
   useEffect(() => {
-    if (roundPhase === "waiting") {
-      if (bothAnswersLocked()) {
-        finalizeRound();
-      }
-      return;
-    }
-
     if (
       roundPhase === "round_result" ||
       roundPhase === "match_finished" ||
@@ -459,11 +506,9 @@ export function useGameLoop({
     return clearRoundTimers;
   }, [
     beginRound,
-    bothAnswersLocked,
     clearRoundTimers,
     clearTimers,
     currentQuestionIndex,
-    finalizeRound,
     play,
     roundPhase,
     roundStartedAt,
@@ -472,7 +517,7 @@ export function useGameLoop({
   ]);
 
   useEffect(() => {
-    if (roundPhase !== "playing" && roundPhase !== "waiting") {
+    if (roundPhase !== "playing") {
       return;
     }
 
@@ -501,5 +546,6 @@ export function useGameLoop({
     playerAAnswer,
     playerBAnswer,
     roundResultSecondsLeft,
+    channelReady,
   };
 }

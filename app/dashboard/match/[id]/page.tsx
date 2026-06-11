@@ -3,7 +3,10 @@ import { redirect } from "next/navigation";
 import { MatchResultRecorder } from "@/components/match/match-result-recorder";
 import { GameLoop } from "@/components/match/game-loop";
 import { MatchHydrator } from "@/components/match/match-hydrator";
-import { getMatchSession } from "@/app/dashboard/matchmaking/actions";
+import {
+  getMatchPlayerNames,
+  getMatchSession,
+} from "@/app/dashboard/matchmaking/actions";
 import { requireOnboardingComplete } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 
@@ -60,6 +63,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
   }
 
   const isBotMatch = opponent?.isGhost ?? false;
+  const { playerAName, playerBName } = await getMatchPlayerNames(session);
 
   return (
     <>
@@ -78,7 +82,8 @@ export default async function MatchPage({ params }: MatchPageProps) {
         localPlayerRole={localPlayerRole}
         isBotMatch={isBotMatch}
         proficiencyLevel={profile.proficiency_level!}
-        opponentName={opponent?.displayName ?? "Opponent"}
+        playerAName={playerAName}
+        playerBName={playerBName}
       />
     </>
   );

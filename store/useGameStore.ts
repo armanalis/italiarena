@@ -299,9 +299,9 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
         const locked: LockedAnswer = { answer, responseTimeMs };
 
         if (localPlayerRole === "a") {
-          set({ playerAAnswer: locked, roundPhase: "waiting" });
+          set({ playerAAnswer: locked });
         } else {
-          set({ playerBAnswer: locked, roundPhase: "waiting" });
+          set({ playerBAnswer: locked });
         }
       },
       lockOpponentAnswer: (answer, responseTimeMs) => {

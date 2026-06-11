@@ -52,19 +52,37 @@ async function getAuthenticatedProfile(): Promise<
   return { profile: { ...profile, role: profile.role ?? "user", display_name: profile.display_name ?? null, sound_enabled: true, haptics_enabled: true } as UserProfile };
 }
 
-async function getOpponentDisplayName(opponentId: string): Promise<string> {
+export async function getPlayerDisplayName(userId: string): Promise<string> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("users")
     .select("display_name, email")
-    .eq("id", opponentId)
+    .eq("id", userId)
     .maybeSingle();
 
   if (!data) {
-    return "Opponent";
+    return "Player";
   }
 
   return getPublicDisplayName(data);
+}
+
+export async function getMatchPlayerNames(session: {
+  player_a_id: string;
+  player_b_id: string | null;
+}) {
+  const playerAName = await getPlayerDisplayName(session.player_a_id);
+
+  if (!session.player_b_id) {
+    return { playerAName, playerBName: "Waiting..." };
+  }
+
+  const playerBName =
+    session.player_b_id === GHOST_PLAYER_ID
+      ? GHOST_PLAYER_NAME
+      : await getPlayerDisplayName(session.player_b_id);
+
+  return { playerAName, playerBName };
 }
 
 async function fetchQuestionsByIds(ids: string[]): Promise<QuestionActive[]> {
@@ -237,7 +255,7 @@ export async function searchForMatch(
                   isGhost,
                   displayName: isGhost
                     ? GHOST_PLAYER_NAME
-                    : await getOpponentDisplayName(opponentId),
+                    : await getPlayerDisplayName(opponentId),
                 }
               : null,
           },
@@ -319,7 +337,7 @@ export async function searchForMatch(
           opponent: {
             id: joinedSession.player_a_id,
             isGhost: false,
-            displayName: await getOpponentDisplayName(joinedSession.player_a_id),
+            displayName: await getPlayerDisplayName(joinedSession.player_a_id),
           },
         },
       };
@@ -501,7 +519,7 @@ export async function startGhostMatch(
                 isGhost,
                 displayName: isGhost
                   ? GHOST_PLAYER_NAME
-                  : await getOpponentDisplayName(opponentId),
+                  : await getPlayerDisplayName(opponentId),
               }
             : null,
         },
@@ -602,7 +620,7 @@ export async function getMatchSession(sessionId: string) {
             isGhost,
             displayName: isGhost
               ? GHOST_PLAYER_NAME
-              : await getOpponentDisplayName(opponentId),
+              : await getPlayerDisplayName(opponentId),
           }
         : null,
     },
