@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/utils/supabase/admin";
+import { createClient } from "@/utils/supabase/server";
 
 export const USERNAME_MIN_LENGTH = 2;
 export const USERNAME_MAX_LENGTH = 24;
@@ -29,6 +30,39 @@ function getAdminClientOrNull() {
   }
 }
 
+async function lookupEmailViaRpc(identifier: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("resolve_login_email", {
+    p_identifier: identifier,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+async function lookupEmailViaAdmin(username: string): Promise<string | null> {
+  const admin = getAdminClientOrNull();
+  if (!admin) {
+    return null;
+  }
+
+  const { data, error } = await admin
+    .from("users")
+    .select("email")
+    .ilike("display_name", username)
+    .limit(1)
+    .returns<{ email: string }[]>();
+
+  if (error || !data?.length) {
+    return null;
+  }
+
+  return data[0].email;
+}
+
 /** Case-insensitive lookup — always reads the current display_name from the database. */
 export async function findUserEmailByUsername(
   username: string
@@ -40,33 +74,17 @@ export async function findUserEmailByUsername(
     return { error: validationError };
   }
 
-  const admin = getAdminClientOrNull();
-  if (!admin) {
-    return { error: "Sign-in is temporarily unavailable. Please try again later." };
+  try {
+    const email = (await lookupEmailViaRpc(trimmed)) ?? (await lookupEmailViaAdmin(trimmed));
+
+    if (!email) {
+      return { error: "No account found for that username." };
+    }
+
+    return { email };
+  } catch {
+    return { error: "Could not look up that username. Please try again." };
   }
-
-  const { data, error } = await admin
-    .from("users")
-    .select("email")
-    .ilike("display_name", trimmed)
-    .limit(2)
-    .returns<{ email: string }[]>();
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  if (!data?.length) {
-    return { error: "No account found for that username." };
-  }
-
-  if (data.length > 1) {
-    return {
-      error: "That username matches multiple accounts. Sign in with your email instead.",
-    };
-  }
-
-  return { email: data[0].email };
 }
 
 export async function resolveLoginEmail(
@@ -85,6 +103,47 @@ export async function resolveLoginEmail(
   return findUserEmailByUsername(trimmed);
 }
 
+async function isUsernameTakenViaRpc(
+  username: string,
+  excludeUserId?: string
+): Promise<boolean | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("is_display_name_taken", {
+    p_display_name: username,
+    p_exclude_user_id: excludeUserId ?? undefined,
+  });
+
+  if (error) {
+    return null;
+  }
+
+  return Boolean(data);
+}
+
+async function isUsernameTakenViaAdmin(
+  username: string,
+  excludeUserId?: string
+): Promise<boolean | null> {
+  const admin = getAdminClientOrNull();
+  if (!admin) {
+    return null;
+  }
+
+  let query = admin.from("users").select("id").ilike("display_name", username).limit(1);
+
+  if (excludeUserId) {
+    query = query.neq("id", excludeUserId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return null;
+  }
+
+  return Boolean(data?.length);
+}
+
 export async function isUsernameTaken(
   username: string,
   excludeUserId?: string
@@ -96,22 +155,11 @@ export async function isUsernameTaken(
     return false;
   }
 
-  const admin = getAdminClientOrNull();
-  if (!admin) {
-    return false;
+  const viaRpc = await isUsernameTakenViaRpc(trimmed, excludeUserId);
+  if (viaRpc !== null) {
+    return viaRpc;
   }
 
-  let query = admin.from("users").select("id").ilike("display_name", trimmed).limit(1);
-
-  if (excludeUserId) {
-    query = query.neq("id", excludeUserId);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    return false;
-  }
-
-  return Boolean(data?.length);
+  const viaAdmin = await isUsernameTakenViaAdmin(trimmed, excludeUserId);
+  return viaAdmin ?? false;
 }
