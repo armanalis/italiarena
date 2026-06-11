@@ -8,8 +8,6 @@ import { useGameLoop } from "@/hooks/useGameLoop";
 import {
   useGameStore,
   useGameStoreHydrated,
-  useLocalScore,
-  useOpponentScore,
   usePlayerAScore,
   usePlayerBScore,
 } from "@/store/useGameStore";
@@ -29,7 +27,8 @@ type GameLoopProps = {
   localPlayerRole: "a" | "b";
   isBotMatch: boolean;
   proficiencyLevel: ProficiencyLevel;
-  opponentName: string;
+  playerAName: string;
+  playerBName: string;
 };
 
 const OPTIONS: { key: CorrectAnswer; label: string }[] = [
@@ -45,11 +44,10 @@ export function GameLoop({
   localPlayerRole,
   isBotMatch,
   proficiencyLevel,
-  opponentName,
+  playerAName,
+  playerBName,
 }: GameLoopProps) {
   const hydrated = useGameStoreHydrated();
-  const localScore = useLocalScore();
-  const opponentScore = useOpponentScore();
   const playerAScore = usePlayerAScore();
   const playerBScore = usePlayerBScore();
   const matchWinner = useGameStore((state) => state.matchWinner);
@@ -71,6 +69,7 @@ export function GameLoop({
     playerAAnswer,
     playerBAnswer,
     roundResultSecondsLeft,
+    channelReady,
   } = useGameLoop({
     sessionId,
     localUserId,
@@ -115,8 +114,13 @@ export function GameLoop({
     localPlayerRoleStore === "a" ? playerBAnswer : playerAAnswer;
   const isLocked = Boolean(localAnswer);
   const showWaiting =
-    roundPhase === "waiting" && isLocked && !opponentAnswer;
+    roundPhase === "playing" && isLocked && !opponentAnswer;
+  const canAnswer = roundPhase === "playing" && !isLocked && channelReady;
 
+  const localDisplayName =
+    localPlayerRoleStore === "a" ? playerAName : playerBName;
+  const opponentDisplayName =
+    localPlayerRoleStore === "a" ? playerBName : playerAName;
   const localLastPoints =
     localPlayerRoleStore === "a" ? lastRoundPointsA : lastRoundPointsB;
   const opponentLastPoints =
@@ -139,7 +143,8 @@ export function GameLoop({
               {isTie ? "It's a tie!" : didWin ? "You win!" : "You lose!"}
             </h1>
             <p className="text-sm text-muted-foreground sm:text-base">
-              Final score · You {localScore} — {opponentName} {opponentScore}
+              Final score · {playerAName} {playerAScore} — {playerBName}{" "}
+              {playerBScore}
             </p>
             {isTie && (
               <p className="text-sm text-muted-foreground">
@@ -191,10 +196,12 @@ export function GameLoop({
               : `Question ${currentQuestionIndex + 1}/${totalQuestions}`}
           </p>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-medium sm:gap-3 sm:text-sm">
-            <span className="truncate">You · {localScore}</span>
+            <span className="truncate">
+              {playerAName} · {playerAScore}
+            </span>
             <span className="text-muted-foreground">vs</span>
             <span className="truncate">
-              {opponentName} · {opponentScore}
+              {playerBName} · {playerBScore}
             </span>
           </div>
         </div>
@@ -228,8 +235,7 @@ export function GameLoop({
           </div>
         )}
 
-        {(roundPhase === "playing" || roundPhase === "waiting") &&
-          currentQuestion && (
+        {roundPhase === "playing" && currentQuestion && (
             <div className="w-full max-w-2xl space-y-4 sm:space-y-6">
               <div className="space-y-2 text-center sm:space-y-3">
                 <Badge variant="secondary" className="uppercase tracking-wide">
@@ -249,7 +255,7 @@ export function GameLoop({
                     <button
                       key={key}
                       type="button"
-                      disabled={isLocked || roundPhase === "waiting"}
+                      disabled={!canAnswer || isLocked}
                       onClick={() => handleSelectAnswer(key)}
                       className={cn(
                         "touch-target min-h-12 rounded-xl border px-3 py-3 text-left text-sm transition-all active:scale-[0.99] sm:px-4 sm:py-4 sm:text-base",
@@ -268,10 +274,17 @@ export function GameLoop({
                 })}
               </div>
 
+              {!channelReady && !isBotMatch && (
+                <div className="flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  Connecting to opponent...
+                </div>
+              )}
+
               {showWaiting && (
                 <div className="flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
                   <Loader2 className="size-4 animate-spin" />
-                  Waiting for opponent...
+                  Waiting for {opponentDisplayName}...
                 </div>
               )}
             </div>
@@ -312,7 +325,7 @@ export function GameLoop({
 
             <div className="grid grid-cols-2 gap-2 text-center text-sm sm:gap-3">
               <div className="rounded-xl border border-border/60 bg-card/50 p-3 sm:p-4">
-                <p className="text-muted-foreground">You</p>
+                <p className="truncate text-muted-foreground">{localDisplayName}</p>
                 <p className="mt-1 text-xl font-bold sm:text-2xl">
                   +{localLastPoints}
                 </p>
@@ -328,7 +341,7 @@ export function GameLoop({
                 </p>
               </div>
               <div className="rounded-xl border border-border/60 bg-card/50 p-3 sm:p-4">
-                <p className="truncate text-muted-foreground">{opponentName}</p>
+                <p className="truncate text-muted-foreground">{opponentDisplayName}</p>
                 <p className="mt-1 text-xl font-bold sm:text-2xl">
                   +{opponentLastPoints}
                 </p>
@@ -369,7 +382,9 @@ export function GameLoop({
             : `Question ${currentQuestionIndex + 1}/${totalQuestions}`}
         </span>
         <span className="hidden text-border sm:inline">|</span>
-        <span>Player A {playerAScore} · Player B {playerBScore}</span>
+        <span>
+          {playerAName} {playerAScore} · {playerBName} {playerBScore}
+        </span>
       </footer>
     </main>
   );

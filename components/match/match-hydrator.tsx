@@ -35,6 +35,20 @@ export function MatchHydrator({
     // the same session — that wipes roundReviews, scores, and match progress.
     if (state.gameSessionId === sessionId) {
       syncedSessionRef.current = sessionId;
+
+      const opponentChanged =
+        state.opponent?.id !== opponent.id ||
+        state.opponent?.isGhost !== opponent.isGhost ||
+        state.opponent?.displayName !== opponent.displayName;
+
+      if (opponentChanged) {
+        useGameStore.setState({
+          opponent,
+          isBotMatch: opponent.isGhost,
+          botDifficulty: opponent.isGhost ? state.botDifficulty ?? "medium" : null,
+        });
+      }
+
       // After a refresh we keep session metadata in localStorage but not the playlist.
       if (state.playlist.length === 0 && playlist.length > 0) {
         useGameStore.setState({ playlist });
