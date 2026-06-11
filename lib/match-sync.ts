@@ -2,6 +2,38 @@ import type { QuestionActive } from "@/types/database.types";
 
 export const MATCH_SYNC_EVENT = "match_sync";
 
+export type MatchSyncPhase =
+  | "topic_reveal"
+  | "playing"
+  | "round_result"
+  | "match_finished";
+
+export type MatchSyncState = {
+  questionIndex: number;
+  phase: MatchSyncPhase;
+  roundStartedAt: number | null;
+  playlistSig: string;
+  updatedAt?: number;
+};
+
+export function isMatchSyncState(value: unknown): value is MatchSyncState {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const state = value as MatchSyncState;
+  return (
+    typeof state.questionIndex === "number" &&
+    (state.phase === "topic_reveal" ||
+      state.phase === "playing" ||
+      state.phase === "round_result" ||
+      state.phase === "match_finished") &&
+    (state.roundStartedAt === null ||
+      typeof state.roundStartedAt === "number") &&
+    typeof state.playlistSig === "string"
+  );
+}
+
 export type MatchSyncPayload =
   | { type: "peer_ready"; playerRole: "a" | "b" }
   | { type: "request_sync" }
