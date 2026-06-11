@@ -9,8 +9,11 @@ import {
   buildMatchPlaylist,
   splitSessionQuestions,
 } from "@/lib/match";
-import { isMatchSyncState } from "@/lib/match-sync";
-import type { MatchSyncState } from "@/lib/match-sync";
+import {
+  buildQuestionPlaylistPayload,
+  extractQuestionIds,
+  parseQuestionPlaylist,
+} from "@/lib/session-playlist";
 import type { QuestionActive } from "@/types/database.types";
 import type { UserProfile } from "@/lib/types";
 
@@ -154,7 +157,7 @@ async function getQuestionRotationContext(userId: string) {
   ]);
 
   const seenQuestions = (stats?.seen_questions ?? []) as string[];
-  const recentPlaylist = (lastSession?.question_playlist ?? []) as string[];
+  const recentPlaylist = extractQuestionIds(lastSession?.question_playlist);
 
   return {
     seenIds: new Set<string>(seenQuestions),
@@ -247,7 +250,7 @@ export async function searchForMatch(
     }
 
     if (existingSession) {
-      const questionIds = (existingSession.question_playlist as string[]) ?? [];
+      const questionIds = extractQuestionIds(existingSession.question_playlist);
       const playlist = await resolveSessionQuestions(questionIds);
 
       if (existingSession.status === "active") {
@@ -335,7 +338,7 @@ export async function searchForMatch(
         );
       }
 
-      const questionIds = (joinedSession.question_playlist as string[]) ?? [];
+      const questionIds = extractQuestionIds(joinedSession.question_playlist);
       const playlist = await resolveSessionQuestions(questionIds);
       await markQuestionsSeen(profile.id, questionIds);
 
@@ -356,8 +359,7 @@ export async function searchForMatch(
   }
 
   if (ownWaitingSession) {
-    const questionIds =
-      (ownWaitingSession.question_playlist as string[]) ?? [];
+    const questionIds = extractQuestionIds(ownWaitingSession.question_playlist);
     const playlist = await resolveSessionQuestions(questionIds);
 
     return {
@@ -392,7 +394,7 @@ export async function searchForMatch(
       status: "waiting",
       language,
       level,
-      question_playlist: matchQuestions.sessionIds,
+      question_playlist: buildQuestionPlaylistPayload(matchQuestions.sessionIds),
     })
     .select("*")
     .single();
@@ -451,7 +453,7 @@ export async function startBotMatch(
       status: "active",
       language,
       level,
-      question_playlist: matchQuestions.sessionIds,
+      question_playlist: buildQuestionPlaylistPayload(matchQuestions.sessionIds),
     })
     .select("*")
     .single();
@@ -513,7 +515,7 @@ export async function startGhostMatch(
       .maybeSingle();
 
     if (existingSession?.status === "active") {
-      const questionIds = (existingSession.question_playlist as string[]) ?? [];
+      const questionIds = extractQuestionIds(existingSession.question_playlist);
       const playlist = await resolveSessionQuestions(questionIds);
       const opponentId = existingSession.player_b_id;
       const isGhost = opponentId === GHOST_PLAYER_ID;
@@ -540,7 +542,7 @@ export async function startGhostMatch(
     return { success: false, error: "Session is no longer waiting." };
   }
 
-  const questionIds = (updatedSession.question_playlist as string[]) ?? [];
+  const questionIds = extractQuestionIds(updatedSession.question_playlist);
   const playlist = await resolveSessionQuestions(questionIds);
 
   return {
@@ -610,7 +612,9 @@ export async function getMatchSession(sessionId: string) {
     return { success: false as const, error: "You are not part of this match." };
   }
 
-  const questionIds = (session.question_playlist as string[]) ?? [];
+  const { questionIds, sync: matchSync } = parseQuestionPlaylist(
+    session.question_playlist
+  );
   const playlist = await resolveSessionQuestions(questionIds);
   const opponentId =
     session.player_a_id === auth.profile.id
@@ -618,9 +622,6 @@ export async function getMatchSession(sessionId: string) {
       : session.player_a_id;
 
   const isGhost = opponentId === GHOST_PLAYER_ID;
-
-  const rawSync = session.match_sync;
-  const matchSync = isMatchSyncState(rawSync) ? (rawSync as MatchSyncState) : null;
 
   return {
     success: true as const,
