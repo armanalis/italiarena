@@ -4,7 +4,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Ghost, Loader2, Users } from "lucide-react";
-import { toast } from "sonner";
 import {
   cancelMatchSearch,
   searchForMatch,
@@ -12,17 +11,31 @@ import {
 } from "@/app/dashboard/matchmaking/actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { createClient } from "@/utils/supabase/client";
 import { useGameStore } from "@/store/useGameStore";
+import {
+  BOT_DIFFICULTY_LABELS,
+  getBotDifficultyDescription,
+  type BotDifficulty,
+} from "@/lib/bot";
 import type { UserProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const SEARCH_INTERVAL_MS = 1500;
-const GHOST_COUNTDOWN_SECONDS = 15;
+const MATCH_SEARCH_SECONDS = 10;
 
 type MatchmakingLobbyProps = {
   profile: UserProfile;
   mode: "real" | "bot";
+  botDifficulty?: BotDifficulty;
 };
 
 type PresencePlayer = {
@@ -31,7 +44,11 @@ type PresencePlayer = {
   proficiency_level: string;
 };
 
-export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
+export function MatchmakingLobby({
+  profile,
+  mode,
+  botDifficulty = "medium",
+}: MatchmakingLobbyProps) {
   const router = useRouter();
   const supabase = createClient();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -39,6 +56,7 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
   const cancelledRef = useRef(false);
   const searchIntervalRef = useRef<number | null>(null);
   const timerIntervalRef = useRef<number | null>(null);
+  const noMatchHandledRef = useRef(false);
   const handleActiveMatchRef = useRef<
     (
       sessionId: string,
@@ -53,10 +71,12 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
   const startMatch = useGameStore((state) => state.startMatch);
   const reset = useGameStore((state) => state.reset);
 
-  const [secondsLeft, setSecondsLeft] = useState(GHOST_COUNTDOWN_SECONDS);
+  const [secondsLeft, setSecondsLeft] = useState(MATCH_SEARCH_SECONDS);
   const [onlineCount, setOnlineCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isExiting, setIsExiting] = useState(false);
+  const [showNoMatchDialog, setShowNoMatchDialog] = useState(false);
+  const [isStartingBot, setIsStartingBot] = useState(false);
   const [statusMessage, setStatusMessage] = useState(
     mode === "bot" ? "Summoning ghost opponent..." : "Searching for opponent..."
   );
@@ -77,33 +97,26 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
     }
   }, []);
 
-  const exitLobby = useCallback(
-    async (options?: { notifyNoGameFound?: boolean }) => {
-      if (redirectingRef.current || cancelledRef.current) {
-        return;
-      }
+  const exitLobby = useCallback(async () => {
+    if (redirectingRef.current || cancelledRef.current) {
+      return;
+    }
 
-      cancelledRef.current = true;
-      redirectingRef.current = true;
-      setIsExiting(true);
-      clearTimers();
+    cancelledRef.current = true;
+    redirectingRef.current = true;
+    setIsExiting(true);
+    clearTimers();
 
-      const sessionId = useGameStore.getState().gameSessionId;
-      await cancelMatchSearch(sessionId);
-      reset();
+    const sessionId = useGameStore.getState().gameSessionId;
+    await cancelMatchSearch(sessionId);
+    reset();
 
-      if (options?.notifyNoGameFound) {
-        toast.error("No game found.");
-      }
-
-      router.replace("/dashboard");
-    },
-    [clearTimers, reset, router]
-  );
+    router.replace("/dashboard");
+  }, [clearTimers, reset, router]);
 
   const goToMatch = useCallback(
     (sessionId: string) => {
-      if (redirectingRef.current || cancelledRef.current) {
+      if (redirectingRef.current) {
         return;
       }
 
@@ -113,6 +126,74 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
     },
     [clearTimers, router]
   );
+
+  const handleSearchTimeout = useCallback(async () => {
+    if (
+      noMatchHandledRef.current ||
+      cancelledRef.current ||
+      redirectingRef.current
+    ) {
+      return;
+    }
+
+    noMatchHandledRef.current = true;
+    clearTimers();
+    setStatusMessage("No matches found");
+
+    const sessionId = useGameStore.getState().gameSessionId;
+    await cancelMatchSearch(sessionId);
+    setShowNoMatchDialog(true);
+  }, [clearTimers]);
+
+  const handlePlayVsBot = useCallback(async () => {
+    if (isStartingBot || redirectingRef.current) {
+      return;
+    }
+
+    setIsStartingBot(true);
+    setShowNoMatchDialog(false);
+    clearTimers();
+
+    const result = await startBotMatch("medium");
+
+    if (!result.success) {
+      setError(result.error);
+      setIsStartingBot(false);
+      setShowNoMatchDialog(true);
+      return;
+    }
+
+    if (result.data.status !== "active" || !result.data.opponent) {
+      setError("Could not start bot match.");
+      setIsStartingBot(false);
+      setShowNoMatchDialog(true);
+      return;
+    }
+
+    setSessionId(result.data.sessionId);
+    startMatch({
+      gameSessionId: result.data.sessionId,
+      opponent: result.data.opponent,
+      playlist: result.data.playlist,
+      botDifficulty: "medium",
+    });
+    setStatusMessage(`${BOT_DIFFICULTY_LABELS.medium} ready — starting match...`);
+    goToMatch(result.data.sessionId);
+  }, [clearTimers, goToMatch, setSessionId, startMatch]);
+
+  const handleReturnToDashboard = useCallback(async () => {
+    if (redirectingRef.current) {
+      return;
+    }
+
+    cancelledRef.current = true;
+    redirectingRef.current = true;
+    setShowNoMatchDialog(false);
+    setIsExiting(true);
+    clearTimers();
+    reset();
+    router.replace("/dashboard");
+  }, [clearTimers, reset, router]);
 
   const handleActiveMatch = useCallback(
     (
@@ -124,21 +205,30 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
         return;
       }
 
-      startMatch({ gameSessionId: sessionId, opponent, playlist });
+      startMatch({
+        gameSessionId: sessionId,
+        opponent,
+        playlist,
+        botDifficulty: opponent.isGhost ? botDifficulty : null,
+      });
       setStatusMessage(
         opponent.isGhost
-          ? "Ghost opponent ready — starting match..."
+          ? `${BOT_DIFFICULTY_LABELS[botDifficulty]} ready — starting match...`
           : "Opponent found — starting match..."
       );
       goToMatch(sessionId);
     },
-    [goToMatch, startMatch]
+    [botDifficulty, goToMatch, startMatch]
   );
 
   handleActiveMatchRef.current = handleActiveMatch;
 
   const runSearch = useCallback(async () => {
-    if (cancelledRef.current || redirectingRef.current) {
+    if (
+      cancelledRef.current ||
+      redirectingRef.current ||
+      noMatchHandledRef.current
+    ) {
       return;
     }
 
@@ -212,12 +302,12 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
   }, [isBotMode]);
 
   useEffect(() => {
-    if (isBotMode || secondsLeft !== 0 || cancelledRef.current) {
+    if (isBotMode || secondsLeft !== 0 || noMatchHandledRef.current) {
       return;
     }
 
-    void exitLobby({ notifyNoGameFound: true });
-  }, [exitLobby, isBotMode, secondsLeft]);
+    void handleSearchTimeout();
+  }, [handleSearchTimeout, isBotMode, secondsLeft]);
 
   useEffect(() => {
     if (!isBotMode || cancelledRef.current) {
@@ -227,7 +317,7 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
     let cancelled = false;
 
     async function startInstantGhostMatch() {
-      const result = await startBotMatch();
+      const result = await startBotMatch(botDifficulty);
       if (cancelled || cancelledRef.current) {
         return;
       }
@@ -255,7 +345,7 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
     return () => {
       cancelled = true;
     };
-  }, [isBotMode, setSessionId]);
+  }, [botDifficulty, isBotMode, setSessionId]);
 
   useEffect(() => {
     if (!gameSessionId || cancelledRef.current) {
@@ -361,7 +451,7 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
             <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{statusMessage}</h1>
             <p className="text-sm text-muted-foreground">
               {isBotMode
-                ? `Starting a ghost match for ${language} at level ${level}.`
+                ? `${getBotDifficultyDescription(botDifficulty)} · ${language} · ${level}`
                 : `Matching ${language} players at level ${level}`}
             </p>
           </div>
@@ -396,19 +486,19 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-1000 ease-linear"
                     style={{
-                      width: `${((GHOST_COUNTDOWN_SECONDS - secondsLeft) / GHOST_COUNTDOWN_SECONDS) * 100}%`,
+                      width: `${((MATCH_SEARCH_SECONDS - secondsLeft) / MATCH_SEARCH_SECONDS) * 100}%`,
                     }}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  If no real player joins within 15 seconds, you&apos;ll return to
-                  the dashboard.
+                  If no real player joins within {MATCH_SEARCH_SECONDS} seconds,
+                  you can play vs bot or return to the dashboard.
                 </p>
               </>
             )}
             {isBotMode && (
               <p className="text-xs text-muted-foreground">
-                Starting a ghost match immediately — no waiting room.
+                Starting {BOT_DIFFICULTY_LABELS[botDifficulty]} immediately — no waiting room.
               </p>
             )}
           </div>
@@ -432,6 +522,46 @@ export function MatchmakingLobby({ profile, mode }: MatchmakingLobbyProps) {
           </Button>
         </div>
       </div>
+
+      <Dialog open={showNoMatchDialog} onOpenChange={() => {}}>
+        <DialogContent
+          showCloseButton={false}
+          onPointerDownOutside={(event) => event.preventDefault()}
+          onEscapeKeyDown={(event) => event.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>No matches found</DialogTitle>
+            <DialogDescription>
+              We couldn&apos;t find another player in your language and level
+              bracket. Would you like to play vs bot or go back to the
+              dashboard?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button
+              type="button"
+              className="w-full"
+              disabled={isStartingBot}
+              onClick={() => {
+                void handlePlayVsBot();
+              }}
+            >
+              {isStartingBot ? "Starting bot match..." : "Play vs bot"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={isStartingBot || isExiting}
+              onClick={() => {
+                void handleReturnToDashboard();
+              }}
+            >
+              Go to dashboard
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

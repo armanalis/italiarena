@@ -30,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={cn("font-sans", inter.variable)}>
-      <body className="min-h-dvh antialiased">
+      <body className="min-h-dvh w-full antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

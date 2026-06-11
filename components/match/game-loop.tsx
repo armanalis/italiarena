@@ -13,6 +13,7 @@ import {
   usePlayerAScore,
   usePlayerBScore,
 } from "@/store/useGameStore";
+import { BOT_DIFFICULTY_LABELS } from "@/lib/bot";
 import { formatCategoryLabel, isAnswerCorrect } from "@/lib/scoring";
 import { MatchMistakesReview } from "@/components/match/match-mistakes-review";
 import { MatchReviewBoundary } from "@/components/match/match-review-boundary";
@@ -57,6 +58,7 @@ export function GameLoop({
   const localPlayerRoleStore = useGameStore((state) => state.localPlayerRole);
   const reset = useGameStore((state) => state.reset);
   const tiebreakerUsed = useGameStore((state) => state.tiebreakerUsed);
+  const botDifficulty = useGameStore((state) => state.botDifficulty);
 
   const {
     roundPhase,
@@ -197,8 +199,12 @@ export function GameLoop({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <SoundVolumeControl className="hidden sm:flex" />
-          {isBotMatch && <Badge variant="secondary">Ghost</Badge>}
+          <SoundVolumeControl />
+          {isBotMatch && (
+            <Badge variant="secondary">
+              {botDifficulty ? BOT_DIFFICULTY_LABELS[botDifficulty] : "Bot"}
+            </Badge>
+          )}
           <Badge
             variant={timeRemaining <= 5 ? "destructive" : "outline"}
             className="min-w-14 justify-center font-mono tabular-nums"

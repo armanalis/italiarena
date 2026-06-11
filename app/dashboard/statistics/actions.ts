@@ -2,10 +2,260 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
+import { isAnswerCorrect } from "@/lib/scoring";
+import type {
+  CorrectAnswer,
+  QuestionActive,
+} from "@/types/database.types";
 
 export type ResetStatsResult =
   | { success: true }
   | { success: false; error: string };
+
+export type MistakeActionResult =
+  | { success: true }
+  | { success: false; error: string };
+
+export type PracticeAnswerResult =
+  | {
+      success: true;
+      correct: boolean;
+      practiceStreak: number;
+      mastered: boolean;
+    }
+  | { success: false; error: string };
+
+export type UserMistakeWithQuestion = {
+  id: string;
+  question_id: string;
+  selected_answer: CorrectAnswer | null;
+  practice_streak: number;
+  last_mistaken_at: string;
+  question: QuestionActive;
+};
+
+type MatchMistakeInput = {
+  questionId: string;
+  selectedAnswer: CorrectAnswer | null;
+};
+
+const PRACTICE_MASTER_STREAK = 3;
+
+const QUESTION_SELECT =
+  "id, language, level, category, question_text, option_a, option_b, option_c, option_d, correct_answer, random_float";
+
+async function resolveQuestionById(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  questionId: string
+): Promise<QuestionActive | null> {
+  const { data: active } = await supabase
+    .from("questions_active")
+    .select(QUESTION_SELECT)
+    .eq("id", questionId)
+    .maybeSingle();
+
+  if (active) {
+    return active as QuestionActive;
+  }
+
+  const { data: flagged } = await supabase
+    .from("questions_flagged")
+    .select(QUESTION_SELECT)
+    .eq("id", questionId)
+    .maybeSingle();
+
+  return flagged ? (flagged as QuestionActive) : null;
+}
+
+export async function getUserMistakes(): Promise<UserMistakeWithQuestion[]> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("user_mistakes")
+    .select("id, question_id, selected_answer, practice_streak, last_mistaken_at")
+    .eq("user_id", user.id)
+    .order("last_mistaken_at", { ascending: false });
+
+  if (error) {
+    return [];
+  }
+
+  const results: UserMistakeWithQuestion[] = [];
+
+  for (const row of data ?? []) {
+    const question = await resolveQuestionById(supabase, row.question_id);
+    if (!question) {
+      continue;
+    }
+
+    results.push({
+      id: row.id,
+      question_id: row.question_id,
+      selected_answer: row.selected_answer as CorrectAnswer | null,
+      practice_streak: row.practice_streak,
+      last_mistaken_at: row.last_mistaken_at,
+      question,
+    });
+  }
+
+  return results;
+}
+
+export async function recordMatchMistakes(
+  sessionId: string,
+  mistakes: MatchMistakeInput[]
+): Promise<MistakeActionResult> {
+  if (mistakes.length === 0) {
+    return { success: true };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: "Not authenticated." };
+  }
+
+  for (const mistake of mistakes) {
+    const { data: existing } = await supabase
+      .from("user_mistakes")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("question_id", mistake.questionId)
+      .maybeSingle();
+
+    if (existing) {
+      const { error } = await supabase
+        .from("user_mistakes")
+        .update({
+          selected_answer: mistake.selectedAnswer,
+          practice_streak: 0,
+          last_mistaken_at: new Date().toISOString(),
+          session_id: sessionId,
+        })
+        .eq("id", existing.id);
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+      continue;
+    }
+
+    const { error } = await supabase.from("user_mistakes").insert({
+      user_id: user.id,
+      question_id: mistake.questionId,
+      selected_answer: mistake.selectedAnswer,
+      practice_streak: 0,
+      session_id: sessionId,
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  revalidatePath("/dashboard/statistics");
+  return { success: true };
+}
+
+export async function submitMistakePracticeAnswer(
+  questionId: string,
+  answer: CorrectAnswer
+): Promise<PracticeAnswerResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: "Not authenticated." };
+  }
+
+  const { data: mistake, error: mistakeError } = await supabase
+    .from("user_mistakes")
+    .select("id, practice_streak, question_id")
+    .eq("user_id", user.id)
+    .eq("question_id", questionId)
+    .maybeSingle();
+
+  if (mistakeError || !mistake) {
+    return { success: false, error: "Mistake not found." };
+  }
+
+  const question = await resolveQuestionById(supabase, questionId);
+
+  if (!question) {
+    return { success: false, error: "Question not found." };
+  }
+
+  const correct = isAnswerCorrect(answer, question.correct_answer);
+
+  if (!correct) {
+    const { error } = await supabase
+      .from("user_mistakes")
+      .update({ practice_streak: 0 })
+      .eq("id", mistake.id);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/dashboard/statistics");
+    return {
+      success: true,
+      correct: false,
+      practiceStreak: 0,
+      mastered: false,
+    };
+  }
+
+  const nextStreak = mistake.practice_streak + 1;
+
+  if (nextStreak >= PRACTICE_MASTER_STREAK) {
+    const { error } = await supabase
+      .from("user_mistakes")
+      .delete()
+      .eq("id", mistake.id);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath("/dashboard/statistics");
+    return {
+      success: true,
+      correct: true,
+      practiceStreak: PRACTICE_MASTER_STREAK,
+      mastered: true,
+    };
+  }
+
+  const { error } = await supabase
+    .from("user_mistakes")
+    .update({ practice_streak: nextStreak })
+    .eq("id", mistake.id);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/dashboard/statistics");
+  return {
+    success: true,
+    correct: true,
+    practiceStreak: nextStreak,
+    mastered: false,
+  };
+}
 
 export async function resetPlayerStatistics(): Promise<ResetStatsResult> {
   const supabase = await createClient();
@@ -44,6 +294,15 @@ export async function resetPlayerStatistics(): Promise<ResetStatsResult> {
 
   if (historyError) {
     return { success: false, error: historyError.message };
+  }
+
+  const { error: mistakesError } = await supabase
+    .from("user_mistakes")
+    .delete()
+    .eq("user_id", user.id);
+
+  if (mistakesError) {
+    return { success: false, error: mistakesError.message };
   }
 
   revalidatePath("/dashboard/statistics");

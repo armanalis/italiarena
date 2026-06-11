@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { Languages, LogOut } from "lucide-react";
 import { signOut } from "@/app/login/actions";
-import { GitHubLink } from "@/components/github-link";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { SoundVolumeControl } from "@/components/sound-volume-control";
 import { Button } from "@/components/ui/button";
 
 type SiteHeaderNavProps = {
@@ -22,19 +20,22 @@ export function SiteHeaderNav({
   isAdmin,
 }: SiteHeaderNavProps) {
   return (
-    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6">
-        <Link href={showDashboard ? "/dashboard" : "/"} className="flex min-w-0 items-center gap-2">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white">
-            <Languages className="size-4" />
+    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md">
+      <div className="flex h-14 w-full items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6 lg:h-16 lg:px-8 xl:px-10 2xl:px-12">
+        <Link
+          href={showDashboard ? "/dashboard" : "/"}
+          className="flex min-w-0 shrink items-center gap-2.5"
+        >
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white lg:size-9">
+            <Languages className="size-4 lg:size-[1.125rem]" />
           </div>
-          <span className="truncate text-sm font-semibold sm:inline">Language Quiz</span>
+          <span className="truncate text-sm font-semibold lg:text-base">
+            Language Quiz
+          </span>
         </Link>
 
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-          <GitHubLink />
-          <SoundVolumeControl />
-          <ThemeToggle className="size-10" />
+        <div className="flex min-w-0 shrink-0 items-center gap-1 sm:gap-2 lg:gap-3">
+          <ThemeToggle className="size-10 lg:size-11" />
 
           {!isAuthenticated ? (
             <>
@@ -55,7 +56,7 @@ export function SiteHeaderNav({
           ) : (
             <>
               {displayName && (
-                <span className="hidden max-w-[140px] truncate text-xs font-medium text-muted-foreground lg:inline">
+                <span className="hidden max-w-[10rem] truncate text-xs font-medium text-muted-foreground md:inline lg:max-w-[14rem] lg:text-sm xl:max-w-none">
                   {displayName}
                 </span>
               )}
