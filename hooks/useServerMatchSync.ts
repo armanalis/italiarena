@@ -6,13 +6,16 @@ import {
   updateMatchSyncState,
 } from "@/app/dashboard/match/sync-actions";
 import { getMatchSession } from "@/app/dashboard/matchmaking/actions";
-import { MATCH_SYNC_VERSION, type MatchSyncState } from "@/lib/match-sync";
+import {
+  MATCH_SYNC_VERSION,
+  TOPIC_REVEAL_MS,
+  type MatchSyncState,
+} from "@/lib/match-sync";
 import { determineWinner } from "@/lib/scoring";
 import { useGameAudio } from "@/hooks/useGameAudio";
 import { useGameStore } from "@/store/useGameStore";
 import type { QuestionActive } from "@/types/database.types";
 
-const TOPIC_REVEAL_MS = 750;
 const POLL_MS = 300;
 const LEADER_START_RETRY_MS = 600;
 const WRITE_ATTEMPTS = 3;
@@ -31,13 +34,15 @@ type UseServerMatchSyncOptions = {
 /**
  * PvP match sync. The database row is the single source of truth.
  *
- * The host writes ONE sync record per round: `{ questionIndex, "round",
- * roundStartedAt }` where `roundStartedAt` is the wall-clock moment the
- * question becomes answerable. Every client (host included) derives the
- * visible phase from its own clock: before `roundStartedAt` it shows the
- * topic reveal, after it the question. Each 300ms poll re-derives the phase,
- * so even if every local timer dies the client converges within one poll —
- * it is impossible to stay stuck on the topic screen while polling works.
+ * The host triggers ONE sync record per round; the SERVER stamps
+ * `roundStartedAt` on its own clock and every poll response carries
+ * `serverNow`. A client decides "topic reveal vs question" by comparing those
+ * two SERVER timestamps — the device clock is never compared against another
+ * device's clock. (v3 did exactly that, so a phone whose clock ran behind the
+ * host's PC stayed frozen on the topic screen for the entire match.)
+ *
+ * Each 300ms poll re-derives the phase from fresh `serverNow`, so even if
+ * every local timer dies the client converges within one poll.
  *
  * The question index is monotonic: clients never move backwards, and a client
  * already showing the round result for the current index is never yanked back.
@@ -76,28 +81,29 @@ export function useServerMatchSync({
     }
   }, []);
 
-  /** Flip topic reveal → playing for the given round, if still relevant. */
-  const enterPlaying = useCallback((questionIndex: number, roundStartedAt: number) => {
-    const live = useGameStore.getState();
-    if (live.currentQuestionIndex !== questionIndex) {
-      return;
-    }
-    if (
-      live.roundPhase === "round_result" ||
-      live.roundPhase === "match_finished"
-    ) {
-      return;
-    }
-    if (live.roundPhase === "playing" && live.roundStartedAt === roundStartedAt) {
-      return;
-    }
+  /**
+   * Flip topic reveal → playing for the given round, if still relevant.
+   * `localRoundStartedAt` is the round start instant already converted to the
+   * local clock (used for the countdown and response times).
+   */
+  const enterPlaying = useCallback(
+    (questionIndex: number, localRoundStartedAt: number) => {
+      const live = useGameStore.getState();
+      if (live.currentQuestionIndex !== questionIndex) {
+        return;
+      }
+      if (live.roundPhase !== "topic_reveal" && live.roundPhase !== "waiting") {
+        return;
+      }
 
-    useGameStore.setState({
-      roundPhase: "playing",
-      roundStartedAt,
-    });
-    onEnterPlayingRef.current();
-  }, []);
+      useGameStore.setState({
+        roundPhase: "playing",
+        roundStartedAt: localRoundStartedAt,
+      });
+      onEnterPlayingRef.current();
+    },
+    []
+  );
 
   /** Tiebreaker question was appended server-side; refetch the playlist. */
   const refreshPlaylist = useCallback(async () => {
@@ -116,7 +122,7 @@ export function useServerMatchSync({
   }, []);
 
   const applySync = useCallback(
-    (sync: MatchSyncState) => {
+    (sync: MatchSyncState, serverNow: number) => {
       const live = useGameStore.getState();
 
       if (sync.phase === "match_finished") {
@@ -153,8 +159,15 @@ export function useServerMatchSync({
         return;
       }
 
-      const now = Date.now();
-      const playingDue = now >= sync.roundStartedAt;
+      // Server-clock vs server-clock comparison. Device clocks are NEVER
+      // compared against another device's clock (that froze skewed devices).
+      const playingDue = serverNow >= sync.roundStartedAt;
+      const msUntilPlaying = Math.max(0, sync.roundStartedAt - serverNow);
+      // The same instant expressed on this device's clock, for the local
+      // countdown and response-time measurements.
+      const localRoundStartedAt =
+        Date.now() + (sync.roundStartedAt - serverNow);
+
       const isNewRound =
         sync.questionIndex > live.currentQuestionIndex ||
         live.roundPhase === "waiting";
@@ -162,7 +175,7 @@ export function useServerMatchSync({
       if (isNewRound) {
         console.log(
           `[match-sync ${MATCH_SYNC_VERSION}] round ${sync.questionIndex} (${
-            playingDue ? "playing" : "topic"
+            playingDue ? "playing" : `topic, flip in ${msUntilPlaying}ms`
           })`
         );
         onNewRoundRef.current();
@@ -173,7 +186,7 @@ export function useServerMatchSync({
           roundPhase: playingDue ? "playing" : "topic_reveal",
           playerAAnswer: null,
           playerBAnswer: null,
-          roundStartedAt: playingDue ? sync.roundStartedAt : null,
+          roundStartedAt: playingDue ? localRoundStartedAt : null,
           timeRemaining: 25,
           lastRoundPointsA: 0,
           lastRoundPointsB: 0,
@@ -184,8 +197,8 @@ export function useServerMatchSync({
           onEnterPlayingRef.current();
         } else {
           flipTimerRef.current = window.setTimeout(
-            () => enterPlaying(sync.questionIndex, sync.roundStartedAt),
-            Math.max(0, sync.roundStartedAt - now)
+            () => enterPlaying(sync.questionIndex, localRoundStartedAt),
+            msUntilPlaying
           );
         }
         return;
@@ -204,11 +217,11 @@ export function useServerMatchSync({
       if (live.roundPhase === "topic_reveal") {
         if (playingDue) {
           clearFlipTimer();
-          enterPlaying(sync.questionIndex, sync.roundStartedAt);
+          enterPlaying(sync.questionIndex, localRoundStartedAt);
         } else if (flipTimerRef.current === null) {
           flipTimerRef.current = window.setTimeout(
-            () => enterPlaying(sync.questionIndex, sync.roundStartedAt),
-            Math.max(0, sync.roundStartedAt - now)
+            () => enterPlaying(sync.questionIndex, localRoundStartedAt),
+            msUntilPlaying
           );
         }
       }
@@ -218,8 +231,10 @@ export function useServerMatchSync({
   );
 
   /**
-   * Host: publish a round. Applies locally first (the host never waits on the
-   * network), then writes to the DB with retries.
+   * Host: publish a round. The write goes out first so the SERVER stamps the
+   * shared start instant; the host then applies the exact record the opponent
+   * will see via polling. Both devices therefore flip to the question at the
+   * same server-clock moment, regardless of their own clock settings.
    */
   const leaderStartRound = useCallback(
     async (questionIndex: number, appendQuestionId?: string) => {
@@ -227,27 +242,37 @@ export function useServerMatchSync({
         return;
       }
 
-      const sync: MatchSyncState = {
+      const request: MatchSyncState = {
         questionIndex,
         phase: "round",
-        roundStartedAt: Date.now() + TOPIC_REVEAL_MS,
+        roundStartedAt: 0, // stamped server-side
       };
-
-      applySync(sync);
 
       for (let attempt = 1; attempt <= WRITE_ATTEMPTS; attempt += 1) {
         const result = await updateMatchSyncState(
           sessionIdRef.current,
-          sync,
+          request,
           appendQuestionId
         );
         if (result.success) {
+          applySync(result.sync, result.serverNow);
           return;
         }
         console.error(
           `[match-sync] round write failed (attempt ${attempt}): ${result.error}`
         );
       }
+
+      // Every write failed — run the round locally so the host isn't frozen;
+      // the next successful poll/write re-converges.
+      applySync(
+        {
+          questionIndex,
+          phase: "round",
+          roundStartedAt: Date.now() + TOPIC_REVEAL_MS,
+        },
+        Date.now()
+      );
     },
     [applySync]
   );
@@ -364,7 +389,7 @@ export function useServerMatchSync({
         }
         loggedFailure = false;
         if (result.sync) {
-          applySync(result.sync);
+          applySync(result.sync, result.serverNow);
         }
       } catch {
         // Transient network error — next poll retries.

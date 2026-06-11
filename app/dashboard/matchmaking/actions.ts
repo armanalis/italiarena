@@ -32,6 +32,14 @@ type MatchmakingResult =
   | { success: true; data: MatchmakingSuccess }
   | { success: false; error: string };
 
+/**
+ * Only lobbies created within this window are joinable. Searching clients
+ * re-poll every ~1.5s, so anything older is a zombie left behind by a closed
+ * tab / refresh — joining one strands the joiner in a session whose host
+ * (the sync leader) will never show up.
+ */
+const JOINABLE_SESSION_MAX_AGE_MS = 45_000;
+
 async function getAuthenticatedProfile(): Promise<
   { profile: UserProfile } | { error: string }
 > {
@@ -285,8 +293,25 @@ export async function searchForMatch(
     }
   }
 
+  // Abandon any OTHER waiting lobby this player owns (zombies from refreshes,
+  // closed tabs, or double-fired searches). Without this, the opponent can
+  // join a session the host is no longer watching and get stuck on
+  // "Preparing match" forever — while the host waits in a different session.
+  let staleCleanup = supabase
+    .from("game_sessions")
+    .update({ status: "abandoned" })
+    .eq("player_a_id", profile.id)
+    .eq("status", "waiting");
+
+  if (ownWaitingSession) {
+    staleCleanup = staleCleanup.neq("id", ownWaitingSession.id);
+  }
+
+  await staleCleanup;
+
   // Always look for an older open lobby to join. If both players create a session
   // at the same time, the one with the newer session joins the older host.
+  // Only fresh lobbies qualify — see JOINABLE_SESSION_MAX_AGE_MS.
   let openSessionQuery = supabase
     .from("game_sessions")
     .select("*")
@@ -295,6 +320,10 @@ export async function searchForMatch(
     .eq("level", level)
     .is("player_b_id", null)
     .neq("player_a_id", profile.id)
+    .gte(
+      "created_at",
+      new Date(Date.now() - JOINABLE_SESSION_MAX_AGE_MS).toISOString()
+    )
     .order("created_at", { ascending: true })
     .limit(1);
 
