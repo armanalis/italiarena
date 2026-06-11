@@ -252,7 +252,7 @@ export function GameLoop({
                       disabled={isLocked || roundPhase === "waiting"}
                       onClick={() => handleSelectAnswer(key)}
                       className={cn(
-                        "min-h-12 rounded-xl border px-3 py-3 text-left text-sm transition-all sm:px-4 sm:py-4 sm:text-base",
+                        "touch-target min-h-12 rounded-xl border px-3 py-3 text-left text-sm transition-all active:scale-[0.99] sm:px-4 sm:py-4 sm:text-base",
                         "border-border/60 bg-card/60 hover:border-indigo-500/40 hover:bg-indigo-500/5",
                         "disabled:cursor-not-allowed disabled:opacity-60",
                         isSelected &&

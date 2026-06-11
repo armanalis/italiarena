@@ -9,7 +9,9 @@ export function AppToaster(props: ToasterProps) {
       richColors
       position="top-center"
       offset={16}
-      mobileOffset={{ top: "calc(env(safe-area-inset-top, 0px) + 3.75rem)" }}
+      mobileOffset={{
+        top: "calc(env(safe-area-inset-top, 0px) + var(--app-header-height) + 0.25rem)",
+      }}
       className="toaster group"
       toastOptions={{
         classNames: {

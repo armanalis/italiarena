@@ -17,11 +17,11 @@ export default async function HomePage() {
   }
 
   return (
-    <main className="relative overflow-x-hidden bg-background">
+    <main className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden bg-background touch-scroll">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.25),_transparent_55%)]" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_rgba(139,92,246,0.18),_transparent_50%)]" />
 
-      <div className="relative mx-auto flex min-h-[calc(100dvh-3.5rem)] max-w-5xl flex-col items-center justify-center px-4 py-12 text-center sm:px-6 sm:py-16">
+      <div className="relative mx-auto flex min-h-app w-full max-w-5xl flex-col items-center justify-center px-4 py-12 pb-[max(3rem,env(safe-area-inset-bottom,0px))] text-center sm:px-6 sm:py-16">
         <div className="mb-6 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-xl shadow-indigo-500/30 sm:size-16">
           <Languages className="size-7 sm:size-8" />
         </div>

@@ -10,7 +10,7 @@ export default async function DashboardLayout({
   await requireOnboardingComplete();
 
   return (
-    <div className="flex h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px))] min-h-0 w-full flex-col overflow-hidden bg-background md:h-[calc(100dvh-4rem-env(safe-area-inset-top,0px))] md:flex-row lg:h-[calc(100dvh-4rem-env(safe-area-inset-top,0px))]">
+    <div className="flex h-app min-h-0 w-full flex-col overflow-hidden bg-background md:flex-row">
       <DashboardShell>{children}</DashboardShell>
     </div>
   );

@@ -15,10 +15,28 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/dashboard", label: "Play", icon: Gamepad2, exact: true },
-  { href: "/dashboard/statistics", label: "Stats", icon: BarChart3, exact: false },
-  { href: "/dashboard/leaderboard", label: "Leaderboard", icon: Trophy, exact: false },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings, exact: false },
+  { href: "/dashboard", label: "Play", shortLabel: "Play", icon: Gamepad2, exact: true },
+  {
+    href: "/dashboard/statistics",
+    label: "Stats",
+    shortLabel: "Stats",
+    icon: BarChart3,
+    exact: false,
+  },
+  {
+    href: "/dashboard/leaderboard",
+    label: "Leaderboard",
+    shortLabel: "Board",
+    icon: Trophy,
+    exact: false,
+  },
+  {
+    href: "/dashboard/settings",
+    label: "Settings",
+    shortLabel: "Settings",
+    icon: Settings,
+    exact: false,
+  },
 ];
 
 type DashboardShellProps = {
@@ -38,7 +56,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
   if (immersive) {
     return (
-      <div className="flex h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px))] min-h-0 w-full flex-1 flex-col overflow-hidden md:h-[calc(100dvh-4rem-env(safe-area-inset-top,0px))]">
+      <div className="flex h-app min-h-0 w-full flex-1 flex-col overflow-hidden">
         {children}
       </div>
     );
@@ -46,7 +64,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
   return (
     <>
-      <aside className="sticky top-[calc(3.5rem+env(safe-area-inset-top,0px))] z-40 hidden h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px))] w-64 shrink-0 self-start flex-col overflow-y-auto border-r border-border/60 bg-card/40 backdrop-blur-sm dark:bg-sidebar/80 md:top-[calc(4rem+env(safe-area-inset-top,0px))] md:flex md:h-[calc(100dvh-4rem-env(safe-area-inset-top,0px))] lg:w-72">
+      <aside className="sticky top-below-header z-40 hidden h-app w-64 shrink-0 self-start flex-col overflow-y-auto border-r border-border/60 bg-card/40 backdrop-blur-sm dark:bg-sidebar/80 md:flex lg:w-72">
         <nav className="flex-1 space-y-1 px-3 py-5">
           {navItems.map(({ href, label, icon: Icon, exact }) => {
             const isActive = exact
@@ -86,7 +104,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         </div>
       </aside>
 
-      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto touch-scroll pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] md:pb-0">
+      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto touch-scroll pb-mobile-nav md:pb-0">
         {children}
       </div>
 
@@ -95,7 +113,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md md:hidden"
       >
         <div className="mx-auto grid max-w-lg grid-cols-4 gap-1 px-2 py-2">
-          {navItems.map(({ href, label, icon: Icon, exact }) => {
+          {navItems.map(({ href, label, shortLabel, icon: Icon, exact }) => {
             const isActive = exact
               ? pathname === href
               : pathname.startsWith(href);
@@ -105,14 +123,17 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 key={href}
                 href={href}
                 className={cn(
-                  "flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-medium transition-colors sm:px-2 sm:text-[11px]",
+                  "touch-target flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-medium transition-colors sm:px-2 sm:text-[11px]",
                   isActive
                     ? "bg-primary/15 text-primary"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
               >
-                <Icon className="size-5" />
-                <span>{label}</span>
+                <Icon className="size-5 shrink-0" />
+                <span className="max-w-full truncate">
+                  <span className="sm:hidden">{shortLabel}</span>
+                  <span className="hidden sm:inline">{label}</span>
+                </span>
               </Link>
             );
           })}

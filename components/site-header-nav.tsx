@@ -21,7 +21,7 @@ export function SiteHeaderNav({
 }: SiteHeaderNavProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md">
-      <div className="flex h-14 w-full items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6 lg:h-16 lg:px-8 xl:px-10 2xl:px-12">
+      <div className="flex h-[var(--app-header-height)] w-full items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
         <Link
           href={showDashboard ? "/dashboard" : "/"}
           className="flex min-w-0 shrink items-center gap-2.5"
