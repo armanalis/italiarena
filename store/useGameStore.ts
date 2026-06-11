@@ -431,6 +431,28 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
     {
       name: "language-quiz-game",
       storage: createJSONStorage(() => safeLocalStorage),
+      // Older builds persisted live round progress. That JSON still sits in
+      // users' localStorage and zustand merges it on load regardless of the
+      // current partialize, so devices would resume matches at different
+      // question indices. Bumping the version discards those stale fields.
+      version: 2,
+      migrate: (persistedState) => {
+        const state = {
+          ...((persistedState ?? {}) as Record<string, unknown>),
+        };
+        delete state.currentQuestionIndex;
+        delete state.roundPhase;
+        delete state.playlist;
+        delete state.playerAScore;
+        delete state.playerBScore;
+        delete state.playerAAnswer;
+        delete state.playerBAnswer;
+        delete state.roundStartedAt;
+        delete state.matchWinner;
+        delete state.tiebreakerUsed;
+        delete state.tiebreakerQuestion;
+        return state as Partial<GameStoreState>;
+      },
       // Keep persistence small — full playlists + review text can exceed localStorage
       // quota and crash the app when the match ends.
       // IMPORTANT: do NOT persist live round progress (currentQuestionIndex,

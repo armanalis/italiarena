@@ -12,6 +12,7 @@ import {
   usePlayerBScore,
 } from "@/store/useGameStore";
 import { BOT_DIFFICULTY_LABELS } from "@/lib/bot";
+import { MATCH_SYNC_VERSION } from "@/lib/match-sync";
 import { formatCategoryLabel, isAnswerCorrect } from "@/lib/scoring";
 import { MatchMistakesReview } from "@/components/match/match-mistakes-review";
 import { MatchReviewBoundary } from "@/components/match/match-review-boundary";
@@ -401,6 +402,11 @@ export function GameLoop({
         <span className="hidden text-border sm:inline">|</span>
         <span>
           {playerAName} {playerAScore} · {playerBName} {playerBScore}
+        </span>
+        <span className="hidden text-border sm:inline">|</span>
+        {/* Build + session marker: both devices must show the same value. */}
+        <span className="font-mono text-muted-foreground/60">
+          {MATCH_SYNC_VERSION}·{sessionId.slice(0, 8)}
         </span>
       </footer>
     </main>

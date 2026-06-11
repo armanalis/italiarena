@@ -5,261 +5,321 @@ import {
   getMatchSyncState,
   updateMatchSyncState,
 } from "@/app/dashboard/match/sync-actions";
-import {
-  playlistIdsSignature,
-  type MatchSyncState,
-} from "@/lib/match-sync";
+import { getMatchSession } from "@/app/dashboard/matchmaking/actions";
+import { MATCH_SYNC_VERSION, type MatchSyncState } from "@/lib/match-sync";
+import { determineWinner } from "@/lib/scoring";
 import { useGameAudio } from "@/hooks/useGameAudio";
 import { useGameStore } from "@/store/useGameStore";
 import type { QuestionActive } from "@/types/database.types";
 
 const TOPIC_REVEAL_MS = 750;
 const POLL_MS = 300;
+const LEADER_START_RETRY_MS = 600;
+const WRITE_ATTEMPTS = 3;
 
 type UseServerMatchSyncOptions = {
   sessionId: string;
   isLeader: boolean;
   serverPlaylist: QuestionActive[];
   enabled: boolean;
+  /** Called whenever a round enters the "playing" phase. */
   onEnterPlaying: () => void;
+  /** Called right before a new round is applied (clear timers/flags). */
+  onNewRound: () => void;
 };
 
+/**
+ * PvP match sync. The database row is the single source of truth.
+ *
+ * The host writes ONE sync record per round: `{ questionIndex, "round",
+ * roundStartedAt }` where `roundStartedAt` is the wall-clock moment the
+ * question becomes answerable. Every client (host included) derives the
+ * visible phase from its own clock: before `roundStartedAt` it shows the
+ * topic reveal, after it the question. Each 300ms poll re-derives the phase,
+ * so even if every local timer dies the client converges within one poll —
+ * it is impossible to stay stuck on the topic screen while polling works.
+ *
+ * The question index is monotonic: clients never move backwards, and a client
+ * already showing the round result for the current index is never yanked back.
+ */
 export function useServerMatchSync({
   sessionId,
   isLeader,
   serverPlaylist,
   enabled,
   onEnterPlaying,
+  onNewRound,
 }: UseServerMatchSyncOptions) {
   const { play } = useGameAudio();
+
+  const playRef = useRef(play);
+  playRef.current = play;
   const onEnterPlayingRef = useRef(onEnterPlaying);
   onEnterPlayingRef.current = onEnterPlaying;
+  const onNewRoundRef = useRef(onNewRound);
+  onNewRoundRef.current = onNewRound;
+  const sessionIdRef = useRef(sessionId);
+  sessionIdRef.current = sessionId;
+  const isLeaderRef = useRef(isLeader);
+  isLeaderRef.current = isLeader;
 
-  const leaderTimerRef = useRef<number | null>(null);
+  const flipTimerRef = useRef<number | null>(null);
   const matchStartedRef = useRef(false);
-  const drivingRef = useRef(false);
+  const startingRef = useRef(false);
+  const refreshingPlaylistRef = useRef(false);
   const initializedSessionRef = useRef<string | null>(null);
 
-  const getPlaylistSig = useCallback(() => {
-    const playlist = useGameStore.getState().playlist;
-    return playlistIdsSignature(playlist);
-  }, []);
-
-  const clearLeaderTimer = useCallback(() => {
-    if (leaderTimerRef.current !== null) {
-      window.clearTimeout(leaderTimerRef.current);
-      leaderTimerRef.current = null;
+  const clearFlipTimer = useCallback(() => {
+    if (flipTimerRef.current !== null) {
+      window.clearTimeout(flipTimerRef.current);
+      flipTimerRef.current = null;
     }
   }, []);
 
-  const writeSync = useCallback(
-    async (state: Omit<MatchSyncState, "playlistSig" | "updatedAt">) => {
-      if (!isLeader) {
-        return;
+  /** Flip topic reveal → playing for the given round, if still relevant. */
+  const enterPlaying = useCallback((questionIndex: number, roundStartedAt: number) => {
+    const live = useGameStore.getState();
+    if (live.currentQuestionIndex !== questionIndex) {
+      return;
+    }
+    if (
+      live.roundPhase === "round_result" ||
+      live.roundPhase === "match_finished"
+    ) {
+      return;
+    }
+    if (live.roundPhase === "playing" && live.roundStartedAt === roundStartedAt) {
+      return;
+    }
+
+    useGameStore.setState({
+      roundPhase: "playing",
+      roundStartedAt,
+    });
+    onEnterPlayingRef.current();
+  }, []);
+
+  /** Tiebreaker question was appended server-side; refetch the playlist. */
+  const refreshPlaylist = useCallback(async () => {
+    if (refreshingPlaylistRef.current) {
+      return;
+    }
+    refreshingPlaylistRef.current = true;
+    try {
+      const result = await getMatchSession(sessionIdRef.current);
+      if (result.success && result.data.playlist.length > 0) {
+        useGameStore.setState({ playlist: result.data.playlist });
       }
+    } finally {
+      refreshingPlaylistRef.current = false;
+    }
+  }, []);
 
-      await updateMatchSyncState(sessionId, {
-        ...state,
-        playlistSig: getPlaylistSig(),
-      });
-    },
-    [getPlaylistSig, isLeader, sessionId]
-  );
-
-  const applyServerState = useCallback(
+  const applySync = useCallback(
     (sync: MatchSyncState) => {
-      // Self-healing: every poll re-asserts the authoritative server state.
-      // We never short-circuit on a timestamp, so if anything clobbers local
-      // state (e.g. a stale persisted value), the next poll recovers it.
       const live = useGameStore.getState();
 
       if (sync.phase === "match_finished") {
-        if (live.roundPhase === "match_finished") {
-          return;
+        if (live.roundPhase !== "match_finished") {
+          clearFlipTimer();
+          useGameStore.setState({
+            roundPhase: "match_finished",
+            status: "finished",
+            matchWinner:
+              live.matchWinner ??
+              determineWinner(
+                live.playerAScore,
+                live.playerBScore,
+                live.playerAResponseTimes,
+                live.playerBResponseTimes
+              ),
+          });
         }
-        useGameStore.setState({ roundPhase: "match_finished" });
         return;
       }
 
-      if (sync.phase === "topic_reveal") {
-        const sameReveal =
-          live.roundPhase === "topic_reveal" &&
-          live.currentQuestionIndex === sync.questionIndex;
+      // Monotonic guard: never move backwards (stale in-flight responses).
+      if (sync.questionIndex < live.currentQuestionIndex) {
+        return;
+      }
 
-        if (sameReveal) {
-          return;
-        }
+      if (live.playlist.length === 0) {
+        return;
+      }
+
+      // Index beyond our playlist → tiebreaker question we haven't fetched.
+      if (sync.questionIndex >= live.playlist.length) {
+        void refreshPlaylist();
+        return;
+      }
+
+      const now = Date.now();
+      const playingDue = now >= sync.roundStartedAt;
+      const isNewRound =
+        sync.questionIndex > live.currentQuestionIndex ||
+        live.roundPhase === "waiting";
+
+      if (isNewRound) {
+        console.log(
+          `[match-sync ${MATCH_SYNC_VERSION}] round ${sync.questionIndex} (${
+            playingDue ? "playing" : "topic"
+          })`
+        );
+        onNewRoundRef.current();
+        clearFlipTimer();
 
         useGameStore.setState({
           currentQuestionIndex: sync.questionIndex,
-          roundPhase: "topic_reveal",
+          roundPhase: playingDue ? "playing" : "topic_reveal",
           playerAAnswer: null,
           playerBAnswer: null,
-          roundStartedAt: null,
+          roundStartedAt: playingDue ? sync.roundStartedAt : null,
           timeRemaining: 25,
           lastRoundPointsA: 0,
           lastRoundPointsB: 0,
         });
-        play("reveal");
+        playRef.current("reveal");
+
+        if (playingDue) {
+          onEnterPlayingRef.current();
+        } else {
+          flipTimerRef.current = window.setTimeout(
+            () => enterPlaying(sync.questionIndex, sync.roundStartedAt),
+            Math.max(0, sync.roundStartedAt - now)
+          );
+        }
         return;
       }
 
-      if (sync.phase === "playing" && sync.roundStartedAt) {
-        const sameRound =
-          live.roundPhase === "playing" &&
-          live.currentQuestionIndex === sync.questionIndex &&
-          live.roundStartedAt === sync.roundStartedAt;
-
-        if (sameRound) {
-          return;
-        }
-
-        useGameStore.setState({
-          currentQuestionIndex: sync.questionIndex,
-          roundPhase: "playing",
-          roundStartedAt: sync.roundStartedAt,
-          timeRemaining: 25,
-          playerAAnswer: null,
-          playerBAnswer: null,
-          lastRoundPointsA: 0,
-          lastRoundPointsB: 0,
-        });
-        onEnterPlayingRef.current();
+      // Same round. If we've already resolved it locally, leave it alone —
+      // the next round arrives via a higher questionIndex.
+      if (
+        live.roundPhase === "round_result" ||
+        live.roundPhase === "match_finished" ||
+        live.roundPhase === "tiebreaker_loading"
+      ) {
         return;
       }
 
-      if (sync.phase === "round_result") {
-        if (live.roundPhase === "round_result") {
-          return;
+      if (live.roundPhase === "topic_reveal") {
+        if (playingDue) {
+          clearFlipTimer();
+          enterPlaying(sync.questionIndex, sync.roundStartedAt);
+        } else if (flipTimerRef.current === null) {
+          flipTimerRef.current = window.setTimeout(
+            () => enterPlaying(sync.questionIndex, sync.roundStartedAt),
+            Math.max(0, sync.roundStartedAt - now)
+          );
         }
-        // Scores / resolveRound are handled locally when answers arrive.
-        useGameStore.setState({ roundPhase: "round_result" });
       }
+      // Already playing: never touch state (answers may be in flight).
     },
-    [play]
+    [clearFlipTimer, enterPlaying, refreshPlaylist]
   );
 
-  const pollServer = useCallback(async () => {
-    const result = await getMatchSyncState(sessionId);
-    if (!result.success) {
-      return null;
-    }
+  /**
+   * Host: publish a round. Applies locally first (the host never waits on the
+   * network), then writes to the DB with retries.
+   */
+  const leaderStartRound = useCallback(
+    async (questionIndex: number, appendQuestionId?: string) => {
+      if (!isLeaderRef.current) {
+        return;
+      }
 
-    if (result.sync) {
-      applyServerState(result.sync);
-    }
+      const sync: MatchSyncState = {
+        questionIndex,
+        phase: "round",
+        roundStartedAt: Date.now() + TOPIC_REVEAL_MS,
+      };
 
-    return result;
-  }, [applyServerState, sessionId]);
+      applySync(sync);
 
-  const startLeaderMatch = useCallback(async () => {
-    if (!isLeader || matchStartedRef.current || drivingRef.current) {
+      for (let attempt = 1; attempt <= WRITE_ATTEMPTS; attempt += 1) {
+        const result = await updateMatchSyncState(
+          sessionIdRef.current,
+          sync,
+          appendQuestionId
+        );
+        if (result.success) {
+          return;
+        }
+        console.error(
+          `[match-sync] round write failed (attempt ${attempt}): ${result.error}`
+        );
+      }
+    },
+    [applySync]
+  );
+
+  const leaderFinishMatch = useCallback(async () => {
+    if (!isLeaderRef.current) {
       return;
     }
 
-    drivingRef.current = true;
+    clearFlipTimer();
+    const sync: MatchSyncState = {
+      questionIndex: useGameStore.getState().currentQuestionIndex,
+      phase: "match_finished",
+      roundStartedAt: Date.now(),
+    };
 
-    const data = await pollServer();
-    if (!data || !data.hasOpponent || data.sync) {
-      drivingRef.current = false;
-      if (data?.sync) {
-        // Match already started (e.g. host refreshed) — follow server state.
+    for (let attempt = 1; attempt <= WRITE_ATTEMPTS; attempt += 1) {
+      const result = await updateMatchSyncState(sessionIdRef.current, sync);
+      if (result.success) {
+        return;
+      }
+      console.error(
+        `[match-sync] finish write failed (attempt ${attempt}): ${result.error}`
+      );
+    }
+  }, [clearFlipTimer]);
+
+  /** Host: start round 0 once the opponent has joined the session row. */
+  const ensureMatchStarted = useCallback(async () => {
+    if (!isLeaderRef.current || matchStartedRef.current || startingRef.current) {
+      return;
+    }
+
+    startingRef.current = true;
+    try {
+      const result = await getMatchSyncState(sessionIdRef.current);
+      if (!result.success) {
+        return;
+      }
+
+      if (result.sync) {
+        // Already started (e.g. host refreshed) — the poll loop resumes it.
         matchStartedRef.current = true;
+        return;
       }
-      return;
+
+      if (!result.hasOpponent || result.status !== "active") {
+        return;
+      }
+
+      matchStartedRef.current = true;
+      await leaderStartRound(0);
+    } finally {
+      startingRef.current = false;
     }
+  }, [leaderStartRound]);
 
-    matchStartedRef.current = true;
-    await writeSync({
-      questionIndex: 0,
-      phase: "topic_reveal",
-      roundStartedAt: null,
-    });
-
-    clearLeaderTimer();
-    leaderTimerRef.current = window.setTimeout(() => {
-      void writeSync({
-        questionIndex: 0,
-        phase: "playing",
-        roundStartedAt: Date.now(),
-      });
-      drivingRef.current = false;
-    }, TOPIC_REVEAL_MS);
-  }, [clearLeaderTimer, isLeader, pollServer, writeSync]);
-
-  const leaderShowTopic = useCallback(
-    async (questionIndex: number) => {
-      if (!isLeader) {
-        return;
-      }
-
-      clearLeaderTimer();
-      drivingRef.current = true;
-
-      await writeSync({
-        questionIndex,
-        phase: "topic_reveal",
-        roundStartedAt: null,
-      });
-
-      leaderTimerRef.current = window.setTimeout(() => {
-        void writeSync({
-          questionIndex,
-          phase: "playing",
-          roundStartedAt: Date.now(),
-        }).then(() => {
-          drivingRef.current = false;
-        });
-      }, TOPIC_REVEAL_MS);
-    },
-    [clearLeaderTimer, isLeader, writeSync]
-  );
-
-  const leaderShowRoundResult = useCallback(
-    async (questionIndex: number) => {
-      if (!isLeader) {
-        return;
-      }
-
-      await writeSync({
-        questionIndex,
-        phase: "round_result",
-        roundStartedAt: null,
-      });
-    },
-    [isLeader, writeSync]
-  );
-
-  const leaderFinishMatch = useCallback(
-    async (questionIndex: number) => {
-      if (!isLeader) {
-        return;
-      }
-
-      clearLeaderTimer();
-      await writeSync({
-        questionIndex,
-        phase: "match_finished",
-        roundStartedAt: null,
-      });
-    },
-    [clearLeaderTimer, isLeader, writeSync]
-  );
-
-  // Authoritative playlist from the server-rendered match page. Runs exactly
-  // once per session so re-renders/polls can never reset live progress.
+  // Authoritative playlist + clean slate, exactly once per session id.
   useEffect(() => {
     if (!enabled || serverPlaylist.length === 0) {
       return;
     }
 
     if (initializedSessionRef.current === sessionId) {
-      // Already initialised — just keep the playlist authoritative.
       useGameStore.setState({ playlist: serverPlaylist });
       return;
     }
 
     initializedSessionRef.current = sessionId;
+    console.log(
+      `[match-sync ${MATCH_SYNC_VERSION}] init session=${sessionId} leader=${isLeader}`
+    );
 
     useGameStore.setState({
       gameSessionId: sessionId,
@@ -278,7 +338,7 @@ export function useServerMatchSync({
       tiebreakerUsed: false,
       tiebreakerQuestion: null,
     });
-  }, [enabled, serverPlaylist, sessionId]);
+  }, [enabled, isLeader, serverPlaylist, sessionId]);
 
   // Both players poll the database — single source of truth.
   useEffect(() => {
@@ -286,36 +346,61 @@ export function useServerMatchSync({
       return;
     }
 
-    void pollServer();
+    let cancelled = false;
+    let loggedFailure = false;
+
+    const tick = async () => {
+      try {
+        const result = await getMatchSyncState(sessionIdRef.current);
+        if (cancelled) {
+          return;
+        }
+        if (!result.success) {
+          if (!loggedFailure) {
+            loggedFailure = true;
+            console.error(`[match-sync] poll failed: ${result.error}`);
+          }
+          return;
+        }
+        loggedFailure = false;
+        if (result.sync) {
+          applySync(result.sync);
+        }
+      } catch {
+        // Transient network error — next poll retries.
+      }
+    };
+
+    void tick();
     const interval = window.setInterval(() => {
-      void pollServer();
+      void tick();
     }, POLL_MS);
 
     return () => {
+      cancelled = true;
       window.clearInterval(interval);
+      clearFlipTimer();
     };
-  }, [enabled, pollServer]);
+  }, [applySync, clearFlipTimer, enabled, sessionId]);
 
-  // Host starts the match once an opponent exists in the session row.
+  // Host kicks off round 0 as soon as the opponent appears in the row.
   useEffect(() => {
     if (!enabled || !isLeader) {
       return;
     }
 
-    void startLeaderMatch();
+    void ensureMatchStarted();
     const interval = window.setInterval(() => {
-      void startLeaderMatch();
-    }, 500);
+      void ensureMatchStarted();
+    }, LEADER_START_RETRY_MS);
 
     return () => {
       window.clearInterval(interval);
-      clearLeaderTimer();
     };
-  }, [clearLeaderTimer, enabled, isLeader, startLeaderMatch]);
+  }, [enabled, ensureMatchStarted, isLeader, sessionId]);
 
   return {
-    leaderShowTopic,
-    leaderShowRoundResult,
+    leaderStartRound,
     leaderFinishMatch,
   };
 }
