@@ -367,6 +367,8 @@ export async function saveMatchResult(payload: {
 
   revalidatePath("/dashboard/settings");
   revalidatePath("/dashboard/statistics");
+  revalidatePath("/dashboard/recent-matches");
+  revalidatePath("/dashboard/leaderboard");
   return { success: true };
   } catch (error) {
     return {

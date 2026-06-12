@@ -52,7 +52,7 @@ export function BotMatchCard() {
                 type="button"
                 onClick={() => setDifficulty(level)}
                 className={cn(
-                  "rounded-xl border px-3 py-3 text-left transition-colors",
+                  "touch-target min-h-11 rounded-xl border px-3 py-3 text-left transition-colors",
                   selected
                     ? "border-violet-500/50 bg-violet-500/15"
                     : "border-border/60 bg-card/40 hover:border-violet-500/30 hover:bg-violet-500/5"

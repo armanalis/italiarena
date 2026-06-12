@@ -86,6 +86,10 @@ type GameStoreState = {
   tiebreakerUsed: boolean;
   roundReviews: MatchRoundReview[];
   isReportDialogOpen: boolean;
+  /** Accumulated time the question timer was frozen (e.g. report dialog open). */
+  timerPauseOffsetMs: number;
+  /** Wall-clock ms when the current pause started, if any. */
+  timerPauseStartedAt: number | null;
 };
 
 type GameStoreActions = {
@@ -226,6 +230,8 @@ const initialState: GameStoreState = {
   playlist: [],
   hasHydrated: false,
   isReportDialogOpen: false,
+  timerPauseOffsetMs: 0,
+  timerPauseStartedAt: null,
   botDifficulty: null,
   ...gameplayDefaults,
 };
@@ -288,6 +294,8 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
           playerBAnswer: null,
           lastRoundPointsA: 0,
           lastRoundPointsB: 0,
+          timerPauseOffsetMs: 0,
+          timerPauseStartedAt: null,
         }),
       setTimeRemaining: (seconds) => set({ timeRemaining: seconds }),
       lockLocalAnswer: (answer, responseTimeMs) => {
@@ -425,7 +433,32 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
       setPlaying: () => set({ status: "playing" }),
       finishMatch: () => set({ status: "finished", roundPhase: "match_finished" }),
       markMatchSaved: () => set({ matchSaved: true }),
-      setReportDialogOpen: (open) => set({ isReportDialogOpen: open }),
+      setReportDialogOpen: (open) =>
+        set((state) => {
+          if (open === state.isReportDialogOpen) {
+            return { isReportDialogOpen: open };
+          }
+
+          if (open) {
+            if (state.timerPauseStartedAt !== null) {
+              return { isReportDialogOpen: true };
+            }
+            return {
+              isReportDialogOpen: true,
+              timerPauseStartedAt: Date.now(),
+            };
+          }
+
+          const activePause = state.timerPauseStartedAt
+            ? Date.now() - state.timerPauseStartedAt
+            : 0;
+
+          return {
+            isReportDialogOpen: false,
+            timerPauseStartedAt: null,
+            timerPauseOffsetMs: state.timerPauseOffsetMs + activePause,
+          };
+        }),
       reset: () => set({ ...initialState, hasHydrated: true }),
     }),
     {

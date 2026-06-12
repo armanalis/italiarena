@@ -207,8 +207,8 @@ export function GameLoop({
 
   return (
     <main className="relative flex min-h-0 flex-1 flex-col overflow-y-auto touch-scroll">
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/60 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-4">
-        <div className="min-w-0 space-y-0.5 sm:space-y-1">
+      <header className="flex shrink-0 flex-wrap items-start justify-between gap-x-2 gap-y-2 border-b border-border/60 px-3 py-2.5 sm:items-center sm:gap-3 sm:px-6 sm:py-4">
+        <div className="min-w-0 max-w-[calc(100%-5.5rem)] flex-1 space-y-0.5 sm:max-w-none sm:flex-none sm:space-y-1">
           <p className="text-sm font-semibold tabular-nums text-foreground sm:text-base">
             {isTiebreakerRound
               ? "Tiebreaker"
@@ -224,7 +224,7 @@ export function GameLoop({
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           <SoundVolumeControl />
           {isBotMatch && (
             <Badge variant="secondary">
@@ -232,10 +232,18 @@ export function GameLoop({
             </Badge>
           )}
           <Badge
-            variant={timeRemaining <= 5 ? "destructive" : "outline"}
+            variant={
+              (roundPhase === "round_result"
+                ? (roundResultSecondsLeft ?? 0)
+                : timeRemaining) <= 5
+                ? "destructive"
+                : "outline"
+            }
             className="min-w-14 justify-center font-mono tabular-nums"
           >
-            {timeRemaining}s
+            {roundPhase === "round_result" && roundResultSecondsLeft !== null
+              ? `${Math.ceil(roundResultSecondsLeft)}s`
+              : `${timeRemaining}s`}
           </Badge>
         </div>
       </header>
@@ -257,9 +265,15 @@ export function GameLoop({
         {roundPhase === "playing" && currentQuestion && (
             <div className="w-full max-w-2xl space-y-4 sm:space-y-6">
               <div className="space-y-2 text-center sm:space-y-3">
-                <Badge variant="secondary" className="uppercase tracking-wide">
-                  {formatCategoryLabel(currentQuestion.category)}
-                </Badge>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <Badge variant="secondary" className="uppercase tracking-wide">
+                    {formatCategoryLabel(currentQuestion.category)}
+                  </Badge>
+                  <ReportQuestionButton
+                    questionId={currentQuestion.id}
+                    questionText={currentQuestion.question_text}
+                  />
+                </div>
                 <h2 className="text-lg font-semibold leading-snug sm:text-2xl">
                   {currentQuestion.question_text}
                 </h2>
@@ -397,9 +411,9 @@ export function GameLoop({
         <span>
           {playerAName} {playerAScore} · {playerBName} {playerBScore}
         </span>
-        <span className="hidden text-border sm:inline">|</span>
-        {/* Build + session marker: both devices must show the same value. */}
-        <span className="font-mono text-muted-foreground/60">
+        <span className="hidden text-border md:inline">|</span>
+        {/* Build + session marker — visible from tablet up; both devices must match when shown. */}
+        <span className="hidden font-mono text-muted-foreground/60 md:inline">
           {MATCH_SYNC_VERSION}·{sessionId.slice(0, 8)}
         </span>
       </footer>

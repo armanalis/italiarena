@@ -54,8 +54,8 @@ export function ResetStatsButton({ hasStats }: ResetStatsButtonProps) {
         <DialogHeader>
           <DialogTitle>Reset all statistics?</DialogTitle>
           <DialogDescription>
-            This clears your wins, losses, accuracy by category, match history, and
-            seen-question memory. You cannot undo this.
+            This clears your wins, losses, accuracy by category, match history,
+            leaderboard standing, and seen-question memory. You cannot undo this.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

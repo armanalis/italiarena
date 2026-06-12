@@ -10,6 +10,7 @@ import {
   simulateBotAnswer,
 } from "@/lib/bot";
 import { pulseCountdownHaptic } from "@/lib/haptics";
+import { getRoundElapsedSec, getRoundPauseMs } from "@/lib/match-timer";
 import { useGameAudio } from "@/hooks/useGameAudio";
 import { useServerMatchSync } from "@/hooks/useServerMatchSync";
 import { useGameStore } from "@/store/useGameStore";
@@ -27,6 +28,10 @@ type AnswerLockedPayload = {
   questionIndex: number;
   answer: CorrectAnswer | null;
   responseTimeMs: number | null;
+};
+
+type ReportPausePayload = {
+  paused: boolean;
 };
 
 type UseGameLoopOptions = {
@@ -58,6 +63,7 @@ export function useGameLoop({
   const playerBAnswer = useGameStore((state) => state.playerBAnswer);
   const timeRemaining = useGameStore((state) => state.timeRemaining);
   const roundStartedAt = useGameStore((state) => state.roundStartedAt);
+  const isReportDialogOpen = useGameStore((state) => state.isReportDialogOpen);
 
   const initGameplay = useGameStore((state) => state.initGameplay);
   const beginRound = useGameStore((state) => state.beginRound);
@@ -80,6 +86,7 @@ export function useGameLoop({
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const channelReadyRef = useRef(false);
   const pendingBroadcastsRef = useRef<AnswerLockedPayload[]>([]);
+  const opponentReportPausedRef = useRef(false);
   const [roundResultSecondsLeft, setRoundResultSecondsLeft] = useState<
     number | null
   >(null);
@@ -206,7 +213,8 @@ export function useGameLoop({
       }
 
       const startedAt = state.roundStartedAt ?? Date.now();
-      const elapsedSec = Math.floor((Date.now() - startedAt) / 1000);
+      const pauseMs = getRoundPauseMs(state);
+      const elapsedSec = getRoundElapsedSec(startedAt, pauseMs);
       const remaining = Math.max(0, ROUND_DURATION_SEC - elapsedSec);
 
       setTimeRemaining(remaining);
@@ -373,6 +381,7 @@ export function useGameLoop({
     // flags so a stale result countdown can't block the next finalize.
     clearTimers();
     resolvingRef.current = false;
+    opponentReportPausedRef.current = false;
     setRoundResultSecondsLeft(null);
   }, [clearTimers]);
 
@@ -501,7 +510,7 @@ export function useGameLoop({
         return;
       }
 
-      if (latest.isReportDialogOpen) {
+      if (latest.isReportDialogOpen || opponentReportPausedRef.current) {
         return;
       }
 
@@ -548,7 +557,8 @@ export function useGameLoop({
       }
 
       play("click");
-      const responseTimeMs = Date.now() - state.roundStartedAt;
+      const responseTimeMs =
+        Date.now() - state.roundStartedAt - getRoundPauseMs(state);
       lockLocalAnswer(answer, responseTimeMs);
 
       broadcastAnswer({
@@ -612,6 +622,10 @@ export function useGameLoop({
     });
 
     channel
+      .on("broadcast", { event: "report_pause" }, ({ payload }) => {
+        const data = payload as ReportPausePayload;
+        opponentReportPausedRef.current = Boolean(data.paused);
+      })
       .on("broadcast", { event: "answer_locked" }, ({ payload }) => {
         const data = payload as AnswerLockedPayload;
         const state = useGameStore.getState();
@@ -635,6 +649,13 @@ export function useGameLoop({
           channelRef.current = channel;
           channelReadyRef.current = true;
           flushPendingBroadcasts();
+          if (useGameStore.getState().isReportDialogOpen) {
+            void channel.send({
+              type: "broadcast",
+              event: "report_pause",
+              payload: { paused: true } satisfies ReportPausePayload,
+            });
+          }
         }
       });
 
@@ -643,8 +664,21 @@ export function useGameLoop({
       channelRef.current = null;
       channelReadyRef.current = false;
       pendingBroadcastsRef.current = [];
+      opponentReportPausedRef.current = false;
     };
   }, [flushPendingBroadcasts, isBotMatch, sessionId, supabase]);
+
+  useEffect(() => {
+    if (isBotMatch || !channelReadyRef.current || !channelRef.current) {
+      return;
+    }
+
+    void channelRef.current.send({
+      type: "broadcast",
+      event: "report_pause",
+      payload: { paused: isReportDialogOpen } satisfies ReportPausePayload,
+    });
+  }, [isBotMatch, isReportDialogOpen]);
 
   useEffect(() => {
     if (!isBotMatch) {

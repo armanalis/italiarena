@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { BookOpen, ClipboardList, Target, TrendingUp } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { BookOpen, ClipboardList, Dumbbell, Target, TrendingUp } from "lucide-react";
 import type { UserMistakeWithQuestion } from "@/app/dashboard/statistics/actions";
 import { MistakePracticeSession } from "@/components/statistics/mistake-practice-session";
 import { MistakesListDialog } from "@/components/statistics/mistakes-list-dialog";
@@ -58,7 +58,16 @@ export function StatisticsDashboard({
 }: StatisticsDashboardProps) {
   const [mistakes, setMistakes] = useState(initialMistakes);
   const [showMistakes, setShowMistakes] = useState(false);
-  const [practiceMode, setPracticeMode] = useState(false);
+  const [activePractice, setActivePractice] = useState<{
+    mistakes: UserMistakeWithQuestion[];
+    label: string;
+    sessionId: string;
+  } | null>(null);
+
+  const activePracticeIds = useMemo(
+    () => new Set(activePractice?.mistakes.map((mistake) => mistake.id) ?? []),
+    [activePractice]
+  );
 
   useEffect(() => {
     setMistakes(initialMistakes);
@@ -103,14 +112,48 @@ export function StatisticsDashboard({
   const hasStats = Boolean(stats?.matches_played);
   const hasMistakes = mistakes.length > 0;
 
-  if (practiceMode) {
+  function startPractice(
+    categoryMistakes: UserMistakeWithQuestion[],
+    label: string
+  ) {
+    setActivePractice({
+      mistakes: categoryMistakes,
+      label,
+      sessionId: crypto.randomUUID(),
+    });
+  }
+
+  function handlePracticeMistakesChange(remaining: UserMistakeWithQuestion[]) {
+    const remainingById = new Map(remaining.map((mistake) => [mistake.id, mistake]));
+    const remainingIds = new Set(remaining.map((mistake) => mistake.id));
+
+    setMistakes((all) =>
+      all
+        .filter(
+          (mistake) =>
+            !activePracticeIds.has(mistake.id) || remainingIds.has(mistake.id)
+        )
+        .map((mistake) => remainingById.get(mistake.id) ?? mistake)
+    );
+  }
+
+  if (activePractice) {
     return (
       <main className="flex w-full min-w-0 flex-1 flex-col gap-6 p-4 sm:p-8 lg:px-10 xl:px-12">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {activePractice.label}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Answer each question correctly 3 times in a row to master it.
+          </p>
+        </div>
         <MistakePracticeSession
-          initialMistakes={mistakes}
-          onMistakesChange={setMistakes}
+          initialMistakes={activePractice.mistakes}
+          practiceSessionId={activePractice.sessionId}
+          onMistakesChange={handlePracticeMistakesChange}
           onClose={() => {
-            setPracticeMode(false);
+            setActivePractice(null);
           }}
         />
       </main>
@@ -192,22 +235,50 @@ export function StatisticsDashboard({
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {categories.map((category) => (
-            <div
-              key={category.key}
-              className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3"
-            >
-              <p className="text-sm font-medium">{category.label}</p>
-              <p className="mt-1 text-2xl font-bold">
-                {pct(category.correct, category.total)}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {category.total > 0
-                  ? `${category.correct} correct out of ${category.total}`
-                  : "No answers recorded yet"}
-              </p>
-            </div>
-          ))}
+          {categories.map((category) => {
+            const categoryMistakes = mistakes.filter(
+              (mistake) => mistake.question.category === category.key
+            );
+            const mistakeCount = categoryMistakes.length;
+
+            return (
+              <div
+                key={category.key}
+                className="flex flex-col rounded-lg border border-border/60 bg-muted/20 px-4 py-3"
+              >
+                <p className="text-sm font-medium">{category.label}</p>
+                <p className="mt-1 text-2xl font-bold">
+                  {pct(category.correct, category.total)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {category.total > 0
+                    ? `${category.correct} correct out of ${category.total}`
+                    : "No answers recorded yet"}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 min-h-9 w-full gap-1.5"
+                  disabled={mistakeCount === 0}
+                  onClick={() =>
+                    startPractice(
+                      categoryMistakes,
+                      `${category.label} practice`
+                    )
+                  }
+                >
+                  <Dumbbell className="size-3.5" />
+                  Practice mistakes
+                  {mistakeCount > 0 && (
+                    <span className="text-muted-foreground">
+                      ({mistakeCount})
+                    </span>
+                  )}
+                </Button>
+              </div>
+            );
+          })}
         </CardContent>
       </Card>
 
@@ -260,7 +331,9 @@ export function StatisticsDashboard({
               type="button"
               className="min-h-11"
               disabled={!hasMistakes}
-              onClick={() => setPracticeMode(true)}
+              onClick={() =>
+                startPractice(mistakes, "Practice all mistakes")
+              }
             >
               Practice mistakes from recent matches
             </Button>

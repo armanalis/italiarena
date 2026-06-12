@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Gamepad2,
+  History,
   LogOut,
   Settings,
   Trophy,
@@ -24,6 +25,13 @@ const navItems = [
     exact: false,
   },
   {
+    href: "/dashboard/recent-matches",
+    label: "Recent",
+    shortLabel: "Recent",
+    icon: History,
+    exact: false,
+  },
+  {
     href: "/dashboard/leaderboard",
     label: "Leaderboard",
     shortLabel: "Board",
@@ -33,7 +41,7 @@ const navItems = [
   {
     href: "/dashboard/settings",
     label: "Settings",
-    shortLabel: "Settings",
+    shortLabel: "Prefs",
     icon: Settings,
     exact: false,
   },
@@ -112,7 +120,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         aria-label="Dashboard"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md md:hidden"
       >
-        <div className="mx-auto grid max-w-lg grid-cols-4 gap-1 px-2 py-2">
+        <div className="mx-auto grid max-w-lg grid-cols-5 gap-0.5 px-1 py-2 sm:gap-1 sm:px-2">
           {navItems.map(({ href, label, shortLabel, icon: Icon, exact }) => {
             const isActive = exact
               ? pathname === href
@@ -123,7 +131,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 key={href}
                 href={href}
                 className={cn(
-                  "touch-target flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-medium transition-colors sm:px-2 sm:text-[11px]",
+                  "touch-target flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-medium leading-tight transition-colors sm:px-2 sm:text-[11px]",
                   isActive
                     ? "bg-primary/15 text-primary"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"

@@ -7,9 +7,12 @@ import {
   submitMistakePracticeAnswer,
   type UserMistakeWithQuestion,
 } from "@/app/dashboard/statistics/actions";
+import { AskAiButton } from "@/components/match/ask-ai-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { MAX_AI_ASKS_PER_MATCH } from "@/lib/ai-explanations";
 import { formatCategoryLabel, getOptionText } from "@/lib/scoring";
+import type { MatchRoundReview } from "@/store/useGameStore";
 import type { CorrectAnswer } from "@/types/database.types";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +20,7 @@ const OPTIONS: CorrectAnswer[] = ["A", "B", "C", "D"];
 
 type MistakePracticeSessionProps = {
   initialMistakes: UserMistakeWithQuestion[];
+  practiceSessionId: string;
   onClose: () => void;
   onMistakesChange?: (mistakes: UserMistakeWithQuestion[]) => void;
 };
@@ -39,6 +43,7 @@ function shuffleMistakes(mistakes: UserMistakeWithQuestion[]) {
 
 export function MistakePracticeSession({
   initialMistakes,
+  practiceSessionId,
   onClose,
   onMistakesChange,
 }: MistakePracticeSessionProps) {
@@ -46,6 +51,7 @@ export function MistakePracticeSession({
   const [index, setIndex] = useState(0);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [masteredCount, setMasteredCount] = useState(0);
+  const [asksRemaining, setAsksRemaining] = useState(MAX_AI_ASKS_PER_MATCH);
   const [isPending, startTransition] = useTransition();
 
   const current = queue[index] ?? null;
@@ -160,6 +166,22 @@ export function MistakePracticeSession({
 
   const question = current.question;
 
+  const aiRound: MatchRoundReview | null = feedback
+    ? {
+        questionIndex: index,
+        isTiebreaker: false,
+        questionId: question.id,
+        category: question.category,
+        questionText: question.question_text,
+        correctAnswer: question.correct_answer,
+        correctOptionText: getOptionText(question, question.correct_answer),
+        selectedAnswer: feedback.selected,
+        selectedOptionText: getOptionText(question, feedback.selected),
+        wasCorrect: feedback.correct,
+        pointsEarned: 0,
+      }
+    : null;
+
   return (
     <div className="rounded-2xl border border-indigo-500/20 bg-card/50 p-4 sm:p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -167,7 +189,7 @@ export function MistakePracticeSession({
           type="button"
           variant="ghost"
           size="sm"
-          className="min-h-10 gap-2"
+          className="min-h-11 gap-2"
           onClick={onClose}
         >
           <ArrowLeft className="size-4" />
@@ -279,8 +301,16 @@ export function MistakePracticeSession({
           </div>
         )}
 
-        {feedback && (
-          <div className="flex justify-end">
+        {feedback && aiRound && (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <AskAiButton
+              round={aiRound}
+              sessionId={practiceSessionId}
+              asksRemaining={asksRemaining}
+              onAsksRemainingChange={setAsksRemaining}
+              showLabel
+              scopeLabel="practice session"
+            />
             <Button
               type="button"
               className="min-h-11"

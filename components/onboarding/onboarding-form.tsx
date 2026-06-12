@@ -13,7 +13,14 @@ import { PROFICIENCY_LEVELS, TARGET_LANGUAGE } from "@/lib/constants";
 import { useActionRedirect } from "@/hooks/use-action-redirect";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { scrollFieldIntoView } from "@/lib/scroll-field-into-view";
 import { cn } from "@/lib/utils";
+
+const fieldClassName = cn(
+  "flex h-11 w-full rounded-lg border border-input bg-transparent px-3 text-base shadow-sm md:text-sm",
+  "focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+  "dark:bg-white/5"
+);
 
 type OnboardingFormProps = {
   defaultUsername?: string | null;
@@ -71,11 +78,8 @@ export function OnboardingForm({ defaultUsername = "" }: OnboardingFormProps) {
             defaultValue={defaultUsername ?? ""}
             autoComplete="username"
             placeholder="Used to sign in and shown to opponents"
-            className={cn(
-              "flex h-11 w-full rounded-lg border border-input bg-transparent px-3 text-sm shadow-sm",
-              "focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-              "dark:bg-white/5"
-            )}
+            className={fieldClassName}
+            onFocus={(event) => scrollFieldIntoView(event.currentTarget)}
           />
         </div>
 
@@ -86,11 +90,8 @@ export function OnboardingForm({ defaultUsername = "" }: OnboardingFormProps) {
             name="proficiency_level"
             required
             defaultValue=""
-            className={cn(
-              "flex h-11 w-full rounded-lg border border-input bg-transparent px-3 text-sm shadow-sm",
-              "focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-              "dark:bg-white/5"
-            )}
+            className={fieldClassName}
+            onFocus={(event) => scrollFieldIntoView(event.currentTarget)}
           >
             <option value="" disabled>
               Select your level
