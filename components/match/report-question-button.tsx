@@ -86,9 +86,6 @@ export function ReportQuestionButton({
     }
 
     setIsSubmitting(true);
-    if (pauseMatchTimer) {
-      setReportDialogOpen(true);
-    }
 
     try {
       const result = await withTimeout(

@@ -24,6 +24,8 @@ type AskAiButtonProps = {
   onAsksRemainingChange: (remaining: number) => void;
   className?: string;
   showLabel?: boolean;
+  /** e.g. "match" or "practice session" — shown in the quota hint. */
+  scopeLabel?: string;
 };
 
 export function AskAiButton({
@@ -33,6 +35,7 @@ export function AskAiButton({
   onAsksRemainingChange,
   className,
   showLabel = false,
+  scopeLabel = "match",
 }: AskAiButtonProps) {
   const [open, setOpen] = useState(false);
   const [explanation, setExplanation] = useState<string | null>(null);
@@ -103,8 +106,8 @@ export function AskAiButton({
             <DialogTitle>AI explanation</DialogTitle>
             <DialogDescription>
               {asksRemaining > 0
-                ? `${asksRemaining} new AI explanation${asksRemaining === 1 ? "" : "s"} left this match (max ${MAX_AI_ASKS_PER_MATCH}). Re-opening a question you already asked does not use a slot.`
-                : `You have used all ${MAX_AI_ASKS_PER_MATCH} new AI explanations for this match.`}
+                ? `${asksRemaining} new AI explanation${asksRemaining === 1 ? "" : "s"} left this ${scopeLabel} (max ${MAX_AI_ASKS_PER_MATCH}). Re-opening a question you already asked does not use a slot.`
+                : `You have used all ${MAX_AI_ASKS_PER_MATCH} new AI explanations for this ${scopeLabel}.`}
             </DialogDescription>
           </DialogHeader>
 

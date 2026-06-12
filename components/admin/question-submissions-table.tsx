@@ -193,7 +193,7 @@ export function QuestionSubmissionsTable({
               onChange={(event) => setRejectNotes(event.target.value)}
               rows={4}
               placeholder="Example: This is A2 vocabulary, not B2. The subjunctive trigger makes it too advanced for the selected level."
-              className="flex min-h-24 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+              className="flex min-h-24 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-base focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 md:text-sm"
             />
           </div>
 

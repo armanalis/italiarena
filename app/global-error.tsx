@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import { Loader2, RefreshCw, ShieldAlert } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { isConnectionError } from "@/lib/errors";
+import { navigateTo } from "@/lib/client-navigation";
+import {
+  isChunkLoadError,
+  isConnectionError,
+  reloadOnceAfterChunkError,
+} from "@/lib/errors";
 import { useGameStore } from "@/store/useGameStore";
 import "./globals.css";
 
@@ -17,10 +22,17 @@ type GlobalErrorProps = {
 
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   const [attempt, setAttempt] = useState(0);
-  const recoverable = isConnectionError(error);
+  const staleBundle = isChunkLoadError(error);
+  const connectionDrop = isConnectionError(error);
+  const recoverable = connectionDrop || staleBundle;
 
   useEffect(() => {
-    if (!recoverable) {
+    if (staleBundle) {
+      reloadOnceAfterChunkError();
+      return;
+    }
+
+    if (!connectionDrop) {
       return;
     }
 
@@ -30,14 +42,37 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
     }, RECONNECT_INTERVAL_MS);
 
     return () => window.clearInterval(timer);
-  }, [recoverable, reset]);
+  }, [connectionDrop, staleBundle, reset]);
+
+  function handleTryAgain() {
+    useGameStore.getState().reset();
+    if (staleBundle) {
+      reloadOnceAfterChunkError();
+      return;
+    }
+    reset();
+  }
+
+  function handleBackToDashboard() {
+    useGameStore.getState().reset();
+    navigateTo("/dashboard");
+  }
 
   return (
     <html lang="en">
-      <body className="min-h-screen bg-background font-sans antialiased">
-        <main className="flex min-h-screen flex-col items-center justify-center px-4 py-10">
+      <body className="min-h-dvh bg-background font-sans antialiased">
+        <main className="flex min-h-dvh flex-col items-center justify-center px-4 py-10 pb-[max(2.5rem,env(safe-area-inset-bottom,0px))]">
           <div className="w-full max-w-md space-y-6">
-            {recoverable ? (
+            {staleBundle ? (
+              <Alert className="border-primary/30 bg-primary/10">
+                <Loader2 className="animate-spin text-primary" />
+                <AlertTitle>Updating the app...</AlertTitle>
+                <AlertDescription>
+                  A new version was deployed while this tab was open. Reloading
+                  to fetch the latest files.
+                </AlertDescription>
+              </Alert>
+            ) : connectionDrop ? (
               <Alert className="border-primary/30 bg-primary/10">
                 <Loader2 className="animate-spin text-primary" />
                 <AlertTitle>Reconnecting to Arena...</AlertTitle>
@@ -64,23 +99,14 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
             )}
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button
-                className="flex-1"
-                onClick={() => {
-                  useGameStore.getState().reset();
-                  reset();
-                }}
-              >
+              <Button className="min-h-11 flex-1" onClick={handleTryAgain}>
                 <RefreshCw className="size-4" />
-                Try again
+                {staleBundle ? "Reload now" : "Try again"}
               </Button>
               <Button
                 variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  useGameStore.getState().reset();
-                  window.location.href = "/dashboard";
-                }}
+                className="min-h-11 flex-1"
+                onClick={handleBackToDashboard}
               >
                 Back to dashboard
               </Button>

@@ -1,9 +1,6 @@
-import {
-  abandonActiveMatch,
-  cancelMatchSearch,
-} from "@/app/dashboard/matchmaking/actions";
 import { navigateTo } from "@/lib/client-navigation";
 import { useGameStore } from "@/store/useGameStore";
+import { createClient } from "@/utils/supabase/client";
 
 /** Routes where an in-progress match should be abandoned on dashboard exit. */
 export function isImmersiveMatchRoute(pathname: string) {
@@ -11,6 +8,27 @@ export function isImmersiveMatchRoute(pathname: string) {
     pathname.startsWith("/dashboard/match/") ||
     pathname === "/dashboard/matchmaking"
   );
+}
+
+function abandonSessionInBackground(sessionId: string, pathname: string) {
+  const supabase = createClient();
+
+  if (pathname.startsWith("/dashboard/match/")) {
+    void supabase
+      .from("game_sessions")
+      .update({ status: "abandoned" })
+      .eq("id", sessionId)
+      .eq("status", "active");
+    return;
+  }
+
+  if (pathname === "/dashboard/matchmaking") {
+    void supabase
+      .from("game_sessions")
+      .update({ status: "abandoned" })
+      .eq("id", sessionId)
+      .eq("status", "waiting");
+  }
 }
 
 /**
@@ -25,11 +43,7 @@ export function exitToDashboard() {
   useGameStore.getState().reset();
 
   if (sessionId) {
-    if (pathname.startsWith("/dashboard/match/")) {
-      void abandonActiveMatch(sessionId);
-    } else if (pathname === "/dashboard/matchmaking") {
-      void cancelMatchSearch(sessionId);
-    }
+    abandonSessionInBackground(sessionId, pathname);
   }
 
   navigateTo("/dashboard");

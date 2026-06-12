@@ -307,5 +307,7 @@ export async function resetPlayerStatistics(): Promise<ResetStatsResult> {
 
   revalidatePath("/dashboard/statistics");
   revalidatePath("/dashboard/settings");
+  revalidatePath("/dashboard/recent-matches");
+  revalidatePath("/dashboard/leaderboard");
   return { success: true };
 }

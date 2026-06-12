@@ -1,11 +1,15 @@
-/** Leaderboard — global rankings by language and proficiency bracket. */
-export default function LeaderboardPage() {
-  return (
-    <main className="flex flex-1 flex-col p-4 sm:p-8">
-      <h1 className="text-2xl font-bold tracking-tight">Leaderboard</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Rankings for your language and level will appear here after launch.
-      </p>
-    </main>
+/** Leaderboard — PvP rankings by language and proficiency bracket. */
+import { getLeaderboard } from "@/app/dashboard/leaderboard/actions";
+import { LeaderboardDashboard } from "@/components/leaderboard/leaderboard-dashboard";
+import { requireOnboardingComplete } from "@/lib/auth";
+
+export default async function LeaderboardPage() {
+  const profile = await requireOnboardingComplete();
+
+  const data = await getLeaderboard(
+    profile.target_language!,
+    profile.proficiency_level!
   );
+
+  return <LeaderboardDashboard data={data} />;
 }

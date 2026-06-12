@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppToaster } from "@/components/app-toaster";
+import { StaleChunkRecovery } from "@/components/stale-chunk-recovery";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  interactiveWidget: "resizes-content",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f8f7fc" },
     { media: "(prefers-color-scheme: dark)", color: "#1f1b2e" },
@@ -43,13 +45,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={cn("font-sans", inter.variable)}>
-      <body className="flex h-dvh min-h-dvh w-full flex-col overflow-hidden antialiased">
+      <body className="flex h-dvh min-h-dvh w-full min-w-[320px] flex-col antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >
+          <StaleChunkRecovery />
           <SiteHeader />
           <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto touch-scroll">
             {children}

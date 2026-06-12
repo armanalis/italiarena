@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PROFICIENCY_LEVELS } from "@/lib/constants";
+import { scrollFieldIntoView } from "@/lib/scroll-field-into-view";
 import {
   CATEGORY_GUIDANCE,
   LEVEL_GUIDANCE,
@@ -195,6 +196,7 @@ export function QuestionSubmissionForm({ pendingCount }: QuestionSubmissionFormP
             "focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
             "dark:bg-white/5 md:text-sm"
           )}
+          onFocus={(event) => scrollFieldIntoView(event.currentTarget)}
         />
       </div>
 
@@ -215,6 +217,7 @@ export function QuestionSubmissionForm({ pendingCount }: QuestionSubmissionFormP
                   "dark:bg-white/5 md:text-sm",
                   correctAnswer === letter && "border-emerald-500/50"
                 )}
+                onFocus={(event) => scrollFieldIntoView(event.currentTarget)}
               />
             </div>
           );
@@ -256,6 +259,7 @@ export function QuestionSubmissionForm({ pendingCount }: QuestionSubmissionFormP
             "focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
             "dark:bg-white/5 md:text-sm"
           )}
+          onFocus={(event) => scrollFieldIntoView(event.currentTarget)}
         />
       </div>
 
@@ -265,7 +269,7 @@ export function QuestionSubmissionForm({ pendingCount }: QuestionSubmissionFormP
             type="checkbox"
             checked={levelConfirmed}
             onChange={(event) => setLevelConfirmed(event.target.checked)}
-            className="mt-1 size-4 rounded border-input"
+            className="mt-0.5 size-5 shrink-0 rounded border-input"
           />
           <span>
             I confirm this question matches <strong>{level}</strong> difficulty —
@@ -277,7 +281,7 @@ export function QuestionSubmissionForm({ pendingCount }: QuestionSubmissionFormP
             type="checkbox"
             checked={categoryConfirmed}
             onChange={(event) => setCategoryConfirmed(event.target.checked)}
-            className="mt-1 size-4 rounded border-input"
+            className="mt-0.5 size-5 shrink-0 rounded border-input"
           />
           <span>
             I confirm this is a <strong>{formatCategoryLabel(category)}</strong>{" "}

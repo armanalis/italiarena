@@ -387,6 +387,21 @@ export interface Database {
         Args: Record<string, never>;
         Returns: number;
       };
+      get_leaderboard: {
+        Args: {
+          p_language: string;
+          p_level: string;
+          p_limit?: number;
+        };
+        Returns: Array<{
+          user_id: string;
+          display_name: string;
+          pvp_matches: number;
+          pvp_wins: number;
+          win_rate: number;
+          total_points: number;
+        }>;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

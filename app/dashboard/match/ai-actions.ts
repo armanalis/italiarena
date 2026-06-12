@@ -94,7 +94,7 @@ export async function askQuestionExplanation(
   if (asksUsed >= MAX_AI_ASKS_PER_MATCH) {
     return {
       success: false,
-      error: `You have used all ${MAX_AI_ASKS_PER_MATCH} AI explanations for this match.`,
+      error: `You have used all ${MAX_AI_ASKS_PER_MATCH} AI explanations for this session.`,
       asksRemaining: 0,
     };
   }

@@ -16,6 +16,36 @@ type SoundVolumeControlProps = {
   showSlider?: boolean;
 };
 
+function VolumeSlider({
+  volume,
+  onChange,
+  className,
+}: {
+  volume: number;
+  onChange: (value: number) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex min-w-[112px] max-w-[168px] items-center gap-2", className)}>
+      <VolumeX className="size-3.5 shrink-0 text-muted-foreground" />
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={1}
+        value={volume}
+        aria-label="Sound volume"
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="h-2 w-full min-w-0 cursor-pointer touch-target accent-indigo-500"
+      />
+      <Volume2 className="size-3.5 shrink-0 text-muted-foreground" />
+      <span className="min-w-6 text-right text-xs tabular-nums text-muted-foreground">
+        {volume}
+      </span>
+    </div>
+  );
+}
+
 export function SoundVolumeControl({
   className,
   showSlider = false,
@@ -52,24 +82,22 @@ export function SoundVolumeControl({
   const panelOpen = showSlider || expanded;
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
+    <div className={cn("relative flex items-center gap-2", className)}>
       {panelOpen && (
-        <div className="flex min-w-[112px] max-w-[168px] flex-1 items-center gap-2">
-          <VolumeX className="size-3.5 shrink-0 text-muted-foreground" />
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={1}
-            value={volume}
-            aria-label="Sound volume"
-            onChange={(event) => persistVolume(Number(event.target.value))}
-            className="h-1.5 w-full cursor-pointer accent-indigo-500"
+        <VolumeSlider
+          volume={volume}
+          onChange={persistVolume}
+          className="hidden md:flex"
+        />
+      )}
+
+      {panelOpen && (
+        <div className="absolute right-0 top-[calc(100%+0.35rem)] z-50 rounded-xl border border-border/60 bg-popover p-3 shadow-lg md:hidden">
+          <VolumeSlider
+            volume={volume}
+            onChange={persistVolume}
+            className="w-[min(240px,calc(100vw-4rem))]"
           />
-          <Volume2 className="size-3.5 shrink-0 text-muted-foreground" />
-          <span className="min-w-6 text-right text-xs tabular-nums text-muted-foreground">
-            {volume}
-          </span>
         </div>
       )}
 
@@ -78,7 +106,7 @@ export function SoundVolumeControl({
           type="button"
           variant="ghost"
           size="icon"
-          className="size-10 shrink-0"
+          className="size-10 min-h-11 min-w-11 shrink-0"
           aria-label={panelOpen ? "Hide volume slider" : "Show volume slider"}
           aria-expanded={panelOpen}
           onClick={() => setExpanded((current) => !current)}
@@ -96,7 +124,7 @@ export function SoundVolumeControl({
           type="button"
           variant="ghost"
           size="icon"
-          className="size-10 shrink-0"
+          className="size-10 min-h-11 min-w-11 shrink-0"
           aria-label={volume > 0 ? "Mute sound" : "Unmute sound"}
           onClick={toggleMute}
         >
