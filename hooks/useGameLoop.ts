@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchTiebreakerQuestion } from "@/app/dashboard/match/actions";
-import { submitMatchAnswer } from "@/app/dashboard/match/sync-actions";
 import { createClient } from "@/utils/supabase/client";
+import type { MatchAnswerRecord } from "@/lib/match-sync";
 import {
   getBotResponseDelayMs,
   getBotResponseTimeMs,
@@ -75,6 +75,8 @@ export function useGameLoop({
   const botTimerRef = useRef<number | null>(null);
   const resolvingRef = useRef(false);
   const resultRemainingMsRef = useRef(0);
+  /** Host: round index we are trying to publish after the result screen. */
+  const pendingNextRoundRef = useRef<number | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const channelReadyRef = useRef(false);
   const pendingBroadcastsRef = useRef<AnswerLockedPayload[]>([]);
@@ -148,9 +150,11 @@ export function useGameLoop({
 
   /**
    * Reliable path alongside the broadcast: persist the locked answer on the
-   * session row so the opponent's 300ms sync poll picks it up even if the
-   * realtime message is dropped. Without this, a missed broadcast stalled the
-   * round until the full 25s timeout.
+   * session row so the opponent's sync poll picks it up even if the realtime
+   * message is dropped. Writes go DIRECTLY to Supabase (RLS-protected) — a
+   * server action here would queue behind other actions and add latency.
+   * Each player only writes their own column, so writers never clobber
+   * each other.
    */
   const persistAnswer = useCallback(
     async (payload: {
@@ -162,17 +166,27 @@ export function useGameLoop({
         return;
       }
 
+      const column = localPlayerRole === "a" ? "answer_a" : "answer_b";
+      const record: MatchAnswerRecord = {
+        ...payload,
+        submittedAt: Date.now(),
+      };
+
       for (let attempt = 1; attempt <= 3; attempt += 1) {
-        const result = await submitMatchAnswer(sessionId, payload);
-        if (result.success) {
+        const { error } = await supabase
+          .from("game_sessions")
+          .update({ [column]: record })
+          .eq("id", sessionId);
+
+        if (!error) {
           return;
         }
         console.error(
-          `[match-sync] answer write failed (attempt ${attempt}): ${result.error}`
+          `[match-sync] answer write failed (attempt ${attempt}): ${error.message}`
         );
       }
     },
-    [isBotMatch, sessionId]
+    [isBotMatch, localPlayerRole, sessionId, supabase]
   );
 
   const bothAnswersLocked = useCallback(() => {
@@ -369,6 +383,11 @@ export function useGameLoop({
     enabled: !isBotMatch,
     onEnterPlaying: startRoundTimer,
     onNewRound: handleNewSyncRound,
+    onBothAnswersLocked: () => {
+      if (useGameStore.getState().roundPhase === "playing") {
+        finalizeRoundRef.current();
+      }
+    },
   });
 
   const leaderStartRoundRef = useRef(serverSync.leaderStartRound);
@@ -385,7 +404,7 @@ export function useGameLoop({
     clearTimers();
 
     const state = useGameStore.getState();
-    const question = state.playlist[currentQuestionIndex];
+    const question = state.playlist[state.currentQuestionIndex];
     const answerA = state.playerAAnswer;
     const answerB = state.playerBAnswer;
     const role = state.localPlayerRole;
@@ -434,10 +453,15 @@ export function useGameLoop({
             }
             // Publish the tiebreaker round; the appended question id lets the
             // opponent refetch the extended playlist.
-            void leaderStartRoundRef.current(
-              useGameStore.getState().currentQuestionIndex,
+            const tiebreakerIndex = useGameStore.getState().currentQuestionIndex;
+            pendingNextRoundRef.current = tiebreakerIndex;
+            const published = await leaderStartRoundRef.current(
+              tiebreakerIndex,
               result.data.id
             );
+            if (published) {
+              pendingNextRoundRef.current = null;
+            }
             return;
           }
         }
@@ -454,12 +478,17 @@ export function useGameLoop({
 
         const nextIndex = latest.currentQuestionIndex + 1;
         if (nextIndex >= latest.playlist.length) {
+          pendingNextRoundRef.current = null;
           advanceToNextRound();
           void leaderFinishMatchRef.current();
           return;
         }
 
-        void leaderStartRoundRef.current(nextIndex);
+        pendingNextRoundRef.current = nextIndex;
+        const published = await leaderStartRoundRef.current(nextIndex);
+        if (published) {
+          pendingNextRoundRef.current = null;
+        }
       })();
     };
 
@@ -490,7 +519,6 @@ export function useGameLoop({
     advanceToNextRound,
     clearResultTimer,
     clearTimers,
-    currentQuestionIndex,
     isBotMatch,
     isSyncLeader,
     play,
@@ -672,6 +700,41 @@ export function useGameLoop({
       finalizeRound();
     }
   }, [finalizeRound, playerAAnswer, playerBAnswer, roundPhase]);
+
+  // Host safety net: if the result screen finished but the round publish did
+  // not land (network blip, RLS, etc.), retry every 2s until both clients move.
+  useEffect(() => {
+    if (isBotMatch || !isSyncLeader) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      const pending = pendingNextRoundRef.current;
+      if (pending === null) {
+        return;
+      }
+
+      const live = useGameStore.getState();
+      if (live.roundPhase !== "round_result") {
+        return;
+      }
+
+      if (live.currentQuestionIndex >= pending) {
+        pendingNextRoundRef.current = null;
+        return;
+      }
+
+      void leaderStartRoundRef.current(pending).then((published) => {
+        if (published) {
+          pendingNextRoundRef.current = null;
+        }
+      });
+    }, 2_000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [isBotMatch, isSyncLeader]);
 
   const currentQuestion = playlist[currentQuestionIndex] ?? null;
   const isTiebreakerRound = currentQuestionIndex >= REGULAR_MATCH_QUESTIONS;

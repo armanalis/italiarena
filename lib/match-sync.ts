@@ -18,8 +18,14 @@
  * Device clocks are never compared against each other anymore.
  */
 
-/** Bumped on protocol changes; surfaced in the UI to verify deployed builds. */
-export const MATCH_SYNC_VERSION = "v4";
+/**
+ * Bumped on protocol changes; surfaced in the UI to verify deployed builds.
+ * v6: round publish (host advancing to the next question) also goes directly
+ * browser → Supabase with a Postgres clock stamp. v5 still used a server
+ * action for that one write, which sat in the same per-tab action queue as
+ * reports and could stall 2–6 minutes between questions.
+ */
+export const MATCH_SYNC_VERSION = "v6";
 
 /** Topic reveal duration before a question becomes answerable. */
 export const TOPIC_REVEAL_MS = 750;

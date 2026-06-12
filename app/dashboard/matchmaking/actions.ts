@@ -589,6 +589,51 @@ export async function startGhostMatch(
   };
 }
 
+/** Mark an active match as abandoned when a participant leaves mid-game. */
+export async function abandonActiveMatch(
+  sessionId: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  const auth = await getAuthenticatedProfile();
+  if ("error" in auth) {
+    return { success: false, error: auth.error };
+  }
+
+  const supabase = await createClient();
+  const { data: session, error: readError } = await supabase
+    .from("game_sessions")
+    .select("player_a_id, player_b_id, status")
+    .eq("id", sessionId)
+    .maybeSingle();
+
+  if (readError) {
+    return { success: false, error: readError.message };
+  }
+
+  if (!session || session.status !== "active") {
+    return { success: true };
+  }
+
+  const isParticipant =
+    session.player_a_id === auth.profile.id ||
+    session.player_b_id === auth.profile.id;
+
+  if (!isParticipant) {
+    return { success: false, error: "Not part of this match." };
+  }
+
+  const { error } = await supabase
+    .from("game_sessions")
+    .update({ status: "abandoned" })
+    .eq("id", sessionId)
+    .eq("status", "active");
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
 export async function cancelMatchSearch(
   sessionId?: string | null
 ): Promise<{ success: true } | { success: false; error: string }> {

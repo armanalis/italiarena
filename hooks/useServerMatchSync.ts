@@ -1,17 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import {
-  getMatchSyncState,
-  updateMatchSyncState,
-} from "@/app/dashboard/match/sync-actions";
 import { getMatchSession } from "@/app/dashboard/matchmaking/actions";
 import {
+  estimateClockOffsetMs,
+  publishMatchSync,
+} from "@/lib/match-sync-client";
+import { createClient } from "@/utils/supabase/client";
+import {
   MATCH_SYNC_VERSION,
-  TOPIC_REVEAL_MS,
+  isMatchAnswerRecord,
   type MatchAnswerRecord,
   type MatchSyncState,
 } from "@/lib/match-sync";
+import { parseQuestionPlaylist } from "@/lib/session-playlist";
 import { determineWinner } from "@/lib/scoring";
 import { useGameAudio } from "@/hooks/useGameAudio";
 import { useGameStore, type LockedAnswer } from "@/store/useGameStore";
@@ -30,20 +32,22 @@ type UseServerMatchSyncOptions = {
   onEnterPlaying: () => void;
   /** Called right before a new round is applied (clear timers/flags). */
   onNewRound: () => void;
+  /** Both locked answers are visible locally (poll/broadcast path). */
+  onBothAnswersLocked: () => void;
 };
 
 /**
  * PvP match sync. The database row is the single source of truth.
  *
- * The host triggers ONE sync record per round; the SERVER stamps
- * `roundStartedAt` on its own clock and every poll response carries
- * `serverNow`. A client decides "topic reveal vs question" by comparing those
- * two SERVER timestamps — the device clock is never compared against another
- * device's clock. (v3 did exactly that, so a phone whose clock ran behind the
- * host's PC stayed frozen on the topic screen for the entire match.)
+ * TRANSPORT (v6): polls, answer writes, AND host round-publish all go
+ * browser → Supabase. Nothing in the hot loop uses a Next.js server action —
+ * one tab's actions run serially, so a report submit or a leftover action
+ * queued for minutes and blocked `updateMatchSyncState` between questions.
+ * Round timestamps come from the Postgres `get_server_time_ms()` RPC.
+ * A realtime postgres_changes subscription triggers an immediate extra poll.
  *
- * Each 300ms poll re-derives the phase from fresh `serverNow`, so even if
- * every local timer dies the client converges within one poll.
+ * CLOCKS: clients estimate offset to the Postgres clock at match start and
+ * only compare server timestamps against that estimate.
  *
  * The question index is monotonic: clients never move backwards, and a client
  * already showing the round result for the current index is never yanked back.
@@ -55,6 +59,7 @@ export function useServerMatchSync({
   enabled,
   onEnterPlaying,
   onNewRound,
+  onBothAnswersLocked,
 }: UseServerMatchSyncOptions) {
   const { play } = useGameAudio();
 
@@ -64,6 +69,8 @@ export function useServerMatchSync({
   onEnterPlayingRef.current = onEnterPlaying;
   const onNewRoundRef = useRef(onNewRound);
   onNewRoundRef.current = onNewRound;
+  const onBothAnswersLockedRef = useRef(onBothAnswersLocked);
+  onBothAnswersLockedRef.current = onBothAnswersLocked;
   const sessionIdRef = useRef(sessionId);
   sessionIdRef.current = sessionId;
   const isLeaderRef = useRef(isLeader);
@@ -74,6 +81,9 @@ export function useServerMatchSync({
   const startingRef = useRef(false);
   const refreshingPlaylistRef = useRef(false);
   const initializedSessionRef = useRef<string | null>(null);
+  const supabaseRef = useRef(createClient());
+  /** localClock + clockOffset ≈ serverClock. null until estimated. */
+  const clockOffsetRef = useRef<number | null>(null);
 
   const clearFlipTimer = useCallback(() => {
     if (flipTimerRef.current !== null) {
@@ -273,8 +283,15 @@ export function useServerMatchSync({
         };
       }
 
-      if (patch.playerAAnswer || patch.playerBAnswer) {
-        useGameStore.setState(patch);
+      if (!patch.playerAAnswer && !patch.playerBAnswer) {
+        return;
+      }
+
+      useGameStore.setState(patch);
+
+      const updated = useGameStore.getState();
+      if (updated.playerAAnswer && updated.playerBAnswer) {
+        onBothAnswersLockedRef.current();
       }
     },
     []
@@ -289,66 +306,54 @@ export function useServerMatchSync({
   const leaderStartRound = useCallback(
     async (questionIndex: number, appendQuestionId?: string) => {
       if (!isLeaderRef.current) {
-        return;
+        return false;
       }
 
-      const request: MatchSyncState = {
-        questionIndex,
-        phase: "round",
-        roundStartedAt: 0, // stamped server-side
-      };
-
       for (let attempt = 1; attempt <= WRITE_ATTEMPTS; attempt += 1) {
-        const result = await updateMatchSyncState(
+        const result = await publishMatchSync(
+          supabaseRef.current,
           sessionIdRef.current,
-          request,
-          appendQuestionId
+          { questionIndex, phase: "round", appendQuestionId }
         );
         if (result.success) {
           applySync(result.sync, result.serverNow);
-          return;
+          return true;
         }
         console.error(
-          `[match-sync] round write failed (attempt ${attempt}): ${result.error}`
+          `[match-sync] round publish failed (attempt ${attempt}): ${result.error}`
         );
       }
 
-      // Every write failed — run the round locally so the host isn't frozen;
-      // the next successful poll/write re-converges.
-      applySync(
-        {
-          questionIndex,
-          phase: "round",
-          roundStartedAt: Date.now() + TOPIC_REVEAL_MS,
-        },
-        Date.now()
-      );
+      return false;
     },
     [applySync]
   );
 
   const leaderFinishMatch = useCallback(async () => {
     if (!isLeaderRef.current) {
-      return;
+      return false;
     }
 
     clearFlipTimer();
-    const sync: MatchSyncState = {
-      questionIndex: useGameStore.getState().currentQuestionIndex,
-      phase: "match_finished",
-      roundStartedAt: Date.now(),
-    };
+    const questionIndex = useGameStore.getState().currentQuestionIndex;
 
     for (let attempt = 1; attempt <= WRITE_ATTEMPTS; attempt += 1) {
-      const result = await updateMatchSyncState(sessionIdRef.current, sync);
+      const result = await publishMatchSync(
+        supabaseRef.current,
+        sessionIdRef.current,
+        { questionIndex, phase: "match_finished" }
+      );
       if (result.success) {
-        return;
+        applySync(result.sync, result.serverNow);
+        return true;
       }
       console.error(
-        `[match-sync] finish write failed (attempt ${attempt}): ${result.error}`
+        `[match-sync] finish publish failed (attempt ${attempt}): ${result.error}`
       );
     }
-  }, [clearFlipTimer]);
+
+    return false;
+  }, [applySync, clearFlipTimer]);
 
   /** Host: start round 0 once the opponent has joined the session row. */
   const ensureMatchStarted = useCallback(async () => {
@@ -358,18 +363,24 @@ export function useServerMatchSync({
 
     startingRef.current = true;
     try {
-      const result = await getMatchSyncState(sessionIdRef.current);
-      if (!result.success) {
+      const { data: session, error } = await supabaseRef.current
+        .from("game_sessions")
+        .select("status, player_b_id, question_playlist")
+        .eq("id", sessionIdRef.current)
+        .maybeSingle();
+
+      if (error || !session) {
         return;
       }
 
-      if (result.sync) {
+      const { sync } = parseQuestionPlaylist(session.question_playlist);
+      if (sync) {
         // Already started (e.g. host refreshed) — the poll loop resumes it.
         matchStartedRef.current = true;
         return;
       }
 
-      if (!result.hasOpponent || result.status !== "active") {
+      if (!session.player_b_id || session.status !== "active") {
         return;
       }
 
@@ -415,35 +426,89 @@ export function useServerMatchSync({
     });
   }, [enabled, isLeader, serverPlaylist, sessionId]);
 
-  // Both players poll the database — single source of truth.
+  // Estimate the offset between this device's clock and the server clock
+  // that stamps roundStartedAt. Min-RTT sample wins; runs once per session.
   useEffect(() => {
     if (!enabled) {
       return;
     }
 
     let cancelled = false;
+
+    const estimate = async () => {
+      const offset = await estimateClockOffsetMs(supabaseRef.current);
+      if (!cancelled) {
+        clockOffsetRef.current = offset;
+      }
+    };
+
+    void estimate();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, sessionId]);
+
+  // Both players poll the database — single source of truth. This reads
+  // Supabase DIRECTLY (never a server action — see the header comment).
+  // A realtime subscription on the row triggers an immediate extra tick so
+  // round changes and answers usually land well under the poll interval.
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    const supabase = supabaseRef.current;
+    let cancelled = false;
     let loggedFailure = false;
+    let inFlight = false;
 
     const tick = async () => {
+      if (inFlight) {
+        return;
+      }
+      inFlight = true;
+
       try {
-        const result = await getMatchSyncState(sessionIdRef.current);
+        const { data: session, error } = await supabase
+          .from("game_sessions")
+          .select("question_playlist, answer_a, answer_b")
+          .eq("id", sessionIdRef.current)
+          .maybeSingle();
+
         if (cancelled) {
           return;
         }
-        if (!result.success) {
+
+        if (error || !session) {
           if (!loggedFailure) {
             loggedFailure = true;
-            console.error(`[match-sync] poll failed: ${result.error}`);
+            console.error(
+              `[match-sync] poll failed: ${error?.message ?? "session not found"}`
+            );
           }
           return;
         }
+
         loggedFailure = false;
-        if (result.sync) {
-          applySync(result.sync, result.serverNow);
+
+        const { sync } = parseQuestionPlaylist(session.question_playlist);
+        const clockOffset = clockOffsetRef.current;
+
+        // Until the clock offset is estimated (sub-second at mount) we cannot
+        // place server timestamps on the local clock — skip, not guess.
+        if (sync && clockOffset !== null) {
+          applySync(sync, Date.now() + clockOffset);
         }
-        applyRemoteAnswers(result.answerA, result.answerB);
+
+        applyRemoteAnswers(
+          isMatchAnswerRecord(session.answer_a) ? session.answer_a : null,
+          isMatchAnswerRecord(session.answer_b) ? session.answer_b : null
+        );
       } catch {
         // Transient network error — next poll retries.
+      } finally {
+        inFlight = false;
       }
     };
 
@@ -452,9 +517,26 @@ export function useServerMatchSync({
       void tick();
     }, POLL_MS);
 
+    const channel = supabase
+      .channel(`match-sync-${sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "game_sessions",
+          filter: `id=eq.${sessionId}`,
+        },
+        () => {
+          void tick();
+        }
+      )
+      .subscribe();
+
     return () => {
       cancelled = true;
       window.clearInterval(interval);
+      supabase.removeChannel(channel);
       clearFlipTimer();
     };
   }, [applyRemoteAnswers, applySync, clearFlipTimer, enabled, sessionId]);

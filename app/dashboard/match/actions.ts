@@ -64,6 +64,7 @@ export async function fetchTiebreakerQuestion(
   return { success: true, data: data as QuestionActive };
 }
 
+/** Server-side report path (e.g. non-client callers). Match UI uses `submitQuestionReport`. */
 export async function reportQuestion(
   questionId: string,
   issueType: ReportIssueType
@@ -81,6 +82,17 @@ export async function reportQuestion(
     return { success: false, error: "Not authenticated." };
   }
 
+  const { data: existing } = await supabase
+    .from("reports")
+    .select("id")
+    .eq("question_id", questionId)
+    .eq("reporter_id", user.id)
+    .maybeSingle();
+
+  if (existing) {
+    return { success: false, error: "You already reported this question." };
+  }
+
   const { error } = await supabase.from("reports").insert({
     question_id: questionId,
     reporter_id: user.id,
@@ -91,15 +103,6 @@ export async function reportQuestion(
     if (error.code === "23505") {
       return { success: false, error: "You already reported this question." };
     }
-
-    if (error.code === "23503") {
-      return {
-        success: false,
-        error:
-          "Could not save your report because this question was already removed from the pool. Please try again shortly.",
-      };
-    }
-
     return { success: false, error: error.message };
   }
 
