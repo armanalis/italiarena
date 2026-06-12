@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchTiebreakerQuestion } from "@/app/dashboard/match/actions";
+import { submitMatchAnswer } from "@/app/dashboard/match/sync-actions";
 import { createClient } from "@/utils/supabase/client";
 import {
   getBotResponseDelayMs,
@@ -77,7 +78,6 @@ export function useGameLoop({
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const channelReadyRef = useRef(false);
   const pendingBroadcastsRef = useRef<AnswerLockedPayload[]>([]);
-  const [channelReady, setChannelReady] = useState(isBotMatch);
   const [roundResultSecondsLeft, setRoundResultSecondsLeft] = useState<
     number | null
   >(null);
@@ -146,6 +146,35 @@ export function useGameLoop({
     [isBotMatch]
   );
 
+  /**
+   * Reliable path alongside the broadcast: persist the locked answer on the
+   * session row so the opponent's 300ms sync poll picks it up even if the
+   * realtime message is dropped. Without this, a missed broadcast stalled the
+   * round until the full 25s timeout.
+   */
+  const persistAnswer = useCallback(
+    async (payload: {
+      questionIndex: number;
+      answer: CorrectAnswer | null;
+      responseTimeMs: number | null;
+    }) => {
+      if (isBotMatch) {
+        return;
+      }
+
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        const result = await submitMatchAnswer(sessionId, payload);
+        if (result.success) {
+          return;
+        }
+        console.error(
+          `[match-sync] answer write failed (attempt ${attempt}): ${result.error}`
+        );
+      }
+    },
+    [isBotMatch, sessionId]
+  );
+
   const bothAnswersLocked = useCallback(() => {
     const state = useGameStore.getState();
     return Boolean(state.playerAAnswer && state.playerBAnswer);
@@ -188,6 +217,11 @@ export function useGameLoop({
             answer: null,
             responseTimeMs: null,
           });
+          void persistAnswer({
+            questionIndex: state.currentQuestionIndex,
+            answer: null,
+            responseTimeMs: null,
+          });
         }
 
         if (isBotMatch) {
@@ -207,6 +241,7 @@ export function useGameLoop({
     isBotMatch,
     lockLocalAnswer,
     lockOpponentAnswer,
+    persistAnswer,
     setTimeRemaining,
   ]);
 
@@ -494,12 +529,24 @@ export function useGameLoop({
         answer,
         responseTimeMs,
       });
+      void persistAnswer({
+        questionIndex: state.currentQuestionIndex,
+        answer,
+        responseTimeMs,
+      });
 
       if (bothAnswersLocked()) {
         finalizeRound();
       }
     },
-    [bothAnswersLocked, broadcastAnswer, finalizeRound, lockLocalAnswer, play]
+    [
+      bothAnswersLocked,
+      broadcastAnswer,
+      finalizeRound,
+      lockLocalAnswer,
+      persistAnswer,
+      play,
+    ]
   );
 
   useEffect(() => {
@@ -526,12 +573,10 @@ export function useGameLoop({
   useEffect(() => {
     if (isBotMatch) {
       channelReadyRef.current = true;
-      setChannelReady(true);
       return;
     }
 
     channelReadyRef.current = false;
-    setChannelReady(false);
     pendingBroadcastsRef.current = [];
 
     const channel = supabase.channel(`game_session:${sessionId}`, {
@@ -561,7 +606,6 @@ export function useGameLoop({
         if (status === "SUBSCRIBED") {
           channelRef.current = channel;
           channelReadyRef.current = true;
-          setChannelReady(true);
           flushPendingBroadcasts();
         }
       });
@@ -644,6 +688,5 @@ export function useGameLoop({
     playerAAnswer,
     playerBAnswer,
     roundResultSecondsLeft,
-    channelReady,
   };
 }

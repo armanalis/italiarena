@@ -9,11 +9,12 @@ import { getMatchSession } from "@/app/dashboard/matchmaking/actions";
 import {
   MATCH_SYNC_VERSION,
   TOPIC_REVEAL_MS,
+  type MatchAnswerRecord,
   type MatchSyncState,
 } from "@/lib/match-sync";
 import { determineWinner } from "@/lib/scoring";
 import { useGameAudio } from "@/hooks/useGameAudio";
-import { useGameStore } from "@/store/useGameStore";
+import { useGameStore, type LockedAnswer } from "@/store/useGameStore";
 import type { QuestionActive } from "@/types/database.types";
 
 const POLL_MS = 300;
@@ -231,6 +232,55 @@ export function useServerMatchSync({
   );
 
   /**
+   * Reliable answer path: lock any answer the poll returned that belongs to
+   * the current round and isn't locked locally yet. The realtime broadcast
+   * usually arrives first; this catches every answer a broadcast dropped, so
+   * the round resolves within one poll instead of stalling until the 25s
+   * timeout.
+   */
+  const applyRemoteAnswers = useCallback(
+    (answerA: MatchAnswerRecord | null, answerB: MatchAnswerRecord | null) => {
+      const live = useGameStore.getState();
+
+      if (live.roundPhase !== "playing" && live.roundPhase !== "topic_reveal") {
+        return;
+      }
+
+      const patch: {
+        playerAAnswer?: LockedAnswer;
+        playerBAnswer?: LockedAnswer;
+      } = {};
+
+      if (
+        answerA &&
+        answerA.questionIndex === live.currentQuestionIndex &&
+        !live.playerAAnswer
+      ) {
+        patch.playerAAnswer = {
+          answer: answerA.answer,
+          responseTimeMs: answerA.responseTimeMs,
+        };
+      }
+
+      if (
+        answerB &&
+        answerB.questionIndex === live.currentQuestionIndex &&
+        !live.playerBAnswer
+      ) {
+        patch.playerBAnswer = {
+          answer: answerB.answer,
+          responseTimeMs: answerB.responseTimeMs,
+        };
+      }
+
+      if (patch.playerAAnswer || patch.playerBAnswer) {
+        useGameStore.setState(patch);
+      }
+    },
+    []
+  );
+
+  /**
    * Host: publish a round. The write goes out first so the SERVER stamps the
    * shared start instant; the host then applies the exact record the opponent
    * will see via polling. Both devices therefore flip to the question at the
@@ -391,6 +441,7 @@ export function useServerMatchSync({
         if (result.sync) {
           applySync(result.sync, result.serverNow);
         }
+        applyRemoteAnswers(result.answerA, result.answerB);
       } catch {
         // Transient network error — next poll retries.
       }
@@ -406,7 +457,7 @@ export function useServerMatchSync({
       window.clearInterval(interval);
       clearFlipTimer();
     };
-  }, [applySync, clearFlipTimer, enabled, sessionId]);
+  }, [applyRemoteAnswers, applySync, clearFlipTimer, enabled, sessionId]);
 
   // Host kicks off round 0 as soon as the opponent appears in the row.
   useEffect(() => {

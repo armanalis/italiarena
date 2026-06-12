@@ -49,3 +49,37 @@ export function isMatchSyncState(value: unknown): value is MatchSyncState {
     typeof state.roundStartedAt === "number"
   );
 }
+
+/**
+ * One player's locked answer for a round, persisted on the session row
+ * (game_sessions.answer_a / answer_b) and delivered through the sync poll.
+ * Realtime broadcasts remain the low-latency fast path; this is the reliable
+ * path, so a missed broadcast can no longer stall a round for the full 25s.
+ */
+export type MatchAnswerRecord = {
+  questionIndex: number;
+  /** null = the player timed out without answering. */
+  answer: "A" | "B" | "C" | "D" | null;
+  responseTimeMs: number | null;
+  submittedAt: number;
+};
+
+export function isMatchAnswerRecord(
+  value: unknown
+): value is MatchAnswerRecord {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as MatchAnswerRecord;
+  return (
+    typeof record.questionIndex === "number" &&
+    (record.answer === null ||
+      record.answer === "A" ||
+      record.answer === "B" ||
+      record.answer === "C" ||
+      record.answer === "D") &&
+    (record.responseTimeMs === null ||
+      typeof record.responseTimeMs === "number")
+  );
+}
