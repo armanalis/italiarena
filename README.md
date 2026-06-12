@@ -32,7 +32,7 @@ The **hosted backend and question database are not part of this repository**. Th
 | **Community quality control** | Players can report bad questions; admins review the queue |
 | **Works like an app on your phone** | Add to home screen on iOS and Android for a full-screen experience |
 
-Supported languages today: **English**, **Italian**, and **Spanish**.
+Supported languages today: **Italian**.
 
 ---
 
