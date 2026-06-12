@@ -383,6 +383,10 @@ export interface Database {
         Args: { p_user_id: string };
         Returns: string | null;
       };
+      get_server_time_ms: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

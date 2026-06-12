@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Flag, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { reportQuestion } from "@/app/dashboard/match/actions";
+import {
+  submitQuestionReport,
+  type ReportQuestionResult,
+} from "@/lib/report-question-client";
 import { useGameStore } from "@/store/useGameStore";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +26,29 @@ const ISSUE_OPTIONS: { value: ReportIssueType; label: string }[] = [
   { value: "wrong_answer", label: "Wrong correct answer" },
   { value: "unnatural_phrasing", label: "Unnatural phrasing" },
 ];
+
+const REPORT_TIMEOUT_MS = 12_000;
+
+function withTimeout(
+  promise: Promise<ReportQuestionResult>,
+  ms: number
+): Promise<ReportQuestionResult> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      reject(new Error("Report request timed out."));
+    }, ms);
+
+    void promise
+      .then((result) => {
+        window.clearTimeout(timer);
+        resolve(result);
+      })
+      .catch((error: unknown) => {
+        window.clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
 
 type ReportQuestionButtonProps = {
   questionId: string;
@@ -49,33 +75,69 @@ export function ReportQuestionButton({
   const [selectedIssue, setSelectedIssue] = useState<ReportIssueType | null>(
     null
   );
-  const [isPending, startTransition] = useTransition();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit() {
-    if (!selectedIssue) {
-      toast.error("Select an issue type before submitting.");
+  async function handleSubmit() {
+    if (!selectedIssue || isSubmitting) {
+      if (!selectedIssue) {
+        toast.error("Select an issue type before submitting.");
+      }
       return;
     }
 
-    startTransition(async () => {
-      const result = await reportQuestion(questionId, selectedIssue);
+    setIsSubmitting(true);
+    if (pauseMatchTimer) {
+      setReportDialogOpen(true);
+    }
+
+    try {
+      const result = await withTimeout(
+        submitQuestionReport(questionId, selectedIssue),
+        REPORT_TIMEOUT_MS
+      );
 
       if (result.success) {
         toast.success("Report logged. Thanks for the feedback!");
         onReported?.();
-        handleOpenChange(false);
+        closeDialog();
         return;
       }
 
       if (result.error === "You already reported this question.") {
         onReported?.();
+        toast.success("You already reported this question.");
+        closeDialog();
+        return;
       }
 
       toast.error(result.error);
-    });
+    } catch {
+      toast.error(
+        "Could not submit your report right now. The match will continue — try again from the review at the end."
+      );
+      closeDialog();
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function closeDialog() {
+    setOpen(false);
+    setSelectedIssue(null);
+    if (pauseMatchTimer) {
+      setReportDialogOpen(false);
+    }
   }
 
   function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen && isSubmitting) {
+      // Let the user escape a slow submit without trapping the whole match.
+      setIsSubmitting(false);
+      if (pauseMatchTimer) {
+        setReportDialogOpen(false);
+      }
+    }
+
     setOpen(nextOpen);
     if (pauseMatchTimer) {
       setReportDialogOpen(nextOpen);
@@ -140,7 +202,7 @@ export function ReportQuestionButton({
             <button
               key={option.value}
               type="button"
-              disabled={isPending}
+              disabled={isSubmitting}
               onClick={() => setSelectedIssue(option.value)}
               className={cn(
                 "min-h-11 rounded-lg border px-3 py-3 text-left text-sm transition-colors",
@@ -158,17 +220,16 @@ export function ReportQuestionButton({
           <Button
             type="button"
             variant="outline"
-            disabled={isPending}
             onClick={() => handleOpenChange(false)}
           >
             Cancel
           </Button>
           <Button
             type="button"
-            disabled={isPending || !selectedIssue}
-            onClick={handleSubmit}
+            disabled={isSubmitting || !selectedIssue}
+            onClick={() => void handleSubmit()}
           >
-            {isPending ? (
+            {isSubmitting ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
                 Submitting...

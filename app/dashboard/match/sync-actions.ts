@@ -5,21 +5,15 @@ import {
   parseQuestionPlaylist,
 } from "@/lib/session-playlist";
 import { createClient } from "@/utils/supabase/server";
-import {
-  TOPIC_REVEAL_MS,
-  isMatchAnswerRecord,
-  type MatchAnswerRecord,
-  type MatchSyncState,
-} from "@/lib/match-sync";
+import { TOPIC_REVEAL_MS, type MatchSyncState } from "@/lib/match-sync";
 
 /**
- * Host-only write of the authoritative round state. Optionally appends a
- * question id to the playlist (used for the sudden-death tiebreaker).
+ * @deprecated Hot-path match sync uses `publishMatchSync` in
+ * `lib/match-sync-client.ts` (browser → Supabase). Do not call this from the
+ * match loop: Next.js serializes server actions per tab and a single queued
+ * action (e.g. report submit) stalled round advances for minutes.
  *
- * For "round" records the server stamps `roundStartedAt` itself so that all
- * sync timestamps live on ONE clock. The stamped record and the server's
- * current time are returned so the host can apply the exact same instant the
- * opponent will derive from polling.
+ * Kept for tooling / backwards compatibility only.
  */
 export async function updateMatchSyncState(
   sessionId: string,
@@ -101,125 +95,16 @@ export async function updateMatchSyncState(
 }
 
 /**
- * Both players persist their locked answer here every round. The opponent
- * receives it through the next sync poll (≤300ms), so the round resolves
- * immediately even when the realtime broadcast is dropped.
+ * Clock reference for sync timestamps. Clients call this a few times at match
+ * start to estimate the offset between their device clock and this server's
+ * clock (which stamps `roundStartedAt`).
+ *
+ * NOTE: do NOT add high-frequency server actions to the match loop. Next.js
+ * runs server actions from one client SEQUENTIALLY in a single queue, so a
+ * 300ms action-based poll backs up the queue and stalls every other action
+ * (round advance, answers, reports) for minutes. All high-frequency match
+ * traffic goes directly from the browser to Supabase instead.
  */
-export async function submitMatchAnswer(
-  sessionId: string,
-  payload: {
-    questionIndex: number;
-    answer: "A" | "B" | "C" | "D" | null;
-    responseTimeMs: number | null;
-  }
-): Promise<{ success: true } | { success: false; error: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, error: "Not authenticated." };
-  }
-
-  const { data: session, error: readError } = await supabase
-    .from("game_sessions")
-    .select("player_a_id, player_b_id, status")
-    .eq("id", sessionId)
-    .maybeSingle();
-
-  if (readError || !session) {
-    return { success: false, error: readError?.message ?? "Session not found." };
-  }
-
-  // Each player only ever writes their own column, so the two writers can
-  // never clobber each other.
-  const column =
-    session.player_a_id === user.id
-      ? "answer_a"
-      : session.player_b_id === user.id
-        ? "answer_b"
-        : null;
-
-  if (!column) {
-    return { success: false, error: "Not part of this match." };
-  }
-
-  if (session.status !== "active") {
-    return { success: false, error: "Match is not active." };
-  }
-
-  const record: MatchAnswerRecord = {
-    ...payload,
-    submittedAt: Date.now(),
-  };
-
-  const { error: updateError } = await supabase
-    .from("game_sessions")
-    .update({ [column]: record })
-    .eq("id", sessionId);
-
-  if (updateError) {
-    return { success: false, error: updateError.message };
-  }
-
-  return { success: true };
-}
-
-/**
- * Lightweight poll target: returns the round sync state, both players'
- * persisted answers, and opponent presence. Avoids resolving full question
- * rows / display names on every poll.
- */
-export async function getMatchSyncState(sessionId: string): Promise<
-  | {
-      success: true;
-      sync: MatchSyncState | null;
-      answerA: MatchAnswerRecord | null;
-      answerB: MatchAnswerRecord | null;
-      hasOpponent: boolean;
-      status: string;
-      /** Server's current time; the only clock sync timestamps may be compared to. */
-      serverNow: number;
-    }
-  | { success: false; error: string }
-> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, error: "Not authenticated." };
-  }
-
-  const { data: session, error } = await supabase
-    .from("game_sessions")
-    .select(
-      "player_a_id, player_b_id, status, question_playlist, answer_a, answer_b"
-    )
-    .eq("id", sessionId)
-    .maybeSingle();
-
-  if (error || !session) {
-    return { success: false, error: error?.message ?? "Session not found." };
-  }
-
-  const isParticipant =
-    session.player_a_id === user.id || session.player_b_id === user.id;
-  if (!isParticipant) {
-    return { success: false, error: "Not part of this match." };
-  }
-
-  const { sync } = parseQuestionPlaylist(session.question_playlist);
-
-  return {
-    success: true,
-    sync,
-    answerA: isMatchAnswerRecord(session.answer_a) ? session.answer_a : null,
-    answerB: isMatchAnswerRecord(session.answer_b) ? session.answer_b : null,
-    hasOpponent: Boolean(session.player_b_id),
-    status: session.status,
-    serverNow: Date.now(),
-  };
+export async function getServerNow(): Promise<number> {
+  return Date.now();
 }

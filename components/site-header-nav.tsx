@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Languages, LogOut } from "lucide-react";
 import { signOut } from "@/app/login/actions";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
+import {
+  exitToDashboard,
+  isImmersiveMatchRoute,
+} from "@/lib/exit-match";
 
 type SiteHeaderNavProps = {
   isAuthenticated: boolean;
@@ -19,11 +24,25 @@ export function SiteHeaderNav({
   showDashboard,
   isAdmin,
 }: SiteHeaderNavProps) {
+  const pathname = usePathname();
+  const leavingActiveMatch =
+    showDashboard && isImmersiveMatchRoute(pathname);
+
+  function handleDashboardExit(event: React.MouseEvent<HTMLAnchorElement>) {
+    if (!leavingActiveMatch) {
+      return;
+    }
+
+    event.preventDefault();
+    exitToDashboard();
+  }
+
   return (
     <header className="sticky top-0 z-50 w-full shrink-0 border-b border-border/60 bg-background/80 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md">
       <div className="flex h-[var(--app-header-height)] w-full items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
         <Link
           href={showDashboard ? "/dashboard" : "/"}
+          onClick={showDashboard ? handleDashboardExit : undefined}
           className="flex min-w-0 shrink items-center gap-2.5"
         >
           <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white lg:size-9">
@@ -62,7 +81,7 @@ export function SiteHeaderNav({
               )}
               {showDashboard && (
                 <Button asChild variant="ghost" size="sm" className="min-h-10 px-2 sm:px-3">
-                  <Link href="/dashboard">
+                  <Link href="/dashboard" onClick={handleDashboardExit}>
                     <span className="hidden sm:inline">Dashboard</span>
                     <span className="sm:hidden">Home</span>
                   </Link>
