@@ -72,7 +72,6 @@ export function GameLoop({
     playerAAnswer,
     playerBAnswer,
     roundResultSecondsLeft,
-    channelReady,
   } = useGameLoop({
     sessionId,
     localUserId,
@@ -133,7 +132,9 @@ export function GameLoop({
   const isLocked = Boolean(localAnswer);
   const showWaiting =
     roundPhase === "playing" && isLocked && !opponentAnswer;
-  const canAnswer = roundPhase === "playing" && !isLocked && channelReady;
+  // Answers persist through the database poll, so answering is never gated on
+  // the realtime channel being connected.
+  const canAnswer = roundPhase === "playing" && !isLocked;
 
   const localDisplayName =
     localPlayerRoleStore === "a" ? playerAName : playerBName;
@@ -291,13 +292,6 @@ export function GameLoop({
                   );
                 })}
               </div>
-
-              {!channelReady && !isBotMatch && (
-                <div className="flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin" />
-                  Connecting to opponent...
-                </div>
-              )}
 
               {showWaiting && (
                 <div className="flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">

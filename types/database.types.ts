@@ -194,6 +194,10 @@ export interface GameSession {
   question_playlist: string[];
   language: QuestionLanguage | null;
   level: QuestionLevel | null;
+  /** Player A's locked answer for the current round (MatchAnswerRecord JSON). */
+  answer_a: unknown;
+  /** Player B's locked answer for the current round (MatchAnswerRecord JSON). */
+  answer_b: unknown;
   created_at: string;
 }
 
