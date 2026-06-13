@@ -55,6 +55,14 @@ export async function submitQuestionReport(
       return { success: false, error: "You already reported this question." };
     }
 
+    if (error.message.includes("questions_flagged_category_check")) {
+      return {
+        success: false,
+        error:
+          "Could not quarantine this question due to a database category mismatch. Ask an admin to run supabase/reports-category-fix.sql.",
+      };
+    }
+
     return { success: false, error: error.message };
   }
 

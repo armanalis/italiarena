@@ -41,7 +41,7 @@ const navItems = [
   {
     href: "/dashboard/settings",
     label: "Settings",
-    shortLabel: "Prefs",
+    shortLabel: "Settings",
     icon: Settings,
     exact: false,
   },
