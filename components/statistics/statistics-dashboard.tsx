@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatCategoryLabel } from "@/lib/scoring";
+import { normalizeQuestionCategory } from "@/lib/match";
 import type { PlayerStats, QuestionCategory } from "@/types/database.types";
 
 type StatisticsDashboardProps = {
@@ -51,6 +52,13 @@ const CATEGORY_KEYS: QuestionCategory[] = [
   "fill-in-the-blank",
   "idioms",
 ];
+
+function mistakeMatchesCategory(
+  mistake: UserMistakeWithQuestion,
+  category: QuestionCategory
+) {
+  return normalizeQuestionCategory(mistake.question.category) === category;
+}
 
 export function StatisticsDashboard({
   stats,
@@ -105,8 +113,9 @@ export function StatisticsDashboard({
   const mistakesByCategory = CATEGORY_KEYS.map((category) => ({
     category,
     label: formatCategoryLabel(category),
-    count: mistakes.filter((mistake) => mistake.question.category === category)
-      .length,
+    count: mistakes.filter((mistake) =>
+      mistakeMatchesCategory(mistake, category)
+    ).length,
   }));
 
   const hasStats = Boolean(stats?.matches_played);
@@ -236,8 +245,8 @@ export function StatisticsDashboard({
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {categories.map((category) => {
-            const categoryMistakes = mistakes.filter(
-              (mistake) => mistake.question.category === category.key
+            const categoryMistakes = mistakes.filter((mistake) =>
+              mistakeMatchesCategory(mistake, category.key)
             );
             const mistakeCount = categoryMistakes.length;
 
