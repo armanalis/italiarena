@@ -1,6 +1,7 @@
 /** Email/password form with sign-in, sign-up, and forgot-password flows. */
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useActionRedirect } from "@/hooks/use-action-redirect";
@@ -265,12 +266,36 @@ export function LoginForm() {
             <SubmitButton mode={mode} />
           </form>
 
-          {isSignUp && (
-            <p className="flex items-start gap-2 rounded-lg bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground dark:bg-white/5">
-              <Sparkles className="mt-0.5 size-3.5 shrink-0 text-indigo-400" />
-              New accounts get matched by language and proficiency level after a
-              quick setup.
+          {!isForgot && (
+            <p className="text-center text-sm text-muted-foreground">
+              Just want to play with friends?{" "}
+              <Link
+                href="/guest"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Play as a Guest
+              </Link>
             </p>
+          )}
+
+          {isSignUp && (
+            <>
+              <p className="flex items-start gap-2 rounded-lg bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground dark:bg-white/5">
+                <Sparkles className="mt-0.5 size-3.5 shrink-0 text-indigo-400" />
+                New accounts get matched by language and proficiency level after a
+                quick setup.
+              </p>
+              <p className="text-center text-xs text-muted-foreground">
+                By creating an account, you agree to our{" "}
+                <Link
+                  href="/privacy"
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Privacy Policy
+                </Link>
+                . Your data is handled in line with GDPR and Italian privacy law.
+              </p>
+            </>
           )}
         </div>
       </div>

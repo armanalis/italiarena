@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/utils/supabase/server";
+import { getAuthUserId } from "@/lib/auth";
+import { resolveQuestionsByIds } from "@/lib/resolve-match-questions";
 import { isAnswerCorrect } from "@/lib/scoring";
+import { createClient } from "@/utils/supabase/server";
 import type {
   CorrectAnswer,
   QuestionActive,
@@ -41,56 +43,42 @@ type MatchMistakeInput = {
 
 const PRACTICE_MASTER_STREAK = 3;
 
-const QUESTION_SELECT =
-  "id, language, level, category, question_text, option_a, option_b, option_c, option_d, correct_answer, random_float";
-
 async function resolveQuestionById(
   supabase: Awaited<ReturnType<typeof createClient>>,
   questionId: string
 ): Promise<QuestionActive | null> {
-  const { data: active } = await supabase
-    .from("questions_active")
-    .select(QUESTION_SELECT)
-    .eq("id", questionId)
-    .maybeSingle();
-
-  if (active) {
-    return active as QuestionActive;
-  }
-
-  const { data: flagged } = await supabase
-    .from("questions_flagged")
-    .select(QUESTION_SELECT)
-    .eq("id", questionId)
-    .maybeSingle();
-
-  return flagged ? (flagged as QuestionActive) : null;
+  const questions = await resolveQuestionsByIds(supabase, [questionId]);
+  return questions.get(questionId) ?? null;
 }
 
 export async function getUserMistakes(): Promise<UserMistakeWithQuestion[]> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getAuthUserId();
 
-  if (!user) {
+  if (!userId) {
     return [];
   }
+
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("user_mistakes")
     .select("id, question_id, selected_answer, practice_streak, last_mistaken_at")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("last_mistaken_at", { ascending: false });
 
-  if (error) {
+  if (error || !data?.length) {
     return [];
   }
 
+  const questionsById = await resolveQuestionsByIds(
+    supabase,
+    data.map((row) => row.question_id)
+  );
+
   const results: UserMistakeWithQuestion[] = [];
 
-  for (const row of data ?? []) {
-    const question = await resolveQuestionById(supabase, row.question_id);
+  for (const row of data) {
+    const question = questionsById.get(row.question_id);
     if (!question) {
       continue;
     }

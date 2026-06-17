@@ -1,15 +1,11 @@
-/** Leaderboard — PvP rankings by language and proficiency bracket. */
-import { getLeaderboard } from "@/app/dashboard/leaderboard/actions";
-import { LeaderboardDashboard } from "@/components/leaderboard/leaderboard-dashboard";
-import { requireOnboardingComplete } from "@/lib/auth";
+import { Suspense } from "react";
+import { DashboardSectionSkeleton } from "@/components/dashboard/dashboard-section-skeleton";
+import { LeaderboardContent } from "@/app/dashboard/leaderboard/leaderboard-content";
 
-export default async function LeaderboardPage() {
-  const profile = await requireOnboardingComplete();
-
-  const data = await getLeaderboard(
-    profile.target_language!,
-    profile.proficiency_level!
+export default function LeaderboardPage() {
+  return (
+    <Suspense fallback={<DashboardSectionSkeleton cards={2} />}>
+      <LeaderboardContent />
+    </Suspense>
   );
-
-  return <LeaderboardDashboard data={data} />;
 }

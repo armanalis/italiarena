@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { recordMatchMistakes } from "@/app/dashboard/statistics/actions";
+import { getCurrentUserProfile, getAuthUserId } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 import {
   PROFICIENCY_LEVELS,
@@ -33,42 +34,22 @@ function isProficiencyLevel(value: string): value is ProficiencyLevel {
 }
 
 export async function getSettingsData() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const profile = await getCurrentUserProfile();
 
-  if (!user) {
+  if (!profile) {
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
-    .from("users")
-    .select(
-      "id, email, display_name, target_language, proficiency_level, role, sound_enabled, haptics_enabled"
-    )
-    .eq("id", user.id)
-    .single();
-
+  const supabase = await createClient();
   const { data: recentMatches } = await supabase
     .from("match_history")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("user_id", profile.id)
     .order("played_at", { ascending: false })
     .limit(10);
 
   return {
-    profile: {
-      id: user.id,
-      email: profile?.email ?? user.email ?? "",
-      display_name: profile?.display_name ?? null,
-      target_language: (profile?.target_language as TargetLanguage | null) ?? null,
-      proficiency_level:
-        (profile?.proficiency_level as ProficiencyLevel | null) ?? null,
-      role: (profile?.role as "user" | "admin" | undefined) ?? "user",
-      sound_enabled: profile?.sound_enabled ?? true,
-      haptics_enabled: profile?.haptics_enabled ?? true,
-    },
+    profile,
     recentMatches: (recentMatches ?? []) as MatchHistoryEntry[],
   };
 }
@@ -97,6 +78,19 @@ export async function updateLearningProfile(formData: FormData): Promise<Setting
 
   if (!user) {
     return { success: false, error: "Not authenticated." };
+  }
+
+  const { data: existingProfile } = await supabase
+    .from("users")
+    .select("is_guest")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (existingProfile?.is_guest) {
+    return {
+      success: false,
+      error: "Guest accounts cannot change their profile. Sign up for a full account.",
+    };
   }
 
   if (await isUsernameTaken(displayName, user.id)) {
@@ -176,6 +170,19 @@ export async function changePassword(formData: FormData): Promise<SettingsAction
     return { success: false, error: "Not authenticated." };
   }
 
+  const { data: existingProfile } = await supabase
+    .from("users")
+    .select("is_guest")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (existingProfile?.is_guest) {
+    return {
+      success: false,
+      error: "Guest accounts cannot change their password. Sign up for a full account.",
+    };
+  }
+
   const { error: verifyError } = await supabase.auth.signInWithPassword({
     email: user.email,
     password: currentPassword,
@@ -221,19 +228,17 @@ export async function deleteAccount(formData: FormData): Promise<SettingsActionR
 }
 
 export async function getPlayerStatistics(): Promise<PlayerStats | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getAuthUserId();
 
-  if (!user) {
+  if (!userId) {
     return null;
   }
 
+  const supabase = await createClient();
   const { data } = await supabase
     .from("player_stats")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .maybeSingle();
 
   return data as PlayerStats | null;

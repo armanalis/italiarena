@@ -1,5 +1,6 @@
 "use server";
 
+import { getAuthUserId } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 
 export type LeaderboardEntry = {
@@ -24,9 +25,7 @@ export async function getLeaderboard(
   level: string
 ): Promise<LeaderboardData> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getAuthUserId();
 
   const { data, error } = await supabase.rpc("get_leaderboard", {
     p_language: language,
@@ -40,7 +39,7 @@ export async function getLeaderboard(
       language,
       level,
       entries: [],
-      currentUserId: user?.id ?? null,
+      currentUserId: userId,
     };
   }
 
@@ -67,6 +66,6 @@ export async function getLeaderboard(
     language,
     level,
     entries,
-    currentUserId: user?.id ?? null,
+    currentUserId: userId,
   };
 }

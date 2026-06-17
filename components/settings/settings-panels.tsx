@@ -29,12 +29,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PROFICIENCY_LEVELS, TARGET_LANGUAGE } from "@/lib/constants";
+import { SUPPORT_EMAIL } from "@/lib/legal";
 import { getSoundVolume, writeGameplayPreferences } from "@/lib/preferences";
 import type { MatchHistoryEntry, UserProfile } from "@/lib/types";
 import { SoundVolumeControl } from "@/components/sound-volume-control";
+import { AddToHomeScreenGuide } from "@/components/settings/add-to-home-screen-guide";
+import { PrivacyDataCard } from "@/components/settings/privacy-data-card";
 import { cn } from "@/lib/utils";
-
-const FEEDBACK_EMAIL = "armanalis1905@gmail.com";
 
 type SettingsPanelsProps = {
   profile: UserProfile;
@@ -90,6 +91,7 @@ function resultLabel(result: MatchHistoryEntry["result"]) {
 }
 
 export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) {
+  const guest = profile.is_guest;
   const [proficiencyLevel, setProficiencyLevel] = useState(
     profile.proficiency_level ?? ""
   );
@@ -170,79 +172,102 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
 
   return (
     <div className="grid w-full max-w-3xl gap-6">
-      <Card className="border-border/60">
-        <CardHeader>
-          <CardTitle>Learning profile</CardTitle>
-          <CardDescription>
-            Update your Italian level and public display name.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="settings-email">Email</Label>
-            <Input id="settings-email" value={profile.email} disabled />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="settings-display-name">Username</Label>
-            <Input
-              id="settings-display-name"
-              value={displayName}
-              maxLength={24}
-              placeholder="Used to sign in and shown to opponents"
-              disabled={isPending}
-              onChange={(event) => setDisplayName(event.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
+      {guest ? (
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardHeader>
+            <CardTitle>Guest account</CardTitle>
+            <CardDescription>
+              You&apos;re playing as{" "}
+              <span className="font-medium text-foreground">
+                {profile.display_name ?? "Guest"}
+              </span>{" "}
+              at level {profile.proficiency_level}. Guest names are assigned
+              automatically and guest players are excluded from the leaderboard.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="min-h-11">
+              <a href="/login">Create a full account</a>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-border/60">
+          <CardHeader>
+            <CardTitle>Learning profile</CardTitle>
+            <CardDescription>
+              Update your Italian level and public display name.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="settings-language">Language</Label>
+              <Label htmlFor="settings-email">Email</Label>
+              <Input id="settings-email" value={profile.email} disabled />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="settings-display-name">Username</Label>
               <Input
-                id="settings-language"
-                value={TARGET_LANGUAGE}
-                disabled
+                id="settings-display-name"
+                value={displayName}
+                maxLength={24}
+                placeholder="Used to sign in and shown to opponents"
+                disabled={isPending}
+                onChange={(event) => setDisplayName(event.target.value)}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Proficiency level</Label>
-              <Select
-                value={proficiencyLevel}
-                disabled={isPending}
-                onValueChange={setProficiencyLevel}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Level" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PROFICIENCY_LEVELS.map((level) => (
-                    <SelectItem key={level} value={level}>
-                      {level}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="settings-language">Language</Label>
+                <Input
+                  id="settings-language"
+                  value={TARGET_LANGUAGE}
+                  disabled
+                />
+              </div>
 
-          <Button
-            type="button"
-            className="min-h-11"
-            disabled={isPending || !proficiencyLevel || !displayName.trim()}
-            onClick={saveProfile}
-          >
-            {isPending ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save profile"
-            )}
-          </Button>
-        </CardContent>
-      </Card>
+              <div className="space-y-2">
+                <Label>Proficiency level</Label>
+                <Select
+                  value={proficiencyLevel}
+                  disabled={isPending}
+                  onValueChange={setProficiencyLevel}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROFICIENCY_LEVELS.map((level) => (
+                      <SelectItem key={level} value={level}>
+                        {level}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              className="min-h-11"
+              disabled={isPending || !proficiencyLevel || !displayName.trim()}
+              onClick={saveProfile}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save profile"
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <AddToHomeScreenGuide />
 
       <Card className="border-border/60">
         <CardHeader>
@@ -325,6 +350,7 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
         </CardContent>
       </Card>
 
+      {!guest && (
       <Card className="border-border/60">
         <CardHeader>
           <CardTitle>Change password</CardTitle>
@@ -379,23 +405,26 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
           </form>
         </CardContent>
       </Card>
+      )}
 
       <Card className="border-border/60">
         <CardHeader>
           <CardTitle>Account</CardTitle>
-          <CardDescription>Sign out or send feedback about the app.</CardDescription>
+          <CardDescription>
+            {guest ? "End your guest session or send feedback." : "Sign out or send feedback about the app."}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form action={signOut}>
             <Button type="submit" variant="outline" className="min-h-11 w-full gap-2 sm:w-auto">
               <LogOut className="size-4" />
-              Sign out
+              {guest ? "End guest session" : "Sign out"}
             </Button>
           </form>
 
           <Button asChild variant="secondary" className="min-h-11 w-full gap-2 sm:w-auto">
             <a
-              href={`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent("Language Quiz feedback")}`}
+              href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Language Quiz feedback")}`}
             >
               <Mail className="size-4" />
               Send feedback
@@ -404,7 +433,9 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
         </CardContent>
       </Card>
 
-      <Card className="border-destructive/30">
+      <PrivacyDataCard />
+
+      <Card id="delete-account" className="border-destructive/30">
         <CardHeader>
           <CardTitle className="text-destructive">Delete account</CardTitle>
           <CardDescription>

@@ -1,17 +1,11 @@
-/** Recent matches — last 10 games with full question breakdowns. */
-import { getRecentMatchesWithQuestions } from "@/app/dashboard/recent-matches/actions";
-import { RecentMatchesDashboard } from "@/components/recent-matches/recent-matches-dashboard";
-import { requireOnboardingComplete } from "@/lib/auth";
+import { Suspense } from "react";
+import { DashboardSectionSkeleton } from "@/components/dashboard/dashboard-section-skeleton";
+import { RecentMatchesContent } from "@/app/dashboard/recent-matches/recent-matches-content";
 
-export default async function RecentMatchesPage() {
-  await requireOnboardingComplete();
-  const { matches, reportedQuestionIds } =
-    await getRecentMatchesWithQuestions();
-
+export default function RecentMatchesPage() {
   return (
-    <RecentMatchesDashboard
-      matches={matches}
-      reportedQuestionIds={reportedQuestionIds}
-    />
+    <Suspense fallback={<DashboardSectionSkeleton cards={2} />}>
+      <RecentMatchesContent />
+    </Suspense>
   );
 }

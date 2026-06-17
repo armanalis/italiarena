@@ -10,8 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { BotMatchCard } from "@/components/dashboard/bot-match-card";
-import { requireOnboardingComplete } from "@/lib/auth";
-import { PenLine, ShieldAlert, Users } from "lucide-react";
+import { getCurrentUserProfile, isGuestUser } from "@/lib/auth";
+import { PenLine, ShieldAlert, UserRound, Users } from "lucide-react";
 
 type DashboardPageProps = {
   searchParams: Promise<{
@@ -20,9 +20,14 @@ type DashboardPageProps = {
 };
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
-  const profile = await requireOnboardingComplete();
+  const profile = await getCurrentUserProfile();
   const params = await searchParams;
   const accessDenied = params.error === "admin_access_denied";
+
+  if (!profile?.target_language || !profile.proficiency_level) {
+    return null;
+  }
+  const guest = isGuestUser(profile);
 
   return (
     <main className="flex w-full min-w-0 flex-1 flex-col">
@@ -31,7 +36,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <div className="min-w-0">
             <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Play</h1>
             <p className="text-sm text-muted-foreground">
-              Ready for {profile.target_language}?
+              {guest
+                ? `Playing as ${profile.display_name ?? "Guest"}`
+                : `Ready for ${profile.target_language}?`}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -54,6 +61,23 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         {accessDenied && (
           <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             Admin access denied. You do not have permission to view that page.
+          </div>
+        )}
+
+        {guest && (
+          <div className="mx-auto w-full max-w-5xl rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-muted-foreground">
+            <p className="flex items-start gap-2">
+              <UserRound className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <span>
+                You&apos;re in <span className="font-medium text-foreground">guest mode</span>.
+                Your name was assigned automatically and you won&apos;t appear on the
+                proficiency leaderboard.{" "}
+                <a href="/login" className="font-medium text-primary underline-offset-4 hover:underline">
+                  Sign up
+                </a>{" "}
+                for a full account to choose a username and compete on the board.
+              </span>
+            </p>
           </div>
         )}
 
@@ -80,25 +104,27 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <BotMatchCard />
         </section>
 
-        <section className="mx-auto w-full max-w-5xl">
-          <Card className="border-border/60">
-            <CardHeader>
-              <div className="mb-2 flex size-11 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400">
-                <PenLine className="size-5" />
-              </div>
-              <CardTitle>Contribute a question</CardTitle>
-              <CardDescription>
-                Add Italian trivia to the pool. Submissions are checked for correct
-                CEFR level and category before they go live in matches.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild variant="outline" className="min-h-11 w-full sm:w-auto">
-                <Link href="/dashboard/contribute">Submit a question</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </section>
+        {!guest && (
+          <section className="mx-auto w-full max-w-5xl">
+            <Card className="border-border/60">
+              <CardHeader>
+                <div className="mb-2 flex size-11 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400">
+                  <PenLine className="size-5" />
+                </div>
+                <CardTitle>Contribute a question</CardTitle>
+                <CardDescription>
+                  Add Italian trivia to the pool. Submissions are checked for correct
+                  CEFR level and category before they go live in matches.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button asChild variant="outline" className="min-h-11 w-full sm:w-auto">
+                  <Link href="/dashboard/contribute">Submit a question</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </section>
+        )}
       </div>
     </main>
   );

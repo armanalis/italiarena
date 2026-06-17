@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 
 type LeaderboardDashboardProps = {
   data: LeaderboardData;
+  isGuest?: boolean;
 };
 
 function rankBadge(rank: number) {
@@ -37,7 +38,7 @@ function rankBadge(rank: number) {
   return String(rank);
 }
 
-export function LeaderboardDashboard({ data }: LeaderboardDashboardProps) {
+export function LeaderboardDashboard({ data, isGuest = false }: LeaderboardDashboardProps) {
   const { entries, currentUserId, language, level } = data;
   const currentUserEntry = entries.find((entry) => entry.userId === currentUserId);
 
@@ -56,6 +57,18 @@ export function LeaderboardDashboard({ data }: LeaderboardDashboardProps) {
           Only real player vs player matches count — bot games are excluded.
         </p>
       </div>
+
+      {isGuest && (
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Guest accounts are not ranked</CardTitle>
+            <CardDescription>
+              You can view this leaderboard, but guest players do not appear here.
+              Sign up for a full account to compete in your proficiency bracket.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
 
       {currentUserEntry ? (
         <Card className="border-indigo-500/30 bg-indigo-500/5">

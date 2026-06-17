@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Languages, Trophy, Users, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LegalFooter } from "@/components/legal/privacy-policy";
 import { getPostAuthPath } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 
@@ -46,7 +47,19 @@ export default async function HomePage() {
           <Button asChild variant="outline" size="lg" className="h-12 min-w-40 px-8 text-base">
             <Link href="/login">Sign Up</Link>
           </Button>
+          <Button
+            asChild
+            variant="secondary"
+            size="lg"
+            className="h-12 min-w-40 px-8 text-base"
+          >
+            <Link href="/guest">Play as a Guest</Link>
+          </Button>
         </div>
+        <p className="mt-3 max-w-md text-xs text-muted-foreground">
+          Guest mode lets you play without enrolling. You&apos;ll get an auto-generated
+          name and won&apos;t appear on the leaderboard.
+        </p>
 
         <div className="mt-16 grid w-full max-w-3xl gap-4 sm:grid-cols-3">
           <div className="rounded-xl border border-border/60 bg-card/50 p-5 text-left backdrop-blur-sm">
@@ -74,6 +87,7 @@ export default async function HomePage() {
             </p>
           </div>
         </div>
+        <LegalFooter className="mt-10" />
       </div>
     </main>
   );

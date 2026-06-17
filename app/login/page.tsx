@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LoginForm } from "@/components/auth/login-form";
+import { LegalFooter } from "@/components/legal/privacy-policy";
 import { getPostAuthPath } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 
@@ -54,6 +55,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         )}
           <LoginForm />
         </div>
+        <LegalFooter className="mt-8" />
       </div>
     </main>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Loader2, Trophy } from "lucide-react";
+import { CheckCircle2, Loader2, Trophy, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useGameLoop } from "@/hooks/useGameLoop";
@@ -130,6 +130,14 @@ export function GameLoop({
   const opponentAnswer =
     localPlayerRoleStore === "a" ? playerBAnswer : playerAAnswer;
   const isLocked = Boolean(localAnswer);
+  const localWasCorrect =
+    localAnswer?.answer && currentQuestion
+      ? isAnswerCorrect(localAnswer.answer, currentQuestion.correct_answer)
+      : null;
+  const opponentWasCorrect =
+    opponentAnswer?.answer && currentQuestion
+      ? isAnswerCorrect(opponentAnswer.answer, currentQuestion.correct_answer)
+      : null;
   const showWaiting =
     roundPhase === "playing" && isLocked && !opponentAnswer;
   // Answers persist through the database poll, so answering is never gated on
@@ -293,7 +301,7 @@ export function GameLoop({
                       className={cn(
                         "touch-target min-h-12 rounded-xl border px-3 py-3 text-left text-sm transition-all active:scale-[0.99] sm:px-4 sm:py-4 sm:text-base",
                         "border-border/60 bg-card/60 hover:border-indigo-500/40 hover:bg-indigo-500/5",
-                        "disabled:cursor-not-allowed disabled:opacity-60",
+                        "disabled:cursor-not-allowed",
                         isSelected &&
                           "border-indigo-500 bg-indigo-500/15 shadow-lg shadow-indigo-500/10"
                       )}
@@ -329,6 +337,86 @@ export function GameLoop({
               />
             </div>
 
+            <div
+              className={cn(
+                "flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold",
+                localWasCorrect
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                  : localAnswer?.answer
+                    ? "border-destructive/40 bg-destructive/10 text-destructive"
+                    : "border-border/60 bg-muted/30 text-muted-foreground"
+              )}
+            >
+              {localWasCorrect ? (
+                <>
+                  <CheckCircle2 className="size-5 shrink-0" />
+                  Correct!
+                </>
+              ) : localAnswer?.answer ? (
+                <>
+                  <XCircle className="size-5 shrink-0" />
+                  Wrong answer
+                </>
+              ) : (
+                <>Timed out</>
+              )}
+            </div>
+
+            <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
+              {OPTIONS.map(({ key, label }) => {
+                const text = currentQuestion[label as keyof typeof currentQuestion] as string;
+                const isLocalPick = localAnswer?.answer === key;
+                const isCorrectOption = key === currentQuestion.correct_answer;
+                const showWrong = isLocalPick && localWasCorrect === false;
+                const showCorrectPick = isLocalPick && localWasCorrect === true;
+                const showCorrectReveal =
+                  isCorrectOption && localWasCorrect === false;
+
+                return (
+                  <div
+                    key={key}
+                    className={cn(
+                      "rounded-xl border px-3 py-3 text-left text-sm sm:px-4 sm:py-4 sm:text-base",
+                      showWrong &&
+                        "border-destructive bg-destructive/15",
+                      showCorrectPick &&
+                        "border-emerald-500 bg-emerald-500/15",
+                      showCorrectReveal &&
+                        "border-emerald-500/50 bg-emerald-500/10",
+                      !showWrong &&
+                        !showCorrectPick &&
+                        !showCorrectReveal &&
+                        "border-border/60 bg-card/60"
+                    )}
+                  >
+                    <span className="flex items-start gap-2">
+                      <span
+                        className={cn(
+                          "font-semibold",
+                          showWrong && "text-destructive",
+                          (showCorrectPick || showCorrectReveal) &&
+                            "text-emerald-400",
+                          !showWrong &&
+                            !showCorrectPick &&
+                            !showCorrectReveal &&
+                            "text-muted-foreground"
+                        )}
+                      >
+                        {key}.
+                      </span>
+                      <span className="flex-1">{text}</span>
+                      {showWrong && (
+                        <XCircle className="size-5 shrink-0 text-destructive" />
+                      )}
+                      {showCorrectPick && (
+                        <CheckCircle2 className="size-5 shrink-0 text-emerald-400" />
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
             <div className="rounded-2xl border border-border/60 bg-card/80 p-5 text-center sm:p-8">
               <p className="text-xs uppercase tracking-widest text-muted-foreground sm:text-sm">
                 Correct answer
@@ -350,36 +438,82 @@ export function GameLoop({
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-center text-sm sm:gap-3">
-              <div className="rounded-xl border border-border/60 bg-card/50 p-3 sm:p-4">
+              <div
+                className={cn(
+                  "rounded-xl border p-3 sm:p-4",
+                  localWasCorrect
+                    ? "border-emerald-500/40 bg-emerald-500/10"
+                    : localAnswer?.answer
+                      ? "border-destructive/40 bg-destructive/10"
+                      : "border-border/60 bg-card/50"
+                )}
+              >
                 <p className="truncate text-muted-foreground">{localDisplayName}</p>
                 <p className="mt-1 text-xl font-bold sm:text-2xl">
                   +{localLastPoints}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {localAnswer?.answer
-                    ? isAnswerCorrect(
-                        localAnswer.answer,
-                        currentQuestion.correct_answer
-                      )
-                      ? "Correct"
-                      : "Wrong"
-                    : "Timed out"}
+                <p
+                  className={cn(
+                    "mt-1 flex items-center justify-center gap-1 text-xs font-medium",
+                    localWasCorrect
+                      ? "text-emerald-400"
+                      : localAnswer?.answer
+                        ? "text-destructive"
+                        : "text-muted-foreground"
+                  )}
+                >
+                  {localWasCorrect ? (
+                    <>
+                      <CheckCircle2 className="size-3.5" />
+                      Correct
+                    </>
+                  ) : localAnswer?.answer ? (
+                    <>
+                      <XCircle className="size-3.5" />
+                      Wrong
+                    </>
+                  ) : (
+                    "Timed out"
+                  )}
                 </p>
               </div>
-              <div className="rounded-xl border border-border/60 bg-card/50 p-3 sm:p-4">
+              <div
+                className={cn(
+                  "rounded-xl border p-3 sm:p-4",
+                  opponentWasCorrect
+                    ? "border-emerald-500/40 bg-emerald-500/10"
+                    : opponentAnswer?.answer
+                      ? "border-destructive/40 bg-destructive/10"
+                      : "border-border/60 bg-card/50"
+                )}
+              >
                 <p className="truncate text-muted-foreground">{opponentDisplayName}</p>
                 <p className="mt-1 text-xl font-bold sm:text-2xl">
                   +{opponentLastPoints}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {opponentAnswer?.answer
-                    ? isAnswerCorrect(
-                        opponentAnswer.answer,
-                        currentQuestion.correct_answer
-                      )
-                      ? "Correct"
-                      : "Wrong"
-                    : "Timed out"}
+                <p
+                  className={cn(
+                    "mt-1 flex items-center justify-center gap-1 text-xs font-medium",
+                    opponentWasCorrect
+                      ? "text-emerald-400"
+                      : opponentAnswer?.answer
+                        ? "text-destructive"
+                        : "text-muted-foreground"
+                  )}
+                >
+                  {opponentWasCorrect ? (
+                    <>
+                      <CheckCircle2 className="size-3.5" />
+                      Correct
+                    </>
+                  ) : opponentAnswer?.answer ? (
+                    <>
+                      <XCircle className="size-3.5" />
+                      Wrong
+                    </>
+                  ) : (
+                    "Timed out"
+                  )}
                 </p>
               </div>
             </div>

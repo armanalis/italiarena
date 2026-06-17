@@ -40,7 +40,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (pathname === "/login" && user) {
+  if ((pathname === "/login" || pathname === "/guest") && user) {
     const destination = await getPostAuthPathFromRequest(supabase, user.id);
     const nextUrl = request.nextUrl.clone();
     nextUrl.pathname = destination;

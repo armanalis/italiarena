@@ -3,11 +3,16 @@ import Link from "next/link";
 import { PenLine } from "lucide-react";
 import { QuestionSubmissionForm } from "@/components/contribute/question-submission-form";
 import { Button } from "@/components/ui/button";
-import { requireOnboardingComplete } from "@/lib/auth";
+import { isGuestUser, requireOnboardingComplete } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
 
 export default async function ContributePage() {
   const profile = await requireOnboardingComplete();
+
+  if (isGuestUser(profile)) {
+    redirect("/dashboard");
+  }
   const supabase = await createClient();
 
   const { count: pendingCount } = await supabase
