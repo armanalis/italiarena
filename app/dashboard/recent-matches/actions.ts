@@ -1,5 +1,6 @@
 "use server";
 
+import { getAuthUserId } from "@/lib/auth";
 import { extractQuestionIds } from "@/lib/session-playlist";
 import { REGULAR_MATCH_QUESTIONS } from "@/lib/match";
 import {
@@ -54,19 +55,18 @@ export type RecentMatchesData = {
 };
 
 export async function getRecentMatchesWithQuestions(): Promise<RecentMatchesData> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getAuthUserId();
 
-  if (!user) {
+  if (!userId) {
     return { matches: [], reportedQuestionIds: [] };
   }
+
+  const supabase = await createClient();
 
   const { data: reportRows } = await supabase
     .from("reports")
     .select("question_id")
-    .eq("reporter_id", user.id);
+    .eq("reporter_id", userId);
 
   const reportedQuestionIds = [
     ...new Set(
@@ -77,7 +77,7 @@ export async function getRecentMatchesWithQuestions(): Promise<RecentMatchesData
   const { data: historyRows, error: historyError } = await supabase
     .from("match_history")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("played_at", { ascending: false })
     .limit(10);
 
@@ -122,7 +122,7 @@ export async function getRecentMatchesWithQuestions(): Promise<RecentMatchesData
     const { data: mistakes } = await supabase
       .from("user_mistakes")
       .select("session_id, question_id, selected_answer")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .in("session_id", sessionIds);
 
     for (const mistake of mistakes ?? []) {

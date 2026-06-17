@@ -2,17 +2,18 @@
  * Auth helpers used across server components.
  * Loads the current user profile and handles redirects for protected routes.
  */
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import type { UserProfile, UserRole } from "@/lib/types";
 
-async function fetchUserRow(userId: string) {
+const fetchUserRow = cache(async (userId: string) => {
   const supabase = await createClient();
 
   const withRole = await supabase
     .from("users")
     .select(
-      "id, email, display_name, target_language, proficiency_level, role, sound_enabled, haptics_enabled"
+      "id, email, display_name, target_language, proficiency_level, role, is_guest, sound_enabled, haptics_enabled"
     )
     .eq("id", userId)
     .maybeSingle();
@@ -31,6 +32,7 @@ async function fetchUserRow(userId: string) {
     return {
       ...withoutExtras.data,
       display_name: null,
+      is_guest: false,
       sound_enabled: true,
       haptics_enabled: true,
     };
@@ -50,16 +52,32 @@ async function fetchUserRow(userId: string) {
     ...withoutRole.data,
     display_name: null,
     role: "user" as UserRole,
+    is_guest: false,
     sound_enabled: true,
     haptics_enabled: true,
   };
+});
+
+export function isGuestUser(profile: UserProfile) {
+  return profile.is_guest;
 }
 
-export async function getCurrentUserProfile(): Promise<UserProfile | null> {
+const getAuthUser = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  return user;
+});
+
+/** Cached per request — shared by header, layout, and pages. */
+export const getAuthUserId = cache(async (): Promise<string | null> => {
+  const user = await getAuthUser();
+  return user?.id ?? null;
+});
+
+export const getCurrentUserProfile = cache(async (): Promise<UserProfile | null> => {
+  const user = await getAuthUser();
 
   if (!user) {
     return null;
@@ -72,6 +90,7 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
       ...(profile as UserProfile),
       display_name: profile.display_name ?? null,
       role: (profile.role as UserRole | undefined) ?? "user",
+      is_guest: profile.is_guest ?? false,
       sound_enabled: profile.sound_enabled ?? true,
       haptics_enabled: profile.haptics_enabled ?? true,
     };
@@ -84,17 +103,18 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
     target_language: null,
     proficiency_level: null,
     role: "user",
+    is_guest: false,
     sound_enabled: true,
     haptics_enabled: true,
   };
-}
+});
 
 export function isOnboardingComplete(profile: UserProfile) {
   return Boolean(profile.target_language && profile.proficiency_level);
 }
 
 /** Redirects to /login if the visitor is not signed in. */
-export async function requireAuth() {
+export const requireAuth = cache(async () => {
   const profile = await getCurrentUserProfile();
 
   if (!profile) {
@@ -102,7 +122,7 @@ export async function requireAuth() {
   }
 
   return profile;
-}
+});
 
 /** Where to send someone right after they authenticate. */
 export async function getPostAuthPath(): Promise<"/dashboard" | "/onboarding"> {
@@ -116,7 +136,7 @@ export async function getPostAuthPath(): Promise<"/dashboard" | "/onboarding"> {
 }
 
 /** Redirects to /onboarding if the user has not picked a language and level yet. */
-export async function requireOnboardingComplete() {
+export const requireOnboardingComplete = cache(async () => {
   const profile = await requireAuth();
 
   if (!isOnboardingComplete(profile)) {
@@ -124,7 +144,7 @@ export async function requireOnboardingComplete() {
   }
 
   return profile;
-}
+});
 
 /** Redirects non-admin users to the dashboard with an access-denied flag. */
 export async function requireAdmin() {

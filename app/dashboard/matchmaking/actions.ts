@@ -54,7 +54,7 @@ async function getAuthenticatedProfile(): Promise<
 
   const { data: profile, error } = await supabase
     .from("users")
-    .select("id, email, display_name, target_language, proficiency_level, role")
+    .select("id, email, display_name, target_language, proficiency_level, role, is_guest")
     .eq("id", user.id)
     .single();
 
@@ -62,7 +62,16 @@ async function getAuthenticatedProfile(): Promise<
     return { error: "Complete onboarding before matchmaking." };
   }
 
-  return { profile: { ...profile, role: profile.role ?? "user", display_name: profile.display_name ?? null, sound_enabled: true, haptics_enabled: true } as UserProfile };
+  return {
+    profile: {
+      ...profile,
+      role: profile.role ?? "user",
+      display_name: profile.display_name ?? null,
+      is_guest: profile.is_guest ?? false,
+      sound_enabled: true,
+      haptics_enabled: true,
+    } as UserProfile,
+  };
 }
 
 export async function getPlayerDisplayName(userId: string): Promise<string> {

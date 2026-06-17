@@ -10,6 +10,7 @@ export type UserProfile = {
   target_language: TargetLanguage | null;
   proficiency_level: ProficiencyLevel | null;
   role: UserRole;
+  is_guest: boolean;
   sound_enabled: boolean;
   haptics_enabled: boolean;
 };

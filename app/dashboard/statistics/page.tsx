@@ -1,16 +1,11 @@
-/** Personal match statistics — wins, losses, accuracy, and mistake practice. */
-import { getUserMistakes } from "@/app/dashboard/statistics/actions";
-import { getPlayerStatistics } from "@/app/dashboard/settings/actions";
-import { StatisticsDashboard } from "@/components/statistics/statistics-dashboard";
-import { requireOnboardingComplete } from "@/lib/auth";
+import { Suspense } from "react";
+import { DashboardSectionSkeleton } from "@/components/dashboard/dashboard-section-skeleton";
+import { StatisticsContent } from "@/app/dashboard/statistics/statistics-content";
 
-export default async function StatisticsPage() {
-  await requireOnboardingComplete();
-
-  const [stats, mistakes] = await Promise.all([
-    getPlayerStatistics(),
-    getUserMistakes(),
-  ]);
-
-  return <StatisticsDashboard stats={stats} mistakes={mistakes} />;
+export default function StatisticsPage() {
+  return (
+    <Suspense fallback={<DashboardSectionSkeleton cards={3} />}>
+      <StatisticsContent />
+    </Suspense>
+  );
 }
