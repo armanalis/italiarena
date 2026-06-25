@@ -64,6 +64,10 @@ export function useGameLoop({
   const timeRemaining = useGameStore((state) => state.timeRemaining);
   const roundStartedAt = useGameStore((state) => state.roundStartedAt);
   const isReportDialogOpen = useGameStore((state) => state.isReportDialogOpen);
+  const timerPauseOffsetMs = useGameStore((state) => state.timerPauseOffsetMs);
+  const timerPauseStartedAt = useGameStore(
+    (state) => state.timerPauseStartedAt
+  );
 
   const initGameplay = useGameStore((state) => state.initGameplay);
   const beginRound = useGameStore((state) => state.beginRound);
@@ -290,7 +294,8 @@ export function useGameLoop({
     }
 
     const botDifficulty = state.botDifficulty ?? "medium";
-    const delay = getBotResponseDelayMs(startedAt, botDifficulty);
+    const pauseMs = getRoundPauseMs(state);
+    const delay = getBotResponseDelayMs(startedAt, botDifficulty, pauseMs);
     const questionIndex = state.currentQuestionIndex;
 
     botTimerRef.current = window.setTimeout(() => {
@@ -734,6 +739,25 @@ export function useGameLoop({
       finalizeRound();
     }
   }, [finalizeRound, playerAAnswer, playerBAnswer, roundPhase]);
+
+  // Reschedule the bot answer when the report dialog pauses the round timer.
+  useEffect(() => {
+    if (!isBotMatch || roundPhase !== "playing" || !roundStartedAt) {
+      return;
+    }
+
+    clearBotTimer();
+    scheduleBotAnswer();
+  }, [
+    clearBotTimer,
+    isBotMatch,
+    isReportDialogOpen,
+    roundPhase,
+    roundStartedAt,
+    scheduleBotAnswer,
+    timerPauseOffsetMs,
+    timerPauseStartedAt,
+  ]);
 
   // Host safety net: if the result screen finished but the round publish did
   // not land (network blip, RLS, etc.), retry every 2s until both clients move.
