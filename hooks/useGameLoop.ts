@@ -22,6 +22,8 @@ const TOPIC_REVEAL_MS = 750;
 const ROUND_RESULT_MS = 2_500;
 const ROUND_RESULT_TICK_MS = 100;
 const ROUND_DURATION_SEC = 25;
+/** Poll while the report dialog pauses the round — mirrors the human round timer. */
+const BOT_TIMER_POLL_MS = 250;
 
 type AnswerLockedPayload = {
   playerRole: "a" | "b";
@@ -293,10 +295,23 @@ export function useGameLoop({
       return;
     }
 
+    const questionIndex = state.currentQuestionIndex;
+    const isPaused =
+      state.isReportDialogOpen || state.timerPauseStartedAt !== null;
+
+    // While the round is frozen, poll instead of using a one-shot timeout —
+    // pauseMs keeps growing and a fixed delay would let the bot answer early.
+    if (isPaused) {
+      botTimerRef.current = window.setTimeout(() => {
+        botTimerRef.current = null;
+        scheduleBotAnswer();
+      }, BOT_TIMER_POLL_MS);
+      return;
+    }
+
     const botDifficulty = state.botDifficulty ?? "medium";
     const pauseMs = getRoundPauseMs(state);
     const delay = getBotResponseDelayMs(startedAt, botDifficulty, pauseMs);
-    const questionIndex = state.currentQuestionIndex;
 
     botTimerRef.current = window.setTimeout(() => {
       botTimerRef.current = null;
@@ -314,6 +329,14 @@ export function useGameLoop({
         latest.roundPhase === "round_result" ||
         latest.roundPhase === "match_finished"
       ) {
+        return;
+      }
+
+      if (
+        latest.isReportDialogOpen ||
+        latest.timerPauseStartedAt !== null
+      ) {
+        scheduleBotAnswer();
         return;
       }
 
