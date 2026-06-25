@@ -155,7 +155,7 @@ export function MatchmakingLobby({
     setShowNoMatchDialog(false);
     clearTimers();
 
-    const result = await startBotMatch("medium");
+    const result = await startBotMatch(botDifficulty);
 
     if (!result.success) {
       setError(result.error);
@@ -176,11 +176,13 @@ export function MatchmakingLobby({
       gameSessionId: result.data.sessionId,
       opponent: result.data.opponent,
       playlist: result.data.playlist,
-      botDifficulty: "medium",
+      botDifficulty,
     });
-    setStatusMessage(`${BOT_DIFFICULTY_LABELS.medium} ready — starting match...`);
+    setStatusMessage(
+      `${BOT_DIFFICULTY_LABELS[botDifficulty]} ready — starting match...`
+    );
     goToMatch(result.data.sessionId);
-  }, [clearTimers, goToMatch, setSessionId, startMatch]);
+  }, [botDifficulty, clearTimers, goToMatch, setSessionId, startMatch]);
 
   const handleReturnToDashboard = useCallback(async () => {
     if (redirectingRef.current) {

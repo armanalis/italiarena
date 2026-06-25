@@ -13,6 +13,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { botDifficultyFromDisplayName } from "@/lib/bot";
 import { useGameStore, useGameStoreHydrated } from "@/store/useGameStore";
 import type { QuestionActive } from "@/types/database.types";
 
@@ -52,10 +53,16 @@ export function MatchHydrator({
         state.gameSessionId === sessionId && state.playlist.length > 0;
 
       if (!alreadyRunningThisSession) {
+        const preservedDifficulty =
+          state.gameSessionId === sessionId ? state.botDifficulty : null;
+
         startMatch({
           gameSessionId: sessionId,
           opponent,
           playlist,
+          botDifficulty:
+            preservedDifficulty ??
+            botDifficultyFromDisplayName(opponent.displayName),
         });
       }
       return;
