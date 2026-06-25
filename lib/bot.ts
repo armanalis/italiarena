@@ -51,9 +51,25 @@ export function getBotResponseTimeMs(difficulty: BotDifficulty = "medium"): numb
 /** Delay until the bot locks an answer, relative to round start. */
 export function getBotResponseDelayMs(
   roundStartedAt: number,
-  difficulty: BotDifficulty = "medium"
+  difficulty: BotDifficulty = "medium",
+  pauseMs = 0
 ): number {
-  return Math.max(0, getBotResponseTimeMs(difficulty) - (Date.now() - roundStartedAt));
+  return Math.max(
+    0,
+    getBotResponseTimeMs(difficulty) - (Date.now() - roundStartedAt - pauseMs)
+  );
+}
+
+/** Resolve bot tier from the ghost opponent label stored on the session. */
+export function botDifficultyFromDisplayName(
+  displayName: string
+): BotDifficulty {
+  for (const [difficulty, label] of Object.entries(BOT_DIFFICULTY_LABELS)) {
+    if (displayName === label) {
+      return difficulty as BotDifficulty;
+    }
+  }
+  return "medium";
 }
 
 function pickWrongAnswer(correct: CorrectAnswer): CorrectAnswer {
