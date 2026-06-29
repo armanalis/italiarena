@@ -31,7 +31,7 @@ export function BotMatchCard() {
   return (
     <Card className="border-border/60">
       <CardHeader>
-        <div className="mb-2 flex size-11 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400">
+        <div className="mb-2 flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <Ghost className="size-5" />
         </div>
         <CardTitle>Play vs bot</CardTitle>
@@ -52,10 +52,10 @@ export function BotMatchCard() {
                 type="button"
                 onClick={() => setDifficulty(level)}
                 className={cn(
-                  "touch-target min-h-11 rounded-xl border px-3 py-3 text-left transition-colors",
+                  "touch-target min-h-11 rounded-2xl border px-3 py-3 text-left transition-colors",
                   selected
-                    ? "border-violet-500/50 bg-violet-500/15"
-                    : "border-border/60 bg-card/40 hover:border-violet-500/30 hover:bg-violet-500/5"
+                    ? "border-primary bg-primary/10"
+                    : "border-border/60 bg-card/40 hover:border-primary/30 hover:bg-muted"
                 )}
               >
                 <p className="font-semibold">{DIFFICULTY_LABELS[level]}</p>

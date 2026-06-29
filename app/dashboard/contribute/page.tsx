@@ -26,8 +26,8 @@ export default async function ContributePage() {
       <header className="w-full border-b border-border/60 px-4 py-5 sm:px-8 sm:py-6 lg:px-10 xl:px-12">
         <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
-            <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 p-2">
-              <PenLine className="size-5 text-indigo-400" />
+            <div className="rounded-lg border border-primary/25 bg-primary/10 p-2">
+              <PenLine className="size-5 text-primary" />
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight sm:text-2xl">

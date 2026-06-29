@@ -284,7 +284,7 @@ export function RecentMatchesDashboard({
     <main className="flex w-full min-w-0 flex-1 flex-col">
       <header className="w-full border-b border-border/60 px-4 py-5 sm:px-8 sm:py-6 lg:px-10 xl:px-12">
         <div className="flex items-start gap-3">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <History className="size-5" />
           </div>
           <div>

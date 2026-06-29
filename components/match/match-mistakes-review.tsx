@@ -47,7 +47,7 @@ function RoundReviewCard({
         "rounded-xl border p-4",
         round.wasCorrect
           ? "border-emerald-500/25 bg-emerald-500/5"
-          : "border-border/60 bg-card/60"
+          : "border-destructive/30 bg-destructive/5"
       )}
     >
       <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -223,7 +223,7 @@ function CategoryFilterBar({
         className={cn(
           "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
           value === "all"
-            ? "border-indigo-500/50 bg-indigo-500/15 text-indigo-200"
+            ? "border-primary/40 bg-primary/10 text-primary"
             : "border-border/60 bg-background/40 text-muted-foreground hover:text-foreground"
         )}
       >
@@ -237,7 +237,7 @@ function CategoryFilterBar({
           className={cn(
             "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
             value === category
-              ? "border-indigo-500/50 bg-indigo-500/15 text-indigo-200"
+              ? "border-primary/40 bg-primary/10 text-primary"
               : "border-border/60 bg-background/40 text-muted-foreground hover:text-foreground"
           )}
         >
@@ -355,7 +355,7 @@ export function MatchMistakesReview() {
   }
 
   return (
-    <div className="w-full max-w-xl space-y-4 rounded-2xl border border-indigo-500/20 bg-card/50 p-4 text-left sm:p-5">
+    <div className="w-full max-w-xl space-y-4 rounded-2xl border border-border bg-card/50 p-4 text-left sm:p-5">
       <div className="space-y-1">
         <h2 className="text-base font-semibold tracking-tight sm:text-lg">
           Match review

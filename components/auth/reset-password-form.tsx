@@ -21,7 +21,7 @@ function SubmitButton() {
     <Button
       type="submit"
       disabled={pending}
-      className="h-11 w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-base font-semibold shadow-lg shadow-indigo-500/25 hover:from-indigo-500 hover:to-violet-500"
+      className="h-11 w-full"
     >
       {pending ? "Updating password..." : "Set new password"}
     </Button>

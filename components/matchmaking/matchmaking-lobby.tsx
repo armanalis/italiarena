@@ -456,12 +456,10 @@ export function MatchmakingLobby({
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-6 touch-scroll sm:px-6 sm:py-12">
-      <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-5 shadow-2xl shadow-indigo-500/10 backdrop-blur-xl dark:border-white/10 dark:bg-card/60 sm:p-8">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.12),_transparent_60%)]" />
-
-        <div className="relative space-y-6 text-center sm:space-y-8">
-          <div className="mx-auto flex size-16 items-center justify-center rounded-full border border-indigo-500/20 bg-indigo-500/10 sm:size-20">
-            <Loader2 className="size-8 animate-spin text-indigo-400 sm:size-10" />
+      <div className="glass-panel w-full max-w-lg overflow-hidden p-5 sm:p-8">
+        <div className="space-y-6 text-center sm:space-y-8">
+          <div className="mx-auto flex size-16 items-center justify-center rounded-full border border-border bg-muted/60 sm:size-20">
+            <Loader2 className="size-8 animate-spin text-accent sm:size-10" />
           </div>
 
           <div className="space-y-2">
@@ -501,7 +499,7 @@ export function MatchmakingLobby({
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-muted dark:bg-white/10">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-1000 ease-linear"
+                    className="h-full rounded-full bg-primary transition-all duration-1000 ease-linear"
                     style={{
                       width: `${((MATCH_SEARCH_SECONDS - secondsLeft) / MATCH_SEARCH_SECONDS) * 100}%`,
                     }}

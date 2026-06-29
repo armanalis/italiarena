@@ -36,7 +36,7 @@ function StepList({
     <ol className={cn("space-y-3", className)}>
       {steps.map((step, index) => (
         <li key={step} className="flex gap-3 text-sm leading-relaxed">
-          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-indigo-500/15 text-xs font-semibold text-indigo-400">
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
             {index + 1}
           </span>
           <span className="pt-0.5 text-muted-foreground">{step}</span>
@@ -50,10 +50,10 @@ export function AddToHomeScreenGuide() {
   const installed = useIsInstalledApp();
 
   return (
-    <Card className="border-indigo-500/25 bg-gradient-to-br from-indigo-500/5 to-violet-500/5">
+    <Card className="border-border ">
       <CardHeader>
         <div className="flex items-start gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-400">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <Smartphone className="size-5" />
           </div>
           <div>

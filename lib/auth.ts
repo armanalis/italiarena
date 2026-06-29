@@ -6,6 +6,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import type { UserProfile, UserRole } from "@/lib/types";
+import { isGuestAuthEmail, isGuestAuthUser } from "@/lib/guest-auth";
 
 const fetchUserRow = cache(async (userId: string) => {
   const supabase = await createClient();
@@ -59,7 +60,7 @@ const fetchUserRow = cache(async (userId: string) => {
 });
 
 export function isGuestUser(profile: UserProfile) {
-  return profile.is_guest;
+  return profile.is_guest || isGuestAuthEmail(profile.email);
 }
 
 const getAuthUser = cache(async () => {
@@ -103,7 +104,7 @@ export const getCurrentUserProfile = cache(async (): Promise<UserProfile | null>
     target_language: null,
     proficiency_level: null,
     role: "user",
-    is_guest: false,
+    is_guest: isGuestAuthUser(user),
     sound_enabled: true,
     haptics_enabled: true,
   };
@@ -125,14 +126,25 @@ export const requireAuth = cache(async () => {
 });
 
 /** Where to send someone right after they authenticate. */
-export async function getPostAuthPath(): Promise<"/dashboard" | "/onboarding"> {
+export async function getPostAuthPath(): Promise<
+  "/dashboard" | "/onboarding" | "/guest"
+> {
   const profile = await getCurrentUserProfile();
+  const user = await getAuthUser();
 
   if (!profile) {
     return "/onboarding";
   }
 
-  return isOnboardingComplete(profile) ? "/dashboard" : "/onboarding";
+  if (isOnboardingComplete(profile)) {
+    return "/dashboard";
+  }
+
+  if (isGuestUser(profile) || (user && isGuestAuthUser(user))) {
+    return "/guest";
+  }
+
+  return "/onboarding";
 }
 
 /** Redirects to /onboarding if the user has not picked a language and level yet. */
@@ -140,6 +152,10 @@ export const requireOnboardingComplete = cache(async () => {
   const profile = await requireAuth();
 
   if (!isOnboardingComplete(profile)) {
+    const user = await getAuthUser();
+    if (isGuestUser(profile) || (user && isGuestAuthUser(user))) {
+      redirect("/guest");
+    }
     redirect("/onboarding");
   }
 

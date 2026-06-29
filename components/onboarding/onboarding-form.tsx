@@ -35,7 +35,7 @@ function SubmitButton() {
     <Button
       type="submit"
       disabled={pending}
-      className="h-11 w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-base font-semibold shadow-lg shadow-indigo-500/25 hover:from-indigo-500 hover:to-violet-500 dark:shadow-indigo-950/50"
+      className="h-11 w-full "
     >
       {pending ? "Saving..." : "Continue to Dashboard"}
     </Button>
@@ -47,9 +47,9 @@ export function OnboardingForm({ defaultUsername = "" }: OnboardingFormProps) {
   useActionRedirect(state?.redirectTo);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/80 shadow-2xl shadow-indigo-500/10 backdrop-blur-xl dark:border-white/10 dark:bg-card/60 dark:shadow-indigo-950/40">
-      <div className="border-b border-border/60 bg-gradient-to-br from-indigo-500/10 via-transparent to-violet-500/10 px-5 pb-6 pt-6 dark:border-white/10 sm:px-8 sm:pb-7 sm:pt-8">
-        <div className="mb-5 flex size-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/30">
+    <div className="glass-panel overflow-hidden">
+      <div className="border-b border-border px-5 pb-6 pt-6 sm:px-8 sm:pb-7 sm:pt-8">
+        <div className="mb-5 flex size-12 items-center justify-center rounded-md border border-border bg-muted text-foreground">
           <GraduationCap className="size-6" />
         </div>
         <h1 className="text-2xl font-bold tracking-tight">
@@ -119,7 +119,7 @@ export function OnboardingForm({ defaultUsername = "" }: OnboardingFormProps) {
       <form action={signOut} className="border-t border-border/60 px-5 py-4 text-center sm:px-8">
         <button
           type="submit"
-          className="inline-flex min-h-11 items-center justify-center px-3 text-sm font-medium text-indigo-400 underline-offset-4 hover:underline"
+          className="inline-flex min-h-11 items-center justify-center px-3 text-sm font-medium text-primary underline-offset-4 hover:underline"
         >
           Sign out and use a different account
         </button>

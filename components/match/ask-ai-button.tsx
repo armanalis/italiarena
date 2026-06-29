@@ -89,8 +89,8 @@ export function AskAiButton({
         disabled={isPending}
         className={cn(
           showLabel
-            ? "shrink-0 gap-1.5 border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/10 hover:text-indigo-200"
-            : "size-11 shrink-0 text-muted-foreground hover:text-indigo-300",
+            ? "shrink-0 gap-1.5 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+            : "size-11 shrink-0 text-muted-foreground hover:text-primary",
           className
         )}
         onClick={() => handleOpenChange(true)}
@@ -117,7 +117,7 @@ export function AskAiButton({
 
           {isPending && (
             <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-              <Loader2 className="size-5 animate-spin text-indigo-400" />
+              <Loader2 className="size-5 animate-spin text-primary" />
               Thinking...
             </div>
           )}
@@ -129,7 +129,7 @@ export function AskAiButton({
                   Loaded from cache — no AI slot used.
                 </p>
               )}
-              <div className="rounded-lg border border-indigo-500/25 bg-indigo-500/5 px-3 py-3 text-sm leading-relaxed whitespace-pre-wrap">
+              <div className="rounded-lg border border-border bg-primary/5 px-3 py-3 text-sm leading-relaxed whitespace-pre-wrap">
                 {explanation}
               </div>
             </div>

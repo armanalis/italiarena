@@ -11,6 +11,11 @@ import {
 } from "@/lib/bot";
 import { pulseCountdownHaptic } from "@/lib/haptics";
 import { getRoundElapsedSec, getRoundPauseMs } from "@/lib/match-timer";
+import {
+  getRoundResultMs,
+  ROUND_DURATION_SEC,
+  TOPIC_REVEAL_MS,
+} from "@/lib/match-timing";
 import { useGameAudio } from "@/hooks/useGameAudio";
 import { useServerMatchSync } from "@/hooks/useServerMatchSync";
 import { useGameStore } from "@/store/useGameStore";
@@ -18,10 +23,7 @@ import { REGULAR_MATCH_QUESTIONS } from "@/lib/match";
 import type { CorrectAnswer, QuestionActive } from "@/types/database.types";
 import type { ProficiencyLevel } from "@/lib/constants";
 
-const TOPIC_REVEAL_MS = 750;
-const ROUND_RESULT_MS = 2_500;
 const ROUND_RESULT_TICK_MS = 100;
-const ROUND_DURATION_SEC = 25;
 
 type AnswerLockedPayload = {
   playerRole: "a" | "b";
@@ -436,8 +438,8 @@ export function useGameLoop({
 
     resolveRound();
 
-    resultRemainingMsRef.current = ROUND_RESULT_MS;
-    setRoundResultSecondsLeft(ROUND_RESULT_MS / 1000);
+    resultRemainingMsRef.current = getRoundResultMs(isBotMatch);
+    setRoundResultSecondsLeft(resultRemainingMsRef.current / 1000);
 
     const advanceAfterResult = () => {
       void (async () => {
