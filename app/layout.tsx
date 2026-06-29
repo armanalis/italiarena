@@ -1,11 +1,14 @@
 /** Root layout — fonts, global styles, and page metadata. */
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppToaster } from "@/components/app-toaster";
 import { StaleChunkRecovery } from "@/components/stale-chunk-recovery";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
+import { SiteHeaderSkeleton } from "@/components/site-header-skeleton";
+import { PRODUCTION_SITE_URL } from "@/lib/site-url";
 import { cn } from "@/lib/utils";
 
 const inter = Inter({
@@ -14,6 +17,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(PRODUCTION_SITE_URL),
   title: "Language Quiz",
   description: "Learn a new language through quick, playful practice with others",
   applicationName: "Language Quiz",
@@ -33,8 +37,8 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   interactiveWidget: "resizes-content",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8f7fc" },
-    { media: "(prefers-color-scheme: dark)", color: "#1f1b2e" },
+    { media: "(prefers-color-scheme: light)", color: "#f7f6f4" },
+    { media: "(prefers-color-scheme: dark)", color: "#14181c" },
   ],
 };
 
@@ -53,7 +57,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <StaleChunkRecovery />
-          <SiteHeader />
+          <Suspense fallback={<SiteHeaderSkeleton />}>
+            <SiteHeader />
+          </Suspense>
           <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto touch-scroll">
             {children}
           </div>

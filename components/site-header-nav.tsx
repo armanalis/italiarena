@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Languages, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { signOut } from "@/app/login/actions";
+import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,19 +39,14 @@ export function SiteHeaderNav({
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full shrink-0 border-b border-border/60 bg-background/80 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md">
+    <header className="glass-header sticky top-0 z-50 w-full shrink-0 pt-[env(safe-area-inset-top,0px)]">
       <div className="flex h-[var(--app-header-height)] w-full items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
         <Link
           href={showDashboard ? "/dashboard" : "/"}
           onClick={showDashboard ? handleDashboardExit : undefined}
-          className="flex min-w-0 shrink items-center gap-2.5"
+          className="flex min-w-0 shrink items-center"
         >
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white lg:size-9">
-            <Languages className="size-4 lg:size-[1.125rem]" />
-          </div>
-          <span className="truncate text-sm font-semibold lg:text-base">
-            Language Quiz
-          </span>
+          <BrandLogo />
         </Link>
 
         <div className="flex min-w-0 shrink-0 items-center gap-1 sm:gap-2 lg:gap-3">
@@ -61,11 +57,7 @@ export function SiteHeaderNav({
               <Button asChild variant="ghost" size="sm" className="hidden min-h-10 sm:inline-flex">
                 <Link href="/login">Sign In</Link>
               </Button>
-              <Button
-                asChild
-                size="sm"
-                className="min-h-10 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500"
-              >
+              <Button asChild size="sm" className="min-h-10">
                 <Link href="/login">
                   <span className="sm:hidden">Join</span>
                   <span className="hidden sm:inline">Sign Up</span>
