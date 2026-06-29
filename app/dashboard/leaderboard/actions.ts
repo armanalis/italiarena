@@ -1,6 +1,7 @@
 "use server";
 
 import { getAuthUserId } from "@/lib/auth";
+import { cachedDashboardQuery, dashboardTag } from "@/lib/dashboard-cache";
 import { createClient } from "@/utils/supabase/server";
 
 export type LeaderboardEntry = {
@@ -24,8 +25,30 @@ export async function getLeaderboard(
   language: string,
   level: string
 ): Promise<LeaderboardData> {
-  const supabase = await createClient();
   const userId = await getAuthUserId();
+
+  if (!userId) {
+    return {
+      language,
+      level,
+      entries: [],
+      currentUserId: null,
+    };
+  }
+
+  return cachedDashboardQuery(
+    ["leaderboard", userId, language, level],
+    dashboardTag(userId, "leaderboard"),
+    async () => fetchLeaderboard(language, level, userId)
+  );
+}
+
+async function fetchLeaderboard(
+  language: string,
+  level: string,
+  userId: string
+): Promise<LeaderboardData> {
+  const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("get_leaderboard", {
     p_language: language,

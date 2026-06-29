@@ -9,6 +9,8 @@ import {
   resolveLoginEmail,
   validateUsername,
 } from "@/lib/username";
+import { mapUsernameSaveError, USERNAME_TAKEN_MESSAGE } from "@/lib/username-errors";
+import { getServerAuthCallbackUrl } from "@/lib/site-url-server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
@@ -17,10 +19,6 @@ export type AuthFormState = {
   success?: string | null;
   redirectTo?: string | null;
 };
-
-function getSiteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-}
 
 export async function signIn(
   _prevState: AuthFormState,
@@ -73,7 +71,7 @@ export async function signUp(
   }
 
   if (await isUsernameTaken(username)) {
-    return { error: "That username is already taken." };
+    return { error: USERNAME_TAKEN_MESSAGE };
   }
 
   const supabase = await createClient();
@@ -90,7 +88,7 @@ export async function signUp(
       .eq("id", data.user.id);
 
     if (profileError) {
-      return { error: profileError.message };
+      return { error: mapUsernameSaveError(profileError) };
     }
   }
 
@@ -136,7 +134,7 @@ export async function requestPasswordReset(
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${getSiteUrl()}/auth/callback?next=/login/reset-password`,
+    redirectTo: await getServerAuthCallbackUrl("/login/reset-password"),
   });
 
   if (error) {

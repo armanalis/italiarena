@@ -8,6 +8,7 @@ import {
   type UserMistakeWithQuestion,
 } from "@/app/dashboard/statistics/actions";
 import { AskAiButton } from "@/components/match/ask-ai-button";
+import { ReportQuestionButton } from "@/components/match/report-question-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MAX_AI_ASKS_PER_MATCH } from "@/lib/ai-explanations";
@@ -52,6 +53,9 @@ export function MistakePracticeSession({
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [masteredCount, setMasteredCount] = useState(0);
   const [asksRemaining, setAsksRemaining] = useState(MAX_AI_ASKS_PER_MATCH);
+  const [reportedQuestionIds, setReportedQuestionIds] = useState<Set<string>>(
+    () => new Set()
+  );
   const [isPending, startTransition] = useTransition();
 
   const current = queue[index] ?? null;
@@ -183,7 +187,7 @@ export function MistakePracticeSession({
     : null;
 
   return (
-    <div className="rounded-2xl border border-indigo-500/20 bg-card/50 p-4 sm:p-6">
+    <div className="rounded-2xl border border-border bg-card/50 p-4 sm:p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <Button
           type="button"
@@ -209,9 +213,21 @@ export function MistakePracticeSession({
 
       <div className="space-y-4">
         <div className="space-y-2 text-center">
-          <Badge variant="secondary" className="uppercase tracking-wide">
-            {formatCategoryLabel(question.category)}
-          </Badge>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <Badge variant="secondary" className="uppercase tracking-wide">
+              {formatCategoryLabel(question.category)}
+            </Badge>
+            <ReportQuestionButton
+              questionId={question.id}
+              questionText={question.question_text}
+              showLabel
+              pauseMatchTimer={false}
+              reported={reportedQuestionIds.has(question.id)}
+              onReported={() =>
+                setReportedQuestionIds((ids) => new Set(ids).add(question.id))
+              }
+            />
+          </div>
           <h2 className="text-lg font-semibold leading-snug sm:text-2xl">
             {question.question_text}
           </h2>
@@ -237,21 +253,50 @@ export function MistakePracticeSession({
                 disabled={Boolean(feedback) || isPending}
                 onClick={() => handleSelect(key)}
                 className={cn(
-                  "min-h-12 rounded-xl border px-3 py-3 text-left text-sm transition-all sm:px-4 sm:py-4 sm:text-base",
-                  "border-border/60 bg-card/60 hover:border-indigo-500/40 hover:bg-indigo-500/5",
+                  "min-h-12 rounded-2xl border px-3 py-3 text-left text-sm transition-all sm:px-4 sm:py-4 sm:text-base",
+                  "border-border/60 bg-card/60 hover:border-primary/30 hover:bg-primary/5",
                   "disabled:cursor-not-allowed disabled:opacity-80",
                   showCorrect &&
                     "border-emerald-500/50 bg-emerald-500/15",
-                  showWrong && "border-destructive/50 bg-destructive/15",
+                  showWrong &&
+                    "border-destructive bg-destructive/15 ring-2 ring-destructive/30",
                   isSelected &&
                     feedback?.correct &&
-                    "border-emerald-500 bg-emerald-500/15"
+                    "border-emerald-500 bg-emerald-500/15 ring-2 ring-emerald-500/30"
                 )}
               >
-                <span className="mr-2 font-semibold text-indigo-400">
-                  {key}.
+                <span className="flex items-start gap-2">
+                  <span
+                    className={cn(
+                      "font-semibold",
+                      showWrong && "text-destructive",
+                      (showCorrect || (isSelected && feedback?.correct)) &&
+                        "text-emerald-400",
+                      !showWrong &&
+                        !(showCorrect || (isSelected && feedback?.correct)) &&
+                        "text-primary"
+                    )}
+                  >
+                    {key}.
+                  </span>
+                  <span
+                    className={cn("flex-1", showWrong && "text-destructive")}
+                  >
+                    {text}
+                  </span>
+                  {showWrong && (
+                    <XCircle
+                      className="size-5 shrink-0 text-destructive"
+                      aria-label="Wrong answer"
+                    />
+                  )}
+                  {isSelected && feedback?.correct && (
+                    <CheckCircle2
+                      className="size-5 shrink-0 text-emerald-400"
+                      aria-label="Correct answer"
+                    />
+                  )}
                 </span>
-                {text}
               </button>
             );
           })}
@@ -270,7 +315,7 @@ export function MistakePracticeSession({
               "rounded-xl border px-4 py-3",
               feedback.correct
                 ? "border-emerald-500/30 bg-emerald-500/10"
-                : "border-destructive/30 bg-destructive/10"
+                : "border-destructive/50 bg-destructive/15"
             )}
           >
             <div className="flex items-start gap-2">
@@ -280,12 +325,17 @@ export function MistakePracticeSession({
                 <XCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
               )}
               <div className="space-y-1 text-sm">
-                <p className="font-medium">
+                <p
+                  className={cn(
+                    "font-semibold",
+                    feedback.correct ? "text-emerald-400" : "text-destructive"
+                  )}
+                >
                   {feedback.mastered
                     ? "Mastered — this question leaves your mistake list."
                     : feedback.correct
                       ? `Correct · ${feedback.practiceStreak}/3 in a row`
-                      : "Not quite — streak reset to 0."}
+                      : "Wrong answer — streak reset to 0."}
                 </p>
                 {!feedback.correct && (
                   <p className="text-muted-foreground">

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthUserId } from "@/lib/auth";
+import { cachedDashboardQuery, dashboardTag, revalidateUserDashboard } from "@/lib/dashboard-cache";
 import { resolveQuestionsByIds } from "@/lib/resolve-match-questions";
 import { isAnswerCorrect } from "@/lib/scoring";
 import { createClient } from "@/utils/supabase/server";
@@ -58,6 +59,14 @@ export async function getUserMistakes(): Promise<UserMistakeWithQuestion[]> {
     return [];
   }
 
+  return cachedDashboardQuery(
+    ["user-mistakes", userId],
+    dashboardTag(userId, "statistics"),
+    () => fetchUserMistakes(userId)
+  );
+}
+
+async function fetchUserMistakes(userId: string): Promise<UserMistakeWithQuestion[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -152,6 +161,7 @@ export async function recordMatchMistakes(
   }
 
   revalidatePath("/dashboard/statistics");
+  revalidateUserDashboard(user.id);
   return { success: true };
 }
 
@@ -198,6 +208,7 @@ export async function submitMistakePracticeAnswer(
     }
 
     revalidatePath("/dashboard/statistics");
+    revalidateUserDashboard(user.id);
     return {
       success: true,
       correct: false,
@@ -219,6 +230,7 @@ export async function submitMistakePracticeAnswer(
     }
 
     revalidatePath("/dashboard/statistics");
+    revalidateUserDashboard(user.id);
     return {
       success: true,
       correct: true,
@@ -237,6 +249,7 @@ export async function submitMistakePracticeAnswer(
   }
 
   revalidatePath("/dashboard/statistics");
+  revalidateUserDashboard(user.id);
   return {
     success: true,
     correct: true,
@@ -297,5 +310,6 @@ export async function resetPlayerStatistics(): Promise<ResetStatsResult> {
   revalidatePath("/dashboard/settings");
   revalidatePath("/dashboard/recent-matches");
   revalidatePath("/dashboard/leaderboard");
+  revalidateUserDashboard(user.id);
   return { success: true };
 }

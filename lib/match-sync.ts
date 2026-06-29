@@ -28,7 +28,7 @@
 export const MATCH_SYNC_VERSION = "v6";
 
 /** Topic reveal duration before a question becomes answerable. */
-export const TOPIC_REVEAL_MS = 750;
+export { TOPIC_REVEAL_MS } from "@/lib/match-timing";
 
 export type MatchSyncState = {
   /** Index into the session's question playlist. */
