@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { getCurrentUserProfile, isOnboardingComplete } from "@/lib/auth";
 import { BOT_DIFFICULTY_LABELS, type BotDifficulty } from "@/lib/bot";
 import { GHOST_PLAYER_ID, GHOST_PLAYER_NAME } from "@/lib/ghost";
 import { getPublicDisplayName } from "@/lib/display-name";
@@ -43,35 +44,17 @@ const JOINABLE_SESSION_MAX_AGE_MS = 45_000;
 async function getAuthenticatedProfile(): Promise<
   { profile: UserProfile } | { error: string }
 > {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const profile = await getCurrentUserProfile();
 
-  if (!user) {
+  if (!profile) {
     return { error: "Not authenticated." };
   }
 
-  const { data: profile, error } = await supabase
-    .from("users")
-    .select("id, email, display_name, target_language, proficiency_level, role, is_guest")
-    .eq("id", user.id)
-    .single();
-
-  if (error || !profile?.target_language || !profile?.proficiency_level) {
+  if (!isOnboardingComplete(profile)) {
     return { error: "Complete onboarding before matchmaking." };
   }
 
-  return {
-    profile: {
-      ...profile,
-      role: profile.role ?? "user",
-      display_name: profile.display_name ?? null,
-      is_guest: profile.is_guest ?? false,
-      sound_enabled: true,
-      haptics_enabled: true,
-    } as UserProfile,
-  };
+  return { profile };
 }
 
 export async function getPlayerDisplayName(userId: string): Promise<string> {

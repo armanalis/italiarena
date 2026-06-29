@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { recordMatchMistakes } from "@/app/dashboard/statistics/actions";
 import { getCurrentUserProfile, getAuthUserId } from "@/lib/auth";
+import {
+  cachedDashboardQuery,
+  dashboardTag,
+  revalidateUserDashboard,
+} from "@/lib/dashboard-cache";
 import { createClient } from "@/utils/supabase/server";
 import {
   PROFICIENCY_LEVELS,
@@ -18,6 +23,7 @@ import {
   normalizeUsername,
   validateUsername,
 } from "@/lib/username";
+import { mapUsernameSaveError, USERNAME_TAKEN_MESSAGE } from "@/lib/username-errors";
 import type {
   CorrectAnswer,
   MatchResult,
@@ -40,18 +46,24 @@ export async function getSettingsData() {
     redirect("/login");
   }
 
-  const supabase = await createClient();
-  const { data: recentMatches } = await supabase
-    .from("match_history")
-    .select("*")
-    .eq("user_id", profile.id)
-    .order("played_at", { ascending: false })
-    .limit(10);
+  return cachedDashboardQuery(
+    ["settings-data", profile.id],
+    dashboardTag(profile.id, "settings"),
+    async () => {
+      const supabase = await createClient();
+      const { data: recentMatches } = await supabase
+        .from("match_history")
+        .select("*")
+        .eq("user_id", profile.id)
+        .order("played_at", { ascending: false })
+        .limit(10);
 
-  return {
-    profile,
-    recentMatches: (recentMatches ?? []) as MatchHistoryEntry[],
-  };
+      return {
+        profile,
+        recentMatches: (recentMatches ?? []) as MatchHistoryEntry[],
+      };
+    }
+  );
 }
 
 export async function updateLearningProfile(formData: FormData): Promise<SettingsActionResult> {
@@ -94,7 +106,7 @@ export async function updateLearningProfile(formData: FormData): Promise<Setting
   }
 
   if (await isUsernameTaken(displayName, user.id)) {
-    return { success: false, error: "That username is already taken." };
+    return { success: false, error: USERNAME_TAKEN_MESSAGE };
   }
 
   const { error } = await supabase
@@ -107,11 +119,12 @@ export async function updateLearningProfile(formData: FormData): Promise<Setting
     .eq("id", user.id);
 
   if (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: mapUsernameSaveError(error) };
   }
 
   revalidatePath("/dashboard/settings");
   revalidatePath("/dashboard");
+  revalidateUserDashboard(user.id);
   return { success: true };
 }
 
@@ -141,6 +154,7 @@ export async function updateGameplayPreferences(
   }
 
   revalidatePath("/dashboard/settings");
+  revalidateUserDashboard(user.id);
   return { success: true };
 }
 
@@ -234,14 +248,20 @@ export async function getPlayerStatistics(): Promise<PlayerStats | null> {
     return null;
   }
 
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("player_stats")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
+  return cachedDashboardQuery(
+    ["player-stats", userId],
+    dashboardTag(userId, "statistics"),
+    async () => {
+      const supabase = await createClient();
+      const { data } = await supabase
+        .from("player_stats")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
 
-  return data as PlayerStats | null;
+      return data as PlayerStats | null;
+    }
+  );
 }
 
 export async function saveMatchResult(payload: {
@@ -374,6 +394,7 @@ export async function saveMatchResult(payload: {
   revalidatePath("/dashboard/statistics");
   revalidatePath("/dashboard/recent-matches");
   revalidatePath("/dashboard/leaderboard");
+  revalidateUserDashboard(user.id);
   return { success: true };
   } catch (error) {
     return {

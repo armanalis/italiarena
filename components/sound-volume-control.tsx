@@ -36,7 +36,7 @@ function VolumeSlider({
         value={volume}
         aria-label="Sound volume"
         onChange={(event) => onChange(Number(event.target.value))}
-        className="h-2 w-full min-w-0 cursor-pointer touch-target accent-indigo-500"
+        className="h-2 w-full min-w-0 cursor-pointer touch-target accent-primary"
       />
       <Volume2 className="size-3.5 shrink-0 text-muted-foreground" />
       <span className="min-w-6 text-right text-xs tabular-nums text-muted-foreground">
