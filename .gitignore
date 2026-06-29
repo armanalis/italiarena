@@ -20,6 +20,9 @@
 .DS_Store
 *.pem
 
+# Accidental nested clone of this repo (must not be committed)
+/language-quiz/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
