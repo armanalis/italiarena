@@ -12,6 +12,7 @@ import {
   normalizeUsername,
   validateUsername,
 } from "@/lib/username";
+import { mapUsernameSaveError, USERNAME_TAKEN_MESSAGE } from "@/lib/username-errors";
 import { createClient } from "@/utils/supabase/server";
 
 export type OnboardingFormState = {
@@ -44,7 +45,7 @@ export async function saveOnboarding(
   }
 
   if (await isUsernameTaken(username, user.id)) {
-    return { error: "That username is already taken." };
+    return { error: USERNAME_TAKEN_MESSAGE };
   }
 
   const profilePayload = {
@@ -74,7 +75,7 @@ export async function saveOnboarding(
     : await supabase.from("users").insert(profilePayload);
 
   if (error) {
-    return { error: error.message };
+    return { error: mapUsernameSaveError(error) };
   }
 
   revalidatePath("/");

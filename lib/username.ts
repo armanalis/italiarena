@@ -103,6 +103,37 @@ export async function resolveLoginEmail(
   return findUserEmailByUsername(trimmed);
 }
 
+async function isUsernameTakenViaLoginLookup(
+  username: string,
+  excludeUserId?: string
+): Promise<boolean | null> {
+  try {
+    const email = await lookupEmailViaRpc(username);
+    if (!email) {
+      return false;
+    }
+
+    if (!excludeUserId) {
+      return true;
+    }
+
+    const supabase = await createClient();
+    const { data: currentUser, error } = await supabase
+      .from("users")
+      .select("email")
+      .eq("id", excludeUserId)
+      .maybeSingle();
+
+    if (error || !currentUser?.email) {
+      return true;
+    }
+
+    return email.toLowerCase() !== currentUser.email.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
 async function isUsernameTakenViaRpc(
   username: string,
   excludeUserId?: string
@@ -158,6 +189,11 @@ export async function isUsernameTaken(
   const viaRpc = await isUsernameTakenViaRpc(trimmed, excludeUserId);
   if (viaRpc !== null) {
     return viaRpc;
+  }
+
+  const viaLookup = await isUsernameTakenViaLoginLookup(trimmed, excludeUserId);
+  if (viaLookup !== null) {
+    return viaLookup;
   }
 
   const viaAdmin = await isUsernameTakenViaAdmin(trimmed, excludeUserId);

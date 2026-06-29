@@ -1,4 +1,17 @@
 {
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "language-quiz-one.vercel.app"
+        }
+      ],
+      "destination": "https://italiarena.com/:path*",
+      "permanent": true
+    }
+  ],
   "headers": [
     {
       "source": "/sounds/(.*)",

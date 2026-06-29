@@ -291,12 +291,12 @@ export function StatisticsDashboard({
         </CardContent>
       </Card>
 
-      <Card className="border-indigo-500/20 bg-card/50">
+      <Card className="border-border bg-card/50">
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <BookOpen className="size-5 text-indigo-400" />
+                <BookOpen className="size-5 text-primary" />
                 Learn from your mistakes
               </CardTitle>
               <CardDescription className="mt-1.5">

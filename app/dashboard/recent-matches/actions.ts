@@ -1,6 +1,7 @@
 "use server";
 
 import { getAuthUserId } from "@/lib/auth";
+import { cachedDashboardQuery, dashboardTag } from "@/lib/dashboard-cache";
 import { extractQuestionIds } from "@/lib/session-playlist";
 import { REGULAR_MATCH_QUESTIONS } from "@/lib/match";
 import {
@@ -61,6 +62,16 @@ export async function getRecentMatchesWithQuestions(): Promise<RecentMatchesData
     return { matches: [], reportedQuestionIds: [] };
   }
 
+  return cachedDashboardQuery(
+    ["recent-matches", userId],
+    dashboardTag(userId, "recent-matches"),
+    () => fetchRecentMatchesWithQuestions(userId)
+  );
+}
+
+async function fetchRecentMatchesWithQuestions(
+  userId: string
+): Promise<RecentMatchesData> {
   const supabase = await createClient();
 
   const { data: reportRows } = await supabase

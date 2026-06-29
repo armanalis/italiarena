@@ -2,17 +2,9 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { getClientAuthCallbackUrl } from "@/lib/site-url";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
-
-function getAuthCallbackUrl() {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  if (siteUrl) {
-    return `${siteUrl.replace(/\/$/, "")}/auth/callback`;
-  }
-
-  return `${window.location.origin}/auth/callback`;
-}
 
 function GoogleIcon() {
   return (
@@ -49,7 +41,7 @@ export function GoogleSignInButton() {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: getAuthCallbackUrl(),
+        redirectTo: getClientAuthCallbackUrl(),
       },
     });
 

@@ -6,7 +6,7 @@ It is built for people who want practice that feels competitive and social — n
 
 I started Language Quiz because most language tools feel like homework. This project is my attempt to build the kind of practice I would actually open every day: fast rounds, clear feedback, and enough pressure to stay focused without burning out.
 
-**[Play the live app →](https://language-quiz-one.vercel.app)**
+**[Play the live app →](https://italiarena.com)**
 
 ---
 
@@ -94,7 +94,7 @@ npm run lint     # ESLint
 
 ## Deployment
 
-The app is deployed on [Vercel](https://vercel.com/). Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in the project environment. Optional features (for example Ask AI) may require additional keys configured only on the hosted instance.
+The app is deployed on [Vercel](https://vercel.com/) at [italiarena.com](https://italiarena.com). Set `NEXT_PUBLIC_SITE_URL` to `https://italiarena.com`, plus `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in the project environment. Optional features (for example Ask AI) may require additional keys configured only on the hosted instance.
 
 ---
 

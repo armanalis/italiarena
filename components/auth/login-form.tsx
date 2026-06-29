@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useActionRedirect } from "@/hooks/use-action-redirect";
-import { ArrowLeft, Languages, Lock, Mail, Sparkles, UserRound } from "lucide-react";
+import { ArrowLeft, Lock, Mail, Sparkles, UserRound } from "lucide-react";
+import { ItalianBrandIcon } from "@/components/italian-brand-icon";
 import {
   requestPasswordReset,
   signIn,
@@ -42,7 +43,7 @@ function SubmitButton({ mode }: { mode: AuthMode }) {
     <Button
       type="submit"
       disabled={pending}
-      className="h-11 w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-base font-semibold shadow-lg shadow-indigo-500/25 hover:from-indigo-500 hover:to-violet-500 dark:shadow-indigo-950/50"
+      className="h-11 w-full "
     >
       {label}
     </Button>
@@ -79,10 +80,10 @@ export function LoginForm() {
 
   return (
     <div className="w-full max-w-[420px]">
-      <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/80 shadow-2xl shadow-indigo-500/10 backdrop-blur-xl dark:border-white/10 dark:bg-card/60 dark:shadow-indigo-950/40">
-        <div className="border-b border-border/60 bg-gradient-to-br from-indigo-500/10 via-transparent to-violet-500/10 px-5 pb-6 pt-6 dark:border-white/10 sm:px-8 sm:pb-7 sm:pt-8">
-          <div className="mb-5 flex size-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/30">
-            <Languages className="size-6" />
+      <div className="glass-panel overflow-hidden">
+        <div className="border-b border-border px-5 pb-6 pt-6 sm:px-8 sm:pb-7 sm:pt-8">
+          <div className="mb-5 flex size-12 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
+            <ItalianBrandIcon className="size-10" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Language Quiz</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
@@ -99,7 +100,7 @@ export function LoginForm() {
                 type="button"
                 onClick={() => setMode("signin")}
                 className={cn(
-                  "rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                  "rounded-full px-3 py-2.5 text-sm font-medium transition-all",
                   isSignIn
                     ? "bg-background text-foreground shadow-sm dark:bg-white/10 dark:text-white"
                     : "text-muted-foreground hover:text-foreground"
@@ -111,7 +112,7 @@ export function LoginForm() {
                 type="button"
                 onClick={() => setMode("signup")}
                 className={cn(
-                  "rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                  "rounded-full px-3 py-2.5 text-sm font-medium transition-all",
                   isSignUp
                     ? "bg-background text-foreground shadow-sm dark:bg-white/10 dark:text-white"
                     : "text-muted-foreground hover:text-foreground"
@@ -281,7 +282,7 @@ export function LoginForm() {
           {isSignUp && (
             <>
               <p className="flex items-start gap-2 rounded-lg bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground dark:bg-white/5">
-                <Sparkles className="mt-0.5 size-3.5 shrink-0 text-indigo-400" />
+                <Sparkles className="mt-0.5 size-3.5 shrink-0 text-primary" />
                 New accounts get matched by language and proficiency level after a
                 quick setup.
               </p>

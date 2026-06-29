@@ -1,11 +1,37 @@
 /** Public landing page with sign-in and sign-up entry points. */
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Languages, Trophy, Users, Zap } from "lucide-react";
+import { ArrowRight, Trophy, Users, Zap } from "lucide-react";
+import { AuroraCanvas } from "@/components/aurora-canvas";
+import { GlassPanel } from "@/components/glass-panel";
 import { Button } from "@/components/ui/button";
 import { LegalFooter } from "@/components/legal/privacy-policy";
 import { getPostAuthPath } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
+
+const features = [
+  {
+    icon: Zap,
+    num: "01",
+    title: "Just a few minutes a day",
+    description:
+      "Short sessions that fit your schedule — learn without blocking out hours of study time.",
+  },
+  {
+    icon: Users,
+    num: "02",
+    title: "Learn with real people",
+    description:
+      "Practice with others at your level through live quiz rounds at your pace.",
+  },
+  {
+    icon: Trophy,
+    num: "03",
+    title: "Watch your skills grow",
+    description:
+      "Track vocabulary, accuracy, and match history as you improve over time.",
+  },
+];
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -18,77 +44,91 @@ export default async function HomePage() {
   }
 
   return (
-    <main className="relative w-full bg-background">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.25),_transparent_55%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_rgba(139,92,246,0.18),_transparent_50%)]" />
-
-      <div className="relative mx-auto flex w-full max-w-5xl flex-col items-center px-4 py-12 pb-[max(3rem,env(safe-area-inset-bottom,0px))] text-center sm:px-6 sm:py-16">
-        <div className="mb-6 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-xl shadow-indigo-500/30 sm:size-16">
-          <Languages className="size-7 sm:size-8" />
-        </div>
-
-        <h1 className="max-w-2xl text-3xl font-bold tracking-tight sm:text-5xl">
-          Learn a new language the easy way
-        </h1>
-        <p className="mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
-          Practice through quick, playful sessions that take just a few minutes.
-          Pick up words and grammar naturally as you go — without long lessons
-          or feeling like learning is hard work.
-        </p>
-
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Button
-            asChild
-            size="lg"
-            className="h-12 min-w-40 bg-gradient-to-r from-indigo-600 to-violet-600 px-8 text-base font-semibold shadow-lg shadow-indigo-500/25"
-          >
-            <Link href="/login">Sign In</Link>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="h-12 min-w-40 px-8 text-base">
-            <Link href="/login">Sign Up</Link>
-          </Button>
-          <Button
-            asChild
-            variant="secondary"
-            size="lg"
-            className="h-12 min-w-40 px-8 text-base"
-          >
-            <Link href="/guest">Play as a Guest</Link>
-          </Button>
-        </div>
-        <p className="mt-3 max-w-md text-xs text-muted-foreground">
-          Guest mode lets you play without enrolling. You&apos;ll get an auto-generated
-          name and won&apos;t appear on the leaderboard.
-        </p>
-
-        <div className="mt-16 grid w-full max-w-3xl gap-4 sm:grid-cols-3">
-          <div className="rounded-xl border border-border/60 bg-card/50 p-5 text-left backdrop-blur-sm">
-            <Zap className="mb-3 size-5 text-indigo-400" />
-            <p className="font-medium">Just a few minutes a day</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Short sessions that fit into your schedule — learn without blocking
-              out hours of study time.
+    <AuroraCanvas>
+      <main className="mx-auto w-full max-w-6xl px-4 pb-[max(3rem,env(safe-area-inset-bottom,0px))] pt-10 sm:px-6 sm:pt-14 lg:px-8 lg:pt-20">
+        <section className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end lg:gap-14">
+          <div className="space-y-8">
+            <p className="swiss-label">Italian · live quiz matches</p>
+            <h1 className="max-w-xl text-4xl font-semibold leading-[1.08] tracking-tight text-balance sm:text-5xl lg:text-[3.25rem]">
+              Learn a language through quick, real practice
+            </h1>
+            <p className="max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
+              Play timed rounds against real people or a bot. Pick up words and
+              grammar naturally — without long lessons or heavy study blocks.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <Button asChild size="lg" className="h-12 min-w-[9.5rem] px-6">
+                <Link href="/login">
+                  Sign in
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="glass-panel h-12 min-w-[9.5rem] border bg-transparent px-6 shadow-none"
+              >
+                <Link href="/login">Create account</Link>
+              </Button>
+              <Button asChild variant="secondary" size="lg" className="h-12 px-6">
+                <Link href="/guest">Play as guest</Link>
+              </Button>
+            </div>
+            <p className="max-w-md text-sm text-muted-foreground">
+              Guest mode works without signing up. You get an auto-generated name
+              and won&apos;t appear on the leaderboard.
             </p>
           </div>
-          <div className="rounded-xl border border-border/60 bg-card/50 p-5 text-left backdrop-blur-sm">
-            <Users className="mb-3 size-5 text-indigo-400" />
-            <p className="font-medium">Learn with real people</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Practice with others at your level and build confidence through
-              real back-and-forth conversation.
-            </p>
+
+          <GlassPanel className="hidden p-6 lg:block lg:p-8">
+            <p className="swiss-label">Session flow</p>
+            <ol className="mt-6 space-y-5">
+              {[
+                "Choose your level and find an opponent.",
+                "Answer timed questions across grammar, vocab, and more.",
+                "Review mistakes and track progress on your dashboard.",
+              ].map((step, index) => (
+                <li key={step} className="flex gap-4 border-t border-border/80 pt-5 first:border-t-0 first:pt-0">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-sm font-semibold tabular-nums">
+                    {index + 1}
+                  </span>
+                  <p className="pt-0.5 text-sm leading-relaxed">{step}</p>
+                </li>
+              ))}
+            </ol>
+          </GlassPanel>
+        </section>
+
+        <section className="mt-16 sm:mt-20">
+          <div className="mb-8 flex items-end justify-between gap-4 border-b border-border pb-4">
+            <h2 className="text-lg font-semibold tracking-tight sm:text-xl">
+              Built for daily practice
+            </h2>
+            <span className="swiss-label hidden sm:inline">Features</span>
           </div>
-          <div className="rounded-xl border border-border/60 bg-card/50 p-5 text-left backdrop-blur-sm">
-            <Trophy className="mb-3 size-5 text-indigo-400" />
-            <p className="font-medium">Watch your skills grow</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Track your progress as your vocabulary and accuracy improve over
-              time.
-            </p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {features.map(({ icon: Icon, num, title, description }) => (
+              <GlassPanel key={title} className="p-5 sm:p-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="flex size-9 items-center justify-center rounded-md bg-muted/80 text-foreground">
+                    <Icon className="size-4" aria-hidden />
+                  </span>
+                  <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                    {num}
+                  </span>
+                </div>
+                <h3 className="font-semibold tracking-tight">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {description}
+                </p>
+              </GlassPanel>
+            ))}
           </div>
-        </div>
-        <LegalFooter className="mt-10" />
-      </div>
-    </main>
+        </section>
+
+        <LegalFooter className="mt-12 sm:mt-16" />
+      </main>
+    </AuroraCanvas>
   );
 }

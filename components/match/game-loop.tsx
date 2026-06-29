@@ -84,7 +84,7 @@ export function GameLoop({
   if (!hydrated) {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-indigo-400" />
+        <Loader2 className="size-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -100,7 +100,7 @@ export function GameLoop({
   if (roundPhase === "waiting" && !isBotMatch) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-        <Loader2 className="size-10 animate-spin text-indigo-400" />
+        <Loader2 className="size-10 animate-spin text-primary" />
         <div className="space-y-1">
           <p className="text-lg font-semibold">Preparing match</p>
           <p className="text-sm text-muted-foreground">
@@ -114,7 +114,7 @@ export function GameLoop({
   if (roundPhase === "tiebreaker_loading") {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-        <Loader2 className="size-10 animate-spin text-indigo-400" />
+        <Loader2 className="size-10 animate-spin text-primary" />
         <div className="space-y-1">
           <p className="text-lg font-semibold">Scores tied</p>
           <p className="text-sm text-muted-foreground">
@@ -162,8 +162,8 @@ export function GameLoop({
     return (
       <main className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain touch-scroll">
         <div className="flex shrink-0 flex-col items-center gap-3 px-4 py-5 text-center sm:gap-4 sm:px-8 sm:py-6">
-          <div className="rounded-full border border-indigo-500/30 bg-indigo-500/10 p-4 sm:p-5">
-            <Trophy className="size-9 text-indigo-400 sm:size-10" />
+          <div className="rounded-full border border-primary/25 bg-primary/10 p-4 sm:p-5">
+            <Trophy className="size-9 text-primary sm:size-10" />
           </div>
           <div className="space-y-1.5">
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
@@ -214,9 +214,9 @@ export function GameLoop({
   }
 
   return (
-    <main className="relative flex min-h-0 flex-1 flex-col overflow-y-auto touch-scroll">
+    <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
       <header className="flex shrink-0 flex-wrap items-start justify-between gap-x-2 gap-y-2 border-b border-border/60 px-3 py-2.5 sm:items-center sm:gap-3 sm:px-6 sm:py-4">
-        <div className="min-w-0 max-w-[calc(100%-5.5rem)] flex-1 space-y-0.5 sm:max-w-none sm:flex-none sm:space-y-1">
+        <div className="min-w-0 flex-1 space-y-0.5 sm:space-y-1">
           <p className="text-sm font-semibold tabular-nums text-foreground sm:text-base">
             {isTiebreakerRound
               ? "Tiebreaker"
@@ -232,35 +232,97 @@ export function GameLoop({
             </span>
           </div>
         </div>
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-1.5 sm:gap-2">
+          {roundPhase === "round_result" && roundResultSecondsLeft !== null && (
+            <div className="flex items-center gap-2 rounded-full border border-border/60 bg-card/70 px-2.5 py-1 text-[10px] sm:gap-2.5 sm:px-3 sm:py-1.5 sm:text-xs">
+              <span className="inline-flex items-center gap-1">
+                <span className="max-w-[4rem] truncate text-muted-foreground sm:max-w-[5.5rem]">
+                  {localDisplayName}
+                </span>
+                <span
+                  className={cn(
+                    "font-bold tabular-nums",
+                    localWasCorrect
+                      ? "text-emerald-400"
+                      : localAnswer?.answer
+                        ? "text-destructive"
+                        : "text-foreground"
+                  )}
+                >
+                  +{localLastPoints}
+                </span>
+              </span>
+              <span className="text-muted-foreground" aria-hidden>
+                ·
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="max-w-[4rem] truncate text-muted-foreground sm:max-w-[5.5rem]">
+                  {opponentDisplayName}
+                </span>
+                <span
+                  className={cn(
+                    "font-bold tabular-nums",
+                    opponentWasCorrect
+                      ? "text-emerald-400"
+                      : opponentAnswer?.answer
+                        ? "text-destructive"
+                        : "text-foreground"
+                  )}
+                >
+                  +{opponentLastPoints}
+                </span>
+              </span>
+              <span className="hidden h-4 w-px bg-border/60 sm:inline" aria-hidden />
+              <span className="inline-flex items-center gap-1">
+                <span className="hidden text-muted-foreground sm:inline">Next</span>
+                <Badge
+                  variant={
+                    roundResultSecondsLeft <= 3 ? "destructive" : "default"
+                  }
+                  className="min-w-[3.25rem] justify-center px-2 py-0.5 font-mono text-xs font-bold tabular-nums sm:min-w-[3.75rem] sm:text-sm"
+                >
+                  {roundResultSecondsLeft.toFixed(1)}s
+                </Badge>
+              </span>
+            </div>
+          )}
           <SoundVolumeControl />
           {isBotMatch && (
             <Badge variant="secondary">
               {botDifficulty ? BOT_DIFFICULTY_LABELS[botDifficulty] : "Bot"}
             </Badge>
           )}
-          <Badge
-            variant={
-              (roundPhase === "round_result"
-                ? (roundResultSecondsLeft ?? 0)
-                : timeRemaining) <= 5
-                ? "destructive"
-                : "outline"
-            }
-            className="min-w-14 justify-center font-mono tabular-nums"
-          >
-            {roundPhase === "round_result" && roundResultSecondsLeft !== null
-              ? `${Math.ceil(roundResultSecondsLeft)}s`
-              : `${timeRemaining}s`}
-          </Badge>
+          {roundPhase !== "round_result" && (
+            <Badge
+              variant={timeRemaining <= 5 ? "destructive" : "outline"}
+              className="min-w-14 justify-center font-mono tabular-nums"
+            >
+              {timeRemaining}s
+            </Badge>
+          )}
         </div>
       </header>
 
-      <div className="relative flex flex-1 flex-col items-center justify-center p-3 py-4 sm:p-6">
+      <div
+        className={cn(
+          "relative flex min-h-0 flex-1 flex-col",
+          roundPhase === "round_result"
+            ? "overflow-hidden"
+            : "overflow-y-auto touch-scroll"
+        )}
+      >
+      <div
+        className={cn(
+          "relative flex w-full flex-1 flex-col items-center px-3 py-3 sm:px-6",
+          roundPhase === "round_result"
+            ? "min-h-0 justify-center py-4 sm:py-6"
+            : "justify-center py-4 sm:py-6"
+        )}
+      >
         {roundPhase === "topic_reveal" && currentQuestion && (
-          <div className="animate-in fade-in zoom-in flex min-h-[180px] w-full max-w-xl items-center justify-center rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/20 to-violet-500/10 p-6 text-center duration-300 sm:min-h-[280px] sm:p-12">
+          <div className="animate-in fade-in zoom-in flex min-h-[180px] w-full max-w-xl items-center justify-center rounded-2xl border border-primary/25 bg-muted/40 p-6 text-center duration-300 sm:min-h-[280px] sm:p-12">
             <div>
-              <p className="text-xs uppercase tracking-[0.25em] text-indigo-300 sm:text-sm sm:tracking-[0.35em]">
+              <p className="text-xs uppercase tracking-[0.25em] text-primary sm:text-sm sm:tracking-[0.35em]">
                 {isTiebreakerRound ? "Sudden death" : "Up next"}
               </p>
               <h2 className="mt-2 text-2xl font-black tracking-tight sm:mt-3 sm:text-4xl">
@@ -299,17 +361,24 @@ export function GameLoop({
                       disabled={!canAnswer || isLocked}
                       onClick={() => handleSelectAnswer(key)}
                       className={cn(
-                        "touch-target min-h-12 rounded-xl border px-3 py-3 text-left text-sm transition-all active:scale-[0.99] sm:px-4 sm:py-4 sm:text-base",
-                        "border-border/60 bg-card/60 hover:border-indigo-500/40 hover:bg-indigo-500/5",
+                        "touch-target min-h-12 rounded-2xl border px-3 py-3 text-left text-sm transition-all active:scale-[0.99] sm:px-4 sm:py-4 sm:text-base",
+                        "border-border/60 bg-card/60 hover:border-primary/30 hover:bg-primary/5",
                         "disabled:cursor-not-allowed",
                         isSelected &&
-                          "border-indigo-500 bg-indigo-500/15 shadow-lg shadow-indigo-500/10"
+                          "border-primary bg-primary/10 ring-2 ring-primary/20"
                       )}
                     >
-                      <span className="mr-2 font-semibold text-indigo-400">
-                        {key}.
+                      <span className="flex items-start gap-2">
+                        <span
+                          className={cn(
+                            "font-semibold",
+                            isSelected ? "text-primary" : "text-primary"
+                          )}
+                        >
+                          {key}.
+                        </span>
+                        <span className="flex-1">{text}</span>
                       </span>
-                      {text}
                     </button>
                   );
                 })}
@@ -321,25 +390,33 @@ export function GameLoop({
                   Waiting for {opponentDisplayName}...
                 </div>
               )}
+
+              {isLocked && opponentAnswer && (
+                <div className="flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  Revealing answers...
+                </div>
+              )}
             </div>
           )}
 
         {roundPhase === "round_result" && currentQuestion && (
-          <div className="w-full max-w-xl animate-in fade-in space-y-4 duration-300 sm:space-y-6">
-            <div className="flex flex-col items-center gap-3 px-1 sm:px-2">
-              <p className="text-center text-sm leading-relaxed text-muted-foreground">
+          <div className="flex w-full max-w-2xl shrink-0 flex-col gap-3 sm:gap-4">
+            <div className="flex shrink-0 items-start justify-between gap-3 sm:gap-4">
+              <p className="line-clamp-2 flex-1 text-left text-base font-medium leading-snug sm:text-lg">
                 {currentQuestion.question_text}
               </p>
               <ReportQuestionButton
                 questionId={currentQuestion.id}
                 questionText={currentQuestion.question_text}
                 showLabel
+                className="shrink-0"
               />
             </div>
 
             <div
               className={cn(
-                "flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold",
+                "flex shrink-0 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold sm:py-3",
                 localWasCorrect
                   ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
                   : localAnswer?.answer
@@ -362,69 +439,109 @@ export function GameLoop({
               )}
             </div>
 
-            <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
+            <div className="grid w-full shrink-0 grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3">
               {OPTIONS.map(({ key, label }) => {
                 const text = currentQuestion[label as keyof typeof currentQuestion] as string;
                 const isLocalPick = localAnswer?.answer === key;
+                const isOpponentPick = opponentAnswer?.answer === key;
                 const isCorrectOption = key === currentQuestion.correct_answer;
-                const showWrong = isLocalPick && localWasCorrect === false;
-                const showCorrectPick = isLocalPick && localWasCorrect === true;
+                const showLocalWrong = isLocalPick && localWasCorrect === false;
+                const showLocalCorrect = isLocalPick && localWasCorrect === true;
+                const showOpponentWrong =
+                  isOpponentPick && opponentWasCorrect === false;
+                const showOpponentCorrect =
+                  isOpponentPick && opponentWasCorrect === true;
                 const showCorrectReveal =
-                  isCorrectOption && localWasCorrect === false;
+                  isCorrectOption &&
+                  !showLocalCorrect &&
+                  !showOpponentCorrect;
+                const isHighlighted =
+                  showLocalWrong ||
+                  showLocalCorrect ||
+                  showOpponentWrong ||
+                  showOpponentCorrect ||
+                  showCorrectReveal;
 
                 return (
                   <div
                     key={key}
                     className={cn(
-                      "rounded-xl border px-3 py-3 text-left text-sm sm:px-4 sm:py-4 sm:text-base",
-                      showWrong &&
-                        "border-destructive bg-destructive/15",
-                      showCorrectPick &&
-                        "border-emerald-500 bg-emerald-500/15",
+                      "flex min-h-[3.25rem] flex-col justify-center rounded-2xl border px-3 py-3 text-left text-sm sm:min-h-14 sm:px-4 sm:py-3.5 sm:text-base",
+                      !isHighlighted && "opacity-70",
+                      showLocalWrong &&
+                        "border-destructive bg-destructive/15 opacity-100",
+                      showLocalCorrect &&
+                        "border-emerald-500 bg-emerald-500/15 opacity-100",
+                      !showLocalWrong &&
+                        !showLocalCorrect &&
+                        showOpponentWrong &&
+                        "border-destructive/70 bg-destructive/10 opacity-100",
+                      !showLocalWrong &&
+                        !showLocalCorrect &&
+                        showOpponentCorrect &&
+                        "border-emerald-500/70 bg-emerald-500/10 opacity-100",
                       showCorrectReveal &&
-                        "border-emerald-500/50 bg-emerald-500/10",
-                      !showWrong &&
-                        !showCorrectPick &&
-                        !showCorrectReveal &&
+                        "border-emerald-500/50 bg-emerald-500/10 opacity-100",
+                      !isHighlighted &&
                         "border-border/60 bg-card/60"
                     )}
                   >
-                    <span className="flex items-start gap-2">
+                    <div className="flex items-start gap-2.5 sm:gap-3">
                       <span
                         className={cn(
-                          "font-semibold",
-                          showWrong && "text-destructive",
-                          (showCorrectPick || showCorrectReveal) &&
+                          "shrink-0 font-semibold",
+                          (showLocalWrong || showOpponentWrong) &&
+                            "text-destructive",
+                          (showLocalCorrect ||
+                            showOpponentCorrect ||
+                            showCorrectReveal) &&
                             "text-emerald-400",
-                          !showWrong &&
-                            !showCorrectPick &&
-                            !showCorrectReveal &&
-                            "text-muted-foreground"
+                          !isHighlighted && "text-muted-foreground"
                         )}
                       >
                         {key}.
                       </span>
-                      <span className="flex-1">{text}</span>
-                      {showWrong && (
-                        <XCircle className="size-5 shrink-0 text-destructive" />
-                      )}
-                      {showCorrectPick && (
-                        <CheckCircle2 className="size-5 shrink-0 text-emerald-400" />
-                      )}
-                    </span>
+                      <span className="min-w-0 flex-1 leading-snug sm:line-clamp-2">
+                        {text}
+                      </span>
+                      <span className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+                        {isLocalPick && (
+                          <Badge variant="secondary" className="h-5 px-2 text-[10px] sm:text-xs">
+                            You
+                          </Badge>
+                        )}
+                        {isOpponentPick && (
+                          <Badge variant="outline" className="h-5 max-w-[5.5rem] truncate px-2 text-[10px] sm:max-w-[6.5rem] sm:text-xs">
+                            {opponentDisplayName}
+                          </Badge>
+                        )}
+                        {showLocalWrong && (
+                          <XCircle className="size-4 text-destructive sm:size-5" />
+                        )}
+                        {showLocalCorrect && (
+                          <CheckCircle2 className="size-4 text-emerald-400 sm:size-5" />
+                        )}
+                        {!isLocalPick && showOpponentCorrect && (
+                          <CheckCircle2 className="size-4 text-emerald-400/80 sm:size-5" />
+                        )}
+                        {!isLocalPick && showOpponentWrong && (
+                          <XCircle className="size-4 text-destructive/80 sm:size-5" />
+                        )}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
             </div>
 
-            <div className="rounded-2xl border border-border/60 bg-card/80 p-5 text-center sm:p-8">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground sm:text-sm">
+            <div className="w-full shrink-0 rounded-2xl border border-border/60 bg-card/80 px-4 py-3 text-center sm:py-4">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground sm:text-sm">
                 Correct answer
               </p>
-              <h2 className="mt-2 text-2xl font-bold text-emerald-400 sm:text-3xl">
-                {currentQuestion.correct_answer}
-              </h2>
-              <p className="mt-3 text-sm text-muted-foreground sm:mt-4 sm:text-base">
+              <p className="mt-1.5 text-base leading-snug sm:mt-2 sm:text-lg">
+                <span className="font-bold text-emerald-400">
+                  {currentQuestion.correct_answer}.
+                </span>{" "}
                 {
                   currentQuestion[
                     `option_${currentQuestion.correct_answer.toLowerCase()}` as
@@ -436,101 +553,6 @@ export function GameLoop({
                 }
               </p>
             </div>
-
-            <div className="grid grid-cols-2 gap-2 text-center text-sm sm:gap-3">
-              <div
-                className={cn(
-                  "rounded-xl border p-3 sm:p-4",
-                  localWasCorrect
-                    ? "border-emerald-500/40 bg-emerald-500/10"
-                    : localAnswer?.answer
-                      ? "border-destructive/40 bg-destructive/10"
-                      : "border-border/60 bg-card/50"
-                )}
-              >
-                <p className="truncate text-muted-foreground">{localDisplayName}</p>
-                <p className="mt-1 text-xl font-bold sm:text-2xl">
-                  +{localLastPoints}
-                </p>
-                <p
-                  className={cn(
-                    "mt-1 flex items-center justify-center gap-1 text-xs font-medium",
-                    localWasCorrect
-                      ? "text-emerald-400"
-                      : localAnswer?.answer
-                        ? "text-destructive"
-                        : "text-muted-foreground"
-                  )}
-                >
-                  {localWasCorrect ? (
-                    <>
-                      <CheckCircle2 className="size-3.5" />
-                      Correct
-                    </>
-                  ) : localAnswer?.answer ? (
-                    <>
-                      <XCircle className="size-3.5" />
-                      Wrong
-                    </>
-                  ) : (
-                    "Timed out"
-                  )}
-                </p>
-              </div>
-              <div
-                className={cn(
-                  "rounded-xl border p-3 sm:p-4",
-                  opponentWasCorrect
-                    ? "border-emerald-500/40 bg-emerald-500/10"
-                    : opponentAnswer?.answer
-                      ? "border-destructive/40 bg-destructive/10"
-                      : "border-border/60 bg-card/50"
-                )}
-              >
-                <p className="truncate text-muted-foreground">{opponentDisplayName}</p>
-                <p className="mt-1 text-xl font-bold sm:text-2xl">
-                  +{opponentLastPoints}
-                </p>
-                <p
-                  className={cn(
-                    "mt-1 flex items-center justify-center gap-1 text-xs font-medium",
-                    opponentWasCorrect
-                      ? "text-emerald-400"
-                      : opponentAnswer?.answer
-                        ? "text-destructive"
-                        : "text-muted-foreground"
-                  )}
-                >
-                  {opponentWasCorrect ? (
-                    <>
-                      <CheckCircle2 className="size-3.5" />
-                      Correct
-                    </>
-                  ) : opponentAnswer?.answer ? (
-                    <>
-                      <XCircle className="size-3.5" />
-                      Wrong
-                    </>
-                  ) : (
-                    "Timed out"
-                  )}
-                </p>
-              </div>
-            </div>
-
-            <p className="text-center text-sm text-muted-foreground">
-              {roundResultSecondsLeft !== null ? (
-                <>
-                  Next question in{" "}
-                  <span className="font-mono font-medium tabular-nums text-foreground">
-                    {roundResultSecondsLeft.toFixed(1)}s
-                  </span>
-                  {" — "}think the answer is wrong? Tap Report above.
-                </>
-              ) : (
-                "Next question in a moment..."
-              )}
-            </p>
           </div>
         )}
       </div>
@@ -546,11 +568,11 @@ export function GameLoop({
           {playerAName} {playerAScore} · {playerBName} {playerBScore}
         </span>
         <span className="hidden text-border md:inline">|</span>
-        {/* Build + session marker — visible from tablet up; both devices must match when shown. */}
         <span className="hidden font-mono text-muted-foreground/60 md:inline">
           {MATCH_SYNC_VERSION}·{sessionId.slice(0, 8)}
         </span>
       </footer>
+      </div>
     </main>
   );
 }

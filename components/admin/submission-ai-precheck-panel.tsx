@@ -68,7 +68,7 @@ export function SubmissionAiPrecheckPanel({
     return (
       <div className="mt-4 rounded-lg border border-border/60 bg-muted/15 px-3 py-2 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
-          <Sparkles className="size-4 text-indigo-400" />
+          <Sparkles className="size-4 text-primary" />
           AI pre-check running…
         </div>
       </div>
@@ -101,11 +101,11 @@ export function SubmissionAiPrecheckPanel({
           ? "border-amber-500/30 bg-amber-500/5"
           : recommendation === "approve"
             ? "border-emerald-500/20 bg-emerald-500/5"
-            : "border-indigo-500/20 bg-indigo-500/5"
+            : "border-border bg-primary/5"
       )}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <Sparkles className="size-4 text-indigo-400" />
+        <Sparkles className="size-4 text-primary" />
         <span className="font-medium text-foreground">AI advisory</span>
         {recommendation && (
           <Badge variant={recommendationVariant(recommendation)}>

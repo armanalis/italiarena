@@ -4,6 +4,7 @@ import type { UserProfile } from "@/lib/types";
 export function getPublicDisplayName(profile: {
   display_name?: string | null;
   email: string;
+  is_guest?: boolean;
 }): string {
   const trimmed = profile.display_name?.trim();
   if (trimmed) {
@@ -11,6 +12,10 @@ export function getPublicDisplayName(profile: {
   }
 
   const localPart = profile.email.split("@")[0]?.trim();
+  if (profile.is_guest || (localPart && /^guest-[0-9a-f-]+$/i.test(localPart))) {
+    return "Guest";
+  }
+
   return localPart || "Player";
 }
 
