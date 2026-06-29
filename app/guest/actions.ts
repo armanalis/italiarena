@@ -66,7 +66,7 @@ async function saveGuestProfile(
     return fallbackUpsertError?.message ?? null;
   }
 
-  return updateError.message;
+  return upsertError.message;
 }
 
 async function allocateGuestDisplayName(userId: string): Promise<string> {
