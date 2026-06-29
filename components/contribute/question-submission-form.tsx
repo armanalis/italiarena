@@ -92,7 +92,7 @@ export function QuestionSubmissionForm({ pendingCount }: QuestionSubmissionFormP
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-4 py-3 text-sm text-muted-foreground">
+      <div className="rounded-xl border border-border bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
         Submissions are reviewed before going live. You have{" "}
         <span className="font-medium text-foreground">{pendingCount}</span> pending
         {pendingCount === 1 ? "" : "s"}.
@@ -233,7 +233,7 @@ export function QuestionSubmissionForm({ pendingCount }: QuestionSubmissionFormP
               type="button"
               onClick={() => setCorrectAnswer(letter)}
               className={cn(
-                "touch-target min-h-11 rounded-lg border text-sm font-medium transition-colors",
+                "touch-target min-h-11 rounded-full border text-sm font-medium transition-colors",
                 correctAnswer === letter
                   ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
                   : "border-border/60 hover:border-emerald-500/30"

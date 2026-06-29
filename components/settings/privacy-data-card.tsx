@@ -14,7 +14,7 @@ export function PrivacyDataCard() {
     <Card className="border-border/60">
       <CardHeader>
         <div className="mb-1 flex items-center gap-2">
-          <Shield className="size-5 text-indigo-400" />
+          <Shield className="size-5 text-primary" />
           <CardTitle>Privacy &amp; data</CardTitle>
         </div>
         <CardDescription>

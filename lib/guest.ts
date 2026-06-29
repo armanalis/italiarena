@@ -1,7 +1,12 @@
-import { randomInt } from "crypto";
+import { randomUUID } from "crypto";
 
-/** Auto-generated display name for guest sessions, e.g. Guest428623827. */
-export function generateGuestDisplayName(): string {
-  const suffix = randomInt(100_000_000, 1_000_000_000);
-  return `Guest${suffix}`;
+const GUEST_PREFIX = "Guest";
+const GUEST_SUFFIX_LENGTH = 12;
+
+/** Unique guest label tied to an auth user id, e.g. Guesta1b2c3d4e5f6. */
+export function generateGuestDisplayName(seed?: string): string {
+  const source = (seed ?? randomUUID()).replace(/-/g, "").toLowerCase();
+  return `${GUEST_PREFIX}${source.slice(0, GUEST_SUFFIX_LENGTH)}`;
 }
+
+export { isGuestAuthEmail, isGuestAuthUser } from "@/lib/guest-auth";

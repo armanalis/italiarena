@@ -202,7 +202,7 @@ export function ReportQuestionButton({
               disabled={isSubmitting}
               onClick={() => setSelectedIssue(option.value)}
               className={cn(
-                "min-h-11 rounded-lg border px-3 py-3 text-left text-sm transition-colors",
+                "min-h-11 rounded-full border px-3 py-3 text-left text-sm transition-colors",
                 "border-border/60 hover:border-amber-500/40 hover:bg-amber-500/5",
                 selectedIssue === option.value &&
                   "border-amber-500 bg-amber-500/10 text-amber-100"

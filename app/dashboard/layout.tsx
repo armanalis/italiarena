@@ -1,17 +1,15 @@
-/** Shared dashboard shell with sidebar navigation. Requires completed onboarding. */
+/** Shared dashboard shell with sidebar navigation. Auth enforced in middleware. */
+import { AuroraCanvas } from "@/components/aurora-canvas";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { requireOnboardingComplete } from "@/lib/auth";
 
-export default async function DashboardLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  await requireOnboardingComplete();
-
   return (
-    <div className="flex h-app min-h-0 w-full flex-col overflow-hidden bg-background md:flex-row">
+    <AuroraCanvas subtle className="flex h-app min-h-0 w-full flex-col overflow-hidden md:flex-row">
       <DashboardShell>{children}</DashboardShell>
-    </div>
+    </AuroraCanvas>
   );
 }

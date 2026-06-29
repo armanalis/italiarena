@@ -46,7 +46,7 @@ export function LeaderboardDashboard({ data, isGuest = false }: LeaderboardDashb
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-8">
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <Trophy className="size-7 text-indigo-400" />
+          <Trophy className="size-7 text-primary" />
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Leaderboard
           </h1>
@@ -71,7 +71,7 @@ export function LeaderboardDashboard({ data, isGuest = false }: LeaderboardDashb
       )}
 
       {currentUserEntry ? (
-        <Card className="border-indigo-500/30 bg-indigo-500/5">
+        <Card className="border-primary/25 bg-primary/5">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Your standing</CardTitle>
             <CardDescription>
@@ -106,7 +106,7 @@ export function LeaderboardDashboard({ data, isGuest = false }: LeaderboardDashb
       ) : (
         <Card className="border-border/60 bg-card/50">
           <CardContent className="flex items-start gap-3 p-5 text-sm text-muted-foreground">
-            <Users className="mt-0.5 size-5 shrink-0 text-indigo-400" />
+            <Users className="mt-0.5 size-5 shrink-0 text-primary" />
             <p>
               You are not on the board yet. Finish a{" "}
               <span className="font-medium text-foreground">Play vs user</span>{" "}
@@ -141,7 +141,7 @@ export function LeaderboardDashboard({ data, isGuest = false }: LeaderboardDashb
                       key={entry.userId}
                       className={cn(
                         "rounded-xl border border-border/60 bg-card/40 px-3 py-3",
-                        isCurrentUser && "border-indigo-500/30 bg-indigo-500/10"
+                        isCurrentUser && "border-primary/25 bg-primary/10"
                       )}
                     >
                       <div className="flex items-center justify-between gap-2">
@@ -200,7 +200,7 @@ export function LeaderboardDashboard({ data, isGuest = false }: LeaderboardDashb
                         <TableRow
                           key={entry.userId}
                           className={cn(
-                            isCurrentUser && "bg-indigo-500/10 hover:bg-indigo-500/15"
+                            isCurrentUser && "bg-primary/10 hover:bg-primary/10"
                           )}
                         >
                           <TableCell className="font-medium tabular-nums">

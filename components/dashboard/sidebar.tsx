@@ -5,11 +5,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Gamepad2,
-  Languages,
   LogOut,
   Settings,
   Trophy,
 } from "lucide-react";
+import { ItalianBrandIcon } from "@/components/italian-brand-icon";
 import { signOut } from "@/app/login/actions";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -34,9 +34,7 @@ export function DashboardSidebar({ profile }: DashboardSidebarProps) {
     <aside className="flex h-full w-64 flex-col border-r border-border/60 bg-card/40 backdrop-blur-sm dark:bg-sidebar/80">
       <div className="flex items-center justify-between gap-2 px-6 py-5">
         <div className="flex items-center gap-2">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/20">
-            <Languages className="size-5" />
-          </div>
+          <ItalianBrandIcon className="size-9 shrink-0 rounded-lg" />
           <div>
             <p className="text-sm font-semibold tracking-tight">Language Quiz</p>
             <p className="text-xs text-muted-foreground">Multiplayer Trivia</p>

@@ -119,7 +119,7 @@ export function QuestionSubmissionsTable({
                         : "border-border/60"
                     }`}
                   >
-                    <span className="font-semibold text-indigo-400">{letter}.</span>{" "}
+                    <span className="font-semibold text-primary">{letter}.</span>{" "}
                     {option}
                   </div>
                 );
