@@ -49,7 +49,7 @@ export default async function HomePage() {
         <section className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end lg:gap-14">
           <div className="space-y-8">
             <p className="swiss-label">Italian · live quiz matches</p>
-            <h1 className="max-w-xl text-4xl font-semibold leading-[1.08] tracking-tight text-balance sm:text-5xl lg:text-[3.25rem]">
+            <h1 className="hero-headline max-w-xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-[3.25rem]">
               Learn Italian through quick, real practice
             </h1>
             <p className="max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">

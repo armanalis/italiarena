@@ -51,11 +51,14 @@ export function SoundVolumeControl({
   showSlider = false,
 }: SoundVolumeControlProps) {
   const [volume, setVolume] = useState(DEFAULT_SOUND_VOLUME);
-  const [expanded, setExpanded] = useState(showSlider);
   const lastVolumeRef = useRef(DEFAULT_SOUND_VOLUME);
 
   useEffect(() => {
-    setVolume(getSoundVolume());
+    const storedVolume = getSoundVolume();
+    setVolume(storedVolume);
+    if (storedVolume > 0) {
+      lastVolumeRef.current = storedVolume;
+    }
   }, []);
 
   function persistVolume(nextVolume: number) {
@@ -79,19 +82,15 @@ export function SoundVolumeControl({
     persistVolume(lastVolumeRef.current || DEFAULT_SOUND_VOLUME);
   }
 
-  const panelOpen = showSlider || expanded;
-
   return (
     <div className={cn("relative flex items-center gap-2", className)}>
-      {panelOpen && (
-        <VolumeSlider
-          volume={volume}
-          onChange={persistVolume}
-          className="hidden md:flex"
-        />
-      )}
+      <VolumeSlider
+        volume={volume}
+        onChange={persistVolume}
+        className="hidden md:flex"
+      />
 
-      {panelOpen && (
+      {showSlider && (
         <div className="absolute right-0 top-[calc(100%+0.35rem)] z-50 rounded-xl border border-border/60 bg-popover p-3 shadow-lg md:hidden">
           <VolumeSlider
             volume={volume}
@@ -101,40 +100,21 @@ export function SoundVolumeControl({
         </div>
       )}
 
-      {!showSlider && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-10 min-h-11 min-w-11 shrink-0"
-          aria-label={panelOpen ? "Hide volume slider" : "Show volume slider"}
-          aria-expanded={panelOpen}
-          onClick={() => setExpanded((current) => !current)}
-        >
-          {volume > 0 ? (
-            <Volume2 className="size-4" />
-          ) : (
-            <VolumeX className="size-4" />
-          )}
-        </Button>
-      )}
-
-      {showSlider && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-10 min-h-11 min-w-11 shrink-0"
-          aria-label={volume > 0 ? "Mute sound" : "Unmute sound"}
-          onClick={toggleMute}
-        >
-          {volume > 0 ? (
-            <Volume2 className="size-4" />
-          ) : (
-            <VolumeX className="size-4" />
-          )}
-        </Button>
-      )}
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="size-10 min-h-11 min-w-11 shrink-0"
+        aria-label={volume > 0 ? "Mute sound" : "Unmute sound"}
+        aria-pressed={volume === 0}
+        onClick={toggleMute}
+      >
+        {volume > 0 ? (
+          <Volume2 className="size-4" />
+        ) : (
+          <VolumeX className="size-4" />
+        )}
+      </Button>
     </div>
   );
 }
