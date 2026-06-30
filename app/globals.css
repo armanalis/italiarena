@@ -171,6 +171,16 @@
   .swiss-label {
     @apply text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground;
   }
+
+  /* Room between wrapped lines so text selection reads as separate bands */
+  .hero-headline {
+    line-height: 1.18;
+  }
+
+  .hero-headline::selection {
+    background-color: color-mix(in oklch, var(--accent) 32%, transparent);
+    color: inherit;
+  }
 }
 
 @layer base {
