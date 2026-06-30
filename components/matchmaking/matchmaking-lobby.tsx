@@ -467,7 +467,7 @@ export function MatchmakingLobby({
             <p className="text-sm text-muted-foreground">
               {isBotMode
                 ? `${getBotDifficultyDescription(botDifficulty)} · ${language} · ${level}`
-                : `Matching ${language} players at level ${level}`}
+                : `Matching Italian learners at level ${level}`}
             </p>
           </div>
 
@@ -547,9 +547,8 @@ export function MatchmakingLobby({
           <DialogHeader>
             <DialogTitle>No matches found</DialogTitle>
             <DialogDescription>
-              We couldn&apos;t find another player in your language and level
-              bracket. Would you like to play vs bot or go back to the
-              dashboard?
+              We couldn&apos;t find another player at your Italian level.
+              Would you like to play vs bot or go back to the dashboard?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col gap-2 sm:flex-col">

@@ -19,7 +19,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(PRODUCTION_SITE_URL),
   title: "Language Quiz",
-  description: "Learn a new language through quick, playful practice with others",
+  description: "Learn Italian through quick, playful practice with others",
   applicationName: "Language Quiz",
   appleWebApp: {
     capable: true,

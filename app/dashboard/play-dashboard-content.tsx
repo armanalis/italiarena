@@ -91,7 +91,7 @@ export async function PlayDashboardContent({
               </div>
               <CardTitle>Play vs real user</CardTitle>
               <CardDescription>
-                Match with a live opponent at your language and level. After 10
+                Match with a live opponent at your Italian level. After 10
                 seconds with no match, you can play vs bot or return to the
                 dashboard.
               </CardDescription>

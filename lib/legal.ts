@@ -19,7 +19,7 @@ export const ITALIAN_DPA_URL = "https://www.garanteprivacy.it";
 export const PRIVACY_POLICY_SECTIONS = [
   {
     title: "Who we are",
-    body: `${APP_LEGAL_NAME} is a language-learning quiz service offered to users in Italy. The data controller is the operator of ${APP_LEGAL_NAME}. For any request relating to your personal data, contact us at ${PRIVACY_CONTACT_EMAIL}.`,
+    body: `${APP_LEGAL_NAME} is an Italian learning quiz service offered to users in Italy. The data controller is the operator of ${APP_LEGAL_NAME}. For any request relating to your personal data, contact us at ${PRIVACY_CONTACT_EMAIL}.`,
   },
   {
     title: "What we collect",

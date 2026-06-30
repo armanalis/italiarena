@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Language Quiz",
     short_name: "Lang Quiz",
     description:
-      "Learn a new language through quick, playful practice with others",
+      "Learn Italian through quick, playful practice with others",
     start_url: "/",
     scope: "/",
     display: "standalone",

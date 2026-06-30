@@ -194,7 +194,7 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
       ) : (
         <Card className="border-border/60">
           <CardHeader>
-            <CardTitle>Learning profile</CardTitle>
+            <CardTitle>Italian profile</CardTitle>
             <CardDescription>
               Update your Italian level and public display name.
             </CardDescription>
