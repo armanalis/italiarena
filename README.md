@@ -1,10 +1,10 @@
-# Language Quiz
+# Italiarena
 
-Language Quiz is a live 1v1 language trivia game for learners.
+Italiarena is a live 1v1 Italian trivia game for learners.
 
 It is built for people who want practice that feels competitive and social — not another static flashcard app. The goal is simple: jump into a short match, answer timed questions against a real person or a bot, and actually remember what you got wrong.
 
-I started Language Quiz because most language tools feel like homework. This project is my attempt to build the kind of practice I would actually open every day: fast rounds, clear feedback, and enough pressure to stay focused without burning out.
+I started Italiarena because most language tools feel like homework. This project is my attempt to build the kind of Italian practice I would actually open every day: fast rounds, clear feedback, and enough pressure to stay focused without burning out.
 
 **[Play the live app →](https://italiarena.com)**
 
@@ -12,7 +12,7 @@ I started Language Quiz because most language tools feel like homework. This pro
 
 ## Always open source
 
-Language Quiz is open source because learning tools are better when people can inspect the product, fix rough edges, and improve the experience together. Contributions are welcome.
+Italiarena is open source because learning tools are better when people can inspect the product, fix rough edges, and improve the experience together. Contributions are welcome.
 
 The project is licensed under [MIT](LICENSE). If you want to contribute, start with [CONTRIBUTING.md](CONTRIBUTING.md), open an issue, or send a focused pull request.
 
@@ -25,14 +25,14 @@ The **hosted backend and question database are not part of this repository**. Th
 | Idea | How it shows up in the app |
 | --- | --- |
 | **Short, focused matches** | Ten timed questions per round — grammar, vocabulary, fill-in-the-blank, and idioms |
-| **Real opponents** | Matchmaking pairs players by target language and CEFR level (A1–C1) |
+| **Real opponents** | Matchmaking pairs players by Italian level (CEFR A1–C1) |
 | **No dead waiting** | Play vs bot for an instant ghost match, or search for a human opponent |
 | **Speed matters** | Faster correct answers score more; ties break on response time |
 | **Learn from mistakes** | Post-match review, mistake practice, and optional AI explanations |
 | **Community quality control** | Players can report bad questions; admins review the queue |
 | **Works like an app on your phone** | Add to home screen on iOS and Android for a full-screen experience |
 
-Supported languages today: **Italian**.
+Supported language: **Italian**.
 
 ---
 
@@ -62,8 +62,8 @@ Database schema and migrations live outside this public repo. See [`supabase/REA
 ### Setup
 
 ```bash
-git clone https://github.com/armanalis/language-quiz.git
-cd language-quiz
+git clone https://github.com/armanalis/italiarena.git
+cd italiarena
 npm install
 ```
 
@@ -94,7 +94,7 @@ npm run lint     # ESLint
 
 ## Deployment
 
-The app is deployed on [Vercel](https://vercel.com/) at [italiarena.com](https://italiarena.com). Set `NEXT_PUBLIC_SITE_URL` to `https://italiarena.com`, plus `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in the project environment. Optional features (for example Ask AI) may require additional keys configured only on the hosted instance.
+The app is deployed on [Vercel](https://vercel.com/) at [italiarena.com](https://italiarena.com). Set `NEXT_PUBLIC_SITE_URL` to `https://italiarena.com`, plus `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in the project environment. In Supabase → Authentication → URL configuration, set **Site URL** to `https://italiarena.com`, add `https://italiarena.com/auth/callback` to **Redirect URLs**, and remove any old `language-quiz-one.vercel.app` entries. Optional features (for example Ask AI) may require additional keys configured only on the hosted instance.
 
 ---
 

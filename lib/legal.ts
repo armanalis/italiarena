@@ -1,5 +1,6 @@
 /** Legal and privacy copy shared across the app (Italy / GDPR). */
-export const APP_LEGAL_NAME = "Language Quiz";
+export const APP_NAME = "Italiarena";
+export const APP_LEGAL_NAME = APP_NAME;
 
 export const SUPPORT_EMAIL = "support@italiarena.com";
 
@@ -19,7 +20,7 @@ export const ITALIAN_DPA_URL = "https://www.garanteprivacy.it";
 export const PRIVACY_POLICY_SECTIONS = [
   {
     title: "Who we are",
-    body: `${APP_LEGAL_NAME} is a language-learning quiz service offered to users in Italy. The data controller is the operator of ${APP_LEGAL_NAME}. For any request relating to your personal data, contact us at ${PRIVACY_CONTACT_EMAIL}.`,
+    body: `${APP_LEGAL_NAME} is an Italian learning quiz service offered to users in Italy. The data controller is the operator of ${APP_LEGAL_NAME}. For any request relating to your personal data, contact us at ${PRIVACY_CONTACT_EMAIL}.`,
   },
   {
     title: "What we collect",

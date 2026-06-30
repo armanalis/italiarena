@@ -7,6 +7,7 @@ import { useFormStatus } from "react-dom";
 import { useActionRedirect } from "@/hooks/use-action-redirect";
 import { ArrowLeft, Lock, Mail, Sparkles, UserRound } from "lucide-react";
 import { ItalianBrandIcon } from "@/components/italian-brand-icon";
+import { APP_NAME } from "@/lib/legal";
 import {
   requestPasswordReset,
   signIn,
@@ -85,11 +86,11 @@ export function LoginForm() {
           <div className="mb-5 flex size-12 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
             <ItalianBrandIcon className="size-10" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Language Quiz</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{APP_NAME}</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
             {isForgot
               ? "Enter your email and we'll send you a reset link."
-              : "Practice a new language through quick, real-time sessions with others at your level."}
+              : "Practice Italian through quick, real-time sessions with others at your level."}
           </p>
         </div>
 
@@ -283,8 +284,7 @@ export function LoginForm() {
             <>
               <p className="flex items-start gap-2 rounded-lg bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground dark:bg-white/5">
                 <Sparkles className="mt-0.5 size-3.5 shrink-0 text-primary" />
-                New accounts get matched by language and proficiency level after a
-                quick setup.
+                New accounts get matched by Italian level after a quick setup.
               </p>
               <p className="text-center text-xs text-muted-foreground">
                 By creating an account, you agree to our{" "}

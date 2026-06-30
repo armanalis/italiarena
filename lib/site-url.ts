@@ -8,10 +8,45 @@ export function normalizeSiteUrl(url: string) {
   return url.replace(/\/$/, "");
 }
 
+export function isLocalDevHostname(hostname: string) {
+  return hostname === "localhost" || hostname === "127.0.0.1";
+}
+
+export function isLegacySiteHostname(hostname: string) {
+  return (LEGACY_SITE_HOSTNAMES as readonly string[]).includes(hostname);
+}
+
+function isLegacySiteUrl(url: string) {
+  try {
+    return isLegacySiteHostname(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
+
+/** Canonical origin for auth redirects and emailed links in deployed environments. */
+export function getCanonicalSiteUrl() {
+  const defaultUrl = getDefaultSiteUrl();
+  if (defaultUrl.includes("localhost") || defaultUrl.includes("127.0.0.1")) {
+    return defaultUrl;
+  }
+  return getProductionSiteUrl();
+}
+
 export function getDefaultSiteUrl() {
-  return normalizeSiteUrl(
+  const fromEnv = normalizeSiteUrl(
     process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
   );
+
+  if (fromEnv.includes("localhost") || fromEnv.includes("127.0.0.1")) {
+    return fromEnv;
+  }
+
+  if (isLegacySiteUrl(fromEnv)) {
+    return getProductionSiteUrl();
+  }
+
+  return fromEnv;
 }
 
 export function getProductionSiteUrl() {
@@ -22,14 +57,35 @@ export function getAuthCallbackUrl(origin: string) {
   return `${normalizeSiteUrl(origin)}/auth/callback`;
 }
 
-/** Client-side OAuth callback: always use the tab the user is on. */
+/** OAuth callback target: localhost in dev, canonical production URL otherwise. */
 export function getClientAuthCallbackUrl() {
   if (typeof window !== "undefined") {
-    return getAuthCallbackUrl(window.location.origin);
+    if (isLocalDevHostname(window.location.hostname)) {
+      return getAuthCallbackUrl(window.location.origin);
+    }
+    return getAuthCallbackUrl(getProductionSiteUrl());
   }
-  return getAuthCallbackUrl(getDefaultSiteUrl());
+
+  return getAuthCallbackUrl(getCanonicalSiteUrl());
 }
 
 export function getRequestOrigin(request: Request) {
   return new URL(request.url).origin;
+}
+
+export function resolveCanonicalOriginForHostname(hostname: string) {
+  if (isLocalDevHostname(hostname)) {
+    return null;
+  }
+
+  if (
+    hostname === "italiarena.com" ||
+    hostname === "www.italiarena.com" ||
+    isLegacySiteHostname(hostname) ||
+    hostname.endsWith(".vercel.app")
+  ) {
+    return getProductionSiteUrl();
+  }
+
+  return null;
 }

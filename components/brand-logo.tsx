@@ -1,4 +1,5 @@
 import { ItalianBrandIcon } from "@/components/italian-brand-icon";
+import { APP_NAME } from "@/lib/legal";
 import { cn } from "@/lib/utils";
 
 type BrandLogoProps = {
@@ -27,7 +28,7 @@ export function BrandLogo({
       </span>
       {showLabel && (
         <span className="truncate text-sm font-semibold tracking-tight lg:text-base">
-          Language Quiz
+          {APP_NAME}
         </span>
       )}
     </span>
