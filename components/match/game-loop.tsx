@@ -286,7 +286,7 @@ export function GameLoop({
               </span>
             </div>
           )}
-          <SoundVolumeControl />
+          <SoundVolumeControl collapsible />
           {isBotMatch && (
             <Badge variant="secondary">
               {botDifficulty ? BOT_DIFFICULTY_LABELS[botDifficulty] : "Bot"}
