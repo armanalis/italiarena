@@ -7,7 +7,7 @@ import { useFormStatus } from "react-dom";
 import { useActionRedirect } from "@/hooks/use-action-redirect";
 import { ArrowLeft, Lock, Mail, Sparkles, UserRound } from "lucide-react";
 import { ItalianBrandIcon } from "@/components/italian-brand-icon";
-import { APP_NAME } from "@/lib/legal";
+import { APP_NAME, PRIVACY_FOOTER_NOTICE } from "@/lib/legal";
 import {
   requestPasswordReset,
   signIn,
@@ -287,14 +287,14 @@ export function LoginForm() {
                 New accounts get matched by Italian level after a quick setup.
               </p>
               <p className="text-center text-xs text-muted-foreground">
-                By creating an account, you agree to our{" "}
+                By creating an account, you acknowledge our{" "}
                 <Link
                   href="/privacy"
                   className="font-medium text-primary underline-offset-4 hover:underline"
                 >
-                  Privacy Policy
+                  Informativa privacy
                 </Link>
-                . Your data is handled in line with GDPR and Italian privacy law.
+                . {PRIVACY_FOOTER_NOTICE}
               </p>
             </>
           )}
