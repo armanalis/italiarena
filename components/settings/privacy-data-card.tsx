@@ -7,7 +7,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { APP_NAME, PRIVACY_CONTACT_EMAIL } from "@/lib/legal";
+import {
+  APP_NAME,
+  PRIVACY_CONTACT_EMAIL,
+  PRIVACY_SETTINGS_SUMMARY,
+} from "@/lib/legal";
 
 export function PrivacyDataCard() {
   return (
@@ -18,26 +22,31 @@ export function PrivacyDataCard() {
           <CardTitle>Privacy &amp; data</CardTitle>
         </div>
         <CardDescription>
-          How we handle your data under GDPR and Italian privacy law.
+          How we handle your data under the GDPR and Italian Privacy Code
+          (D.Lgs. 196/2003).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 text-sm text-muted-foreground">
         <ul className="list-inside list-disc space-y-2">
-          <li>
-            We only collect data needed to run the app (account, gameplay stats,
-            match history, and optional reports or AI explanations).
-          </li>
-          <li>
-            Your data is stored securely (HTTPS), never sold to third parties,
-            and you can exercise your rights under GDPR and Italian privacy law.
-          </li>
-          <li>
-            You can update your profile here,{" "}
-            <a href="#delete-account" className="text-primary underline-offset-4 hover:underline">
-              delete your account
-            </a>{" "}
-            at any time, or contact us to access or correct your data.
-          </li>
+          {PRIVACY_SETTINGS_SUMMARY.map((item, index) => (
+            <li key={item}>
+              {index === 2 ? (
+                <>
+                  You can update your profile in Settings,{" "}
+                  <a
+                    href="#delete-account"
+                    className="text-primary underline-offset-4 hover:underline"
+                  >
+                    delete your account
+                  </a>{" "}
+                  at any time, or contact us to exercise your rights under the
+                  GDPR and Italian privacy law.
+                </>
+              ) : (
+                item
+              )}
+            </li>
+          ))}
         </ul>
 
         <div className="flex flex-wrap gap-2 pt-1">
@@ -45,7 +54,7 @@ export function PrivacyDataCard() {
             href="/privacy"
             className="inline-flex min-h-10 items-center rounded-lg border border-border/60 bg-muted/30 px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
           >
-            Read full Privacy Policy
+            Read full privacy notice (IT)
           </Link>
           <a
             href={`mailto:${PRIVACY_CONTACT_EMAIL}?subject=${encodeURIComponent(`${APP_NAME} — privacy request`)}`}
