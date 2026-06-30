@@ -22,6 +22,7 @@ import type { PlayerStats, QuestionCategory } from "@/types/database.types";
 type StatisticsDashboardProps = {
   stats: PlayerStats | null;
   mistakes: UserMistakeWithQuestion[];
+  reportedQuestionIds: string[];
 };
 
 function pct(correct: number, total: number) {
@@ -63,6 +64,7 @@ function mistakeMatchesCategory(
 export function StatisticsDashboard({
   stats,
   mistakes: initialMistakes,
+  reportedQuestionIds: initialReportedQuestionIds,
 }: StatisticsDashboardProps) {
   const [mistakes, setMistakes] = useState(initialMistakes);
   const [showMistakes, setShowMistakes] = useState(false);
@@ -354,6 +356,7 @@ export function StatisticsDashboard({
         open={showMistakes}
         onOpenChange={setShowMistakes}
         mistakes={mistakes}
+        reportedQuestionIds={initialReportedQuestionIds}
       />
     </main>
   );

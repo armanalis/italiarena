@@ -75,10 +75,22 @@ export async function signUp(
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: await getServerAuthCallbackUrl(),
+    },
+  });
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (data.user?.identities?.length === 0) {
+    return {
+      error: "An account with this email already exists. Try signing in instead.",
+    };
   }
 
   if (data.user) {
@@ -92,7 +104,15 @@ export async function signUp(
     }
   }
 
-  return { error: null, redirectTo: await getPostAuthPath() };
+  if (data.session) {
+    return { error: null, redirectTo: await getPostAuthPath() };
+  }
+
+  return {
+    error: null,
+    success:
+      "Verification email sent. Check your inbox to confirm your account, then sign in.",
+  };
 }
 
 export async function requestPasswordReset(

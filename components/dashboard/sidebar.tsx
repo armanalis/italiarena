@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { ItalianBrandIcon } from "@/components/italian-brand-icon";
 import { signOut } from "@/app/login/actions";
+import { APP_NAME } from "@/lib/legal";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -36,8 +37,8 @@ export function DashboardSidebar({ profile }: DashboardSidebarProps) {
         <div className="flex items-center gap-2">
           <ItalianBrandIcon className="size-9 shrink-0 rounded-lg" />
           <div>
-            <p className="text-sm font-semibold tracking-tight">Language Quiz</p>
-            <p className="text-xs text-muted-foreground">Multiplayer Trivia</p>
+            <p className="text-sm font-semibold tracking-tight">{APP_NAME}</p>
+            <p className="text-xs text-muted-foreground">Italian live quizzes</p>
           </div>
         </div>
         <ThemeToggle className="size-8 shrink-0" />

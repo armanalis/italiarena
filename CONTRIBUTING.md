@@ -1,6 +1,6 @@
-# Contributing to Language Quiz
+# Contributing to Italiarena
 
-Thanks for taking the time to improve Language Quiz. This project is open source so the app can get better in public — but the live question pool and database schema are maintained separately and are **not** published in this repository.
+Thanks for taking the time to improve Italiarena. This project is open source so the app can get better in public — but the live question pool and database schema are maintained separately and are **not** published in this repository.
 
 ## What you can contribute
 
@@ -37,7 +37,7 @@ You do **not** need to run database migrations or seed questions to contribute t
 
 ## Reporting bugs
 
-Open a [GitHub issue](https://github.com/armanalis/language-quiz/issues) with:
+Open a [GitHub issue](https://github.com/armanalis/italiarena/issues) with:
 
 - What you expected
 - What happened instead
@@ -56,4 +56,4 @@ Open a [GitHub issue](https://github.com/armanalis/language-quiz/issues) with:
 
 If you are unsure whether an idea fits, open an issue labeled as a question. That is always better than spending time on a PR that cannot be merged.
 
-Thank you for helping make language practice feel less like homework.
+Thank you for helping make Italian practice feel less like homework.

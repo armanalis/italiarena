@@ -15,14 +15,14 @@ const features = [
     num: "01",
     title: "Just a few minutes a day",
     description:
-      "Short sessions that fit your schedule — learn without blocking out hours of study time.",
+      "Short sessions that fit your schedule — learn Italian without blocking out hours of study time.",
   },
   {
     icon: Users,
     num: "02",
-    title: "Learn with real people",
+    title: "Practice Italian with real people",
     description:
-      "Practice with others at your level through live quiz rounds at your pace.",
+      "Practice Italian with others at your level through live quiz rounds at your pace.",
   },
   {
     icon: Trophy,
@@ -50,11 +50,12 @@ export default async function HomePage() {
           <div className="space-y-8">
             <p className="swiss-label">Italian · live quiz matches</p>
             <h1 className="max-w-xl text-4xl font-semibold leading-[1.08] tracking-tight text-balance sm:text-5xl lg:text-[3.25rem]">
-              Learn a language through quick, real practice
+              Learn Italian through quick, real practice
             </h1>
             <p className="max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Play timed rounds against real people or a bot. Pick up words and
-              grammar naturally — without long lessons or heavy study blocks.
+              Play timed rounds against real people or a bot. Pick up Italian
+              words and grammar naturally — without long lessons or heavy study
+              blocks.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <Button asChild size="lg" className="h-12 min-w-[9.5rem] px-6">

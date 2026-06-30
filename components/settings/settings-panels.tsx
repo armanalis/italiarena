@@ -29,7 +29,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PROFICIENCY_LEVELS, TARGET_LANGUAGE } from "@/lib/constants";
-import { SUPPORT_EMAIL } from "@/lib/legal";
+import { APP_NAME, SUPPORT_EMAIL } from "@/lib/legal";
 import { getSoundVolume, writeGameplayPreferences } from "@/lib/preferences";
 import type { MatchHistoryEntry, UserProfile } from "@/lib/types";
 import { SoundVolumeControl } from "@/components/sound-volume-control";
@@ -194,7 +194,7 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
       ) : (
         <Card className="border-border/60">
           <CardHeader>
-            <CardTitle>Learning profile</CardTitle>
+            <CardTitle>Italian profile</CardTitle>
             <CardDescription>
               Update your Italian level and public display name.
             </CardDescription>
@@ -424,7 +424,7 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
 
           <Button asChild variant="secondary" className="min-h-11 w-full gap-2 sm:w-auto">
             <a
-              href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Language Quiz feedback")}`}
+              href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`${APP_NAME} feedback`)}`}
             >
               <Mail className="size-4" />
               Send feedback

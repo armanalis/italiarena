@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { APP_NAME } from "@/lib/legal";
 import { cn } from "@/lib/utils";
 
 function useIsInstalledApp() {
@@ -59,7 +60,7 @@ export function AddToHomeScreenGuide() {
           <div>
             <CardTitle>Add to your home screen</CardTitle>
             <CardDescription className="mt-1.5">
-              Install Language Quiz like an app for quick access, full screen, and a
+              Install {APP_NAME} like an app for quick access, full screen, and a
               smoother mobile experience.
             </CardDescription>
           </div>

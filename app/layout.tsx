@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SiteHeaderSkeleton } from "@/components/site-header-skeleton";
 import { PRODUCTION_SITE_URL } from "@/lib/site-url";
+import { APP_NAME } from "@/lib/legal";
 import { cn } from "@/lib/utils";
 
 const inter = Inter({
@@ -18,13 +19,13 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL(PRODUCTION_SITE_URL),
-  title: "Language Quiz",
-  description: "Learn a new language through quick, playful practice with others",
-  applicationName: "Language Quiz",
+  title: APP_NAME,
+  description: "Learn Italian through quick, playful practice with others",
+  applicationName: APP_NAME,
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Language Quiz",
+    title: APP_NAME,
   },
   formatDetection: {
     telephone: false,
