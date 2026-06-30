@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export const GITHUB_REPO_URL = "https://github.com/armanalis/language-quiz";
+export const GITHUB_REPO_URL = "https://github.com/armanalis/italiarena";
 
 function GitHubIcon({ className }: { className?: string }) {
   return (

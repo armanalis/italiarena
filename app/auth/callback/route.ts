@@ -1,11 +1,24 @@
 /** OAuth callback: exchanges the provider code for a Supabase session. */
 import { NextResponse } from "next/server";
 import { getPostAuthPath } from "@/lib/auth";
-import { getRequestOrigin } from "@/lib/site-url";
+import {
+  getProductionSiteUrl,
+  getRequestOrigin,
+  isLegacySiteHostname,
+} from "@/lib/site-url";
 import { createClient } from "@/utils/supabase/server";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
+
+  if (isLegacySiteHostname(requestUrl.hostname)) {
+    const destination = new URL(
+      `${requestUrl.pathname}${requestUrl.search}`,
+      getProductionSiteUrl()
+    );
+    return NextResponse.redirect(destination, 308);
+  }
+
   const origin = getRequestOrigin(request);
   const code = requestUrl.searchParams.get("code");
   const next = requestUrl.searchParams.get("next");

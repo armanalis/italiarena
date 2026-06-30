@@ -189,7 +189,7 @@ async function generateMatchQuestions(
 
   if (regular.length < REGULAR_MATCH_QUESTIONS) {
     throw new Error(
-      `Add at least ${REGULAR_MATCH_QUESTIONS} questions for ${language} / ${level} before playing.`
+      `Add at least ${REGULAR_MATCH_QUESTIONS} Italian questions for ${level} before playing.`
     );
   }
 
@@ -202,8 +202,8 @@ async function generateMatchQuestions(
   };
 }
 
-function insufficientQuestionsMessage(language: string, level: string) {
-  return `Add at least ${REGULAR_MATCH_QUESTIONS} questions for ${language} / ${level} before playing.`;
+function insufficientQuestionsMessage(level: string) {
+  return `Add at least ${REGULAR_MATCH_QUESTIONS} Italian questions for ${level} before playing.`;
 }
 
 async function abandonOwnWaitingSession(
@@ -404,7 +404,7 @@ export async function searchForMatch(
       error:
         error instanceof Error
           ? error.message
-          : insufficientQuestionsMessage(language, level),
+          : insufficientQuestionsMessage(level),
     };
   }
 
@@ -462,7 +462,7 @@ export async function startBotMatch(
       error:
         error instanceof Error
           ? error.message
-          : insufficientQuestionsMessage(language, level),
+          : insufficientQuestionsMessage(level),
     };
   }
 

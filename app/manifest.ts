@@ -1,11 +1,12 @@
 import type { MetadataRoute } from "next";
+import { APP_NAME } from "@/lib/legal";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Language Quiz",
-    short_name: "Lang Quiz",
+    name: APP_NAME,
+    short_name: APP_NAME,
     description:
-      "Learn a new language through quick, playful practice with others",
+      "Learn Italian through quick, playful practice with others",
     start_url: "/",
     scope: "/",
     display: "standalone",

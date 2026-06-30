@@ -57,7 +57,7 @@ export async function fetchTiebreakerQuestion(
   if (!data) {
     return {
       success: false,
-      error: "No tiebreaker question available for your language and level.",
+      error: "No tiebreaker question available for your Italian level.",
     };
   }
 

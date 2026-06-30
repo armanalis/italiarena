@@ -66,6 +66,26 @@ export async function getUserMistakes(): Promise<UserMistakeWithQuestion[]> {
   );
 }
 
+export async function getReportedQuestionIds(): Promise<string[]> {
+  const userId = await getAuthUserId();
+
+  if (!userId) {
+    return [];
+  }
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("reports")
+    .select("question_id")
+    .eq("reporter_id", userId);
+
+  return [
+    ...new Set(
+      (data ?? []).map((row) => row.question_id).filter(Boolean) as string[]
+    ),
+  ];
+}
+
 async function fetchUserMistakes(userId: string): Promise<UserMistakeWithQuestion[]> {
   const supabase = await createClient();
 
