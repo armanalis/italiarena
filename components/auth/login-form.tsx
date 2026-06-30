@@ -7,6 +7,7 @@ import { useFormStatus } from "react-dom";
 import { useActionRedirect } from "@/hooks/use-action-redirect";
 import { ArrowLeft, Lock, Mail, Sparkles, UserRound } from "lucide-react";
 import { ItalianBrandIcon } from "@/components/italian-brand-icon";
+import { APP_NAME } from "@/lib/legal";
 import {
   requestPasswordReset,
   signIn,
@@ -85,7 +86,7 @@ export function LoginForm() {
           <div className="mb-5 flex size-12 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
             <ItalianBrandIcon className="size-10" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Language Quiz</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{APP_NAME}</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
             {isForgot
               ? "Enter your email and we'll send you a reset link."

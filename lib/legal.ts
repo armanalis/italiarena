@@ -1,5 +1,6 @@
 /** Legal and privacy copy shared across the app (Italy / GDPR). */
-export const APP_LEGAL_NAME = "Language Quiz";
+export const APP_NAME = "Italiarena";
+export const APP_LEGAL_NAME = APP_NAME;
 
 export const SUPPORT_EMAIL = "support@italiarena.com";
 

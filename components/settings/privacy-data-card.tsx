@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PRIVACY_CONTACT_EMAIL } from "@/lib/legal";
+import { APP_NAME, PRIVACY_CONTACT_EMAIL } from "@/lib/legal";
 
 export function PrivacyDataCard() {
   return (
@@ -48,7 +48,7 @@ export function PrivacyDataCard() {
             Read full Privacy Policy
           </Link>
           <a
-            href={`mailto:${PRIVACY_CONTACT_EMAIL}?subject=${encodeURIComponent("Language Quiz — privacy request")}`}
+            href={`mailto:${PRIVACY_CONTACT_EMAIL}?subject=${encodeURIComponent(`${APP_NAME} — privacy request`)}`}
             className="inline-flex min-h-10 items-center rounded-lg border border-border/60 px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/30"
           >
             Contact about my data
