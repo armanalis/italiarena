@@ -306,14 +306,15 @@ export function LoginForm() {
                 New accounts get matched by Italian level after a quick setup.
               </p>
               <p className="text-center text-xs text-muted-foreground">
-                By creating an account, you agree to our{" "}
+                Creando un account accetti la nostra{" "}
                 <Link
                   href="/privacy"
                   className="font-medium text-primary underline-offset-4 hover:underline"
                 >
-                  Privacy Policy
+                  Informativa sulla privacy
                 </Link>
-                . Your data is handled in line with GDPR and Italian privacy law.
+                . I dati sono trattati nel rispetto del GDPR e del Codice Privacy
+                italiano.
               </p>
             </>
           )}

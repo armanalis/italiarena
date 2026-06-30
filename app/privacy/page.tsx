@@ -11,7 +11,7 @@ export default function PrivacyPage() {
           href="/"
           className="mb-8 inline-flex text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
-          ← Back to home
+          ← Torna alla home
         </Link>
 
         <PrivacyPolicyContent />

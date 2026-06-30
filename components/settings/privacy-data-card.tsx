@@ -18,25 +18,27 @@ export function PrivacyDataCard() {
           <CardTitle>Privacy &amp; data</CardTitle>
         </div>
         <CardDescription>
-          How we handle your data under GDPR and Italian privacy law.
+          Come trattiamo i tuoi dati ai sensi del GDPR e del Codice Privacy
+          italiano.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 text-sm text-muted-foreground">
         <ul className="list-inside list-disc space-y-2">
           <li>
-            We only collect data needed to run the app (account, gameplay stats,
-            match history, and optional reports or AI explanations).
+            Raccogliamo solo i dati necessari al servizio (account, statistiche
+            di gioco, cronologia partite e, se lo usi, segnalazioni o spiegazioni
+            AI).
           </li>
           <li>
-            Your data is stored securely (HTTPS), never sold to third parties,
-            and you can exercise your rights under GDPR and Italian privacy law.
+            I dati sono conservati in modo sicuro (HTTPS), non venduti a terzi;
+            puoi esercitare i diritti previsti dal GDPR e dal Codice Privacy.
           </li>
           <li>
-            You can update your profile here,{" "}
+            Puoi aggiornare il profilo qui,{" "}
             <a href="#delete-account" className="text-primary underline-offset-4 hover:underline">
-              delete your account
+              eliminare l&apos;account
             </a>{" "}
-            at any time, or contact us to access or correct your data.
+            in qualsiasi momento o contattarci per accesso o rettifica.
           </li>
         </ul>
 
@@ -45,13 +47,13 @@ export function PrivacyDataCard() {
             href="/privacy"
             className="inline-flex min-h-10 items-center rounded-lg border border-border/60 bg-muted/30 px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
           >
-            Read full Privacy Policy
+            Leggi l&apos;informativa completa
           </Link>
           <a
-            href={`mailto:${PRIVACY_CONTACT_EMAIL}?subject=${encodeURIComponent(`${APP_NAME} — privacy request`)}`}
+            href={`mailto:${PRIVACY_CONTACT_EMAIL}?subject=${encodeURIComponent(`${APP_NAME} — richiesta privacy`)}`}
             className="inline-flex min-h-10 items-center rounded-lg border border-border/60 px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/30"
           >
-            Contact about my data
+            Contattaci sui miei dati
           </a>
         </div>
       </CardContent>
