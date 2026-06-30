@@ -94,7 +94,7 @@ npm run lint     # ESLint
 
 ## Deployment
 
-The app is deployed on [Vercel](https://vercel.com/) at [italiarena.com](https://italiarena.com). Set `NEXT_PUBLIC_SITE_URL` to `https://italiarena.com`, plus `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in the project environment. In Supabase → Authentication → URL configuration, set **Site URL** to `https://italiarena.com`, add `https://italiarena.com/auth/callback` to **Redirect URLs**, and remove any old `language-quiz-one.vercel.app` entries. Optional features (for example Ask AI) may require additional keys configured only on the hosted instance.
+The app is deployed on [Vercel](https://vercel.com/) at [italiarena.com](https://italiarena.com). Set `NEXT_PUBLIC_SITE_URL` to `https://italiarena.com`, plus `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in the project environment. In Supabase → Authentication → URL configuration, set **Site URL** to `https://italiarena.com`, add `https://italiarena.com/auth/callback` to **Redirect URLs**, and remove any old `language-quiz-one.vercel.app` or `quiz-one.vercel.app` entries (otherwise sign-up and password-reset emails link to a dead URL). Optional features (for example Ask AI) may require additional keys configured only on the hosted instance.
 
 ---
 

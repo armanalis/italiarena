@@ -4,14 +4,14 @@ import { getPostAuthPath } from "@/lib/auth";
 import {
   getProductionSiteUrl,
   getRequestOrigin,
-  isLegacySiteHostname,
+  shouldRedirectToProductionHost,
 } from "@/lib/site-url";
 import { createClient } from "@/utils/supabase/server";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
 
-  if (isLegacySiteHostname(requestUrl.hostname)) {
+  if (shouldRedirectToProductionHost(requestUrl.hostname)) {
     const destination = new URL(
       `${requestUrl.pathname}${requestUrl.search}`,
       getProductionSiteUrl()

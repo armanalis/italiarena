@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useActionRedirect } from "@/hooks/use-action-redirect";
 import { ArrowLeft, Lock, Mail, Sparkles, UserRound } from "lucide-react";
@@ -53,6 +53,9 @@ function SubmitButton({ mode }: { mode: AuthMode }) {
 
 export function LoginForm() {
   const [mode, setMode] = useState<AuthMode>("signin");
+  const [verificationMessage, setVerificationMessage] = useState<string | null>(
+    null
+  );
   const [signInState, signInAction] = useActionState(signIn, initialState);
   const [signUpState, signUpAction] = useActionState(signUp, initialState);
   const [forgotState, forgotAction] = useActionState(
@@ -79,6 +82,16 @@ export function LoginForm() {
         : null
   );
 
+  useEffect(() => {
+    if (signUpState?.success) {
+      setVerificationMessage(signUpState.success);
+      setMode("signin");
+    }
+  }, [signUpState?.success]);
+
+  const successMessage =
+    verificationMessage ?? (isForgot ? forgotState?.success : null);
+
   return (
     <div className="w-full max-w-[420px]">
       <div className="glass-panel overflow-hidden">
@@ -99,7 +112,10 @@ export function LoginForm() {
             <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted/60 p-1 dark:bg-white/5">
               <button
                 type="button"
-                onClick={() => setMode("signin")}
+                onClick={() => {
+                  setVerificationMessage(null);
+                  setMode("signin");
+                }}
                 className={cn(
                   "rounded-full px-3 py-2.5 text-sm font-medium transition-all",
                   isSignIn
@@ -111,7 +127,10 @@ export function LoginForm() {
               </button>
               <button
                 type="button"
-                onClick={() => setMode("signup")}
+                onClick={() => {
+                  setVerificationMessage(null);
+                  setMode("signup");
+                }}
                 className={cn(
                   "rounded-full px-3 py-2.5 text-sm font-medium transition-all",
                   isSignUp
@@ -256,12 +275,12 @@ export function LoginForm() {
               </div>
             )}
 
-            {state?.success && (
+            {successMessage && (
               <div
                 className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-600 dark:text-emerald-400"
                 role="status"
               >
-                {state?.success}
+                {successMessage}
               </div>
             )}
 

@@ -2,7 +2,10 @@
 export const PRODUCTION_SITE_URL = "https://italiarena.com";
 
 /** Legacy hosts that should permanently redirect to {@link PRODUCTION_SITE_URL}. */
-export const LEGACY_SITE_HOSTNAMES = ["language-quiz-one.vercel.app"] as const;
+export const LEGACY_SITE_HOSTNAMES = [
+  "language-quiz-one.vercel.app",
+  "quiz-one.vercel.app",
+] as const;
 
 export function normalizeSiteUrl(url: string) {
   return url.replace(/\/$/, "");
@@ -13,12 +16,35 @@ export function isLocalDevHostname(hostname: string) {
 }
 
 export function isLegacySiteHostname(hostname: string) {
-  return (LEGACY_SITE_HOSTNAMES as readonly string[]).includes(hostname);
+  if ((LEGACY_SITE_HOSTNAMES as readonly string[]).includes(hostname)) {
+    return true;
+  }
+
+  return (
+    hostname.endsWith(".vercel.app") &&
+    (hostname.includes("language-quiz") || hostname.includes("quiz-one"))
+  );
+}
+
+/** Vercel preview aliases and legacy project URLs should hit italiarena.com. */
+export function shouldRedirectToProductionHost(hostname: string) {
+  if (isLocalDevHostname(hostname)) {
+    return false;
+  }
+
+  if (hostname === "italiarena.com" || hostname === "www.italiarena.com") {
+    return false;
+  }
+
+  return isLegacySiteHostname(hostname) || hostname.endsWith(".vercel.app");
 }
 
 function isLegacySiteUrl(url: string) {
   try {
-    return isLegacySiteHostname(new URL(url).hostname);
+    const hostname = new URL(url).hostname;
+    return (
+      isLegacySiteHostname(hostname) || hostname.endsWith(".vercel.app")
+    );
   } catch {
     return false;
   }
@@ -57,6 +83,15 @@ export function getAuthCallbackUrl(origin: string) {
   return `${normalizeSiteUrl(origin)}/auth/callback`;
 }
 
+/** Email confirmation and password-reset links always use the canonical site URL. */
+export function getEmailAuthCallbackUrl(nextPath?: string) {
+  const callback = getAuthCallbackUrl(getCanonicalSiteUrl());
+  if (!nextPath) {
+    return callback;
+  }
+  return `${callback}?next=${encodeURIComponent(nextPath)}`;
+}
+
 /** OAuth callback target: localhost in dev, canonical production URL otherwise. */
 export function getClientAuthCallbackUrl() {
   if (typeof window !== "undefined") {
@@ -78,12 +113,7 @@ export function resolveCanonicalOriginForHostname(hostname: string) {
     return null;
   }
 
-  if (
-    hostname === "italiarena.com" ||
-    hostname === "www.italiarena.com" ||
-    isLegacySiteHostname(hostname) ||
-    hostname.endsWith(".vercel.app")
-  ) {
+  if (shouldRedirectToProductionHost(hostname)) {
     return getProductionSiteUrl();
   }
 

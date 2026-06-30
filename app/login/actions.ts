@@ -10,15 +10,23 @@ import {
   validateUsername,
 } from "@/lib/username";
 import { mapUsernameSaveError, USERNAME_TAKEN_MESSAGE } from "@/lib/username-errors";
-import { getServerAuthCallbackUrl } from "@/lib/site-url-server";
+import { getEmailAuthCallbackUrl } from "@/lib/site-url";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
+import type { User } from "@supabase/supabase-js";
 
 export type AuthFormState = {
   error: string | null;
   success?: string | null;
   redirectTo?: string | null;
 };
+
+const VERIFICATION_EMAIL_SENT_MESSAGE =
+  "Verification email sent. Check your inbox to confirm your account, then sign in.";
+
+function userNeedsEmailConfirmation(user: User) {
+  return !user.email_confirmed_at;
+}
 
 export async function signIn(
   _prevState: AuthFormState,
@@ -43,6 +51,12 @@ export async function signIn(
   });
 
   if (error) {
+    if (error.message.toLowerCase().includes("email not confirmed")) {
+      return {
+        error:
+          "Please confirm your email first. Check your inbox for the verification link.",
+      };
+    }
     return { error: error.message };
   }
 
@@ -79,7 +93,7 @@ export async function signUp(
     email,
     password,
     options: {
-      emailRedirectTo: await getServerAuthCallbackUrl(),
+      emailRedirectTo: getEmailAuthCallbackUrl(),
     },
   });
 
@@ -104,14 +118,21 @@ export async function signUp(
     }
   }
 
+  if (data.user && userNeedsEmailConfirmation(data.user)) {
+    await supabase.auth.signOut();
+    return {
+      error: null,
+      success: VERIFICATION_EMAIL_SENT_MESSAGE,
+    };
+  }
+
   if (data.session) {
     return { error: null, redirectTo: await getPostAuthPath() };
   }
 
   return {
     error: null,
-    success:
-      "Verification email sent. Check your inbox to confirm your account, then sign in.",
+    success: VERIFICATION_EMAIL_SENT_MESSAGE,
   };
 }
 
@@ -154,7 +175,7 @@ export async function requestPasswordReset(
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: await getServerAuthCallbackUrl("/login/reset-password"),
+    redirectTo: getEmailAuthCallbackUrl("/login/reset-password"),
   });
 
   if (error) {

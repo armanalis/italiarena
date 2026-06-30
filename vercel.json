@@ -10,6 +10,17 @@
       ],
       "destination": "https://italiarena.com/:path*",
       "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "quiz-one.vercel.app"
+        }
+      ],
+      "destination": "https://italiarena.com/:path*",
+      "permanent": true
     }
   ],
   "headers": [

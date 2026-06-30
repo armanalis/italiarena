@@ -7,7 +7,7 @@ import { updateSession } from "@/utils/supabase/middleware";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import {
   getProductionSiteUrl,
-  LEGACY_SITE_HOSTNAMES,
+  shouldRedirectToProductionHost,
 } from "@/lib/site-url";
 import { isGuestAuthEmail, isGuestAuthUser } from "@/lib/guest-auth";
 
@@ -72,11 +72,9 @@ export async function middleware(request: NextRequest) {
     request.headers.get("host") ??
     request.nextUrl.host;
 
-  if (
-    LEGACY_SITE_HOSTNAMES.includes(
-      host as (typeof LEGACY_SITE_HOSTNAMES)[number]
-    )
-  ) {
+  const hostname = host.split(":")[0] ?? host;
+
+  if (shouldRedirectToProductionHost(hostname)) {
     const destination = new URL(
       `${request.nextUrl.pathname}${request.nextUrl.search}`,
       getProductionSiteUrl()
