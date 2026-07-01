@@ -103,7 +103,7 @@ export function GuestSetupForm(_props?: GuestSetupFormProps) {
                 href="/privacy"
                 className="font-medium text-primary underline-offset-4 hover:underline"
               >
-                Informativa privacy
+                Privacy policy
               </Link>
             </li>
           </ul>

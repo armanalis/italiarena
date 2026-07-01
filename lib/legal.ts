@@ -9,7 +9,7 @@ export const SUPPORT_EMAIL = "support@italiarena.com";
 /** Privacy and data-protection requests (same inbox as general support). */
 export const PRIVACY_CONTACT_EMAIL = SUPPORT_EMAIL;
 
-export const PRIVACY_POLICY_LAST_UPDATED = "30 giugno 2026";
+export const PRIVACY_POLICY_LAST_UPDATED = "June 30, 2026";
 
 /** Minimum age to use the service in Italy (art. 2-quinquies Codice privacy). */
 export const MINIMUM_AGE_ITALY = 14;
@@ -23,17 +23,17 @@ export const ITALIAN_DPA_ADDRESS = "Piazza Venezia 11, 00187 Roma";
 
 export const ITALIAN_DPA_PEC = "protocollo@pec.gpdp.it";
 
-export const PRIVACY_POLICY_TITLE = "Informativa privacy";
+export const PRIVACY_POLICY_TITLE = "Privacy policy";
 
-export const PRIVACY_POLICY_SUBTITLE = `${APP_LEGAL_NAME} · Ultimo aggiornamento: ${PRIVACY_POLICY_LAST_UPDATED} · Italia`;
+export const PRIVACY_POLICY_SUBTITLE = `${APP_LEGAL_NAME} · Last updated: ${PRIVACY_POLICY_LAST_UPDATED} · Italy`;
 
 export const PRIVACY_POLICY_INTRO =
-  "La presente informativa è resa ai sensi degli artt. 13 e 14 del Regolamento (UE) 2016/679 (" +
-  "«GDPR») e del Codice in materia di protezione dei dati personali (D.Lgs. 30 giugno 2003, n. 196, " +
-  "come modificato dal D.Lgs. 10 agosto 2018, n. 101, di seguito «Codice privacy») agli utenti del " +
-  "servizio Italiarena residenti o presenti in Italia. Il testo è redatto in linguaggio chiaro e " +
-  "accessibile, come richiesto dagli artt. 12–14 GDPR e dalle Linee guida sulla trasparenza del " +
-  "Gruppo di lavoro Articolo 29 (rev. 1, aprile 2018).";
+  "This privacy notice is provided pursuant to Articles 13 and 14 of Regulation (EU) 2016/679 " +
+  "(the «GDPR») and the Codice in materia di protezione dei dati personali (D.Lgs. 30 giugno 2003, " +
+  "n. 196, as amended by D.Lgs. 10 agosto 2018, n. 101, hereinafter «Codice privacy») to users of " +
+  "the Italiarena service located in or using the service from Italy. The text is written in clear, " +
+  "plain language as required by Articles 12–14 GDPR and the Article 29 Working Party transparency " +
+  "guidelines (rev. 1, April 2018).";
 
 export type PrivacyPolicySection = {
   title: string;
@@ -43,161 +43,156 @@ export type PrivacyPolicySection = {
 
 export const PRIVACY_POLICY_SECTIONS: readonly PrivacyPolicySection[] = [
   {
-    title: "1. Titolare del trattamento",
+    title: "1. Data controller",
     body:
-      `Il titolare del trattamento è l'operatore del servizio ${APP_LEGAL_NAME} ` +
-      `(sito web: ${APP_WEBSITE}). Per qualsiasi richiesta relativa ai dati personali è possibile ` +
-      `contattare il titolare all'indirizzo e-mail ${PRIVACY_CONTACT_EMAIL}.`,
+      `The data controller is the operator of ${APP_LEGAL_NAME} ` +
+      `(website: ${APP_WEBSITE}). For any request relating to your personal data, contact the controller at ` +
+      `${PRIVACY_CONTACT_EMAIL}.`,
   },
   {
-    title: "2. Responsabile della Protezione dei Dati (RPD/DPO)",
+    title: "2. Data Protection Officer (DPO)",
     body:
-      "Non è stato designato un Responsabile della Protezione dei Dati (RPD/DPO), in quanto il " +
-      "trattamento non rientra nei casi di obbligo previsti dall'art. 37 GDPR.",
+      "No Data Protection Officer (DPO) has been appointed, as processing does not fall within the " +
+      "cases requiring one under art. 37 GDPR.",
   },
   {
-    title: "3. Categorie di dati personali trattati",
-    body: "Trattiamo le seguenti categorie di dati, limitatamente a quanto necessario per il servizio:",
+    title: "3. Categories of personal data processed",
+    body: "We process the following categories of data, limited to what is necessary for the service:",
     items: [
-      "Dati identificativi e di contatto: indirizzo e-mail, nome visualizzato (username) o nome generato automaticamente in modalità ospite.",
-      "Dati di profilo e preferenze: livello di competenza in italiano (CEFR), lingua di destinazione, impostazioni audio e feedback aptico.",
-      "Dati di gioco: statistiche, cronologia partite, punteggi, errori commessi e progressi nella pratica degli errori, posizione in classifica (per utenti registrati).",
-      "Dati relativi a segnalazioni e contributi: contenuto delle segnalazioni su domande errate o ambigue e domande inviate alla community.",
-      "Dati relativi alle funzioni di intelligenza artificiale: testo delle domande, risposte selezionate e spiegazioni generate quando l'utente richiede esplicitamente «Ask AI».",
-      "Dati tecnici di autenticazione: cookie e token di sessione necessari per l'accesso sicuro, gestiti dal nostro fornitore di autenticazione.",
+      "Identification and contact data: email address, display name (username), or an auto-generated name in guest mode.",
+      "Profile and preference data: Italian proficiency level (CEFR), target language, sound and haptic settings.",
+      "Gameplay data: statistics, match history, scores, mistakes, mistake-practice progress, and leaderboard position (registered users).",
+      "Reports and contributions: content of reports on incorrect or ambiguous questions and questions submitted to the community.",
+      "Artificial intelligence data: question text, selected answers, and generated explanations when you explicitly request «Ask AI».",
+      "Authentication technical data: cookies and session tokens required for secure access, managed by our authentication provider.",
     ],
   },
   {
-    title: "4. Finalità, basi giuridiche e periodi di conservazione",
+    title: "4. Purposes, legal bases, and retention periods",
     body:
-      "Per ciascuna finalità indichiamo la base giuridica ai sensi dell'art. 6 GDPR e il periodo " +
-      "di conservazione, come richiesto dagli artt. 13(1)(c) e 13(2)(a) GDPR:",
+      "For each purpose we indicate the legal basis under art. 6 GDPR and the retention period, as " +
+      "required by art. 13(1)(c) and 13(2)(a) GDPR:",
     items: [
-      "Creazione e gestione dell'account (e-mail, credenziali, profilo): base giuridica — esecuzione del contratto o misure precontrattuali (art. 6, par. 1, lett. b) GDPR); conservazione — per tutta la durata dell'account.",
-      "Modalità ospite (sessione anonima, nome generato, livello di competenza): base giuridica — esecuzione del contratto (art. 6, par. 1, lett. b) GDPR); conservazione — per la durata della sessione ospite o fino alla conversione in account registrato.",
-      "Svolgimento di partite, classifiche e statistiche: base giuridica — esecuzione del contratto (art. 6, par. 1, lett. b) GDPR); conservazione — per tutta la durata dell'account.",
-      "Pratica degli errori e revisione post-partita: base giuridica — esecuzione del contratto (art. 6, par. 1, lett. b) GDPR); conservazione — per tutta la durata dell'account.",
-      "Segnalazione di domande problematiche: base giuridica — legittimo interesse del titolare a garantire la qualità dei contenuti (art. 6, par. 1, lett. f) GDPR); l'interesse consiste nel mantenere domande corrette e utili per tutti gli utenti, con impatto minimo sull'interessato; conservazione — fino alla risoluzione della segnalazione e, al massimo, 24 mesi.",
-      "Invio di domande alla community: base giuridica — esecuzione del contratto (art. 6, par. 1, lett. b) GDPR); conservazione — fino alla revisione amministrativa; se approvata, i dati restano nel pool delle domande.",
-      "Spiegazioni tramite intelligenza artificiale («Ask AI»): base giuridica — consenso dell'interessato manifestato con la richiesta esplicita (art. 6, par. 1, lett. a) GDPR); conservazione — le spiegazioni generate possono essere memorizzate in cache condivisa per domanda/risposta; i log di utilizzo per utente e sessione sono conservati per la durata dell'account.",
-      "Sicurezza, prevenzione abusi e funzionamento tecnico del servizio: base giuridica — legittimo interesse del titolare (art. 6, par. 1, lett. f) GDPR); conservazione — log tecnici per un massimo di 90 giorni, salvo obblighi di legge.",
+      "Account creation and management (email, credentials, profile): legal basis — performance of a contract or pre-contractual measures (art. 6(1)(b) GDPR); retention — for as long as the account is active.",
+      "Guest mode (anonymous session, generated name, proficiency level): legal basis — performance of a contract (art. 6(1)(b) GDPR); retention — for the guest session or until conversion to a registered account.",
+      "Matches, leaderboards, and statistics: legal basis — performance of a contract (art. 6(1)(b) GDPR); retention — for as long as the account is active.",
+      "Mistake practice and post-match review: legal basis — performance of a contract (art. 6(1)(b) GDPR); retention — for as long as the account is active.",
+      "Reporting problematic questions: legal basis — legitimate interest in ensuring content quality (art. 6(1)(f) GDPR); the interest is keeping questions accurate and useful for all users, with minimal impact on the data subject; retention — until the report is resolved, up to 24 months.",
+      "Community question submissions: legal basis — performance of a contract (art. 6(1)(b) GDPR); retention — until administrative review; if approved, data remains in the question pool.",
+      "AI explanations («Ask AI»): legal basis — consent given by your explicit request (art. 6(1)(a) GDPR); retention — generated explanations may be stored in a shared cache per question/answer; per-user usage logs are kept for the life of the account.",
+      "Security, abuse prevention, and technical operation: legal basis — legitimate interest (art. 6(1)(f) GDPR); retention — technical logs for up to 90 days, unless longer retention is required by law.",
     ],
   },
   {
-    title: "5. Natura del conferimento dei dati e conseguenze del rifiuto",
+    title: "5. Whether data is required and consequences of refusal",
     body:
-      "Il conferimento dei dati contrassegnati come obbligatori in fase di registrazione (e-mail e " +
-      "password) o di avvio della modalità ospite (livello di competenza) è necessario per concludere " +
-      "il contratto e utilizzare il servizio. Il mancato conferimento impedisce la creazione dell'account " +
-      "o l'accesso alle partite. Il nome visualizzato, le segnalazioni, i contributi alla community e " +
-      "l'uso di «Ask AI» sono facoltativi; il loro mancato utilizzo non impedisce l'uso principale del " +
-      "servizio, ma limita le funzionalità corrispondenti.",
+      "Providing data marked as required during registration (email and password) or when starting guest " +
+      "mode (proficiency level) is necessary to enter into the contract and use the service. Refusal " +
+      "prevents account creation or access to matches. Display name, reports, community submissions, " +
+      "and «Ask AI» are optional; not using them does not block core use of the service, but limits " +
+      "the related features.",
   },
   {
-    title: "6. Destinatari e responsabili del trattamento",
+    title: "6. Recipients and processors",
     body:
-      "I dati possono essere comunicati a soggetti che trattano per nostro conto in qualità di " +
-      "responsabili del trattamento ai sensi dell'art. 28 GDPR, vincolati da accordi di trattamento:",
+      "Data may be shared with parties that process it on our behalf as data processors under " +
+      "art. 28 GDPR, bound by data processing agreements:",
     items: [
-      "Supabase Inc. — database, autenticazione e hosting dei dati applicativi.",
-      "Vercel Inc. — hosting dell'applicazione web.",
-      "Groq Inc. — generazione opzionale di spiegazioni didattiche quando l'utente richiede «Ask AI».",
+      "Supabase Inc. — database, authentication, and application data hosting.",
+      "Vercel Inc. — web application hosting.",
+      "Groq Inc. — optional educational explanations when you request «Ask AI».",
     ],
   },
   {
-    title: "7. Trasferimenti di dati verso paesi terzi",
+    title: "7. Transfers to third countries",
     body:
-      "Alcuni fornitori sopra elencati possono trattare dati al di fuori dello Spazio economico europeo " +
-      "(SEE), in particolare negli Stati Uniti d'America. In tali casi il trasferimento avviene nel " +
-      "rispetto degli artt. 44–49 GDPR, sulla base di decisioni di adeguatezza della Commissione " +
-      "europea e/o Clausole contrattuali standard (SCC) approvate dalla Commissione europea, nonché " +
-      "delle garanzie supplementari adottate dai fornitori. Copie delle garanzie applicabili possono " +
-      "essere richieste a " +
+      "Some providers listed above may process data outside the European Economic Area (EEA), " +
+      "including the United States. In such cases, transfers take place in compliance with " +
+      "Articles 44–49 GDPR, on the basis of European Commission adequacy decisions and/or " +
+      "Standard Contractual Clauses (SCC) approved by the European Commission, as well as " +
+      "supplementary safeguards adopted by providers. Copies of applicable safeguards may be " +
+      "requested at " +
       PRIVACY_CONTACT_EMAIL +
       ".",
   },
   {
-    title: "8. Processi decisionali automatizzati e profilazione",
+    title: "8. Automated decision-making and profiling",
     body:
-      "Non effettuiamo processi decisionali automatizzati che producano effetti giuridici o incidano in " +
-      "modo analogo significativamente sull'interessato ai sensi dell'art. 22 GDPR. L'abbinamento tra " +
-      "giocatori avviene in base al livello di competenza dichiarato, esclusivamente per organizzare " +
-      "partite equilibrate, senza profilazione a fini commerciali. Non vendiamo né cediamo a terzi i " +
-      "dati personali per finalità di marketing.",
+      "We do not carry out automated decision-making that produces legal effects or similarly " +
+      "significantly affects you under art. 22 GDPR. Matchmaking is based on declared proficiency " +
+      "level solely to organize fair matches, without commercial profiling. We do not sell or share " +
+      "personal data with third parties for marketing purposes.",
   },
   {
-    title: "9. Comunicazioni promozionali",
+    title: "9. Promotional communications",
     body:
-      "Ai sensi dell'art. 130 del Codice privacy, non inviamo comunicazioni promozionali, newsletter o " +
-      "messaggi pubblicitari tramite e-mail, telefono o sistemi automatizzati senza il previo consenso " +
-      "libero, specifico, informato e documentato dell'interessato. Il servizio invia esclusivamente " +
-      "comunicazioni strettamente necessarie al funzionamento dell'account e del servizio.",
+      "Under art. 130 Codice privacy, we do not send promotional communications, newsletters, or " +
+      "advertising messages by email, phone, or automated systems without your prior free, specific, " +
+      "informed, and documented consent. The service sends only communications strictly necessary for " +
+      "account and service operation.",
   },
   {
-    title: "10. Misure di sicurezza",
+    title: "10. Security measures",
     body:
-      "Adottiamo misure tecniche e organizzative adeguate ai sensi dell'art. 32 GDPR, tra cui " +
-      "crittografia in transito (HTTPS/TLS), gestione sicura delle credenziali tramite il fornitore di " +
-      "autenticazione (password non conservate in chiaro), accesso limitato ai dati di produzione e " +
-      "accordi contrattuali con i responsabili del trattamento.",
+      "We apply appropriate technical and organizational measures under art. 32 GDPR, including " +
+      "encryption in transit (HTTPS/TLS), secure credential handling through our authentication " +
+      "provider (passwords not stored in plain text), restricted access to production data, and " +
+      "contractual agreements with processors.",
   },
   {
-    title: "11. Diritti dell'interessato",
+    title: "11. Your rights",
     body:
-      `Ai sensi degli artt. 15–22 GDPR e del Codice privacy, l'interessato ha diritto di accesso, ` +
-      `rettifica, cancellazione, limitazione del trattamento, opposizione (ove applicabile) e ` +
-      `portabilità dei dati. Quando il trattamento si basa sul consenso (ad esempio «Ask AI»), è ` +
-      `possibile revocare il consenso in qualsiasi momento senza pregiudicare la liceità del ` +
-      `trattamento basato sul consenso prestato prima della revoca. È possibile aggiornare il profilo ` +
-      `dalle Impostazioni, eliminare l'account in qualsiasi momento o scrivere a ${PRIVACY_CONTACT_EMAIL}. ` +
-      `Rispondiamo entro un mese dal ricevimento della richiesta, prorogabile di ulteriori due mesi ` +
-      `nei casi complessi, come previsto dall'art. 12, par. 3, GDPR.`,
+      `Under Articles 15–22 GDPR and the Codice privacy, you have the right of access, rectification, ` +
+      `erasure, restriction of processing, objection (where applicable), and data portability. Where ` +
+      `processing is based on consent (for example «Ask AI»), you may withdraw consent at any time ` +
+      `without affecting the lawfulness of processing based on consent before withdrawal. You can update ` +
+      `your profile in Settings, delete your account at any time, or write to ${PRIVACY_CONTACT_EMAIL}. ` +
+      `We respond within one month of receiving your request, extendable by two further months in ` +
+      `complex cases, as provided by art. 12(3) GDPR.`,
   },
   {
-    title: "12. Diritto di reclamo al Garante",
+    title: "12. Right to lodge a complaint with the Garante",
     body:
-      `L'interessato ha il diritto di proporre reclamo al ${ITALIAN_DPA_NAME} ai sensi dell'art. 77 ` +
-      `GDPR e degli artt. 140-bis e seguenti del Codice privacy, qualora ritenga che il trattamento ` +
-      `violi la normativa applicabile.`,
+      `You may lodge a complaint with the ${ITALIAN_DPA_NAME} under art. 77 GDPR and Articles ` +
+      `140-bis et seq. of the Codice privacy if you believe processing violates applicable law.`,
     items: [
-      `Sito web: ${ITALIAN_DPA_URL}`,
-      `Indirizzo: ${ITALIAN_DPA_ADDRESS}`,
+      `Website: ${ITALIAN_DPA_URL}`,
+      `Address: ${ITALIAN_DPA_ADDRESS}`,
       `PEC: ${ITALIAN_DPA_PEC}`,
     ],
   },
   {
-    title: "13. Minori",
+    title: "13. Children",
     body:
-      `Il servizio è destinato a utenti di età pari o superiore a ${MINIMUM_AGE_ITALY} anni, in linea ` +
-      `con l'art. 8 GDPR e l'art. 2-quinquies del Codice privacy (età del consenso per i servizi ` +
-      `della società dell'informazione in Italia). Non raccogliamo consapevolmente dati personali di ` +
-      `minori di ${MINIMUM_AGE_ITALY} anni. Se ritieni che un minore abbia fornito dati senza valido ` +
-      `consenso del titolare della responsabilità genitoriale, contattaci a ${PRIVACY_CONTACT_EMAIL} ` +
-      `e provvederemo alla cancellazione senza ingiustificato ritardo.`,
+      `The service is intended for users aged ${MINIMUM_AGE_ITALY} and over, in line with art. 8 GDPR ` +
+      `and art. 2-quinquies Codice privacy (age of consent for information society services in Italy). ` +
+      `We do not knowingly collect personal data from anyone under ${MINIMUM_AGE_ITALY}. If you believe a ` +
+      `minor provided data without valid parental consent, contact us at ${PRIVACY_CONTACT_EMAIL} and we ` +
+      `will delete it without undue delay.`,
   },
   {
-    title: "14. Cancellazione dell'account e conservazione residua",
+    title: "14. Account deletion and residual retention",
     body:
-      "Eliminando l'account dalle Impostazioni, cancelliamo senza ingiustificato ritardo il profilo, " +
-      "le statistiche, la cronologia delle partite e gli altri dati personali collegati. Copie residue " +
-      "possono permanere in backup crittografati per un periodo tecnico limitato (fino a 30 giorni) " +
-      "prima della cancellazione automatica. Le spiegazioni IA memorizzate in cache condivisa per " +
-      "domanda/risposta possono essere conservate in forma anonimizzata o non riconducibile all'utente.",
+      "When you delete your account from Settings, we erase your profile, statistics, match history, " +
+      "and other linked personal data without undue delay. Residual copies may remain in encrypted " +
+      "backups for a limited technical period (up to 30 days) before automatic deletion. AI " +
+      "explanations stored in a shared cache per question/answer may be kept in anonymized or " +
+      "non-identifiable form.",
   },
   {
-    title: "15. Modifiche all'informativa",
+    title: "15. Changes to this notice",
     body:
-      "Possiamo aggiornare la presente informativa per riflettere modifiche del servizio o della " +
-      "normativa applicabile. Pubblicheremo la data di aggiornamento in cima a questa pagina. In caso " +
-      "di modifiche sostanziali, forniremo un avviso chiaro nell'app ove opportuno.",
+      "We may update this notice to reflect changes to the service or applicable law. We will publish " +
+      "the updated date at the top of this page. For material changes, we will provide a clear notice " +
+      "in the app where appropriate.",
   },
 ] as const;
 
-/** Short notice for footers and auth screens (Italian, per Garante transparency rules). */
+/** Short notice for footers and auth screens. */
 export const PRIVACY_FOOTER_NOTICE =
-  "Trattamento dei dati conforme al GDPR e al Codice privacy italiano (D.Lgs. 196/2003).";
+  "Data processing in compliance with the GDPR and the Codice privacy italiano (D.Lgs. 196/2003).";
 
-/** Short notice for the settings privacy card (English UI, Italian law references). */
+/** Short notice for the settings privacy card. */
 export const PRIVACY_SETTINGS_SUMMARY = [
   "We collect only data needed to run the app, as listed in our privacy notice (art. 13 GDPR).",
   "Data is stored securely (HTTPS), never sold, and not used for promotional communications (art. 130 Codice privacy).",

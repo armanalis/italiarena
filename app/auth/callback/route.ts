@@ -1,5 +1,11 @@
-/** OAuth callback: exchanges the provider code for a Supabase session. */
+/** OAuth callback: exchanges provider codes or email token hashes for a session. */
+import { type EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import {
+  getAuthConfirmErrorCode,
+  resolveAuthNextPath,
+  verifyEmailTokenHash,
+} from "@/lib/auth-email-confirm";
 import { getPostAuthPath } from "@/lib/auth";
 import {
   getProductionSiteUrl,
@@ -20,10 +26,38 @@ export async function GET(request: Request) {
   }
 
   const origin = getRequestOrigin(request);
+  const tokenHash = requestUrl.searchParams.get("token_hash");
+  const tokenType = requestUrl.searchParams.get("type") as EmailOtpType | null;
   const code = requestUrl.searchParams.get("code");
   const next = requestUrl.searchParams.get("next");
   const oauthError = requestUrl.searchParams.get("error");
   const oauthErrorCode = requestUrl.searchParams.get("error_code");
+
+  if (tokenHash && tokenType) {
+    const supabase = await createClient();
+    const { error } = await verifyEmailTokenHash(
+      supabase,
+      tokenHash,
+      tokenType
+    );
+
+    if (error) {
+      const loginUrl = new URL("/login", origin);
+      loginUrl.searchParams.set(
+        "error",
+        getAuthConfirmErrorCode(error.message)
+      );
+      return NextResponse.redirect(loginUrl);
+    }
+
+    const nextPath = resolveAuthNextPath(next, origin);
+    if (nextPath) {
+      return NextResponse.redirect(`${origin}${nextPath}`);
+    }
+
+    const destination = await getPostAuthPath();
+    return NextResponse.redirect(`${origin}${destination}`);
+  }
 
   if (oauthError) {
     const loginUrl = new URL("/login", origin);
