@@ -1,21 +1,20 @@
 /** Email confirmation and password recovery: exchanges token_hash for a session. */
 import { type EmailOtpType } from "@supabase/supabase-js";
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import {
   getAuthConfirmErrorCode,
-  resolveAuthNextPath,
+  resolveAuthConfirmDestination,
   verifyEmailTokenHash,
 } from "@/lib/auth-email-confirm";
 import { getPostAuthPath } from "@/lib/auth";
 import {
   getProductionSiteUrl,
-  getRequestOrigin,
   isLegacySiteHostname,
 } from "@/lib/site-url";
-import { createClient } from "@/utils/supabase/server";
+import { createSupabaseRouteClient } from "@/utils/supabase/route-handler";
 
-export async function GET(request: Request) {
-  const requestUrl = new URL(request.url);
+export async function GET(request: NextRequest) {
+  const requestUrl = request.nextUrl;
 
   if (isLegacySiteHostname(requestUrl.hostname)) {
     const destination = new URL(
@@ -25,7 +24,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(destination, 308);
   }
 
-  const origin = getRequestOrigin(request);
+  const origin = requestUrl.origin;
   const tokenHash = requestUrl.searchParams.get("token_hash");
   const type = requestUrl.searchParams.get("type") as EmailOtpType | null;
   const nextParam = requestUrl.searchParams.get("next");
@@ -36,7 +35,11 @@ export async function GET(request: Request) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const supabase = await createClient();
+  const destinationPath =
+    resolveAuthConfirmDestination(type, nextParam, origin) ??
+    (await getPostAuthPath());
+  const successResponse = NextResponse.redirect(`${origin}${destinationPath}`);
+  const supabase = createSupabaseRouteClient(request, successResponse);
   const { error } = await verifyEmailTokenHash(supabase, tokenHash, type);
 
   if (error) {
@@ -45,11 +48,5 @@ export async function GET(request: Request) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const nextPath = resolveAuthNextPath(nextParam, origin);
-  if (nextPath) {
-    return NextResponse.redirect(`${origin}${nextPath}`);
-  }
-
-  const destination = await getPostAuthPath();
-  return NextResponse.redirect(`${origin}${destination}`);
+  return successResponse;
 }

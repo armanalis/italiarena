@@ -1,21 +1,21 @@
 /** OAuth callback: exchanges provider codes or email token hashes for a session. */
 import { type EmailOtpType } from "@supabase/supabase-js";
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import {
   getAuthConfirmErrorCode,
+  resolveAuthConfirmDestination,
   resolveAuthNextPath,
   verifyEmailTokenHash,
 } from "@/lib/auth-email-confirm";
 import { getPostAuthPath } from "@/lib/auth";
 import {
   getProductionSiteUrl,
-  getRequestOrigin,
   isLegacySiteHostname,
 } from "@/lib/site-url";
-import { createClient } from "@/utils/supabase/server";
+import { createSupabaseRouteClient } from "@/utils/supabase/route-handler";
 
-export async function GET(request: Request) {
-  const requestUrl = new URL(request.url);
+export async function GET(request: NextRequest) {
+  const requestUrl = request.nextUrl;
 
   if (isLegacySiteHostname(requestUrl.hostname)) {
     const destination = new URL(
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(destination, 308);
   }
 
-  const origin = getRequestOrigin(request);
+  const origin = requestUrl.origin;
   const tokenHash = requestUrl.searchParams.get("token_hash");
   const tokenType = requestUrl.searchParams.get("type") as EmailOtpType | null;
   const code = requestUrl.searchParams.get("code");
@@ -34,7 +34,11 @@ export async function GET(request: Request) {
   const oauthErrorCode = requestUrl.searchParams.get("error_code");
 
   if (tokenHash && tokenType) {
-    const supabase = await createClient();
+    const destinationPath =
+      resolveAuthConfirmDestination(tokenType, next, origin) ??
+      (await getPostAuthPath());
+    const successResponse = NextResponse.redirect(`${origin}${destinationPath}`);
+    const supabase = createSupabaseRouteClient(request, successResponse);
     const { error } = await verifyEmailTokenHash(
       supabase,
       tokenHash,
@@ -50,13 +54,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(loginUrl);
     }
 
-    const nextPath = resolveAuthNextPath(next, origin);
-    if (nextPath) {
-      return NextResponse.redirect(`${origin}${nextPath}`);
-    }
-
-    const destination = await getPostAuthPath();
-    return NextResponse.redirect(`${origin}${destination}`);
+    return successResponse;
   }
 
   if (oauthError) {
@@ -75,7 +73,10 @@ export async function GET(request: Request) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const supabase = await createClient();
+  const destinationPath =
+    resolveAuthNextPath(next, origin) ?? (await getPostAuthPath());
+  const successResponse = NextResponse.redirect(`${origin}${destinationPath}`);
+  const supabase = createSupabaseRouteClient(request, successResponse);
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
@@ -88,11 +89,6 @@ export async function GET(request: Request) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (next) {
-    const nextPath = next.startsWith("/") ? next : `/${next}`;
-    return NextResponse.redirect(`${origin}${nextPath}`);
-  }
-
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -103,6 +99,5 @@ export async function GET(request: Request) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const destination = await getPostAuthPath();
-  return NextResponse.redirect(`${origin}${destination}`);
+  return successResponse;
 }
