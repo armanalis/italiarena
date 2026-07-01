@@ -152,11 +152,26 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(nextUrl);
   }
 
+  if (
+    pathname === "/login/reset-password" &&
+    request.nextUrl.searchParams.has("code") &&
+    !user
+  ) {
+    const callbackUrl = request.nextUrl.clone();
+    callbackUrl.pathname = "/auth/callback";
+    callbackUrl.searchParams.set("next", "/login/reset-password");
+    return NextResponse.redirect(callbackUrl);
+  }
+
   if (pathname.startsWith("/login/reset-password") && !user) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("error", "reset_link_expired");
     return NextResponse.redirect(loginUrl);
+  }
+
+  if (pathname.startsWith("/login/reset-password") && user) {
+    return supabaseResponse;
   }
 
   return supabaseResponse;
