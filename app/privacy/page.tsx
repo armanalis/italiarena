@@ -1,4 +1,4 @@
-/** Public privacy policy and GDPR information (Italian informativa, art. 13 GDPR). */
+/** Public privacy policy and GDPR information (art. 13 GDPR). */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AuroraCanvas } from "@/components/aurora-canvas";
@@ -8,7 +8,7 @@ import { PRIVACY_POLICY_TITLE } from "@/lib/legal";
 export const metadata: Metadata = {
   title: PRIVACY_POLICY_TITLE,
   description:
-    "Informativa privacy di Italiarena ai sensi del GDPR e del Codice privacy italiano (D.Lgs. 196/2003).",
+    "Italiarena privacy policy under the GDPR and the Codice privacy italiano (D.Lgs. 196/2003).",
 };
 
 export default function PrivacyPage() {
@@ -19,7 +19,7 @@ export default function PrivacyPage() {
           href="/"
           className="mb-8 inline-flex text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
-          ← Torna alla home
+          ← Back to home
         </Link>
 
         <PrivacyPolicyContent />

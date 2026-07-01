@@ -54,7 +54,7 @@ export function PrivacyDataCard() {
             href="/privacy"
             className="inline-flex min-h-10 items-center rounded-lg border border-border/60 bg-muted/30 px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
           >
-            Read full privacy notice (IT)
+            Read full privacy notice
           </Link>
           <a
             href={`mailto:${PRIVACY_CONTACT_EMAIL}?subject=${encodeURIComponent(`${APP_NAME} — privacy request`)}`}
