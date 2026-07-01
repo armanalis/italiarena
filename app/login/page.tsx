@@ -9,9 +9,13 @@ import { getProductionSiteUrl } from "@/lib/site-url";
 import { createClient } from "@/utils/supabase/server";
 
 const loginErrors: Record<string, string> = {
-  auth_callback_failed: `Google sign-in did not complete. In Supabase → Authentication → URL configuration, set Site URL to ${getProductionSiteUrl()}, add ${getProductionSiteUrl()}/auth/callback to Redirect URLs, and remove any old language-quiz-one.vercel.app entries. Then try again. You can still sign in with email or username.`,
+  auth_callback_failed: `Google sign-in did not complete. In Supabase → Authentication → URL configuration, set Site URL to ${getProductionSiteUrl()}, add ${getProductionSiteUrl()}/auth/callback and ${getProductionSiteUrl()}/auth/confirm to Redirect URLs, and remove any old language-quiz-one.vercel.app entries. Then try again. You can still sign in with email or username.`,
+  auth_confirm_failed:
+    "Email confirmation did not complete. The link may be invalid or already used. Sign up again to receive a new verification email, or try signing in if your account is already confirmed.",
+  auth_confirm_expired:
+    "That confirmation link has expired or was already used. Sign up again to receive a new verification email.",
   auth_session_expired:
-    "That sign-in link was already used or expired. Close any extra tabs and try Google sign-in again.",
+    "That sign-in link was already used or expired. Close any extra tabs and try again.",
   reset_link_expired: "Your reset link has expired. Request a new one below.",
 };
 

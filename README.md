@@ -94,7 +94,28 @@ npm run lint     # ESLint
 
 ## Deployment
 
-The app is deployed on [Vercel](https://vercel.com/) at [italiarena.com](https://italiarena.com). Set `NEXT_PUBLIC_SITE_URL` to `https://italiarena.com`, plus `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in the project environment. In Supabase → Authentication → URL configuration, set **Site URL** to `https://italiarena.com`, add `https://italiarena.com/auth/callback` to **Redirect URLs**, and remove any old `language-quiz-one.vercel.app` entries. Optional features (for example Ask AI) may require additional keys configured only on the hosted instance.
+The app is deployed on [Vercel](https://vercel.com/) at [italiarena.com](https://italiarena.com). Set `NEXT_PUBLIC_SITE_URL` to `https://italiarena.com`, plus `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in the project environment. In Supabase → Authentication → URL configuration, set **Site URL** to `https://italiarena.com`, add `https://italiarena.com/auth/callback` and `https://italiarena.com/auth/confirm` to **Redirect URLs**, and remove any old `language-quiz-one.vercel.app` entries.
+
+### Auth emails (custom sender + templates)
+
+Supabase’s built-in mailer sends from “Supabase Auth” and is rate-limited. For production, configure your own provider:
+
+1. **SMTP** — Supabase → **Authentication** → **SMTP Settings** → enable custom SMTP.
+   - **Sender email:** `support@italiarena.com`
+   - **Sender name:** `Italiarena`
+   - **Host / port / credentials:** from your provider (Resend, Google Workspace, Postmark, SendGrid, etc.)
+   - Verify **SPF**, **DKIM**, and **DMARC** for `italiarena.com` in your provider’s DNS settings so messages land in the inbox.
+2. **Templates** — Supabase → **Authentication** → **Email Templates**. Branded HTML for all six templates is in `supabase/email-templates/` (copy each file into the matching Supabase template). Suggested subjects:
+   - Confirm signup — `Confirm your Italiarena account` → `confirm-signup.html`
+   - Invite user — `You're invited to Italiarena` → `invite-user.html`
+   - Magic link or OTP — `Sign in to Italiarena` → `magic-link.html`
+   - Change email address — `Confirm your new Italiarena email` → `change-email.html`
+   - Reset password — `Reset your Italiarena password` → `reset-password.html`
+   - Reauthentication — `Your Italiarena verification code` → `reauthentication.html`
+   Link-based templates should point to `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=…&next={{ .RedirectTo }}` (use `email`, `invite`, `magiclink`, `email_change`, or `recovery` for the type).
+3. After saving, send a test signup or password reset to confirm the sender shows as **Italiarena** / `support@italiarena.com` and links open `/auth/confirm`.
+
+Optional features (for example Ask AI) may require additional keys configured only on the hosted instance.
 
 ---
 

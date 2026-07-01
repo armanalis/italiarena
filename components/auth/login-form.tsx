@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useActionRedirect } from "@/hooks/use-action-redirect";
 import { ArrowLeft, Lock, Mail, Sparkles, UserRound } from "lucide-react";
@@ -53,6 +53,7 @@ function SubmitButton({ mode }: { mode: AuthMode }) {
 
 export function LoginForm() {
   const [mode, setMode] = useState<AuthMode>("signin");
+  const [signInSuccess, setSignInSuccess] = useState<string | null>(null);
   const [signInState, signInAction] = useActionState(signIn, initialState);
   const [signUpState, signUpAction] = useActionState(signUp, initialState);
   const [forgotState, forgotAction] = useActionState(
@@ -64,7 +65,22 @@ export function LoginForm() {
   const isSignUp = mode === "signup";
   const isForgot = mode === "forgot";
 
+  useEffect(() => {
+    if (signUpState.success) {
+      setSignInSuccess(signUpState.success);
+      setMode("signin");
+    }
+  }, [signUpState.success]);
+
+  useEffect(() => {
+    if (forgotState.success) {
+      setSignInSuccess(forgotState.success);
+      setMode("signin");
+    }
+  }, [forgotState.success]);
+
   const state = isSignIn ? signInState : isSignUp ? signUpState : forgotState;
+  const successMessage = isSignIn ? signInSuccess : state?.success;
   const formAction = isSignIn
     ? signInAction
     : isSignUp
@@ -99,7 +115,10 @@ export function LoginForm() {
             <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted/60 p-1 dark:bg-white/5">
               <button
                 type="button"
-                onClick={() => setMode("signin")}
+                onClick={() => {
+                  setSignInSuccess(null);
+                  setMode("signin");
+                }}
                 className={cn(
                   "rounded-full px-3 py-2.5 text-sm font-medium transition-all",
                   isSignIn
@@ -111,7 +130,10 @@ export function LoginForm() {
               </button>
               <button
                 type="button"
-                onClick={() => setMode("signup")}
+                onClick={() => {
+                  setSignInSuccess(null);
+                  setMode("signup");
+                }}
                 className={cn(
                   "rounded-full px-3 py-2.5 text-sm font-medium transition-all",
                   isSignUp
@@ -224,7 +246,10 @@ export function LoginForm() {
                   {isSignIn && (
                     <button
                       type="button"
-                      onClick={() => setMode("forgot")}
+                      onClick={() => {
+                        setSignInSuccess(null);
+                        setMode("forgot");
+                      }}
                       className="text-xs text-primary underline-offset-4 hover:underline"
                     >
                       Forgot password?
@@ -256,12 +281,12 @@ export function LoginForm() {
               </div>
             )}
 
-            {state?.success && (
+            {successMessage && (
               <div
                 className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-600 dark:text-emerald-400"
                 role="status"
               >
-                {state?.success}
+                {successMessage}
               </div>
             )}
 
@@ -292,7 +317,7 @@ export function LoginForm() {
                   href="/privacy"
                   className="font-medium text-primary underline-offset-4 hover:underline"
                 >
-                  Informativa privacy
+                  Privacy policy
                 </Link>
                 . {PRIVACY_FOOTER_NOTICE}
               </p>
