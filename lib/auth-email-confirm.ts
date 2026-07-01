@@ -73,15 +73,76 @@ export function resolveAuthConfirmDestination(
   return null;
 }
 
+export const AUTH_CONFIRM_FINALIZE_PARAM = "finalize";
+
+export function buildAuthConfirmPendingPath(params: {
+  tokenHash: string;
+  type: EmailOtpType;
+  next?: string | null;
+}) {
+  const search = new URLSearchParams({
+    token_hash: params.tokenHash,
+    type: params.type,
+  });
+
+  if (params.next) {
+    search.set("next", params.next);
+  }
+
+  return `/auth/confirm/pending?${search.toString()}`;
+}
+
+export function buildAuthConfirmVerifyPath(params: {
+  tokenHash: string;
+  type: EmailOtpType;
+  next?: string | null;
+}) {
+  const search = new URLSearchParams({
+    token_hash: params.tokenHash,
+    type: params.type,
+    [AUTH_CONFIRM_FINALIZE_PARAM]: "1",
+  });
+
+  if (params.next) {
+    search.set("next", params.next);
+  }
+
+  return `/auth/confirm?${search.toString()}`;
+}
+
 export async function verifyEmailTokenHash(
   supabase: SupabaseClient,
   tokenHash: string,
   type: EmailOtpType
 ) {
-  return supabase.auth.verifyOtp({
+  const primary = await supabase.auth.verifyOtp({
     type,
     token_hash: tokenHash,
   });
+
+  if (!primary.error) {
+    return primary;
+  }
+
+  const alternateTypes: EmailOtpType[] = [];
+  if (type === "email") {
+    alternateTypes.push("signup");
+  } else if (type === "signup") {
+    alternateTypes.push("email");
+  }
+
+  for (const alternateType of alternateTypes) {
+    const retry = await supabase.auth.verifyOtp({
+      type: alternateType,
+      token_hash: tokenHash,
+    });
+
+    if (!retry.error) {
+      return retry;
+    }
+  }
+
+  return primary;
 }
 
 export function getAuthConfirmErrorCode(message: string) {
