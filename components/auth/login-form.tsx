@@ -2,19 +2,24 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, type FormEvent } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import { useActionRedirect } from "@/hooks/use-action-redirect";
 import { ArrowLeft, Lock, Mail, Sparkles, UserRound } from "lucide-react";
 import { ItalianBrandIcon } from "@/components/italian-brand-icon";
 import { APP_NAME, PRIVACY_FOOTER_NOTICE } from "@/lib/legal";
 import {
+  finalizeSignUp,
   requestPasswordReset,
-  resendVerificationEmail,
   signIn,
-  signUp,
+  validateSignUpInput,
   type AuthFormState,
 } from "@/app/login/actions";
+import {
+  resendVerificationOnClient,
+  signUpOnClient,
+} from "@/lib/auth-signup-client";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,8 +30,15 @@ type AuthMode = "signin" | "signup" | "forgot" | "resend";
 
 const initialState: AuthFormState = { error: null, success: null };
 
-function SubmitButton({ mode }: { mode: AuthMode }) {
-  const { pending } = useFormStatus();
+function SubmitButton({
+  mode,
+  pendingOverride,
+}: {
+  mode: AuthMode;
+  pendingOverride?: boolean;
+}) {
+  const { pending: formPending } = useFormStatus();
+  const pending = pendingOverride ?? formPending;
 
   const label =
     mode === "signin"
@@ -57,16 +69,14 @@ function SubmitButton({ mode }: { mode: AuthMode }) {
 }
 
 export function LoginForm() {
+  const router = useRouter();
   const [mode, setMode] = useState<AuthMode>("signin");
   const [signInSuccess, setSignInSuccess] = useState<string | null>(null);
+  const [clientAuthError, setClientAuthError] = useState<string | null>(null);
+  const [clientAuthPending, setClientAuthPending] = useState(false);
   const [signInState, signInAction] = useActionState(signIn, initialState);
-  const [signUpState, signUpAction] = useActionState(signUp, initialState);
   const [forgotState, forgotAction] = useActionState(
     requestPasswordReset,
-    initialState
-  );
-  const [resendState, resendAction] = useActionState(
-    resendVerificationEmail,
     initialState
   );
 
@@ -75,13 +85,7 @@ export function LoginForm() {
   const isForgot = mode === "forgot";
   const isResend = mode === "resend";
   const isEmailOnly = isForgot || isResend;
-
-  useEffect(() => {
-    if (signUpState.success) {
-      setSignInSuccess(signUpState.success);
-      setMode("signin");
-    }
-  }, [signUpState.success]);
+  const usesClientAuth = isSignUp || isResend;
 
   useEffect(() => {
     if (forgotState.success) {
@@ -90,36 +94,72 @@ export function LoginForm() {
     }
   }, [forgotState.success]);
 
-  useEffect(() => {
-    if (resendState.success) {
-      setSignInSuccess(resendState.success);
+  async function handleClientAuthSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setClientAuthError(null);
+    setClientAuthPending(true);
+
+    const formData = new FormData(event.currentTarget);
+
+    try {
+      if (isSignUp) {
+        const validation = await validateSignUpInput(formData);
+        if (validation.error) {
+          setClientAuthError(validation.error);
+          return;
+        }
+
+        const result = await signUpOnClient({
+          email: String(formData.get("email") ?? ""),
+          password: String(formData.get("password") ?? ""),
+          username: String(formData.get("username") ?? ""),
+        });
+
+        if (!result.ok) {
+          setClientAuthError(result.error);
+          return;
+        }
+
+        if (result.profile) {
+          const finalizeState = await finalizeSignUp(result.profile);
+          if (finalizeState.error) {
+            setClientAuthError(finalizeState.error);
+            return;
+          }
+        }
+
+        if (result.redirectTo) {
+          router.push(result.redirectTo);
+          return;
+        }
+
+        setSignInSuccess(result.message);
+        setMode("signin");
+        return;
+      }
+
+      const result = await resendVerificationOnClient(
+        String(formData.get("email") ?? "")
+      );
+
+      if (!result.ok) {
+        setClientAuthError(result.error);
+        return;
+      }
+
+      setSignInSuccess(result.message);
       setMode("signin");
+    } finally {
+      setClientAuthPending(false);
     }
-  }, [resendState.success]);
+  }
 
-  const state = isSignIn
-    ? signInState
-    : isSignUp
-      ? signUpState
-      : isResend
-        ? resendState
-        : forgotState;
+  const state = isSignIn ? signInState : isForgot ? forgotState : null;
   const successMessage = isSignIn ? signInSuccess : state?.success;
-  const formAction = isSignIn
-    ? signInAction
-    : isSignUp
-      ? signUpAction
-      : isResend
-        ? resendAction
-        : forgotAction;
+  const errorMessage = usesClientAuth ? clientAuthError : state?.error;
+  const formAction = isSignIn ? signInAction : isForgot ? forgotAction : undefined;
 
-  useActionRedirect(
-    isSignIn
-      ? signInState?.redirectTo
-      : isSignUp
-        ? signUpState?.redirectTo
-        : null
-  );
+  useActionRedirect(isSignIn ? signInState?.redirectTo : null);
 
   return (
     <div className="w-full max-w-[420px]">
@@ -145,6 +185,7 @@ export function LoginForm() {
                 type="button"
                 onClick={() => {
                   setSignInSuccess(null);
+                  setClientAuthError(null);
                   setMode("signin");
                 }}
                 className={cn(
@@ -160,6 +201,7 @@ export function LoginForm() {
                 type="button"
                 onClick={() => {
                   setSignInSuccess(null);
+                  setClientAuthError(null);
                   setMode("signup");
                 }}
                 className={cn(
@@ -177,6 +219,7 @@ export function LoginForm() {
               type="button"
               onClick={() => {
                 setSignInSuccess(null);
+                setClientAuthError(null);
                 setMode("signin");
               }}
               className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -202,7 +245,11 @@ export function LoginForm() {
             </>
           )}
 
-          <form action={formAction} className="space-y-4">
+          <form
+            action={formAction}
+            onSubmit={usesClientAuth ? (event) => void handleClientAuthSubmit(event) : undefined}
+            className="space-y-4"
+          >
             {isSignUp && (
               <div className="space-y-2">
                 <Label htmlFor="auth-username">Username</Label>
@@ -303,12 +350,12 @@ export function LoginForm() {
               </div>
             )}
 
-            {state?.error && (
+            {errorMessage && (
               <div
                 className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
                 role="alert"
               >
-                {state?.error}
+                {errorMessage}
               </div>
             )}
 
@@ -321,7 +368,10 @@ export function LoginForm() {
               </div>
             )}
 
-            <SubmitButton mode={mode} />
+            <SubmitButton
+              mode={mode}
+              pendingOverride={usesClientAuth ? clientAuthPending : undefined}
+            />
           </form>
 
           {!isEmailOnly && (
@@ -343,6 +393,7 @@ export function LoginForm() {
                 type="button"
                 onClick={() => {
                   setSignInSuccess(null);
+                  setClientAuthError(null);
                   setMode("resend");
                 }}
                 className="font-medium text-primary underline-offset-4 hover:underline"

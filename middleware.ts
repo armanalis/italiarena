@@ -4,12 +4,11 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/utils/supabase/middleware";
-import type { SupabaseClient, User } from "@supabase/supabase-js";
 import {
   getProductionSiteUrl,
   LEGACY_SITE_HOSTNAMES,
 } from "@/lib/site-url";
-import { isGuestAuthEmail, isGuestAuthUser } from "@/lib/guest-auth";
+import { getPostAuthPathForUser } from "@/lib/auth";
 
 const protectedRoutes = ["/dashboard", "/onboarding", "/admin"];
 
@@ -23,47 +22,6 @@ function isDashboardRoute(pathname: string) {
 
 function isSoftNavigation(request: NextRequest) {
   return request.headers.get("RSC") === "1";
-}
-
-async function getPostAuthPathFromRequest(
-  supabase: SupabaseClient,
-  user: User
-): Promise<"/dashboard" | "/onboarding" | "/guest"> {
-  const withGuest = await supabase
-    .from("users")
-    .select("target_language, proficiency_level, is_guest, email")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const data =
-    !withGuest.error && withGuest.data
-      ? withGuest.data
-      : (
-          await supabase
-            .from("users")
-            .select("target_language, proficiency_level, email")
-            .eq("id", user.id)
-            .maybeSingle()
-        ).data;
-
-  if (data?.target_language && data?.proficiency_level) {
-    return "/dashboard";
-  }
-
-  const guestFlag =
-    withGuest.data && "is_guest" in withGuest.data
-      ? Boolean((withGuest.data as { is_guest?: boolean }).is_guest)
-      : false;
-
-  if (
-    guestFlag ||
-    isGuestAuthUser(user) ||
-    isGuestAuthEmail(data?.email ?? user.email)
-  ) {
-    return "/guest";
-  }
-
-  return "/onboarding";
 }
 
 export async function middleware(request: NextRequest) {
@@ -118,7 +76,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isDashboardRoute(pathname) && user && !isSoftNavigation(request)) {
-    const destination = await getPostAuthPathFromRequest(supabase, user);
+    const destination = await getPostAuthPathForUser(supabase, user);
     if (destination !== "/dashboard") {
       const nextUrl = request.nextUrl.clone();
       nextUrl.pathname = destination;
@@ -127,7 +85,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname === "/onboarding" && user) {
-    const destination = await getPostAuthPathFromRequest(supabase, user);
+    const destination = await getPostAuthPathForUser(supabase, user);
     if (destination === "/dashboard") {
       const nextUrl = request.nextUrl.clone();
       nextUrl.pathname = "/dashboard";
@@ -141,7 +99,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if ((pathname === "/login" || pathname === "/guest") && user) {
-    const destination = await getPostAuthPathFromRequest(supabase, user);
+    const destination = await getPostAuthPathForUser(supabase, user);
 
     if (pathname === "/guest" && destination !== "/dashboard") {
       return supabaseResponse;
