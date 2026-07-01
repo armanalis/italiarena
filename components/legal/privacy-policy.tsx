@@ -52,16 +52,16 @@ export function PrivacyPolicyContent({
       </div>
 
       <section className="rounded-xl border border-border/60 bg-muted/20 px-4 py-4">
-        <h2 className="text-base font-semibold text-foreground">Contatti</h2>
+        <h2 className="text-base font-semibold text-foreground">Contact</h2>
         <p className="mt-2">
-          Per richieste relative alla privacy, scrivi a{" "}
+          For privacy requests, email{" "}
           <a
             href={`mailto:${PRIVACY_CONTACT_EMAIL}`}
             className="font-medium text-primary underline-offset-4 hover:underline"
           >
             {PRIVACY_CONTACT_EMAIL}
           </a>
-          . Per proporre reclamo all&apos;autorità di controllo italiana, contatta il{" "}
+          . To lodge a complaint with the Italian supervisory authority, contact the{" "}
           <a
             href={ITALIAN_DPA_URL}
             className="font-medium text-primary underline-offset-4 hover:underline"
@@ -94,7 +94,7 @@ export function LegalFooter({ className }: LegalFooterProps) {
         href="/privacy"
         className="font-medium text-foreground/80 underline-offset-4 hover:text-foreground hover:underline"
       >
-        Informativa privacy
+        Privacy policy
       </Link>
       {" · "}
       {PRIVACY_FOOTER_NOTICE}

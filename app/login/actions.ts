@@ -10,8 +10,8 @@ import {
   validateUsername,
 } from "@/lib/username";
 import { mapUsernameSaveError, USERNAME_TAKEN_MESSAGE } from "@/lib/username-errors";
-import { getServerAuthCallbackUrl } from "@/lib/site-url-server";
-import { createAdminClient } from "@/utils/supabase/admin";
+import { getServerSiteUrl } from "@/lib/site-url-server";
+import { createAdminClientOrNull } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
 export type AuthFormState = {
@@ -79,7 +79,7 @@ export async function signUp(
     email,
     password,
     options: {
-      emailRedirectTo: await getServerAuthCallbackUrl(),
+      emailRedirectTo: `${await getServerSiteUrl()}/onboarding`,
     },
   });
 
@@ -125,10 +125,8 @@ export async function requestPasswordReset(
     return { error: "Email is required.", success: null };
   }
 
-  let admin;
-  try {
-    admin = createAdminClient();
-  } catch {
+  const admin = createAdminClientOrNull();
+  if (!admin) {
     return {
       error: "Password reset is temporarily unavailable. Please try again later.",
       success: null,
@@ -154,7 +152,7 @@ export async function requestPasswordReset(
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: await getServerAuthCallbackUrl("/login/reset-password"),
+    redirectTo: `${await getServerSiteUrl()}/login/reset-password`,
   });
 
   if (error) {
