@@ -57,16 +57,26 @@ export function getAuthCallbackUrl(origin: string) {
   return `${normalizeSiteUrl(origin)}/auth/callback`;
 }
 
-/** OAuth callback target: localhost in dev, canonical production URL otherwise. */
-export function getClientAuthCallbackUrl() {
+function getClientSiteOrigin() {
   if (typeof window !== "undefined") {
     if (isLocalDevHostname(window.location.hostname)) {
-      return getAuthCallbackUrl(window.location.origin);
+      return normalizeSiteUrl(window.location.origin);
     }
-    return getAuthCallbackUrl(getProductionSiteUrl());
+    return getProductionSiteUrl();
   }
 
-  return getAuthCallbackUrl(getCanonicalSiteUrl());
+  return getCanonicalSiteUrl();
+}
+
+/** OAuth callback target: localhost in dev, canonical production URL otherwise. */
+export function getClientAuthCallbackUrl() {
+  return getAuthCallbackUrl(getClientSiteOrigin());
+}
+
+/** Post-confirmation destination for email sign-up and resend flows. */
+export function getClientEmailRedirectUrl(nextPath = "/onboarding") {
+  const path = nextPath.startsWith("/") ? nextPath : `/${nextPath}`;
+  return `${getClientSiteOrigin()}${path}`;
 }
 
 export function getRequestOrigin(request: Request) {

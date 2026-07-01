@@ -4,6 +4,7 @@
  */
 import { cache } from "react";
 import { redirect } from "next/navigation";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/server";
 import type { UserProfile, UserRole } from "@/lib/types";
 import { isGuestAuthEmail, isGuestAuthUser } from "@/lib/guest-auth";
@@ -125,26 +126,62 @@ export const requireAuth = cache(async () => {
   return profile;
 });
 
-/** Where to send someone right after they authenticate. */
-export async function getPostAuthPath(): Promise<
-  "/dashboard" | "/onboarding" | "/guest"
-> {
-  const profile = await getCurrentUserProfile();
-  const user = await getAuthUser();
+/** Where to send an authenticated user based on their profile row. */
+export async function getPostAuthPathForUser(
+  supabase: SupabaseClient,
+  user: User
+): Promise<"/dashboard" | "/onboarding" | "/guest"> {
+  const withGuest = await supabase
+    .from("users")
+    .select("target_language, proficiency_level, is_guest, email")
+    .eq("id", user.id)
+    .maybeSingle();
 
-  if (!profile) {
-    return "/onboarding";
-  }
+  const data =
+    !withGuest.error && withGuest.data
+      ? withGuest.data
+      : (
+          await supabase
+            .from("users")
+            .select("target_language, proficiency_level, email")
+            .eq("id", user.id)
+            .maybeSingle()
+        ).data;
 
-  if (isOnboardingComplete(profile)) {
+  if (data?.target_language && data?.proficiency_level) {
     return "/dashboard";
   }
 
-  if (isGuestUser(profile) || (user && isGuestAuthUser(user))) {
+  const guestFlag =
+    withGuest.data && "is_guest" in withGuest.data
+      ? Boolean((withGuest.data as { is_guest?: boolean }).is_guest)
+      : false;
+
+  if (
+    guestFlag ||
+    isGuestAuthUser(user) ||
+    isGuestAuthEmail(data?.email ?? user.email)
+  ) {
     return "/guest";
   }
 
   return "/onboarding";
+}
+
+/** Where to send someone right after they authenticate. */
+export async function getPostAuthPath(): Promise<
+  "/dashboard" | "/onboarding" | "/guest"
+> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return "/onboarding";
+  }
+
+  return getPostAuthPathForUser(supabase, user);
 }
 
 /** Redirects to /onboarding if the user has not picked a language and level yet. */

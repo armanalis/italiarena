@@ -9,7 +9,7 @@ import {
   resolveLoginEmail,
   validateUsername,
 } from "@/lib/username";
-import { mapUsernameSaveError, USERNAME_TAKEN_MESSAGE } from "@/lib/username-errors";
+import { USERNAME_TAKEN_MESSAGE } from "@/lib/username-errors";
 import { getServerSiteUrl } from "@/lib/site-url-server";
 import { createAdminClientOrNull } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
@@ -49,10 +49,7 @@ export async function signIn(
   return { error: null, redirectTo: await getPostAuthPath() };
 }
 
-export async function signUp(
-  _prevState: AuthFormState,
-  formData: FormData
-): Promise<AuthFormState> {
+export async function validateSignUpInput(formData: FormData): Promise<AuthFormState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const username = normalizeUsername(String(formData.get("username") ?? ""));
@@ -74,59 +71,55 @@ export async function signUp(
     return { error: USERNAME_TAKEN_MESSAGE };
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${await getServerSiteUrl()}/onboarding`,
+  return { error: null };
+}
+
+export async function finalizeSignUp(profile: {
+  userId: string;
+  email: string;
+  username: string;
+}): Promise<AuthFormState> {
+  const admin = createAdminClientOrNull();
+  if (!admin) {
+    return { error: null };
+  }
+
+  const {
+    data: { user },
+    error: userError,
+  } = await admin.auth.admin.getUserById(profile.userId);
+
+  if (userError || !user) {
+    return { error: null };
+  }
+
+  if (user.email?.toLowerCase() !== profile.email.toLowerCase()) {
+    return { error: "Invalid signup request." };
+  }
+
+  await admin.auth.admin.updateUserById(profile.userId, {
+    user_metadata: {
+      ...user.user_metadata,
+      pending_display_name: profile.username,
     },
   });
 
-  if (error) {
-    return { error: error.message };
-  }
+  return { error: null };
+}
 
-  if (data.user?.identities?.length === 0) {
-    const redirectTo = `${await getServerSiteUrl()}/onboarding`;
-    const { error: resendError } = await supabase.auth.resend({
-      type: "signup",
-      email,
-      options: { emailRedirectTo: redirectTo },
-    });
-
-    if (!resendError) {
-      return {
-        error: null,
-        success:
-          "Verification email sent. Check your inbox to confirm your account, then sign in.",
-      };
-    }
-
-    return {
-      error: "An account with this email already exists. Try signing in instead.",
-    };
-  }
-
-  if (data.user) {
-    const { error: profileError } = await supabase
-      .from("users")
-      .update({ display_name: username })
-      .eq("id", data.user.id);
-
-    if (profileError) {
-      return { error: mapUsernameSaveError(profileError) };
-    }
-  }
-
-  if (data.session) {
-    return { error: null, redirectTo: await getPostAuthPath() };
+/** @deprecated Prefer client-side signUp via `signUpOnClient` in `lib/auth-signup-client.ts`. */
+export async function signUp(
+  _prevState: AuthFormState,
+  formData: FormData
+): Promise<AuthFormState> {
+  const validation = await validateSignUpInput(formData);
+  if (validation.error) {
+    return validation;
   }
 
   return {
-    error: null,
-    success:
-      "Verification email sent. Check your inbox to confirm your account, then sign in.",
+    error:
+      "Sign up must be completed in the browser. Please refresh the page and try again.",
   };
 }
 

@@ -8,7 +8,7 @@ import {
   resolveAuthConfirmDestination,
   verifyEmailTokenHash,
 } from "@/lib/auth-email-confirm";
-import { getPostAuthPath } from "@/lib/auth";
+import { getPostAuthPathForUser } from "@/lib/auth";
 import {
   getProductionSiteUrl,
   isLegacySiteHostname,
@@ -46,10 +46,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(pendingPath, origin));
   }
 
-  const destinationPath =
-    resolveAuthConfirmDestination(type, nextParam, origin) ??
-    (await getPostAuthPath());
-  const successResponse = NextResponse.redirect(`${origin}${destinationPath}`);
+  const explicitDestination =
+    resolveAuthConfirmDestination(type, nextParam, origin);
+  const successResponse = NextResponse.redirect(
+    `${origin}${explicitDestination ?? "/onboarding"}`
+  );
   const supabase = createSupabaseRouteClient(request, successResponse);
   const { error } = await verifyEmailTokenHash(supabase, tokenHash, type);
 
@@ -62,6 +63,17 @@ export async function GET(request: NextRequest) {
         : getAuthConfirmErrorCode(error.message)
     );
     return NextResponse.redirect(loginUrl);
+  }
+
+  if (!explicitDestination) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const destinationPath = await getPostAuthPathForUser(supabase, user);
+      successResponse.headers.set("Location", `${origin}${destinationPath}`);
+    }
   }
 
   return successResponse;
