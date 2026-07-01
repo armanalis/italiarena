@@ -2,6 +2,8 @@
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 import {
+  AUTH_CONFIRM_FINALIZE_PARAM,
+  buildAuthConfirmPendingPath,
   getAuthConfirmErrorCode,
   resolveAuthConfirmDestination,
   resolveAuthNextPath,
@@ -34,6 +36,15 @@ export async function GET(request: NextRequest) {
   const oauthErrorCode = requestUrl.searchParams.get("error_code");
 
   if (tokenHash && tokenType) {
+    if (requestUrl.searchParams.get(AUTH_CONFIRM_FINALIZE_PARAM) !== "1") {
+      const pendingPath = buildAuthConfirmPendingPath({
+        tokenHash,
+        type: tokenType,
+        next,
+      });
+      return NextResponse.redirect(new URL(pendingPath, origin));
+    }
+
     const destinationPath =
       resolveAuthConfirmDestination(tokenType, next, origin) ??
       (await getPostAuthPath());
@@ -49,7 +60,9 @@ export async function GET(request: NextRequest) {
       const loginUrl = new URL("/login", origin);
       loginUrl.searchParams.set(
         "error",
-        getAuthConfirmErrorCode(error.message)
+        tokenType === "recovery"
+          ? "reset_link_expired"
+          : getAuthConfirmErrorCode(error.message)
       );
       return NextResponse.redirect(loginUrl);
     }
