@@ -13,7 +13,7 @@ const loginErrors: Record<string, string> = {
   auth_confirm_failed:
     "Email confirmation did not complete. The link may be invalid or already used. Sign up again to receive a new verification email, or try signing in if your account is already confirmed.",
   auth_confirm_expired:
-    "That confirmation link has expired or was already used. Sign up again to receive a new verification email.",
+    "That confirmation link has expired or was already used. Use “Resend verification email” on the sign-in form to get a fresh link.",
   auth_session_expired:
     "That sign-in link was already used or expired. Close any extra tabs and try again.",
   reset_link_expired: "Your reset link has expired. Request a new one below.",

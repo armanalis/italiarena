@@ -10,6 +10,7 @@ import { ItalianBrandIcon } from "@/components/italian-brand-icon";
 import { APP_NAME, PRIVACY_FOOTER_NOTICE } from "@/lib/legal";
 import {
   requestPasswordReset,
+  resendVerificationEmail,
   signIn,
   signUp,
   type AuthFormState,
@@ -20,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-type AuthMode = "signin" | "signup" | "forgot";
+type AuthMode = "signin" | "signup" | "forgot" | "resend";
 
 const initialState: AuthFormState = { error: null, success: null };
 
@@ -36,9 +37,13 @@ function SubmitButton({ mode }: { mode: AuthMode }) {
         ? pending
           ? "Creating account..."
           : "Create Account"
-        : pending
-          ? "Sending link..."
-          : "Send reset link";
+        : mode === "resend"
+          ? pending
+            ? "Sending email..."
+            : "Resend verification email"
+          : pending
+            ? "Sending link..."
+            : "Send reset link";
 
   return (
     <Button
@@ -60,10 +65,16 @@ export function LoginForm() {
     requestPasswordReset,
     initialState
   );
+  const [resendState, resendAction] = useActionState(
+    resendVerificationEmail,
+    initialState
+  );
 
   const isSignIn = mode === "signin";
   const isSignUp = mode === "signup";
   const isForgot = mode === "forgot";
+  const isResend = mode === "resend";
+  const isEmailOnly = isForgot || isResend;
 
   useEffect(() => {
     if (signUpState.success) {
@@ -79,13 +90,28 @@ export function LoginForm() {
     }
   }, [forgotState.success]);
 
-  const state = isSignIn ? signInState : isSignUp ? signUpState : forgotState;
+  useEffect(() => {
+    if (resendState.success) {
+      setSignInSuccess(resendState.success);
+      setMode("signin");
+    }
+  }, [resendState.success]);
+
+  const state = isSignIn
+    ? signInState
+    : isSignUp
+      ? signUpState
+      : isResend
+        ? resendState
+        : forgotState;
   const successMessage = isSignIn ? signInSuccess : state?.success;
   const formAction = isSignIn
     ? signInAction
     : isSignUp
       ? signUpAction
-      : forgotAction;
+      : isResend
+        ? resendAction
+        : forgotAction;
 
   useActionRedirect(
     isSignIn
@@ -106,12 +132,14 @@ export function LoginForm() {
           <p className="mt-1.5 text-sm text-muted-foreground">
             {isForgot
               ? "Enter your email and we'll send you a reset link."
-              : "Practice Italian through quick, real-time sessions with others at your level."}
+              : isResend
+                ? "Enter your email and we'll send a fresh verification link."
+                : "Practice Italian through quick, real-time sessions with others at your level."}
           </p>
         </div>
 
         <div className="space-y-6 px-5 py-6 sm:px-8 sm:py-7">
-          {!isForgot ? (
+          {!isEmailOnly ? (
             <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted/60 p-1 dark:bg-white/5">
               <button
                 type="button"
@@ -147,7 +175,10 @@ export function LoginForm() {
           ) : (
             <button
               type="button"
-              onClick={() => setMode("signin")}
+              onClick={() => {
+                setSignInSuccess(null);
+                setMode("signin");
+              }}
               className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft className="size-4" />
@@ -155,7 +186,7 @@ export function LoginForm() {
             </button>
           )}
 
-          {!isForgot && (
+          {!isEmailOnly && (
             <>
               <GoogleSignInButton />
               <div className="relative">
@@ -195,26 +226,26 @@ export function LoginForm() {
               </div>
             )}
 
-            {(isForgot || isSignIn) && (
+            {(isEmailOnly || isSignIn) && (
               <div className="space-y-2">
-                <Label htmlFor={isForgot ? "auth-email" : "auth-login"}>
-                  {isForgot ? "Email" : "Email or username"}
+                <Label htmlFor={isEmailOnly ? "auth-email" : "auth-login"}>
+                  {isEmailOnly ? "Email" : "Email or username"}
                 </Label>
                 <div className="relative">
-                  {isForgot ? (
+                  {isEmailOnly ? (
                     <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   ) : (
                     <UserRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   )}
                   <Input
-                    id={isForgot ? "auth-email" : "auth-login"}
-                    name={isForgot ? "email" : "login"}
-                    type={isForgot ? "email" : "text"}
+                    id={isEmailOnly ? "auth-email" : "auth-login"}
+                    name={isEmailOnly ? "email" : "login"}
+                    type={isEmailOnly ? "email" : "text"}
                     placeholder={
-                      isForgot ? "you@example.com" : "you@example.com or yourname"
+                      isEmailOnly ? "you@example.com" : "you@example.com or yourname"
                     }
                     required
-                    autoComplete={isForgot ? "email" : "username"}
+                    autoComplete={isEmailOnly ? "email" : "username"}
                     className="h-11 pl-10 dark:bg-white/5"
                   />
                 </div>
@@ -239,7 +270,7 @@ export function LoginForm() {
               </div>
             )}
 
-            {!isForgot && (
+            {!isEmailOnly && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <Label htmlFor="auth-password">Password</Label>
@@ -293,7 +324,7 @@ export function LoginForm() {
             <SubmitButton mode={mode} />
           </form>
 
-          {!isForgot && (
+          {!isEmailOnly && (
             <p className="text-center text-sm text-muted-foreground">
               Just want to play with friends?{" "}
               <Link
@@ -302,6 +333,22 @@ export function LoginForm() {
               >
                 Play as a Guest
               </Link>
+            </p>
+          )}
+
+          {isSignIn && (
+            <p className="text-center text-sm text-muted-foreground">
+              Waiting on a verification email?{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  setSignInSuccess(null);
+                  setMode("resend");
+                }}
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Resend verification email
+              </button>
             </p>
           )}
 
