@@ -112,8 +112,8 @@ Supabase’s built-in mailer sends from “Supabase Auth” and is rate-limited.
    - Change email address — `Confirm your new Italiarena email` → `change-email.html`
    - Reset password — `Reset your Italiarena password` → `reset-password.html`
    - Reauthentication — `Your Italiarena verification code` → `reauthentication.html`
-   Link-based templates should point to `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=…&next={{ .RedirectTo }}` (use `email`, `invite`, `magiclink`, `email_change`, or `recovery` for the type).
-3. After saving, send a test signup or password reset to confirm the sender shows as **Italiarena** / `support@italiarena.com` and links open `/auth/confirm`.
+   Link-based templates should point to `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=…&next={{ .RedirectTo }}` (use `email`, `invite`, `magiclink`, `email_change`, or `recovery` for the type). Inbox scanners are redirected to a confirmation button page before the one-time token is used.
+3. After saving, send a test signup or password reset to confirm the sender shows as **Italiarena** / `support@italiarena.com` and links open `/auth/confirm/pending` (then continue via the button).
 
 Optional features (for example Ask AI) may require additional keys configured only on the hosted instance.
 

@@ -88,6 +88,21 @@ export async function signUp(
   }
 
   if (data.user?.identities?.length === 0) {
+    const redirectTo = `${await getServerSiteUrl()}/onboarding`;
+    const { error: resendError } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: redirectTo },
+    });
+
+    if (!resendError) {
+      return {
+        error: null,
+        success:
+          "Verification email sent. Check your inbox to confirm your account, then sign in.",
+      };
+    }
+
     return {
       error: "An account with this email already exists. Try signing in instead.",
     };
@@ -112,6 +127,36 @@ export async function signUp(
     error: null,
     success:
       "Verification email sent. Check your inbox to confirm your account, then sign in.",
+  };
+}
+
+export async function resendVerificationEmail(
+  _prevState: AuthFormState,
+  formData: FormData
+): Promise<AuthFormState> {
+  const email = String(formData.get("email") ?? "").trim();
+
+  if (!email) {
+    return { error: "Email is required.", success: null };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: {
+      emailRedirectTo: `${await getServerSiteUrl()}/onboarding`,
+    },
+  });
+
+  if (error) {
+    return { error: error.message, success: null };
+  }
+
+  return {
+    error: null,
+    success:
+      "Verification email sent. Check your inbox for a new confirmation link.",
   };
 }
 
