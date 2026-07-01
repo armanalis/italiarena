@@ -9,7 +9,7 @@ import {
   resolveAuthNextPath,
   verifyEmailTokenHash,
 } from "@/lib/auth-email-confirm";
-import { getPostAuthPath } from "@/lib/auth";
+import { getPostAuthPathForUser } from "@/lib/auth";
 import {
   getProductionSiteUrl,
   isLegacySiteHostname,
@@ -45,10 +45,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL(pendingPath, origin));
     }
 
-    const destinationPath =
-      resolveAuthConfirmDestination(tokenType, next, origin) ??
-      (await getPostAuthPath());
-    const successResponse = NextResponse.redirect(`${origin}${destinationPath}`);
+    const explicitDestination =
+      resolveAuthConfirmDestination(tokenType, next, origin);
+    const successResponse = NextResponse.redirect(
+      `${origin}${explicitDestination ?? "/onboarding"}`
+    );
     const supabase = createSupabaseRouteClient(request, successResponse);
     const { error } = await verifyEmailTokenHash(
       supabase,
@@ -65,6 +66,17 @@ export async function GET(request: NextRequest) {
           : getAuthConfirmErrorCode(error.message)
       );
       return NextResponse.redirect(loginUrl);
+    }
+
+    if (!explicitDestination) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const destinationPath = await getPostAuthPathForUser(supabase, user);
+        successResponse.headers.set("Location", `${origin}${destinationPath}`);
+      }
     }
 
     return successResponse;
@@ -86,9 +98,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const destinationPath =
-    resolveAuthNextPath(next, origin) ?? (await getPostAuthPath());
-  const successResponse = NextResponse.redirect(`${origin}${destinationPath}`);
+  const explicitNextPath = resolveAuthNextPath(next, origin);
+  const successResponse = NextResponse.redirect(
+    `${origin}${explicitNextPath ?? "/onboarding"}`
+  );
   const supabase = createSupabaseRouteClient(request, successResponse);
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
@@ -110,6 +123,11 @@ export async function GET(request: NextRequest) {
     const loginUrl = new URL("/login", origin);
     loginUrl.searchParams.set("error", "auth_callback_failed");
     return NextResponse.redirect(loginUrl);
+  }
+
+  if (!explicitNextPath) {
+    const destinationPath = await getPostAuthPathForUser(supabase, user);
+    successResponse.headers.set("Location", `${origin}${destinationPath}`);
   }
 
   return successResponse;

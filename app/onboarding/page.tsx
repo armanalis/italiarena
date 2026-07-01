@@ -30,10 +30,17 @@ export default async function OnboardingPage() {
     redirect("/guest");
   }
 
+  const pendingUsername =
+    typeof user?.user_metadata?.pending_display_name === "string"
+      ? user.user_metadata.pending_display_name
+      : null;
+
   return (
     <AuroraCanvas>
       <main className="mx-auto w-full max-w-lg px-4 py-8 pb-[max(3rem,env(safe-area-inset-bottom,0px))] sm:px-6 sm:pb-12 sm:py-10">
-        <OnboardingForm defaultUsername={profile.display_name} />
+        <OnboardingForm
+          defaultUsername={profile.display_name ?? pendingUsername ?? ""}
+        />
       </main>
     </AuroraCanvas>
   );
