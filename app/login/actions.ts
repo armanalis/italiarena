@@ -3,6 +3,7 @@
 
 import { redirect } from "next/navigation";
 import { getPostAuthPath } from "@/lib/auth";
+import { EXISTING_EMAIL_MESSAGE, isEmailRegistered } from "@/lib/auth-email-lookup";
 import {
   isUsernameTaken,
   normalizeUsername,
@@ -10,7 +11,10 @@ import {
   validateUsername,
 } from "@/lib/username";
 import { USERNAME_TAKEN_MESSAGE } from "@/lib/username-errors";
-import { getServerSiteUrl } from "@/lib/site-url-server";
+import {
+  getServerSignupEmailRedirectOrigin,
+  getServerSiteUrl,
+} from "@/lib/site-url-server";
 import { createAdminClientOrNull } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
@@ -65,6 +69,10 @@ export async function validateSignUpInput(formData: FormData): Promise<AuthFormS
 
   if (password.length < 6) {
     return { error: "Password must be at least 6 characters." };
+  }
+
+  if (await isEmailRegistered(email)) {
+    return { error: EXISTING_EMAIL_MESSAGE };
   }
 
   if (await isUsernameTaken(username)) {
@@ -138,7 +146,7 @@ export async function resendVerificationEmail(
     type: "signup",
     email,
     options: {
-      emailRedirectTo: `${await getServerSiteUrl()}/onboarding`,
+      emailRedirectTo: await getServerSignupEmailRedirectOrigin(),
     },
   });
 

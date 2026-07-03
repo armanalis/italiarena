@@ -70,7 +70,7 @@ export default async function HomePage() {
                 size="lg"
                 className="glass-panel h-12 min-w-[9.5rem] border bg-transparent px-6 shadow-none"
               >
-                <Link href="/login">Create account</Link>
+                <Link href="/login?mode=signup">Create account</Link>
               </Button>
               <Button asChild variant="secondary" size="lg" className="h-12 px-6">
                 <Link href="/guest">Play as guest</Link>

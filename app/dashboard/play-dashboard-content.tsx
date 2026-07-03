@@ -74,7 +74,7 @@ export async function PlayDashboardContent({
                 You&apos;re in <span className="font-medium text-foreground">guest mode</span>.
                 Your name was assigned automatically and you won&apos;t appear on the
                 proficiency leaderboard.{" "}
-                <a href="/login" className="font-medium text-primary underline-offset-4 hover:underline">
+                <a href="/login?mode=signup" className="font-medium text-primary underline-offset-4 hover:underline">
                   Sign up
                 </a>{" "}
                 for a full account to choose a username and compete on the board.

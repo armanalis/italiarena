@@ -79,6 +79,16 @@ export function getClientEmailRedirectUrl(nextPath = "/onboarding") {
   return `${getClientSiteOrigin()}${path}`;
 }
 
+/**
+ * Origin passed as `emailRedirectTo` during signup so email templates can build
+ * confirm links on the same host as the browser (localhost vs production).
+ * Templates should link to:
+ * `{{ .RedirectTo }}auth/confirm/pending?token_hash={{ .TokenHash }}&type=signup&next=/onboarding`
+ */
+export function getClientSignupEmailRedirectOrigin() {
+  return `${getClientSiteOrigin()}/`;
+}
+
 export function getRequestOrigin(request: Request) {
   return new URL(request.url).origin;
 }
