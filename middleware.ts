@@ -9,6 +9,7 @@ import {
   LEGACY_SITE_HOSTNAMES,
 } from "@/lib/site-url";
 import { getPostAuthPathForUser } from "@/lib/auth";
+import { isEmailVerifiedUser } from "@/lib/guest-auth";
 
 const protectedRoutes = ["/dashboard", "/onboarding", "/admin"];
 
@@ -63,6 +64,21 @@ export async function middleware(request: NextRequest) {
 
   const { user, supabase, supabaseResponse } = await updateSession(request);
   const { pathname } = request.nextUrl;
+
+  if (user && !isEmailVerifiedUser(user)) {
+    await supabase.auth.signOut();
+
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.search = "";
+    loginUrl.searchParams.set("error", "email_not_verified");
+
+    if (pathname !== "/login") {
+      return NextResponse.redirect(loginUrl);
+    }
+
+    return supabaseResponse;
+  }
 
   const isProtectedRoute = protectedRoutes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)

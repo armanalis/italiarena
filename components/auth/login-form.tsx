@@ -28,6 +28,8 @@ import { cn } from "@/lib/utils";
 
 type AuthMode = "signin" | "signup" | "forgot" | "resend";
 
+export const LOGIN_SIGNUP_PATH = "/login?mode=signup";
+
 const initialState: AuthFormState = { error: null, success: null };
 
 function SubmitButton({
@@ -68,9 +70,9 @@ function SubmitButton({
   );
 }
 
-export function LoginForm() {
+export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }) {
   const router = useRouter();
-  const [mode, setMode] = useState<AuthMode>("signin");
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [signInSuccess, setSignInSuccess] = useState<string | null>(null);
   const [clientAuthError, setClientAuthError] = useState<string | null>(null);
   const [clientAuthPending, setClientAuthPending] = useState(false);
@@ -88,11 +90,21 @@ export function LoginForm() {
   const usesClientAuth = isSignUp || isResend;
 
   useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
+
+  useEffect(() => {
     if (forgotState.success) {
       setSignInSuccess(forgotState.success);
       setMode("signin");
     }
   }, [forgotState.success]);
+
+  useEffect(() => {
+    if (signInState.error || signInState.redirectTo) {
+      setSignInSuccess(null);
+    }
+  }, [signInState.error, signInState.redirectTo]);
 
   async function handleClientAuthSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -117,6 +129,7 @@ export function LoginForm() {
 
         if (!result.ok) {
           setClientAuthError(result.error);
+          setSignInSuccess(null);
           return;
         }
 
@@ -134,6 +147,7 @@ export function LoginForm() {
         }
 
         setSignInSuccess(result.message);
+        setClientAuthError(null);
         setMode("signin");
         return;
       }
@@ -156,7 +170,12 @@ export function LoginForm() {
 
   const state = isSignIn ? signInState : isForgot ? forgotState : null;
   const successMessage = isSignIn ? signInSuccess : state?.success;
-  const errorMessage = usesClientAuth ? clientAuthError : state?.error;
+  const errorMessage =
+    usesClientAuth
+      ? clientAuthError
+      : isSignIn && signInSuccess
+        ? null
+        : state?.error;
   const formAction = isSignIn ? signInAction : isForgot ? forgotAction : undefined;
 
   useActionRedirect(isSignIn ? signInState?.redirectTo : null);

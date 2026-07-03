@@ -156,7 +156,7 @@ export function GuestSetupForm(_props?: GuestSetupFormProps) {
           <p className="text-center text-sm text-muted-foreground">
             Want a permanent account?{" "}
             <Link
-              href="/login"
+              href="/login?mode=signup"
               className="font-medium text-primary underline-offset-4 hover:underline"
             >
               Sign up instead
