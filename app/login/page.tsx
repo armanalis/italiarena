@@ -5,6 +5,7 @@ import { AuroraCanvas } from "@/components/aurora-canvas";
 import { LoginForm } from "@/components/auth/login-form";
 import { LegalFooter } from "@/components/legal/privacy-policy";
 import { getPostAuthPath } from "@/lib/auth";
+import { isEmailVerifiedUser } from "@/lib/guest-auth";
 import { getProductionSiteUrl } from "@/lib/site-url";
 import { createClient } from "@/utils/supabase/server";
 
@@ -17,11 +18,14 @@ const loginErrors: Record<string, string> = {
   auth_session_expired:
     "That sign-in link was already used or expired. Close any extra tabs and try again.",
   reset_link_expired: "Your reset link has expired. Request a new one below.",
+  email_not_verified:
+    "Please verify your email before signing in. Check your inbox or use \"Resend verification email\" below.",
 };
 
 type LoginPageProps = {
   searchParams: Promise<{
     error?: string;
+    mode?: string;
   }>;
 };
 
@@ -31,12 +35,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (user) {
+  if (user && isEmailVerifiedUser(user)) {
     redirect(await getPostAuthPath());
   }
 
   const params = await searchParams;
   const authError = params.error ? loginErrors[params.error] ?? null : null;
+  const initialMode = params.mode === "signup" ? "signup" : "signin";
 
   return (
     <AuroraCanvas>
@@ -57,7 +62,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               {authError}
             </div>
           )}
-          <LoginForm />
+          <LoginForm initialMode={initialMode} />
         </div>
         <LegalFooter className="mt-8" />
       </main>

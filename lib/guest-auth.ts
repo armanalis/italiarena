@@ -15,3 +15,16 @@ export function isGuestAuthUser(user: {
 }): boolean {
   return Boolean(user.is_anonymous) || isGuestAuthEmail(user.email);
 }
+
+/** Email/password accounts must confirm before accessing the app. */
+export function isEmailVerifiedUser(user: {
+  email?: string | null;
+  email_confirmed_at?: string | null;
+  is_anonymous?: boolean;
+}): boolean {
+  if (isGuestAuthUser(user)) {
+    return true;
+  }
+
+  return Boolean(user.email_confirmed_at);
+}

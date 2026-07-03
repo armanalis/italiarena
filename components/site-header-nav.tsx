@@ -58,7 +58,7 @@ export function SiteHeaderNav({
                 <Link href="/login">Sign In</Link>
               </Button>
               <Button asChild size="sm" className="min-h-10">
-                <Link href="/login">
+                <Link href="/login?mode=signup">
                   <span className="sm:hidden">Join</span>
                   <span className="hidden sm:inline">Sign Up</span>
                 </Link>

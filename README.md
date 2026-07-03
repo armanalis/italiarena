@@ -96,6 +96,8 @@ npm run lint     # ESLint
 
 The app is deployed on [Vercel](https://vercel.com/) at [italiarena.com](https://italiarena.com). Set `NEXT_PUBLIC_SITE_URL` to `https://italiarena.com`, plus `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in the project environment. In Supabase → Authentication → URL configuration, set **Site URL** to `https://italiarena.com`, add `https://italiarena.com/auth/callback`, `https://italiarena.com/auth/confirm`, `https://italiarena.com/auth/confirm/pending`, and `https://italiarena.com/onboarding` to **Redirect URLs** (or use `https://italiarena.com/**`), and remove any old `language-quiz-one.vercel.app` entries.
 
+For **local development**, set `NEXT_PUBLIC_SITE_URL=http://localhost:3000` in `.env.local` and add these to Supabase **Redirect URLs** as well: `http://localhost:3000/**` (or at minimum `http://localhost:3000/auth/callback`, `http://localhost:3000/auth/confirm`, and `http://localhost:3000/auth/confirm/pending`).
+
 ### Auth emails (custom sender + templates)
 
 Supabase’s built-in mailer sends from “Supabase Auth” and is rate-limited. For production, configure your own provider:
@@ -112,7 +114,7 @@ Supabase’s built-in mailer sends from “Supabase Auth” and is rate-limited.
    - Change email address — `Confirm your new Italiarena email` → `change-email.html`
    - Reset password — `Reset your Italiarena password` → `reset-password.html`
    - Reauthentication — `Your Italiarena verification code` → `reauthentication.html`
-   Link-based templates should point to `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=…&next={{ .RedirectTo }}` (use `signup` for Confirm signup, `recovery` for Reset password, and `email`, `invite`, `magiclink`, or `email_change` for the others). Inbox scanners are redirected to a confirmation button page before the one-time token is used.
+   Link-based templates should point to `{{ .RedirectTo }}auth/confirm/pending?token_hash={{ .TokenHash }}&type=…&next=/onboarding` (use `signup` for Confirm signup; for recovery use `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/login/reset-password`). `RedirectTo` is the signup origin (`http://localhost:3000/` locally or `https://italiarena.com/` in production). Inbox scanners are redirected to a confirmation button page before the one-time token is used.
 3. After saving, send a test signup or password reset to confirm the sender shows as **Italiarena** / `support@italiarena.com` and links open `/auth/confirm/pending` (then continue via the button).
 
 Optional features (for example Ask AI) may require additional keys configured only on the hosted instance.

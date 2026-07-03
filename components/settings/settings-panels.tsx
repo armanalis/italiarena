@@ -187,7 +187,7 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
           </CardHeader>
           <CardContent>
             <Button asChild className="min-h-11">
-              <a href="/login">Create a full account</a>
+              <a href="/login?mode=signup">Create a full account</a>
             </Button>
           </CardContent>
         </Card>
