@@ -430,6 +430,7 @@ export function MatchmakingLobby({
         const players = Object.values(state).flat();
         const relevant = players.filter(
           (player) =>
+            player.id !== profile.id &&
             player.target_language === language &&
             player.proficiency_level === level
         );

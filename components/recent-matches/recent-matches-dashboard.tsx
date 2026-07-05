@@ -3,8 +3,14 @@
 import { useState } from "react";
 import { ChevronDown, History } from "lucide-react";
 import type { CorrectAnswer } from "@/types/database.types";
-import type { RecentMatchWithQuestions } from "@/app/dashboard/recent-matches/actions";
+import type {
+  RecentMatchQuestion,
+  RecentMatchWithQuestions,
+} from "@/app/dashboard/recent-matches/actions";
+import { AskAiButton } from "@/components/match/ask-ai-button";
 import { ReportQuestionButton } from "@/components/match/report-question-button";
+import { MAX_AI_ASKS_PER_MATCH } from "@/lib/ai-explanations";
+import { normalizeQuestionCategory } from "@/lib/resolve-match-questions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatCategoryLabel } from "@/lib/scoring";
+import type { MatchRoundReview } from "@/store/useGameStore";
 import { cn } from "@/lib/utils";
 
 type RecentMatchesDashboardProps = {
@@ -67,15 +74,45 @@ function optionLabel(
   return null;
 }
 
+function toMatchRoundReview(question: RecentMatchQuestion): MatchRoundReview {
+  const correctOption = question.options.find(
+    (option) => option.key === question.correctAnswer
+  );
+  const selectedOption = question.selectedAnswer
+    ? question.options.find((option) => option.key === question.selectedAnswer)
+    : null;
+
+  return {
+    questionIndex: question.questionIndex,
+    isTiebreaker: false,
+    questionId: question.questionId,
+    category: normalizeQuestionCategory(question.category),
+    questionText: question.questionText,
+    correctAnswer: question.correctAnswer,
+    correctOptionText: correctOption?.text ?? "",
+    selectedAnswer: question.selectedAnswer,
+    selectedOptionText: selectedOption?.text ?? null,
+    wasCorrect: question.wasCorrect,
+    pointsEarned: 0,
+  };
+}
+
 function MatchQuestionCard({
   question,
+  sessionId,
+  asksRemaining,
+  onAsksRemainingChange,
   reported,
   onReported,
 }: {
-  question: RecentMatchWithQuestions["questions"][number];
+  question: RecentMatchQuestion;
+  sessionId: string | null;
+  asksRemaining: number;
+  onAsksRemainingChange: (remaining: number) => void;
   reported: boolean;
   onReported: () => void;
 }) {
+  const aiRound = toMatchRoundReview(question);
   return (
     <li
       className={cn(
@@ -165,7 +202,17 @@ function MatchQuestionCard({
         </p>
       )}
 
-      <div className="mt-3 flex justify-end border-t border-border/40 pt-3">
+      <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-border/40 pt-3">
+        {sessionId ? (
+          <AskAiButton
+            round={aiRound}
+            sessionId={sessionId}
+            asksRemaining={asksRemaining}
+            onAsksRemainingChange={onAsksRemainingChange}
+            showLabel
+            scopeLabel="match"
+          />
+        ) : null}
         <ReportQuestionButton
           questionId={question.questionId}
           questionText={question.questionText}
@@ -189,6 +236,7 @@ function MatchCard({
   onQuestionReported: (questionId: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [asksRemaining, setAsksRemaining] = useState(MAX_AI_ASKS_PER_MATCH);
   const correctCount = match.questions.filter((q) => q.wasCorrect).length;
 
   return (
@@ -257,6 +305,9 @@ function MatchCard({
               <MatchQuestionCard
                 key={`${match.id}-${question.questionId}`}
                 question={question}
+                sessionId={match.sessionId}
+                asksRemaining={asksRemaining}
+                onAsksRemainingChange={setAsksRemaining}
                 reported={reportedQuestionIds.has(question.questionId)}
                 onReported={() => onQuestionReported(question.questionId)}
               />
@@ -292,8 +343,8 @@ export function RecentMatchesDashboard({
               Recent matches
             </h1>
             <p className="text-sm text-muted-foreground">
-              Your last 10 games with every question from each match. Tap Report
-              on any question to flag an issue.
+              Your last 10 games with every question from each match. Ask AI for
+              explanations or tap Report to flag an issue.
             </p>
           </div>
         </div>

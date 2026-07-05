@@ -248,7 +248,13 @@ export async function resetPassword(
     return { error: error.message, success: null };
   }
 
-  return { error: null, success: null, redirectTo: await getPostAuthPath() };
+  await supabase.auth.signOut();
+
+  return {
+    error: null,
+    success: null,
+    redirectTo: "/login?success=password_reset",
+  };
 }
 
 export async function signOut() {

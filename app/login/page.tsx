@@ -22,10 +22,15 @@ const loginErrors: Record<string, string> = {
     "Please verify your email before signing in. Check your inbox or use \"Resend verification email\" below.",
 };
 
+const loginSuccess: Record<string, string> = {
+  password_reset: "Your password was updated. Sign in with your new password.",
+};
+
 type LoginPageProps = {
   searchParams: Promise<{
     error?: string;
     mode?: string;
+    success?: string;
   }>;
 };
 
@@ -41,6 +46,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   const params = await searchParams;
   const authError = params.error ? loginErrors[params.error] ?? null : null;
+  const authSuccess = params.success ? loginSuccess[params.success] ?? null : null;
   const initialMode = params.mode === "signup" ? "signup" : "signin";
 
   return (
@@ -60,6 +66,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               role="alert"
             >
               {authError}
+            </div>
+          )}
+          {authSuccess && (
+            <div
+              className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400"
+              role="status"
+            >
+              {authSuccess}
             </div>
           )}
           <LoginForm initialMode={initialMode} />
