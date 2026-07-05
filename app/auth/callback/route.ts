@@ -68,6 +68,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
+    if (tokenType === "recovery") {
+      successResponse.headers.set("Location", `${origin}/login/reset-password`);
+      return successResponse;
+    }
+
     if (!explicitDestination) {
       const {
         data: { user },
@@ -123,6 +128,12 @@ export async function GET(request: NextRequest) {
     const loginUrl = new URL("/login", origin);
     loginUrl.searchParams.set("error", "auth_callback_failed");
     return NextResponse.redirect(loginUrl);
+  }
+
+  const resetPasswordPath = resolveAuthNextPath(next, origin);
+  if (resetPasswordPath === "/login/reset-password") {
+    successResponse.headers.set("Location", `${origin}/login/reset-password`);
+    return successResponse;
   }
 
   if (!explicitNextPath) {

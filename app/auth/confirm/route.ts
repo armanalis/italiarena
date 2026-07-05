@@ -65,6 +65,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  if (type === "recovery") {
+    successResponse.headers.set("Location", `${origin}/login/reset-password`);
+    return successResponse;
+  }
+
   if (!explicitDestination) {
     const {
       data: { user },

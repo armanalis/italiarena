@@ -61,13 +61,13 @@ export function resolveAuthConfirmDestination(
   next: string | null,
   origin: string
 ) {
+  if (type === "recovery") {
+    return "/login/reset-password";
+  }
+
   const nextPath = resolveAuthNextPath(next, origin);
   if (nextPath) {
     return nextPath;
-  }
-
-  if (type === "recovery") {
-    return "/login/reset-password";
   }
 
   return null;
@@ -129,6 +129,12 @@ export async function verifyEmailTokenHash(
     alternateTypes.push("signup");
   } else if (type === "signup") {
     alternateTypes.push("email");
+  }
+
+  if (type === "recovery") {
+    alternateTypes.push("email");
+  } else {
+    alternateTypes.push("recovery");
   }
 
   for (const alternateType of alternateTypes) {
