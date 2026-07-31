@@ -5,6 +5,7 @@ import {
   AUTH_CONFIRM_FINALIZE_PARAM,
   buildAuthConfirmPendingPath,
   getAuthConfirmErrorCode,
+  isPasswordRecoveryFlow,
   resolveAuthConfirmDestination,
   resolveAuthNextPath,
   verifyEmailTokenHash,
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
       `${origin}${explicitDestination ?? "/onboarding"}`
     );
     const supabase = createSupabaseRouteClient(request, successResponse);
-    const { error } = await verifyEmailTokenHash(
+    const { error, verifiedType } = await verifyEmailTokenHash(
       supabase,
       tokenHash,
       tokenType
@@ -61,14 +62,15 @@ export async function GET(request: NextRequest) {
       const loginUrl = new URL("/login", origin);
       loginUrl.searchParams.set(
         "error",
-        tokenType === "recovery"
+        isPasswordRecoveryFlow(tokenType, next, origin) ||
+          isPasswordRecoveryFlow(verifiedType, next, origin)
           ? "reset_link_expired"
           : getAuthConfirmErrorCode(error.message)
       );
       return NextResponse.redirect(loginUrl);
     }
 
-    if (tokenType === "recovery") {
+    if (isPasswordRecoveryFlow(verifiedType, next, origin)) {
       successResponse.headers.set("Location", `${origin}/login/reset-password`);
       return successResponse;
     }

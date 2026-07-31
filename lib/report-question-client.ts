@@ -1,15 +1,10 @@
+import { isReportIssueType } from "@/lib/report-issues";
 import { createClient } from "@/utils/supabase/client";
 import type { ReportIssueType } from "@/types/database.types";
 
 export type ReportQuestionResult =
   | { success: true }
   | { success: false; error: string };
-
-const ISSUE_TYPES: ReportIssueType[] = [
-  "typo",
-  "wrong_answer",
-  "unnatural_phrasing",
-];
 
 /**
  * Submit a question report from the browser. Uses the Supabase client directly
@@ -20,7 +15,7 @@ export async function submitQuestionReport(
   questionId: string,
   issueType: ReportIssueType
 ): Promise<ReportQuestionResult> {
-  if (!ISSUE_TYPES.includes(issueType)) {
+  if (!isReportIssueType(issueType)) {
     return { success: false, error: "Invalid issue type." };
   }
 

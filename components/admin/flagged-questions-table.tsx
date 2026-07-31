@@ -38,13 +38,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatCategoryLabel } from "@/lib/scoring";
+import { REPORT_ISSUE_LABELS } from "@/lib/report-issues";
 import type { CorrectAnswer, ReportIssueType } from "@/types/database.types";
-
-const ISSUE_LABELS: Record<ReportIssueType, string> = {
-  typo: "Typo",
-  wrong_answer: "Wrong answer",
-  unnatural_phrasing: "Unnatural phrasing",
-};
 
 type FlaggedQuestionsTableProps = {
   questions: AdminReviewQuestion[];
@@ -150,7 +145,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
       <div className="mt-2 flex flex-wrap gap-1.5">
         {issueTypes.map((issueType) => (
           <Badge key={issueType} variant="outline" className="text-[10px] uppercase">
-            {ISSUE_LABELS[issueType]}
+            {REPORT_ISSUE_LABELS[issueType]}
           </Badge>
         ))}
       </div>

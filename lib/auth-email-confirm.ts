@@ -56,12 +56,42 @@ export function resolveAuthNextPath(next: string | null, origin: string) {
   return null;
 }
 
-export function resolveAuthConfirmDestination(
+export function isPasswordRecoveryFlow(
   type: EmailOtpType,
   next: string | null,
   origin: string
 ) {
   if (type === "recovery") {
+    return true;
+  }
+
+  if (resolveAuthNextPath(next, origin) === "/login/reset-password") {
+    return true;
+  }
+
+  if (!next) {
+    return false;
+  }
+
+  try {
+    const url = new URL(next, origin);
+    const nestedNext = url.searchParams.get("next");
+    if (resolveAuthNextPath(nestedNext, origin) === "/login/reset-password") {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
+}
+
+export function resolveAuthConfirmDestination(
+  type: EmailOtpType,
+  next: string | null,
+  origin: string
+) {
+  if (isPasswordRecoveryFlow(type, next, origin)) {
     return "/login/reset-password";
   }
 
@@ -121,7 +151,7 @@ export async function verifyEmailTokenHash(
   });
 
   if (!primary.error) {
-    return primary;
+    return { ...primary, verifiedType: type };
   }
 
   const alternateTypes: EmailOtpType[] = [];
@@ -144,11 +174,11 @@ export async function verifyEmailTokenHash(
     });
 
     if (!retry.error) {
-      return retry;
+      return { ...retry, verifiedType: alternateType };
     }
   }
 
-  return primary;
+  return { ...primary, verifiedType: type };
 }
 
 export function getAuthConfirmErrorCode(message: string) {

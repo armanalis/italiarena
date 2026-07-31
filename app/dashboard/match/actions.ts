@@ -1,5 +1,6 @@
 "use server";
 
+import { isReportIssueType } from "@/lib/report-issues";
 import { createClient } from "@/utils/supabase/server";
 import type { QuestionActive, ReportIssueType } from "@/types/database.types";
 
@@ -10,12 +11,6 @@ export type ReportQuestionResult =
 export type FetchTiebreakerResult =
   | { success: true; data: QuestionActive }
   | { success: false; error: string };
-
-const ISSUE_TYPES: ReportIssueType[] = [
-  "typo",
-  "wrong_answer",
-  "unnatural_phrasing",
-];
 
 export async function fetchTiebreakerQuestion(
   excludeIds: string[]
@@ -69,7 +64,7 @@ export async function reportQuestion(
   questionId: string,
   issueType: ReportIssueType
 ): Promise<ReportQuestionResult> {
-  if (!ISSUE_TYPES.includes(issueType)) {
+  if (!isReportIssueType(issueType)) {
     return { success: false, error: "Invalid issue type." };
   }
 

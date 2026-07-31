@@ -35,16 +35,21 @@ type LoginPageProps = {
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const params = await searchParams;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (user && isEmailVerifiedUser(user)) {
-    redirect(await getPostAuthPath());
+  if (params.success === "password_reset") {
+    await supabase.auth.signOut();
+  } else {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user && isEmailVerifiedUser(user)) {
+      redirect(await getPostAuthPath());
+    }
   }
 
-  const params = await searchParams;
   const authError = params.error ? loginErrors[params.error] ?? null : null;
   const authSuccess = params.success ? loginSuccess[params.success] ?? null : null;
   const initialMode = params.mode === "signup" ? "signup" : "signin";

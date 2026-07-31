@@ -158,6 +158,81 @@ export async function updateGameplayPreferences(
   return { success: true };
 }
 
+export async function updateDailyReminderPreferences(options: {
+  enabled?: boolean;
+  hour?: number;
+  timezone?: string;
+}): Promise<SettingsActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: "Not authenticated." };
+  }
+
+  const { data: existingProfile } = await supabase
+    .from("users")
+    .select("is_guest")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (existingProfile?.is_guest) {
+    return {
+      success: false,
+      error: "Guest accounts cannot enable notifications. Sign up for a full account.",
+    };
+  }
+
+  const updates: {
+    daily_reminder_enabled?: boolean;
+    daily_reminder_hour?: number;
+    timezone?: string;
+  } = {};
+
+  if (typeof options.enabled === "boolean") {
+    updates.daily_reminder_enabled = options.enabled;
+  }
+
+  if (
+    typeof options.hour === "number" &&
+    Number.isInteger(options.hour) &&
+    options.hour >= 0 &&
+    options.hour <= 23
+  ) {
+    updates.daily_reminder_hour = options.hour;
+  } else if (options.hour !== undefined) {
+    return { success: false, error: "Choose a valid reminder hour." };
+  }
+
+  if (typeof options.timezone === "string" && options.timezone.trim()) {
+    try {
+      Intl.DateTimeFormat(undefined, { timeZone: options.timezone });
+      updates.timezone = options.timezone;
+    } catch {
+      return { success: false, error: "Could not save your timezone." };
+    }
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return { success: false, error: "Nothing to update." };
+  }
+
+  const { error } = await supabase
+    .from("users")
+    .update(updates)
+    .eq("id", user.id);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/dashboard/settings");
+  revalidateUserDashboard(user.id);
+  return { success: true };
+}
+
 export async function changePassword(formData: FormData): Promise<SettingsActionResult> {
   const currentPassword = String(formData.get("current_password") ?? "");
   const newPassword = String(formData.get("new_password") ?? "");

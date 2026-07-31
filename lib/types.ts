@@ -13,6 +13,9 @@ export type UserProfile = {
   is_guest: boolean;
   sound_enabled: boolean;
   haptics_enabled: boolean;
+  daily_reminder_enabled: boolean;
+  daily_reminder_hour: number;
+  timezone: string;
 };
 
 export type MatchHistoryEntry = {
