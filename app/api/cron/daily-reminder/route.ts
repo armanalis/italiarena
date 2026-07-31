@@ -7,28 +7,7 @@ export const dynamic = "force-dynamic";
 
 type ReminderUser = {
   id: string;
-  daily_reminder_hour: number;
-  timezone: string;
 };
-
-function localHourNow(timeZone: string, now = new Date()): number | null {
-  try {
-    const hourPart = new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      hour: "numeric",
-      hourCycle: "h23",
-    })
-      .formatToParts(now)
-      .find((part) => part.type === "hour");
-
-    if (!hourPart) return null;
-    const hour = Number(hourPart.value);
-    if (!Number.isFinite(hour) || hour < 0 || hour > 23) return null;
-    return hour;
-  } catch {
-    return null;
-  }
-}
 
 function authorizeCron(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -51,11 +30,16 @@ function createServiceClient() {
   });
 }
 
+/**
+ * Vercel Hobby only allows one cron run per day, so we notify every opted-in
+ * user on that daily pass. Preferred hour is still stored for a future
+ * hourly schedule (Pro plan or external cron).
+ */
 async function runDailyReminderCron() {
   const admin = createServiceClient();
   const { data, error } = await admin
     .from("users")
-    .select("id, daily_reminder_hour, timezone")
+    .select("id")
     .eq("daily_reminder_enabled", true)
     .eq("is_guest", false);
 
@@ -64,26 +48,24 @@ async function runDailyReminderCron() {
   }
 
   const users = (data ?? []) as ReminderUser[];
-  const now = new Date();
-  let matched = 0;
   let sent = 0;
   let failed = 0;
   let pruned = 0;
 
   for (const user of users) {
-    const hour = localHourNow(user.timezone || "UTC", now);
-    if (hour === null || hour !== user.daily_reminder_hour) {
-      continue;
-    }
-
-    matched += 1;
     const result = await sendPushToUser(user.id, DAILY_REMINDER_PAYLOAD);
     sent += result.sent;
     failed += result.failed;
     pruned += result.pruned;
   }
 
-  return { matched, sent, failed, pruned, checked: users.length };
+  return {
+    matched: users.length,
+    sent,
+    failed,
+    pruned,
+    checked: users.length,
+  };
 }
 
 export async function GET(request: Request) {
