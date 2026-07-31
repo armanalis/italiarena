@@ -140,7 +140,7 @@ export function NotificationsSettingsCard({
 
         setEnabled(true);
         toast.success(
-          `Daily reminder enabled. You'll get a clash nudge around ${formatReminderHour(hour)}.`
+          "Daily reminder enabled. You'll get one clash nudge per day."
         );
       } catch (error) {
         const message =
@@ -264,10 +264,12 @@ export function NotificationsSettingsCard({
         />
 
         <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
-          <Label htmlFor="daily-reminder-hour">Reminder time</Label>
+          <Label htmlFor="daily-reminder-hour">Preferred reminder time</Label>
           <p className="text-xs text-muted-foreground">
-            Local time on this device. We&apos;ll nudge you once a day around
-            this hour.
+            Saved to your account. On the free hosting plan, reminders are
+            sent once per day for everyone (around 8:00 PM Turkey time / 5:00
+            PM UTC). Your preferred hour is kept for when hourly delivery is
+            available.
           </p>
           <Select
             value={String(hour)}
