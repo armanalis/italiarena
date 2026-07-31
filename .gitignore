@@ -20,6 +20,9 @@
 .DS_Store
 *.pem
 
+# Local question-audit exports (scripts/audit-questions.ts)
+/tmp/
+
 # Accidental nested clone of this repo (must not be committed)
 /language-quiz/
 

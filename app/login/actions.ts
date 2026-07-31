@@ -12,8 +12,8 @@ import {
 } from "@/lib/username";
 import { USERNAME_TAKEN_MESSAGE } from "@/lib/username-errors";
 import {
+  getServerAuthCallbackUrl,
   getServerSignupEmailRedirectOrigin,
-  getServerSiteUrl,
 } from "@/lib/site-url-server";
 import { createAdminClientOrNull } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
@@ -185,11 +185,14 @@ export async function requestPasswordReset(
     .ilike("email", email)
     .maybeSingle();
 
+  const emailKnown =
+    Boolean(registeredUser) || (await isEmailRegistered(email));
+
   if (lookupError) {
     return { error: lookupError.message, success: null };
   }
 
-  if (!registeredUser) {
+  if (!emailKnown) {
     return {
       error: "There is no registered email for this address.",
       success: null,
@@ -198,7 +201,7 @@ export async function requestPasswordReset(
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${await getServerSiteUrl()}/login/reset-password`,
+    redirectTo: await getServerAuthCallbackUrl("/login/reset-password"),
   });
 
   if (error) {
@@ -250,11 +253,7 @@ export async function resetPassword(
 
   await supabase.auth.signOut();
 
-  return {
-    error: null,
-    success: null,
-    redirectTo: "/login?success=password_reset",
-  };
+  redirect("/login?success=password_reset");
 }
 
 export async function signOut() {

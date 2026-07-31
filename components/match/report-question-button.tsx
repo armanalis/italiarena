@@ -18,14 +18,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { REPORT_ISSUE_OPTIONS } from "@/lib/report-issues";
 import type { ReportIssueType } from "@/types/database.types";
 import { cn } from "@/lib/utils";
-
-const ISSUE_OPTIONS: { value: ReportIssueType; label: string }[] = [
-  { value: "typo", label: "Typo" },
-  { value: "wrong_answer", label: "Wrong correct answer" },
-  { value: "unnatural_phrasing", label: "Unnatural phrasing" },
-];
 
 const REPORT_TIMEOUT_MS = 12_000;
 
@@ -195,7 +190,7 @@ export function ReportQuestionButton({
         </p>
 
         <div className="grid gap-2">
-          {ISSUE_OPTIONS.map((option) => (
+          {REPORT_ISSUE_OPTIONS.map((option) => (
             <button
               key={option.value}
               type="button"

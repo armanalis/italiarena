@@ -34,6 +34,7 @@ import { getSoundVolume, writeGameplayPreferences } from "@/lib/preferences";
 import type { MatchHistoryEntry, UserProfile } from "@/lib/types";
 import { SoundVolumeControl } from "@/components/sound-volume-control";
 import { AddToHomeScreenGuide } from "@/components/settings/add-to-home-screen-guide";
+import { NotificationsSettingsCard } from "@/components/settings/notifications-settings-card";
 import { PrivacyDataCard } from "@/components/settings/privacy-data-card";
 import { cn } from "@/lib/utils";
 
@@ -268,6 +269,13 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
       )}
 
       <AddToHomeScreenGuide />
+
+      {!guest && (
+        <NotificationsSettingsCard
+          initialEnabled={profile.daily_reminder_enabled}
+          initialHour={profile.daily_reminder_hour}
+        />
+      )}
 
       <Card className="border-border/60">
         <CardHeader>
