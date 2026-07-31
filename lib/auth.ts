@@ -15,13 +15,30 @@ const fetchUserRow = cache(async (userId: string) => {
   const withRole = await supabase
     .from("users")
     .select(
-      "id, email, display_name, target_language, proficiency_level, role, is_guest, sound_enabled, haptics_enabled"
+      "id, email, display_name, target_language, proficiency_level, role, is_guest, sound_enabled, haptics_enabled, daily_reminder_enabled, daily_reminder_hour, timezone"
     )
     .eq("id", userId)
     .maybeSingle();
 
   if (!withRole.error && withRole.data) {
     return withRole.data;
+  }
+
+  const withoutReminder = await supabase
+    .from("users")
+    .select(
+      "id, email, display_name, target_language, proficiency_level, role, is_guest, sound_enabled, haptics_enabled"
+    )
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!withoutReminder.error && withoutReminder.data) {
+    return {
+      ...withoutReminder.data,
+      daily_reminder_enabled: false,
+      daily_reminder_hour: 18,
+      timezone: "UTC",
+    };
   }
 
   const withoutExtras = await supabase
@@ -37,6 +54,9 @@ const fetchUserRow = cache(async (userId: string) => {
       is_guest: false,
       sound_enabled: true,
       haptics_enabled: true,
+      daily_reminder_enabled: false,
+      daily_reminder_hour: 18,
+      timezone: "UTC",
     };
   }
 
@@ -57,6 +77,9 @@ const fetchUserRow = cache(async (userId: string) => {
     is_guest: false,
     sound_enabled: true,
     haptics_enabled: true,
+    daily_reminder_enabled: false,
+    daily_reminder_hour: 18,
+    timezone: "UTC",
   };
 });
 
@@ -95,6 +118,9 @@ export const getCurrentUserProfile = cache(async (): Promise<UserProfile | null>
       is_guest: profile.is_guest ?? false,
       sound_enabled: profile.sound_enabled ?? true,
       haptics_enabled: profile.haptics_enabled ?? true,
+      daily_reminder_enabled: profile.daily_reminder_enabled ?? false,
+      daily_reminder_hour: profile.daily_reminder_hour ?? 18,
+      timezone: profile.timezone ?? "UTC",
     };
   }
 
@@ -108,6 +134,9 @@ export const getCurrentUserProfile = cache(async (): Promise<UserProfile | null>
     is_guest: isGuestAuthUser(user),
     sound_enabled: true,
     haptics_enabled: true,
+    daily_reminder_enabled: false,
+    daily_reminder_hour: 18,
+    timezone: "UTC",
   };
 });
 

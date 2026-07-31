@@ -132,6 +132,16 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
+  if (
+    pathname === "/login" &&
+    request.nextUrl.searchParams.get("success") === "password_reset"
+  ) {
+    if (user) {
+      await supabase.auth.signOut();
+    }
+    return supabaseResponse;
+  }
+
   if ((pathname === "/login" || pathname === "/guest") && user) {
     const destination = await getPostAuthPathForUser(supabase, user);
 

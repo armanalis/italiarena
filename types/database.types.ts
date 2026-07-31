@@ -17,7 +17,11 @@ export type CorrectAnswer = "A" | "B" | "C" | "D";
 export type MatchResult = "win" | "loss" | "tie";
 export type OpponentType = "real" | "ghost";
 
-export type ReportIssueType = "typo" | "wrong_answer" | "unnatural_phrasing";
+export type ReportIssueType =
+  | "typo"
+  | "wrong_answer"
+  | "unnatural_phrasing"
+  | "duplicate_answer";
 
 export type GameSessionStatus =
   | "waiting"
@@ -275,6 +279,36 @@ export type GhostMatchInsert = Pick<
 > &
   Partial<Pick<GhostMatch, "id" | "created_at">>;
 
+/** Browser push subscription endpoint stored for Web Push delivery. */
+export interface PushSubscriptionRow {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  user_agent: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PushSubscriptionInsert = Pick<
+  PushSubscriptionRow,
+  "user_id" | "endpoint" | "p256dh" | "auth"
+> &
+  Partial<
+    Pick<
+      PushSubscriptionRow,
+      "id" | "user_agent" | "created_at" | "updated_at"
+    >
+  >;
+
+export type PushSubscriptionUpdate = Partial<
+  Pick<
+    PushSubscriptionRow,
+    "endpoint" | "p256dh" | "auth" | "user_agent" | "updated_at"
+  >
+>;
+
 // Arguments passed to Postgres RPC functions
 export type GetRandomQuestionsArgs = {
   p_language: QuestionLanguage;
@@ -350,6 +384,12 @@ export interface Database {
         Row: GhostMatch;
         Insert: GhostMatchInsert;
         Update: Partial<GhostMatchInsert>;
+        Relationships: [];
+      };
+      push_subscriptions: {
+        Row: PushSubscriptionRow;
+        Insert: PushSubscriptionInsert;
+        Update: PushSubscriptionUpdate;
         Relationships: [];
       };
     };

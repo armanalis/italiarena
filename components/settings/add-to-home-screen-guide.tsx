@@ -60,8 +60,8 @@ export function AddToHomeScreenGuide() {
           <div>
             <CardTitle>Add to your home screen</CardTitle>
             <CardDescription className="mt-1.5">
-              Install {APP_NAME} like an app for quick access, full screen, and a
-              smoother mobile experience.
+              Install {APP_NAME} like an app for quick access, full screen,
+              smoother mobile play, and out-of-app notifications on iPhone.
             </CardDescription>
           </div>
         </div>
@@ -72,7 +72,8 @@ export function AddToHomeScreenGuide() {
             <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
             <p>
               You&apos;re already using the installed app. Open it from your home
-              screen anytime to jump straight into a match.
+              screen anytime to jump straight into a match — and enable daily
+              reminders in Settings for out-of-app alerts.
             </p>
           </div>
         ) : (
@@ -90,6 +91,7 @@ export function AddToHomeScreenGuide() {
                   "Tap Share in the menu that opens.",
                   "In the share panel, scroll down and tap Add to Home Screen.",
                   "Tap Add in the top-right corner. The app icon will appear on your home screen.",
+                  `Open ${APP_NAME} from that icon, then turn on Daily practice reminder in Settings.`,
                 ]}
               />
             </div>

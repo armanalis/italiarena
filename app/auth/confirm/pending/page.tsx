@@ -44,7 +44,9 @@ export default async function ConfirmPendingPage({
     type,
     next,
   });
-  const isRecovery = type === "recovery";
+  const isRecovery =
+    type === "recovery" ||
+    (next?.includes("/login/reset-password") ?? false);
 
   return (
     <AuroraCanvas>
