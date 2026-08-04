@@ -1,36 +1,62 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { useActionRedirect } from "@/hooks/use-action-redirect";
 import { Lock } from "lucide-react";
 import {
   resetPassword,
   type AuthFormState,
 } from "@/app/login/actions";
+import { navigateTo } from "@/lib/client-navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { createClient } from "@/utils/supabase/client";
 
 const initialState: AuthFormState = { error: null };
+const SIGN_IN_AFTER_RESET = "/login?success=password_reset";
 
-function SubmitButton() {
+function SubmitButton({ finishing }: { finishing: boolean }) {
   const { pending } = useFormStatus();
+  const busy = pending || finishing;
 
   return (
-    <Button
-      type="submit"
-      disabled={pending}
-      className="h-11 w-full"
-    >
-      {pending ? "Updating password..." : "Set new password"}
+    <Button type="submit" disabled={busy} className="h-11 w-full">
+      {busy ? "Updating password..." : "Set new password"}
     </Button>
   );
 }
 
 export function ResetPasswordForm() {
   const [state, formAction] = useActionState(resetPassword, initialState);
-  useActionRedirect(state?.redirectTo);
+  const [finishing, setFinishing] = useState(false);
+
+  useEffect(() => {
+    if (!state?.redirectTo || finishing) {
+      return;
+    }
+
+    let cancelled = false;
+    setFinishing(true);
+
+    void (async () => {
+      try {
+        // Clear the recovery session in the browser so /login cannot bounce to dashboard.
+        const supabase = createClient();
+        await supabase.auth.signOut({ scope: "global" });
+      } catch {
+        // Still send the user to sign-in; middleware also clears leftover sessions.
+      }
+
+      if (!cancelled) {
+        navigateTo(state.redirectTo ?? SIGN_IN_AFTER_RESET);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [state?.redirectTo, finishing]);
 
   return (
     <form action={formAction} className="space-y-4">
@@ -52,7 +78,7 @@ export function ResetPasswordForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="reset-confirm-password">Confirm new password</Label>
+        <Label htmlFor="reset-confirm-password">Re-enter new password</Label>
         <div className="relative">
           <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -73,11 +99,11 @@ export function ResetPasswordForm() {
           className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
           role="alert"
         >
-          {state?.error}
+          {state.error}
         </div>
       )}
 
-      <SubmitButton />
+      <SubmitButton finishing={finishing} />
     </form>
   );
 }
