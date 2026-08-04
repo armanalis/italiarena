@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Bell, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { updateDailyReminderPreferences } from "@/app/dashboard/settings/actions";
@@ -28,6 +28,7 @@ import {
   isPushSupported,
   isStandaloneDisplay,
   serializePushSubscription,
+  showLocalTestNotification,
   subscribeToPush,
 } from "@/lib/push-client";
 import { cn } from "@/lib/utils";
@@ -37,7 +38,10 @@ type NotificationsSettingsCardProps = {
   initialHour: number;
 };
 
+type BusyState = "idle" | "enabling" | "disabling" | "testing" | "saving-hour";
+
 const REMINDER_HOURS = Array.from({ length: 24 }, (_, hour) => hour);
+const FETCH_TIMEOUT_MS = 20_000;
 
 function formatReminderHour(hour: number) {
   const safeHour = Math.min(23, Math.max(0, Math.trunc(hour)));
@@ -47,6 +51,27 @@ function formatReminderHour(hour: number) {
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
+}
+
+async function fetchJson(
+  input: RequestInfo | URL,
+  init?: RequestInit
+): Promise<{ ok: boolean; status: number; body: { error?: string } | null }> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    return { ok: response.ok, status: response.status, body };
+  } finally {
+    window.clearTimeout(timer);
+  }
 }
 
 function PreferenceToggle({
@@ -101,100 +126,107 @@ export function NotificationsSettingsCard({
       ? initialHour
       : 18
   );
-  const [isPending, startTransition] = useTransition();
+  const [busy, setBusy] = useState<BusyState>("idle");
+  const isBusy = busy !== "idle";
 
-  function enableReminder() {
-    startTransition(async () => {
-      if (!isPushSupported()) {
-        toast.error("This browser does not support push notifications.");
-        return;
-      }
+  async function enableReminder() {
+    if (isBusy) return;
 
-      if (isIosDevice() && !isStandaloneDisplay()) {
-        toast.error(
-          `On iPhone, add ${APP_NAME} to your Home Screen first, then open it from there to enable alerts.`
-        );
-        return;
-      }
-
-      try {
-        const subscription = await subscribeToPush();
-        const serialized = serializePushSubscription(subscription);
-        const response = await fetch("/api/push/subscribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...serialized,
-            timezone: getBrowserTimezone(),
-            dailyReminderEnabled: true,
-            dailyReminderHour: hour,
-          }),
-        });
-        const payload = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-
-        if (!response.ok) {
-          throw new Error(payload?.error ?? "Could not enable daily reminder.");
-        }
-
-        setEnabled(true);
-        toast.success(
-          "Daily reminder enabled. You'll get one clash nudge per day."
-        );
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Could not enable daily reminder.";
-        toast.error(message);
-      }
-    });
-  }
-
-  function disableReminder() {
-    startTransition(async () => {
-      try {
-        const existing = await getExistingPushSubscription().catch(() => null);
-        if (existing) {
-          const serialized = serializePushSubscription(existing);
-          await fetch("/api/push/unsubscribe", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              endpoint: serialized.endpoint,
-              disableDailyReminder: true,
-            }),
-          });
-          await existing.unsubscribe().catch(() => undefined);
-        }
-
-        const result = await updateDailyReminderPreferences({ enabled: false });
-        if (!result.success) {
-          throw new Error(result.error);
-        }
-
-        setEnabled(false);
-        toast.success("Daily reminder turned off.");
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Could not disable daily reminder.";
-        toast.error(message);
-      }
-    });
-  }
-
-  function changeReminderHour(nextHour: number) {
-    const previousHour = hour;
-    setHour(nextHour);
-
-    if (!enabled) {
+    if (!isPushSupported()) {
+      toast.error("This browser does not support push notifications.");
       return;
     }
 
-    startTransition(async () => {
+    if (isIosDevice() && !isStandaloneDisplay()) {
+      toast.error(
+        `On iPhone, add ${APP_NAME} to your Home Screen first, then open it from there to enable alerts.`
+      );
+      return;
+    }
+
+    setBusy("enabling");
+    try {
+      const subscription = await subscribeToPush();
+      const serialized = serializePushSubscription(subscription);
+      const { ok, body } = await fetchJson("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...serialized,
+          timezone: getBrowserTimezone(),
+          dailyReminderEnabled: true,
+          dailyReminderHour: hour,
+        }),
+      });
+
+      if (!ok) {
+        throw new Error(body?.error ?? "Could not enable daily reminder.");
+      }
+
+      setEnabled(true);
+      toast.success(
+        "Daily reminder enabled. You'll get one clash nudge per day."
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.name === "TimeoutError" || error.name === "AbortError"
+            ? "Request timed out. Check your connection and try again."
+            : error.message
+          : "Could not enable daily reminder.";
+      toast.error(message);
+    } finally {
+      setBusy("idle");
+    }
+  }
+
+  async function disableReminder() {
+    if (isBusy) return;
+
+    setBusy("disabling");
+    try {
+      const existing = await getExistingPushSubscription().catch(() => null);
+      if (existing) {
+        const serialized = serializePushSubscription(existing);
+        await fetchJson("/api/push/unsubscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            endpoint: serialized.endpoint,
+            disableDailyReminder: true,
+          }),
+        }).catch(() => undefined);
+        await existing.unsubscribe().catch(() => undefined);
+      }
+
+      const result = await updateDailyReminderPreferences({ enabled: false });
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      setEnabled(false);
+      toast.success("Daily reminder turned off.");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Could not disable daily reminder.";
+      toast.error(message);
+    } finally {
+      setBusy("idle");
+    }
+  }
+
+  async function changeReminderHour(nextHour: number) {
+    const previousHour = hour;
+    setHour(nextHour);
+
+    if (!enabled || isBusy) {
+      return;
+    }
+
+    setBusy("saving-hour");
+    try {
       const result = await updateDailyReminderPreferences({
         hour: nextHour,
         timezone: getBrowserTimezone(),
@@ -207,32 +239,46 @@ export function NotificationsSettingsCard({
       }
 
       toast.success(
-        `Reminder time updated to ${formatReminderHour(nextHour)}.`
+        `Preferred time saved as ${formatReminderHour(nextHour)}.`
       );
-    });
+    } catch {
+      setHour(previousHour);
+      toast.error("Could not save reminder time.");
+    } finally {
+      setBusy("idle");
+    }
   }
 
-  function sendTest() {
-    startTransition(async () => {
-      try {
-        const response = await fetch("/api/push/test", { method: "POST" });
-        const payload = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        if (!response.ok) {
-          throw new Error(
-            payload?.error ?? "Could not send a test notification."
-          );
-        }
-        toast.success("Test notification sent. Check your notification tray.");
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Could not send a test notification.";
-        toast.error(message);
+  async function sendTest() {
+    if (isBusy) return;
+
+    setBusy("testing");
+    try {
+      // Show something immediately on-device (especially when the PWA is open).
+      await showLocalTestNotification().catch(() => undefined);
+
+      const { ok, body } = await fetchJson("/api/push/test", {
+        method: "POST",
+      });
+      if (!ok) {
+        throw new Error(
+          body?.error ?? "Could not send a test notification."
+        );
       }
-    });
+      toast.success(
+        "Test sent. If you don’t see a banner, check Notification Center (swipe down)."
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.name === "TimeoutError" || error.name === "AbortError"
+            ? "Request timed out. Check your connection and try again."
+            : error.message
+          : "Could not send a test notification.";
+      toast.error(message);
+    } finally {
+      setBusy("idle");
+    }
   }
 
   return (
@@ -256,10 +302,10 @@ export function NotificationsSettingsCard({
           label="Daily practice reminder"
           description='Clash with someone while practicing your Italian.'
           checked={enabled}
-          disabled={isPending}
+          disabled={isBusy}
           onChange={(value) => {
-            if (value) enableReminder();
-            else disableReminder();
+            if (value) void enableReminder();
+            else void disableReminder();
           }}
         />
 
@@ -273,8 +319,8 @@ export function NotificationsSettingsCard({
           </p>
           <Select
             value={String(hour)}
-            disabled={isPending}
-            onValueChange={(value) => changeReminderHour(Number(value))}
+            disabled={isBusy}
+            onValueChange={(value) => void changeReminderHour(Number(value))}
           >
             <SelectTrigger id="daily-reminder-hour" className="min-h-11">
               <SelectValue placeholder="Choose a time" />
@@ -294,18 +340,29 @@ export function NotificationsSettingsCard({
             type="button"
             variant="outline"
             className="min-h-11"
-            disabled={isPending}
-            onClick={sendTest}
+            disabled={isBusy}
+            onClick={() => void sendTest()}
           >
-            {isPending ? (
+            {busy === "testing" ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                Working...
+                Sending...
+              </>
+            ) : busy === "enabling" || busy === "disabling" ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Please wait...
               </>
             ) : (
               "Send a test notification"
             )}
           </Button>
+        ) : null}
+
+        {busy === "enabling" ? (
+          <p className="text-xs text-muted-foreground">
+            Enabling reminders… If iPhone asks for permission, tap Allow.
+          </p>
         ) : null}
 
         {isIosDevice() && !isStandaloneDisplay() ? (
