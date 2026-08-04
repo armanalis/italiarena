@@ -98,6 +98,10 @@ export function GuestSetupForm(_props?: GuestSetupFormProps) {
             </li>
             <li>Guest players don&apos;t appear on the proficiency leaderboard.</li>
             <li>
+              Guests cannot contribute questions to the community pool — sign up
+              for a full account to submit.
+            </li>
+            <li>
               Sign up later to save progress and pick your own username.{" "}
               <Link
                 href="/privacy"

@@ -132,12 +132,13 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
+  // After a successful password reset we always show login (never bounce to dashboard).
   if (
     pathname === "/login" &&
     request.nextUrl.searchParams.get("success") === "password_reset"
   ) {
     if (user) {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: "global" });
     }
     return supabaseResponse;
   }
