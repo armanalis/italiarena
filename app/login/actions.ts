@@ -251,9 +251,14 @@ export async function resetPassword(
     return { error: error.message, success: null };
   }
 
-  await supabase.auth.signOut();
+  // End the recovery session so the next page is login, not dashboard.
+  await supabase.auth.signOut({ scope: "global" });
 
-  redirect("/login?success=password_reset");
+  return {
+    error: null,
+    success: null,
+    redirectTo: "/login?success=password_reset",
+  };
 }
 
 export async function signOut() {

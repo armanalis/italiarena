@@ -6,6 +6,13 @@ import {
   estimateClockOffsetMs,
   publishMatchSync,
 } from "@/lib/match-sync-client";
+import {
+  isMatchScoreState,
+  localResolvedThroughIndex,
+  scoreStateToStorePatch,
+  shouldApplyScoreState,
+  type MatchScoreState,
+} from "@/lib/match-score-state";
 import { createClient } from "@/utils/supabase/client";
 import {
   MATCH_SYNC_VERSION,
@@ -248,6 +255,25 @@ export function useServerMatchSync({
    * the round resolves within one poll instead of stalling until the 25s
    * timeout.
    */
+  const applyScoreState = useCallback((score: MatchScoreState | null) => {
+    if (!score) {
+      return;
+    }
+
+    const live = useGameStore.getState();
+    if (
+      !shouldApplyScoreState(
+        score,
+        localResolvedThroughIndex(live.roundReviews),
+        live.roundPhase === "match_finished" || live.matchWinner !== null
+      )
+    ) {
+      return;
+    }
+
+    useGameStore.setState(scoreStateToStorePatch(score));
+  }, []);
+
   const applyRemoteAnswers = useCallback(
     (answerA: MatchAnswerRecord | null, answerB: MatchAnswerRecord | null) => {
       const live = useGameStore.getState();
@@ -392,6 +418,8 @@ export function useServerMatchSync({
   }, [leaderStartRound]);
 
   // Authoritative playlist + clean slate, exactly once per session id.
+  // Scores are rehydrated from game_sessions.score_state so a refresh does
+  // not wipe the point process.
   useEffect(() => {
     if (!enabled || serverPlaylist.length === 0) {
       return;
@@ -418,13 +446,40 @@ export function useServerMatchSync({
       timeRemaining: 25,
       playerAScore: 0,
       playerBScore: 0,
+      playerAResponseTimes: [],
+      playerBResponseTimes: [],
       lastRoundPointsA: 0,
       lastRoundPointsB: 0,
       matchWinner: null,
       tiebreakerUsed: false,
       tiebreakerQuestion: null,
+      roundReviews: [],
     });
-  }, [enabled, isLeader, serverPlaylist, sessionId]);
+
+    let cancelled = false;
+
+    const hydrateScores = async () => {
+      const { data: session, error } = await supabaseRef.current
+        .from("game_sessions")
+        .select("score_state")
+        .eq("id", sessionId)
+        .maybeSingle();
+
+      if (cancelled || error || !session) {
+        return;
+      }
+
+      if (isMatchScoreState(session.score_state)) {
+        applyScoreState(session.score_state);
+      }
+    };
+
+    void hydrateScores();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applyScoreState, enabled, isLeader, serverPlaylist, sessionId]);
 
   // Estimate the offset between this device's clock and the server clock
   // that stamps roundStartedAt. Min-RTT sample wins; runs once per session.
@@ -472,7 +527,7 @@ export function useServerMatchSync({
       try {
         const { data: session, error } = await supabase
           .from("game_sessions")
-          .select("question_playlist, answer_a, answer_b")
+          .select("question_playlist, answer_a, answer_b, score_state")
           .eq("id", sessionIdRef.current)
           .maybeSingle();
 
@@ -491,6 +546,10 @@ export function useServerMatchSync({
         }
 
         loggedFailure = false;
+
+        applyScoreState(
+          isMatchScoreState(session.score_state) ? session.score_state : null
+        );
 
         const { sync } = parseQuestionPlaylist(session.question_playlist);
         const clockOffset = clockOffsetRef.current;
@@ -539,7 +598,14 @@ export function useServerMatchSync({
       supabase.removeChannel(channel);
       clearFlipTimer();
     };
-  }, [applyRemoteAnswers, applySync, clearFlipTimer, enabled, sessionId]);
+  }, [
+    applyRemoteAnswers,
+    applyScoreState,
+    applySync,
+    clearFlipTimer,
+    enabled,
+    sessionId,
+  ]);
 
   // Host kicks off round 0 as soon as the opponent appears in the row.
   useEffect(() => {

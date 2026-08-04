@@ -23,7 +23,8 @@ const loginErrors: Record<string, string> = {
 };
 
 const loginSuccess: Record<string, string> = {
-  password_reset: "Your password was updated. Sign in with your new password.",
+  password_reset:
+    "Your password was updated. Sign in with your new password to confirm the change.",
 };
 
 type LoginPageProps = {
@@ -38,8 +39,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const supabase = await createClient();
 
+  // After password reset, always stay on sign-in (never auto-route to dashboard).
   if (params.success === "password_reset") {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "global" });
   } else {
     const {
       data: { user },
@@ -52,7 +54,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   const authError = params.error ? loginErrors[params.error] ?? null : null;
   const authSuccess = params.success ? loginSuccess[params.success] ?? null : null;
-  const initialMode = params.mode === "signup" ? "signup" : "signin";
+  const initialMode =
+    params.success === "password_reset"
+      ? "signin"
+      : params.mode === "signup"
+        ? "signup"
+        : "signin";
 
   return (
     <AuroraCanvas>

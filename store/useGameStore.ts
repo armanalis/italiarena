@@ -7,6 +7,7 @@ import {
   emptyCategoryProgress,
   normalizeCategoryProgress,
 } from "@/lib/category-progress";
+import type { MatchRoundReview } from "@/lib/match-score-state";
 import { safeLocalStorage } from "@/lib/safe-storage";
 import {
   computePoints,
@@ -19,6 +20,8 @@ import type { BotDifficulty } from "@/lib/bot";
 import type { ProficiencyLevel } from "@/lib/constants";
 import type { CategoryProgress } from "@/lib/types";
 import type { CorrectAnswer, QuestionActive, QuestionCategory } from "@/types/database.types";
+
+export type { MatchRoundReview };
 
 export type GameStoreStatus = "idle" | "searching" | "playing" | "finished";
 
@@ -39,21 +42,6 @@ export type GameOpponent = {
 export type LockedAnswer = {
   answer: CorrectAnswer | null;
   responseTimeMs: number | null;
-};
-
-/** One completed round, stored for end-of-match review. */
-export type MatchRoundReview = {
-  questionIndex: number;
-  isTiebreaker: boolean;
-  questionId: string;
-  category: QuestionCategory;
-  questionText: string;
-  correctAnswer: CorrectAnswer;
-  correctOptionText: string;
-  selectedAnswer: CorrectAnswer | null;
-  selectedOptionText: string | null;
-  wasCorrect: boolean;
-  pointsEarned: number;
 };
 
 type GameStoreState = {
@@ -330,6 +318,17 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
         const state = get();
         const question = state.playlist[state.currentQuestionIndex];
         if (!question) {
+          return;
+        }
+
+        // Idempotent: a refresh can re-deliver the same locked answers and
+        // re-trigger finalize. Never double-count a round already scored.
+        if (
+          state.roundReviews.some(
+            (round) => round.questionIndex === state.currentQuestionIndex
+          )
+        ) {
+          set({ roundPhase: "round_result" });
           return;
         }
 

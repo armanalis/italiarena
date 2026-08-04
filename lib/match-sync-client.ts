@@ -7,6 +7,10 @@
  * questions even after polling moved off the server.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  isMatchScoreState,
+  type MatchScoreState,
+} from "@/lib/match-score-state";
 import { TOPIC_REVEAL_MS, type MatchSyncState } from "@/lib/match-sync";
 import {
   buildQuestionPlaylistPayload,
@@ -131,4 +135,59 @@ export async function publishMatchSync(
   }
 
   return { success: true, sync: stamped, serverNow };
+}
+
+/**
+ * Persist cumulative scores after a round resolves. Monotonic: never lets a
+ * stale client overwrite a document that already includes more rounds.
+ */
+export async function persistMatchScoreState(
+  supabase: SupabaseClient,
+  sessionId: string,
+  score: MatchScoreState
+): Promise<{ success: true } | { success: false; error: string }> {
+  const { data: session, error: readError } = await supabase
+    .from("game_sessions")
+    .select("score_state")
+    .eq("id", sessionId)
+    .maybeSingle();
+
+  if (readError) {
+    return { success: false, error: readError.message };
+  }
+
+  const existing = isMatchScoreState(session?.score_state)
+    ? session.score_state
+    : null;
+
+  if (
+    existing &&
+    (existing.resolvedThroughIndex > score.resolvedThroughIndex ||
+      (existing.resolvedThroughIndex === score.resolvedThroughIndex &&
+        existing.matchFinished &&
+        !score.matchFinished))
+  ) {
+    return { success: true };
+  }
+
+  const { data: updated, error: updateError } = await supabase
+    .from("game_sessions")
+    .update({ score_state: score })
+    .eq("id", sessionId)
+    .select("id")
+    .maybeSingle();
+
+  if (updateError) {
+    return { success: false, error: updateError.message };
+  }
+
+  if (!updated) {
+    return {
+      success: false,
+      error:
+        "Score write was blocked (no row updated). Check game_sessions RLS and run supabase/match-score-state-migration.sql.",
+    };
+  }
+
+  return { success: true };
 }

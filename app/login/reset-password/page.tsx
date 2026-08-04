@@ -32,7 +32,8 @@ export default async function ResetPasswordPage() {
             </div>
             <h1 className="text-2xl font-semibold tracking-tight">Reset password</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Choose a new password for {user.email}.
+              Enter a new password for {user.email}, then confirm it. You will
+              sign in again with that password to finish.
             </p>
           </div>
 

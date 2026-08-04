@@ -388,17 +388,40 @@ export async function getPendingQuestionSubmissions(): Promise<
   }
 
   const submitterIds = [...new Set(submissions.map((row) => row.submitter_id))];
-  const { data: users } = await supabase
-    .from("users")
-    .select("id, display_name, email")
-    .in("id", submitterIds);
 
-  const labelById = new Map(
-    (users ?? []).map((user) => [
-      user.id,
-      user.display_name?.trim() || user.email || "Contributor",
-    ])
+  // SECURITY DEFINER RPC — works under RLS (direct users select does not).
+  const { data: nameRows, error: namesError } = await supabase.rpc(
+    "get_submitter_display_names",
+    { user_ids: submitterIds }
   );
+
+  const labelById = new Map<string, string>();
+
+  if (!namesError && nameRows) {
+    for (const row of nameRows) {
+      const name = row.display_name?.trim();
+      if (name) {
+        labelById.set(row.id, name);
+      }
+    }
+  }
+
+  // Fallback for any IDs the batch RPC missed.
+  const missingIds = submitterIds.filter((id) => !labelById.has(id));
+  if (missingIds.length > 0) {
+    await Promise.all(
+      missingIds.map(async (id) => {
+        const { data: publicName } = await supabase.rpc(
+          "get_public_display_name",
+          { p_user_id: id }
+        );
+        const trimmed = typeof publicName === "string" ? publicName.trim() : "";
+        if (trimmed && trimmed !== "Player") {
+          labelById.set(id, trimmed);
+        }
+      })
+    );
+  }
 
   return submissions.map((submission) => ({
     ...submission,

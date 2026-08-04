@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getCurrentUserProfile, isGuestUser } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 import {
   MAX_PENDING_SUBMISSIONS,
@@ -22,19 +23,24 @@ export async function submitQuestion(
     return { success: false, error: validated.error };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  const profile = await getCurrentUserProfile();
+  if (!profile) {
     return { success: false, error: "Not authenticated." };
   }
+
+  if (isGuestUser(profile)) {
+    return {
+      success: false,
+      error: "Guest players cannot contribute questions. Sign up to submit.",
+    };
+  }
+
+  const supabase = await createClient();
 
   const { count: pendingCount, error: pendingError } = await supabase
     .from("question_submissions")
     .select("id", { count: "exact", head: true })
-    .eq("submitter_id", user.id)
+    .eq("submitter_id", profile.id)
     .eq("status", "pending");
 
   if (pendingError) {
@@ -54,7 +60,7 @@ export async function submitQuestion(
   const { count: todayCount, error: todayError } = await supabase
     .from("question_submissions")
     .select("id", { count: "exact", head: true })
-    .eq("submitter_id", user.id)
+    .eq("submitter_id", profile.id)
     .gte("created_at", dayStart.toISOString());
 
   if (todayError) {
@@ -84,7 +90,7 @@ export async function submitQuestion(
   const { data: duplicatePending } = await supabase
     .from("question_submissions")
     .select("id")
-    .eq("submitter_id", user.id)
+    .eq("submitter_id", profile.id)
     .eq("status", "pending")
     .ilike("question_text", validated.data.question_text)
     .maybeSingle();
@@ -99,7 +105,7 @@ export async function submitQuestion(
   const { data: inserted, error } = await supabase
     .from("question_submissions")
     .insert({
-      submitter_id: user.id,
+      submitter_id: profile.id,
       language: validated.data.language,
       level: validated.data.level,
       category: validated.data.category,

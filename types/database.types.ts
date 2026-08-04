@@ -202,6 +202,8 @@ export interface GameSession {
   answer_a: unknown;
   /** Player B's locked answer for the current round (MatchAnswerRecord JSON). */
   answer_b: unknown;
+  /** Cumulative scores / round reviews so refresh cannot wipe the point process. */
+  score_state: unknown;
   created_at: string;
 }
 
@@ -270,7 +272,15 @@ export type GameSessionInsert = Pick<GameSession, "player_a_id"> &
   >;
 
 export type GameSessionUpdate = Partial<
-  Pick<GameSession, "player_b_id" | "status" | "question_playlist">
+  Pick<
+    GameSession,
+    | "player_b_id"
+    | "status"
+    | "question_playlist"
+    | "answer_a"
+    | "answer_b"
+    | "score_state"
+  >
 >;
 
 export type GhostMatchInsert = Pick<
@@ -422,6 +432,14 @@ export interface Database {
       get_public_display_name: {
         Args: { p_user_id: string };
         Returns: string | null;
+      };
+      get_submitter_display_names: {
+        Args: { user_ids: string[] };
+        Returns: Array<{ id: string; display_name: string | null }>;
+      };
+      is_admin: {
+        Args: Record<string, never>;
+        Returns: boolean;
       };
       get_server_time_ms: {
         Args: Record<string, never>;

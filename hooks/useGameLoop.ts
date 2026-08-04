@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchTiebreakerQuestion } from "@/app/dashboard/match/actions";
 import { createClient } from "@/utils/supabase/client";
 import type { MatchAnswerRecord } from "@/lib/match-sync";
+import { buildMatchScoreState } from "@/lib/match-score-state";
+import { persistMatchScoreState } from "@/lib/match-sync-client";
 import {
   getBotResponseDelayMs,
   getBotResponseTimeMs,
@@ -206,6 +208,24 @@ export function useGameLoop({
     const state = useGameStore.getState();
     return Boolean(state.playerAAnswer && state.playerBAnswer);
   }, []);
+
+  /** Push cumulative scores to the session row so a refresh cannot wipe them. */
+  const persistScores = useCallback(async () => {
+    const state = useGameStore.getState();
+    if (!state.gameSessionId) {
+      return;
+    }
+
+    const result = await persistMatchScoreState(
+      supabase,
+      state.gameSessionId,
+      buildMatchScoreState(state)
+    );
+
+    if (!result.success) {
+      console.error(`[match-sync] score persist failed: ${result.error}`);
+    }
+  }, [supabase]);
 
   const startRoundTimer = useCallback(() => {
     if (roundTimerRef.current) {
@@ -437,6 +457,7 @@ export function useGameLoop({
     }
 
     resolveRound();
+    void persistScores();
 
     resultRemainingMsRef.current = getRoundResultMs(isBotMatch);
     setRoundResultSecondsLeft(resultRemainingMsRef.current / 1000);
@@ -464,6 +485,7 @@ export function useGameLoop({
 
           if (result.success) {
             startTiebreakerRound(result.data);
+            void persistScores();
             if (isBotMatch) {
               return;
             }
@@ -485,6 +507,7 @@ export function useGameLoop({
         if (isBotMatch) {
           advanceToNextRound();
           const afterAdvance = useGameStore.getState();
+          void persistScores();
           if (afterAdvance.roundPhase === "match_finished") {
             return;
           }
@@ -496,6 +519,7 @@ export function useGameLoop({
         if (nextIndex >= latest.playlist.length) {
           pendingNextRoundRef.current = null;
           advanceToNextRound();
+          void persistScores();
           void leaderFinishMatchRef.current();
           return;
         }
@@ -537,6 +561,7 @@ export function useGameLoop({
     clearTimers,
     isBotMatch,
     isSyncLeader,
+    persistScores,
     play,
     resolveRound,
     setRoundPhase,
