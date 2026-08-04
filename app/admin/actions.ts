@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { getPrivilegedSupabase } from "@/lib/supabase-admin";
-import { createClient } from "@/utils/supabase/server";
+import { runSubmissionAiPrecheck } from "@/lib/run-submission-precheck";
 import { validateQuestionSubmission } from "@/lib/question-contribution";
+import { TARGET_LANGUAGE } from "@/lib/constants";
+import { createClient } from "@/utils/supabase/server";
 import type {
   CorrectAnswer,
   QuestionActive,
@@ -565,5 +567,66 @@ export async function rejectQuestionSubmission(
 
   revalidatePath("/admin");
   revalidatePath("/dashboard/contribute");
+  return { success: true };
+}
+
+export async function rerunSubmissionAiPrecheck(
+  submissionId: string
+): Promise<AdminActionResult> {
+  await requireAdmin();
+
+  const supabase = await getPrivilegedSupabase();
+  const { data: submission, error } = await supabase
+    .from("question_submissions")
+    .select("*")
+    .eq("id", submissionId)
+    .eq("status", "pending")
+    .maybeSingle();
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  if (!submission) {
+    return { success: false, error: "Pending submission not found." };
+  }
+
+  const row = submission as QuestionSubmission;
+
+  await supabase
+    .from("question_submissions")
+    .update({
+      ai_precheck_status: "pending",
+      ai_precheck_summary: null,
+      ai_precheck_details: null,
+      ai_precheck_recommendation: null,
+      ai_precheck_at: null,
+    } as never)
+    .eq("id", submissionId);
+
+  try {
+    await runSubmissionAiPrecheck(submissionId, {
+      language: TARGET_LANGUAGE,
+      level: row.level,
+      category: row.category,
+      question_text: row.question_text,
+      option_a: row.option_a,
+      option_b: row.option_b,
+      option_c: row.option_c,
+      option_d: row.option_d,
+      correct_answer: row.correct_answer,
+      rationale: row.rationale ?? "",
+    });
+  } catch (precheckError) {
+    return {
+      success: false,
+      error:
+        precheckError instanceof Error
+          ? precheckError.message
+          : "AI re-check failed.",
+    };
+  }
+
+  revalidatePath("/admin");
   return { success: true };
 }

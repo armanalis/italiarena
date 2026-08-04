@@ -1,10 +1,18 @@
-import { Sparkles } from "lucide-react";
+"use client";
+
+import { useTransition } from "react";
+import { Loader2, RefreshCw, Sparkles } from "lucide-react";
+import { toast } from "sonner";
+import { rerunSubmissionAiPrecheck } from "@/app/admin/actions";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   formatAiCategoryMatchLabel,
+  formatAiLanguageOkLabel,
   formatAiLevelMatchLabel,
   formatAiRecommendationLabel,
   type SubmissionAiCategoryMatch,
+  type SubmissionAiLanguageOk,
   type SubmissionAiLevelMatch,
   type SubmissionAiPrecheck,
   type SubmissionAiRecommendation,
@@ -28,8 +36,16 @@ function parsePrecheckDetails(
     return null;
   }
 
+  const language_ok: SubmissionAiLanguageOk =
+    record.language_ok === "yes" ||
+    record.language_ok === "no" ||
+    record.language_ok === "unclear"
+      ? record.language_ok
+      : "unclear";
+
   return {
     recommendation: record.recommendation,
+    language_ok,
     level_match: (record.level_match ?? "unclear") as SubmissionAiLevelMatch,
     category_match: (record.category_match ?? "unclear") as SubmissionAiCategoryMatch,
     suggested_level: record.suggested_level ?? null,
@@ -62,7 +78,19 @@ type SubmissionAiPrecheckPanelProps = {
 export function SubmissionAiPrecheckPanel({
   submission,
 }: SubmissionAiPrecheckPanelProps) {
+  const [isPending, startTransition] = useTransition();
   const status = submission.ai_precheck_status;
+
+  function handleRerun() {
+    startTransition(async () => {
+      const result = await rerunSubmissionAiPrecheck(submission.id);
+      if (result.success) {
+        toast.success("AI advisory refreshed.");
+        return;
+      }
+      toast.error(result.error);
+    });
+  }
 
   if (status === "pending" || !status) {
     return (
@@ -78,9 +106,26 @@ export function SubmissionAiPrecheckPanel({
   if (status === "unavailable") {
     return (
       <div className="mt-4 rounded-lg border border-border/60 bg-muted/15 px-3 py-2 text-sm">
-        <div className="flex items-center gap-2 font-medium text-foreground">
-          <Sparkles className="size-4 text-muted-foreground" />
-          AI pre-check unavailable
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 font-medium text-foreground">
+            <Sparkles className="size-4 text-muted-foreground" />
+            AI pre-check unavailable
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={isPending}
+            onClick={handleRerun}
+            className="h-8"
+          >
+            {isPending ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="size-3.5" />
+            )}
+            Re-run AI
+          </Button>
         </div>
         <p className="mt-1 text-muted-foreground">
           {submission.ai_precheck_summary ??
@@ -115,6 +160,21 @@ export function SubmissionAiPrecheckPanel({
         <span className="text-xs text-muted-foreground">
           You make the final decision
         </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={isPending}
+          onClick={handleRerun}
+          className="ml-auto h-8"
+        >
+          {isPending ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <RefreshCw className="size-3.5" />
+          )}
+          Re-run AI
+        </Button>
       </div>
 
       <p className="mt-2 text-muted-foreground">
@@ -123,6 +183,13 @@ export function SubmissionAiPrecheckPanel({
 
       {details && (
         <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+          <p
+            className={cn(
+              details.language_ok === "no" && "font-medium text-amber-600 dark:text-amber-400"
+            )}
+          >
+            {formatAiLanguageOkLabel(details.language_ok)}
+          </p>
           <p>
             {formatAiLevelMatchLabel(
               details.level_match,
