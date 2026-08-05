@@ -20,7 +20,10 @@ export default async function ResetPasswordPage() {
     <AuroraCanvas>
       <main className="mx-auto w-full max-w-[420px] px-4 pb-[max(3rem,env(safe-area-inset-bottom,0px))] pt-6 sm:px-6 sm:pb-12 sm:pt-8">
         <Link
-          href="/login"
+          href={
+            "/auth/sign-out?next=" +
+            encodeURIComponent("/login")
+          }
           className="mb-6 inline-flex text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
           ← Back to login

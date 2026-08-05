@@ -75,7 +75,9 @@ export default async function ConfirmPendingPage({
 
           <div className="space-y-4 px-5 py-6 sm:px-8 sm:py-7">
             <Button asChild className="h-11 w-full gap-2">
-              <Link href={verifyPath}>
+              {/* Plain <a>: Next's <Link> prefetches in production, which would
+                  consume the one-time token before the user clicks. */}
+              <a href={verifyPath}>
                 {isRecovery ? (
                   <>
                     <KeyRound className="size-4" />
@@ -87,7 +89,7 @@ export default async function ConfirmPendingPage({
                     Confirm email address
                   </>
                 )}
-              </Link>
+              </a>
             </Button>
             <p className="text-center text-xs text-muted-foreground">
               This extra step keeps automated inbox scanners from using your
