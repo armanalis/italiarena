@@ -214,53 +214,6 @@ export async function requestPasswordReset(
   };
 }
 
-export async function resetPassword(
-  _prevState: AuthFormState,
-  formData: FormData
-): Promise<AuthFormState> {
-  const password = String(formData.get("password") ?? "");
-  const confirmPassword = String(formData.get("confirm_password") ?? "");
-
-  if (!password || !confirmPassword) {
-    return { error: "Both password fields are required.", success: null };
-  }
-
-  if (password.length < 6) {
-    return { error: "Password must be at least 6 characters.", success: null };
-  }
-
-  if (password !== confirmPassword) {
-    return { error: "Passwords do not match.", success: null };
-  }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return {
-      error: "Your reset link has expired. Request a new one from the login page.",
-      success: null,
-    };
-  }
-
-  const { error } = await supabase.auth.updateUser({ password });
-
-  if (error) {
-    return { error: error.message, success: null };
-  }
-
-  // End the recovery session so the next page is login, not dashboard.
-  await supabase.auth.signOut({ scope: "global" });
-
-  return {
-    error: null,
-    success: null,
-    redirectTo: "/login?success=password_reset",
-  };
-}
-
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();

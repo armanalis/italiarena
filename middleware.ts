@@ -140,9 +140,36 @@ export async function middleware(request: NextRequest) {
     if (user) {
       await supabase.auth.signOut({ scope: "global" });
     }
+
+    for (const cookie of request.cookies.getAll()) {
+      if (
+        cookie.name.startsWith("sb-") ||
+        cookie.name.includes("auth-token") ||
+        cookie.name.includes("code-verifier")
+      ) {
+        supabaseResponse.cookies.set(cookie.name, "", {
+          maxAge: 0,
+          path: "/",
+        });
+      }
+    }
+
     return supabaseResponse;
   }
 
+  // A signed-in user with an expired reset link can still set a new password.
+  if (
+    pathname === "/login" &&
+    request.nextUrl.searchParams.get("error") === "reset_link_expired" &&
+    user
+  ) {
+    const resetUrl = request.nextUrl.clone();
+    resetUrl.pathname = "/login/reset-password";
+    resetUrl.search = "";
+    return NextResponse.redirect(resetUrl);
+  }
+
+  // Signed-in users on /login normally bounce away — except right after password reset.
   if ((pathname === "/login" || pathname === "/guest") && user) {
     const destination = await getPostAuthPathForUser(supabase, user);
 
@@ -160,6 +187,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|auth/callback|auth/confirm|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|auth/callback|auth/confirm|auth/sign-out|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

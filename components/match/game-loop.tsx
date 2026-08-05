@@ -158,6 +158,7 @@ export function GameLoop({
       (matchWinner === "a" && localPlayerRoleStore === "a") ||
       (matchWinner === "b" && localPlayerRoleStore === "b");
     const isTie = matchWinner === "tie";
+    const scoresEven = playerAScore === playerBScore;
 
     return (
       <main className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain touch-scroll">
@@ -167,20 +168,24 @@ export function GameLoop({
           </div>
           <div className="space-y-1.5">
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-              {isTie ? "It's a tie!" : didWin ? "You win!" : "You lose!"}
+              {isTie || scoresEven
+                ? "It's a tie!"
+                : didWin
+                  ? "You win!"
+                  : "You lose!"}
             </h1>
             <p className="text-sm text-muted-foreground sm:text-base">
               Final score · {playerAName} {playerAScore} — {playerBName}{" "}
               {playerBScore}
             </p>
-            {isTie && (
+            {(isTie || scoresEven) && (
               <p className="text-sm text-muted-foreground">
                 {tiebreakerUsed
-                  ? "Still tied after the sudden-death round — fastest average response time wins."
-                  : "Tie-breaker: fastest average response time"}
+                  ? "Still tied after the sudden-death round."
+                  : "Both players finished with the same score."}
               </p>
             )}
-            {tiebreakerUsed && !isTie && (
+            {tiebreakerUsed && !isTie && !scoresEven && (
               <p className="text-sm text-muted-foreground">
                 Decided by sudden-death tiebreaker.
               </p>

@@ -59,11 +59,30 @@ export async function GET(request: NextRequest) {
     );
 
     if (error) {
+      const isRecovery =
+        isPasswordRecoveryFlow(tokenType, next, origin) ||
+        isPasswordRecoveryFlow(verifiedType, next, origin);
+
+      if (isRecovery) {
+        // A live session (already signed in, or token consumed by a prefetch)
+        // can still set a new password — go to the reset form, not the dashboard.
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          successResponse.headers.set(
+            "Location",
+            `${origin}/login/reset-password`
+          );
+          return successResponse;
+        }
+      }
+
       const loginUrl = new URL("/login", origin);
       loginUrl.searchParams.set(
         "error",
-        isPasswordRecoveryFlow(tokenType, next, origin) ||
-          isPasswordRecoveryFlow(verifiedType, next, origin)
+        isRecovery
           ? "reset_link_expired"
           : getAuthConfirmErrorCode(error.message)
       );
@@ -113,6 +132,24 @@ export async function GET(request: NextRequest) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
+    if (explicitNextPath === "/login/reset-password") {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        successResponse.headers.set(
+          "Location",
+          `${origin}/login/reset-password`
+        );
+        return successResponse;
+      }
+
+      const loginUrl = new URL("/login", origin);
+      loginUrl.searchParams.set("error", "reset_link_expired");
+      return NextResponse.redirect(loginUrl);
+    }
+
     const loginUrl = new URL("/login", origin);
     if (error.message.toLowerCase().includes("already been used")) {
       loginUrl.searchParams.set("error", "auth_session_expired");
