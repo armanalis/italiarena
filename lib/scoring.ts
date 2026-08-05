@@ -37,35 +37,24 @@ export function averageResponseTime(times: number[]): number | null {
 
 export type MatchWinner = "a" | "b" | "tie";
 
+/**
+ * Winner from total points only.
+ *
+ * Equal scores are a true tie. Speed already affects points during the round
+ * (faster correct answers earn more), so response-time averages must not
+ * silently overturn a tied scoreboard. Tied regular matches go to a
+ * sudden-death question instead; if that also ends even, the match is a tie.
+ */
 export function determineWinner(
   playerAScore: number,
   playerBScore: number,
-  playerAResponseTimes: number[],
-  playerBResponseTimes: number[]
+  _playerAResponseTimes: number[] = [],
+  _playerBResponseTimes: number[] = []
 ): MatchWinner {
   if (playerAScore > playerBScore) {
     return "a";
   }
   if (playerBScore > playerAScore) {
-    return "b";
-  }
-
-  const avgA = averageResponseTime(playerAResponseTimes);
-  const avgB = averageResponseTime(playerBResponseTimes);
-
-  if (avgA === null && avgB === null) {
-    return "tie";
-  }
-  if (avgA === null) {
-    return "b";
-  }
-  if (avgB === null) {
-    return "a";
-  }
-  if (avgA < avgB) {
-    return "a";
-  }
-  if (avgB < avgA) {
     return "b";
   }
 

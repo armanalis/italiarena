@@ -33,8 +33,10 @@ export function MatchResultRecorder({ language, level }: MatchResultRecorderProp
     const opponentScore =
       state.localPlayerRole === "a" ? state.playerBScore : state.playerAScore;
 
+    // Equal scores are always a tie — never persist a win/loss from a stale
+    // matchWinner that used response-time as a silent breaker.
     const result =
-      state.matchWinner === "tie"
+      localScore === opponentScore || state.matchWinner === "tie"
         ? "tie"
         : state.matchWinner === state.localPlayerRole
           ? "win"

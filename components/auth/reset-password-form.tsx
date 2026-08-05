@@ -1,65 +1,83 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { useFormStatus } from "react-dom";
+import { useState, type FormEvent } from "react";
 import { Lock } from "lucide-react";
-import {
-  resetPassword,
-  type AuthFormState,
-} from "@/app/login/actions";
 import { navigateTo } from "@/lib/client-navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/utils/supabase/client";
 
-const initialState: AuthFormState = { error: null };
-const SIGN_IN_AFTER_RESET = "/login?success=password_reset";
-
-function SubmitButton({ finishing }: { finishing: boolean }) {
-  const { pending } = useFormStatus();
-  const busy = pending || finishing;
-
-  return (
-    <Button type="submit" disabled={busy} className="h-11 w-full">
-      {busy ? "Updating password..." : "Set new password"}
-    </Button>
-  );
-}
+const SIGN_IN_AFTER_RESET =
+  "/auth/sign-out?next=" +
+  encodeURIComponent("/login?success=password_reset");
 
 export function ResetPasswordForm() {
-  const [state, formAction] = useActionState(resetPassword, initialState);
-  const [finishing, setFinishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
-  useEffect(() => {
-    if (!state?.redirectTo || finishing) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const password = String(formData.get("password") ?? "");
+    const confirmPassword = String(formData.get("confirm_password") ?? "");
+
+    if (!password || !confirmPassword) {
+      setError("Both password fields are required.");
       return;
     }
 
-    let cancelled = false;
-    setFinishing(true);
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
 
-    void (async () => {
-      try {
-        // Clear the recovery session in the browser so /login cannot bounce to dashboard.
-        const supabase = createClient();
-        await supabase.auth.signOut({ scope: "global" });
-      } catch {
-        // Still send the user to sign-in; middleware also clears leftover sessions.
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setPending(true);
+
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setError(
+          "Your reset link has expired. Request a new one from the login page."
+        );
+        setPending(false);
+        return;
       }
 
-      if (!cancelled) {
-        navigateTo(state.redirectTo ?? SIGN_IN_AFTER_RESET);
-      }
-    })();
+      const { error: updateError } = await supabase.auth.updateUser({
+        password,
+      });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [state?.redirectTo, finishing]);
+      if (updateError) {
+        setError(updateError.message);
+        setPending(false);
+        return;
+      }
+
+      // Hard navigation through a route that clears cookies on the redirect
+      // response — never leave the recovery session alive (that sends users
+      // to the dashboard as signed-in).
+      navigateTo(SIGN_IN_AFTER_RESET);
+    } catch {
+      setError("Could not update password. Please try again.");
+      setPending(false);
+    }
+  }
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="reset-password">New password</Label>
         <div className="relative">
@@ -72,6 +90,7 @@ export function ResetPasswordForm() {
             minLength={6}
             autoComplete="new-password"
             required
+            disabled={pending}
             className="h-11 pl-10 dark:bg-white/5"
           />
         </div>
@@ -89,21 +108,24 @@ export function ResetPasswordForm() {
             minLength={6}
             autoComplete="new-password"
             required
+            disabled={pending}
             className="h-11 pl-10 dark:bg-white/5"
           />
         </div>
       </div>
 
-      {state?.error && (
+      {error && (
         <div
           className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
           role="alert"
         >
-          {state.error}
+          {error}
         </div>
       )}
 
-      <SubmitButton finishing={finishing} />
+      <Button type="submit" disabled={pending} className="h-11 w-full">
+        {pending ? "Updating password..." : "Set new password"}
+      </Button>
     </form>
   );
 }

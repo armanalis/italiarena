@@ -60,13 +60,30 @@ export async function GET(request: NextRequest) {
   );
 
   if (error) {
+    const isRecovery =
+      isPasswordRecoveryFlow(type, nextParam, origin) ||
+      isPasswordRecoveryFlow(verifiedType, nextParam, origin);
+
+    if (isRecovery) {
+      // Already signed in (e.g. token consumed by a prefetch, or the user had
+      // a session): still take them to the reset form instead of the dashboard.
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        successResponse.headers.set(
+          "Location",
+          `${origin}/login/reset-password`
+        );
+        return successResponse;
+      }
+    }
+
     const loginUrl = new URL("/login", origin);
     loginUrl.searchParams.set(
       "error",
-      isPasswordRecoveryFlow(type, nextParam, origin) ||
-        isPasswordRecoveryFlow(verifiedType, nextParam, origin)
-        ? "reset_link_expired"
-        : getAuthConfirmErrorCode(error.message)
+      isRecovery ? "reset_link_expired" : getAuthConfirmErrorCode(error.message)
     );
     return NextResponse.redirect(loginUrl);
   }

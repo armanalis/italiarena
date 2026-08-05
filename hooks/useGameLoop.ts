@@ -476,15 +476,27 @@ export function useGameLoop({
           latest.currentQuestionIndex === REGULAR_MATCH_QUESTIONS - 1;
         const isScoreTied = latest.playerAScore === latest.playerBScore;
 
+        // Sudden-death: tied after the 10 regular questions → one extra round.
         if (finishedRegularRound && isScoreTied && !latest.tiebreakerUsed) {
           setRoundPhase("tiebreaker_loading");
 
-          const result = await fetchTiebreakerQuestion(
-            latest.playlist.map((item) => item.id)
-          );
+          const excludeIds = latest.playlist.map((item) => item.id);
+          let tiebreaker: Awaited<
+            ReturnType<typeof fetchTiebreakerQuestion>
+          > | null = null;
 
-          if (result.success) {
-            startTiebreakerRound(result.data);
+          for (let attempt = 1; attempt <= 3; attempt += 1) {
+            tiebreaker = await fetchTiebreakerQuestion(excludeIds);
+            if (tiebreaker.success) {
+              break;
+            }
+            console.error(
+              `[match] tiebreaker fetch failed (attempt ${attempt}): ${tiebreaker.error}`
+            );
+          }
+
+          if (tiebreaker?.success) {
+            startTiebreakerRound(tiebreaker.data);
             void persistScores();
             if (isBotMatch) {
               return;
@@ -495,13 +507,19 @@ export function useGameLoop({
             pendingNextRoundRef.current = tiebreakerIndex;
             const published = await leaderStartRoundRef.current(
               tiebreakerIndex,
-              result.data.id
+              tiebreaker.data.id
             );
             if (published) {
               pendingNextRoundRef.current = null;
             }
             return;
           }
+
+          // No sudden-death question available — end as a true tie rather than
+          // inventing a winner from response times.
+          console.error(
+            "[match] tiebreaker unavailable; finishing tied match without sudden-death"
+          );
         }
 
         if (isBotMatch) {
