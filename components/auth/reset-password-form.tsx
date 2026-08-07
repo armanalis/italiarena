@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { Lock } from "lucide-react";
 import { navigateTo } from "@/lib/client-navigation";
@@ -12,13 +13,28 @@ const SIGN_IN_AFTER_RESET =
   "/auth/sign-out?next=" +
   encodeURIComponent("/login?success=password_reset");
 
+const SAME_PASSWORD_MESSAGE =
+  "New password must be different from your current password.";
+
+function isSamePasswordError(message: string) {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("different from the old password") ||
+    normalized.includes("should be different") ||
+    normalized.includes("same as the old") ||
+    normalized.includes("same password")
+  );
+}
+
 export function ResetPasswordForm() {
   const [error, setError] = useState<string | null>(null);
+  const [linkExpired, setLinkExpired] = useState(false);
   const [pending, setPending] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setLinkExpired(false);
 
     const form = event.currentTarget;
     const formData = new FormData(form);
@@ -48,10 +64,24 @@ export function ResetPasswordForm() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) {
+      if (!user?.email) {
+        setLinkExpired(true);
         setError(
           "Your reset link has expired. Request a new one from the login page."
         );
+        setPending(false);
+        return;
+      }
+
+      // If the typed password still signs the user in, it is their current password.
+      const { error: currentPasswordError } =
+        await supabase.auth.signInWithPassword({
+          email: user.email,
+          password,
+        });
+
+      if (!currentPasswordError) {
+        setError(SAME_PASSWORD_MESSAGE);
         setPending(false);
         return;
       }
@@ -61,7 +91,11 @@ export function ResetPasswordForm() {
       });
 
       if (updateError) {
-        setError(updateError.message);
+        setError(
+          isSamePasswordError(updateError.message)
+            ? SAME_PASSWORD_MESSAGE
+            : updateError.message
+        );
         setPending(false);
         return;
       }
@@ -119,7 +153,17 @@ export function ResetPasswordForm() {
           className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
           role="alert"
         >
-          {error}
+          <p>{error}</p>
+          {linkExpired && (
+            <p className="mt-2">
+              <Link
+                href="/login"
+                className="font-medium underline underline-offset-4"
+              >
+                Go to login and request a new reset link
+              </Link>
+            </p>
+          )}
         </div>
       )}
 
