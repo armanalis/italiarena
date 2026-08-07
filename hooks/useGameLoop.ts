@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchTiebreakerQuestion } from "@/app/dashboard/match/actions";
 import { createClient } from "@/utils/supabase/client";
 import type { MatchAnswerRecord } from "@/lib/match-sync";
 import { buildMatchScoreState } from "@/lib/match-score-state";
-import { persistMatchScoreState } from "@/lib/match-sync-client";
+import {
+  fetchTiebreakerQuestionClient,
+  persistMatchScoreState,
+} from "@/lib/match-sync-client";
 import {
   getBotResponseDelayMs,
   getBotResponseTimeMs,
@@ -23,7 +25,10 @@ import { useServerMatchSync } from "@/hooks/useServerMatchSync";
 import { useGameStore } from "@/store/useGameStore";
 import { REGULAR_MATCH_QUESTIONS } from "@/lib/match";
 import type { CorrectAnswer, QuestionActive } from "@/types/database.types";
-import type { ProficiencyLevel } from "@/lib/constants";
+import {
+  TARGET_LANGUAGE,
+  type ProficiencyLevel,
+} from "@/lib/constants";
 
 const ROUND_RESULT_TICK_MS = 100;
 
@@ -91,6 +96,8 @@ export function useGameLoop({
   const resultRemainingMsRef = useRef(0);
   /** Host: round index we are trying to publish after the result screen. */
   const pendingNextRoundRef = useRef<number | null>(null);
+  /** Host: sudden-death question to re-append if the publish retries. */
+  const pendingAppendQuestionRef = useRef<QuestionActive | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const channelReadyRef = useRef(false);
   const pendingBroadcastsRef = useRef<AnswerLockedPayload[]>([]);
@@ -482,11 +489,18 @@ export function useGameLoop({
 
           const excludeIds = latest.playlist.map((item) => item.id);
           let tiebreaker: Awaited<
-            ReturnType<typeof fetchTiebreakerQuestion>
+            ReturnType<typeof fetchTiebreakerQuestionClient>
           > | null = null;
 
           for (let attempt = 1; attempt <= 3; attempt += 1) {
-            tiebreaker = await fetchTiebreakerQuestion(excludeIds);
+            // Browser → Supabase RPC (not a server action) so the fetch cannot
+            // stall behind the per-tab Next.js action queue.
+            tiebreaker = await fetchTiebreakerQuestionClient(supabase, {
+              language: TARGET_LANGUAGE,
+              level: proficiencyLevel,
+              userId: localUserId,
+              excludeIds,
+            });
             if (tiebreaker.success) {
               break;
             }
@@ -496,21 +510,37 @@ export function useGameLoop({
           }
 
           if (tiebreaker?.success) {
-            startTiebreakerRound(tiebreaker.data);
-            void persistScores();
             if (isBotMatch) {
+              startTiebreakerRound(tiebreaker.data);
+              void persistScores();
               return;
             }
-            // Publish the tiebreaker round; the appended question id lets the
-            // opponent refetch the extended playlist.
-            const tiebreakerIndex = useGameStore.getState().currentQuestionIndex;
+
+            // Append locally so the host playlist covers Q11, but stay on
+            // tiebreaker_loading until publish/applySync advances BOTH clients
+            // from the same server-stamped round record.
+            useGameStore.setState((state) => ({
+              playlist: state.playlist.some(
+                (question) => question.id === tiebreaker.data.id
+              )
+                ? state.playlist
+                : [...state.playlist, tiebreaker.data],
+              tiebreakerQuestion: tiebreaker.data,
+              tiebreakerUsed: true,
+              roundPhase: "tiebreaker_loading",
+            }));
+            void persistScores();
+
+            const tiebreakerIndex = REGULAR_MATCH_QUESTIONS;
             pendingNextRoundRef.current = tiebreakerIndex;
+            pendingAppendQuestionRef.current = tiebreaker.data;
             const published = await leaderStartRoundRef.current(
               tiebreakerIndex,
-              tiebreaker.data.id
+              tiebreaker.data
             );
             if (published) {
               pendingNextRoundRef.current = null;
+              pendingAppendQuestionRef.current = null;
             }
             return;
           }
@@ -536,6 +566,7 @@ export function useGameLoop({
         const nextIndex = latest.currentQuestionIndex + 1;
         if (nextIndex >= latest.playlist.length) {
           pendingNextRoundRef.current = null;
+          pendingAppendQuestionRef.current = null;
           advanceToNextRound();
           void persistScores();
           void leaderFinishMatchRef.current();
@@ -543,6 +574,7 @@ export function useGameLoop({
         }
 
         pendingNextRoundRef.current = nextIndex;
+        pendingAppendQuestionRef.current = null;
         const published = await leaderStartRoundRef.current(nextIndex);
         if (published) {
           pendingNextRoundRef.current = null;
@@ -579,12 +611,15 @@ export function useGameLoop({
     clearTimers,
     isBotMatch,
     isSyncLeader,
+    localUserId,
     persistScores,
     play,
+    proficiencyLevel,
     resolveRound,
     setRoundPhase,
     startTiebreakerRound,
     startTopicReveal,
+    supabase,
   ]);
 
   const finalizeRoundRef = useRef(finalizeRound);
@@ -818,18 +853,28 @@ export function useGameLoop({
       }
 
       const live = useGameStore.getState();
-      if (live.roundPhase !== "round_result") {
+      // Sudden-death stays on tiebreaker_loading until the publish lands;
+      // regular advances retry from the result screen.
+      if (
+        live.roundPhase !== "round_result" &&
+        live.roundPhase !== "tiebreaker_loading"
+      ) {
         return;
       }
 
       if (live.currentQuestionIndex >= pending) {
         pendingNextRoundRef.current = null;
+        pendingAppendQuestionRef.current = null;
         return;
       }
 
-      void leaderStartRoundRef.current(pending).then((published) => {
+      void leaderStartRoundRef.current(
+        pending,
+        pendingAppendQuestionRef.current ?? undefined
+      ).then((published) => {
         if (published) {
           pendingNextRoundRef.current = null;
+          pendingAppendQuestionRef.current = null;
         }
       });
     }, 2_000);
