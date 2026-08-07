@@ -23,6 +23,11 @@ import {
   normalizeUsername,
   validateUsername,
 } from "@/lib/username";
+import {
+  isSamePasswordError,
+  SAME_PASSWORD_MESSAGE,
+  validateNewPassword,
+} from "@/lib/password-rules";
 import { mapUsernameSaveError, USERNAME_TAKEN_MESSAGE } from "@/lib/username-errors";
 import type {
   CorrectAnswer,
@@ -242,18 +247,15 @@ export async function changePassword(formData: FormData): Promise<SettingsAction
     return { success: false, error: "All password fields are required." };
   }
 
-  if (newPassword.length < 6) {
-    return { success: false, error: "New password must be at least 6 characters." };
-  }
-
-  if (newPassword !== confirmPassword) {
-    return { success: false, error: "New passwords do not match." };
+  const rules = validateNewPassword(newPassword, confirmPassword);
+  if (!rules.ok) {
+    return { success: false, error: rules.error };
   }
 
   if (newPassword === currentPassword) {
     return {
       success: false,
-      error: "New password must be different from your current password.",
+      error: SAME_PASSWORD_MESSAGE,
     };
   }
 
@@ -291,17 +293,8 @@ export async function changePassword(formData: FormData): Promise<SettingsAction
   const { error } = await supabase.auth.updateUser({ password: newPassword });
 
   if (error) {
-    const normalized = error.message.toLowerCase();
-    if (
-      normalized.includes("different from the old password") ||
-      normalized.includes("should be different") ||
-      normalized.includes("same as the old") ||
-      normalized.includes("same password")
-    ) {
-      return {
-        success: false,
-        error: "New password must be different from your current password.",
-      };
+    if (isSamePasswordError(error.message)) {
+      return { success: false, error: SAME_PASSWORD_MESSAGE };
     }
     return { success: false, error: error.message };
   }
