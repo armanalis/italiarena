@@ -250,6 +250,13 @@ export async function changePassword(formData: FormData): Promise<SettingsAction
     return { success: false, error: "New passwords do not match." };
   }
 
+  if (newPassword === currentPassword) {
+    return {
+      success: false,
+      error: "New password must be different from your current password.",
+    };
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -284,6 +291,18 @@ export async function changePassword(formData: FormData): Promise<SettingsAction
   const { error } = await supabase.auth.updateUser({ password: newPassword });
 
   if (error) {
+    const normalized = error.message.toLowerCase();
+    if (
+      normalized.includes("different from the old password") ||
+      normalized.includes("should be different") ||
+      normalized.includes("same as the old") ||
+      normalized.includes("same password")
+    ) {
+      return {
+        success: false,
+        error: "New password must be different from your current password.",
+      };
+    }
     return { success: false, error: error.message };
   }
 
