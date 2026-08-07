@@ -16,6 +16,7 @@ import {
   buildQuestionPlaylistPayload,
   parseQuestionPlaylist,
 } from "@/lib/session-playlist";
+import type { QuestionActive } from "@/types/database.types";
 
 const CLOCK_SAMPLES = 3;
 
@@ -61,7 +62,13 @@ export async function estimateClockOffsetMs(
 type PublishSyncInput = {
   questionIndex: number;
   phase: MatchSyncState["phase"];
+  /** Legacy: append only the id (follower must refetch). Prefer appendQuestion. */
   appendQuestionId?: string;
+  /**
+   * Sudden-death question to append. The full row is stored in the playlist
+   * payload so both clients enter the round from the same poll.
+   */
+  appendQuestion?: QuestionActive;
 };
 
 /**
@@ -95,11 +102,16 @@ export async function publishMatchSync(
   }
 
   const parsed = parseQuestionPlaylist(session.question_playlist);
+  const appendId = input.appendQuestion?.id ?? input.appendQuestionId;
   const questionIds =
-    input.appendQuestionId &&
-    !parsed.questionIds.includes(input.appendQuestionId)
-      ? [...parsed.questionIds, input.appendQuestionId]
+    appendId && !parsed.questionIds.includes(appendId)
+      ? [...parsed.questionIds, appendId]
       : parsed.questionIds;
+
+  const questionBank = { ...parsed.questionBank };
+  if (input.appendQuestion) {
+    questionBank[input.appendQuestion.id] = input.appendQuestion;
+  }
 
   const serverNow = (await fetchServerTimeMs(supabase)) ?? Date.now();
   const stamped: MatchSyncState = {
@@ -113,7 +125,11 @@ export async function publishMatchSync(
   const { data: updated, error: updateError } = await supabase
     .from("game_sessions")
     .update({
-      question_playlist: buildQuestionPlaylistPayload(questionIds, stamped),
+      question_playlist: buildQuestionPlaylistPayload(
+        questionIds,
+        stamped,
+        questionBank
+      ),
       ...(input.phase === "round"
         ? { answer_a: null, answer_b: null }
         : {}),
@@ -135,6 +151,43 @@ export async function publishMatchSync(
   }
 
   return { success: true, sync: stamped, serverNow };
+}
+
+/**
+ * Host fetches a sudden-death question via browser → Supabase RPC.
+ * Avoids the per-tab Next.js server-action queue that can stall mid-match.
+ */
+export async function fetchTiebreakerQuestionClient(
+  supabase: SupabaseClient,
+  input: {
+    language: string;
+    level: string;
+    userId: string;
+    excludeIds: string[];
+  }
+): Promise<
+  | { success: true; data: QuestionActive }
+  | { success: false; error: string }
+> {
+  const { data, error } = await supabase.rpc("get_tiebreaker_question", {
+    p_language: input.language,
+    p_level: input.level,
+    p_user_id: input.userId,
+    p_exclude_ids: input.excludeIds,
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  if (!data) {
+    return {
+      success: false,
+      error: "No tiebreaker question available for your Italian level.",
+    };
+  }
+
+  return { success: true, data: data as QuestionActive };
 }
 
 /**

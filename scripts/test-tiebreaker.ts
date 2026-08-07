@@ -174,6 +174,31 @@ check("server playlist payload can append the sudden-death question id", () => {
   assert.equal(parsed.sync?.questionIndex, 10);
 });
 
+check("sudden-death payload embeds the full question for both clients", () => {
+  const regularIds = Array.from({ length: 10 }, (_, i) => `q-${i}`);
+  const tiebreaker = fakeQuestion("q-tie", 10);
+  const payload = buildQuestionPlaylistPayload(
+    [...regularIds, tiebreaker.id],
+    {
+      questionIndex: 10,
+      phase: "round",
+      roundStartedAt: Date.now() + 1000,
+    },
+    { [tiebreaker.id]: tiebreaker }
+  );
+  const parsed = parseQuestionPlaylist(payload);
+  assert.equal(parsed.questionIds.length, 11);
+  assert.equal(parsed.questionBank["q-tie"]?.id, "q-tie");
+  assert.equal(
+    parsed.questionBank["q-tie"]?.question_text,
+    tiebreaker.question_text
+  );
+  // Follower can enter index 10 from the same poll without a refetch.
+  assert.equal(parsed.sync?.questionIndex, 10);
+  assert.ok(parsed.sync!.questionIndex < parsed.questionIds.length);
+  assert.ok(parsed.questionBank[parsed.questionIds[10]!]);
+});
+
 check("after sudden-death, still-even scores finish as tie", () => {
   // Both scored 1230 in regular + same points on Q11
   assert.equal(determineWinner(1370, 1370), "tie");

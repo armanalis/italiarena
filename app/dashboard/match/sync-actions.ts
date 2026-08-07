@@ -68,7 +68,12 @@ export async function updateMatchSyncState(
   const { data: updated, error: updateError } = await supabase
     .from("game_sessions")
     .update({
-      question_playlist: buildQuestionPlaylistPayload(questionIds, stamped),
+      // Preserve any embedded sudden-death questionBank from a prior write.
+      question_playlist: buildQuestionPlaylistPayload(
+        questionIds,
+        stamped,
+        parsed.questionBank
+      ),
       // New round → previous round's locked answers are consumed. Clients
       // also filter answers by questionIndex, so a stale write that races
       // this clear is ignored anyway.

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { getMatchSession } from "@/app/dashboard/matchmaking/actions";
 import {
   estimateClockOffsetMs,
   publishMatchSync,
@@ -20,6 +19,8 @@ import {
   type MatchAnswerRecord,
   type MatchSyncState,
 } from "@/lib/match-sync";
+import { REGULAR_MATCH_QUESTIONS } from "@/lib/match";
+import { resolveQuestionsByIds } from "@/lib/resolve-match-questions";
 import { parseQuestionPlaylist } from "@/lib/session-playlist";
 import { determineWinner } from "@/lib/scoring";
 import { useGameAudio } from "@/hooks/useGameAudio";
@@ -123,21 +124,72 @@ export function useServerMatchSync({
     []
   );
 
-  /** Tiebreaker question was appended server-side; refetch the playlist. */
-  const refreshPlaylist = useCallback(async () => {
-    if (refreshingPlaylistRef.current) {
-      return;
-    }
-    refreshingPlaylistRef.current = true;
-    try {
-      const result = await getMatchSession(sessionIdRef.current);
-      if (result.success && result.data.playlist.length > 0) {
-        useGameStore.setState({ playlist: result.data.playlist });
+  /**
+   * Ensure the local playlist covers `questionIndex` before applying sync.
+   * Prefer the embedded questionBank from the session row (synchronous for
+   * sudden-death); fall back to a direct Supabase read — never a server action.
+   */
+  const ensurePlaylistCoversIndex = useCallback(
+    async (
+      questionIndex: number,
+      questionIds: string[],
+      questionBank: Record<string, QuestionActive>
+    ): Promise<boolean> => {
+      const live = useGameStore.getState();
+      if (questionIndex < live.playlist.length) {
+        return true;
       }
-    } finally {
-      refreshingPlaylistRef.current = false;
-    }
-  }, []);
+
+      if (questionIds.length <= questionIndex) {
+        return false;
+      }
+
+      const byId = new Map(live.playlist.map((question) => [question.id, question]));
+      for (const [id, question] of Object.entries(questionBank)) {
+        byId.set(id, question);
+      }
+
+      const missingIds = questionIds.filter((id) => !byId.has(id));
+      if (missingIds.length > 0) {
+        if (refreshingPlaylistRef.current) {
+          return false;
+        }
+        refreshingPlaylistRef.current = true;
+        try {
+          const fetched = await resolveQuestionsByIds(
+            supabaseRef.current,
+            missingIds
+          );
+          for (const [id, question] of fetched) {
+            byId.set(id, question);
+          }
+        } finally {
+          refreshingPlaylistRef.current = false;
+        }
+      }
+
+      const nextPlaylist = questionIds
+        .map((id) => byId.get(id))
+        .filter((question): question is QuestionActive => Boolean(question));
+
+      if (nextPlaylist.length <= questionIndex) {
+        return false;
+      }
+
+      const tiebreaker = nextPlaylist[questionIndex] ?? null;
+      useGameStore.setState({
+        playlist: nextPlaylist,
+        ...(tiebreaker && questionIndex >= live.playlist.length
+          ? {
+              tiebreakerQuestion: tiebreaker,
+              tiebreakerUsed: true,
+            }
+          : {}),
+      });
+      return true;
+    },
+    []
+  );
 
   const applySync = useCallback(
     (sync: MatchSyncState, serverNow: number) => {
@@ -171,9 +223,16 @@ export function useServerMatchSync({
         return;
       }
 
-      // Index beyond our playlist → tiebreaker question we haven't fetched.
+      // Index beyond our playlist → sudden-death question not applied yet.
+      // Poll loop calls ensurePlaylistCoversIndex first; if we're still short,
+      // show the shared "Scores tied" screen instead of jumping to finished.
       if (sync.questionIndex >= live.playlist.length) {
-        void refreshPlaylist();
+        if (
+          live.roundPhase !== "tiebreaker_loading" &&
+          live.roundPhase !== "match_finished"
+        ) {
+          useGameStore.setState({ roundPhase: "tiebreaker_loading" });
+        }
         return;
       }
 
@@ -188,7 +247,8 @@ export function useServerMatchSync({
 
       const isNewRound =
         sync.questionIndex > live.currentQuestionIndex ||
-        live.roundPhase === "waiting";
+        live.roundPhase === "waiting" ||
+        live.roundPhase === "tiebreaker_loading";
 
       if (isNewRound) {
         console.log(
@@ -208,6 +268,13 @@ export function useServerMatchSync({
           timeRemaining: 25,
           lastRoundPointsA: 0,
           lastRoundPointsB: 0,
+          ...(sync.questionIndex >= REGULAR_MATCH_QUESTIONS
+            ? {
+                tiebreakerUsed: true,
+                tiebreakerQuestion:
+                  live.playlist[sync.questionIndex] ?? live.tiebreakerQuestion,
+              }
+            : {}),
         });
         playRef.current("reveal");
 
@@ -245,7 +312,7 @@ export function useServerMatchSync({
       }
       // Already playing: never touch state (answers may be in flight).
     },
-    [clearFlipTimer, enterPlaying, refreshPlaylist]
+    [clearFlipTimer, enterPlaying]
   );
 
   /**
@@ -330,16 +397,26 @@ export function useServerMatchSync({
    * same server-clock moment, regardless of their own clock settings.
    */
   const leaderStartRound = useCallback(
-    async (questionIndex: number, appendQuestionId?: string) => {
+    async (
+      questionIndex: number,
+      appendQuestion?: QuestionActive | string
+    ) => {
       if (!isLeaderRef.current) {
         return false;
       }
+
+      const appendPayload =
+        typeof appendQuestion === "string"
+          ? { appendQuestionId: appendQuestion }
+          : appendQuestion
+            ? { appendQuestion }
+            : {};
 
       for (let attempt = 1; attempt <= WRITE_ATTEMPTS; attempt += 1) {
         const result = await publishMatchSync(
           supabaseRef.current,
           sessionIdRef.current,
-          { questionIndex, phase: "round", appendQuestionId }
+          { questionIndex, phase: "round", ...appendPayload }
         );
         if (result.success) {
           applySync(result.sync, result.serverNow);
@@ -426,7 +503,11 @@ export function useServerMatchSync({
     }
 
     if (initializedSessionRef.current === sessionId) {
-      useGameStore.setState({ playlist: serverPlaylist });
+      // Never shrink a mid-match playlist — sudden-death may have appended Q11.
+      const liveLength = useGameStore.getState().playlist.length;
+      if (serverPlaylist.length > liveLength) {
+        useGameStore.setState({ playlist: serverPlaylist });
+      }
       return;
     }
 
@@ -551,12 +632,36 @@ export function useServerMatchSync({
           isMatchScoreState(session.score_state) ? session.score_state : null
         );
 
-        const { sync } = parseQuestionPlaylist(session.question_playlist);
+        const { questionIds, sync, questionBank } = parseQuestionPlaylist(
+          session.question_playlist
+        );
         const clockOffset = clockOffsetRef.current;
 
         // Until the clock offset is estimated (sub-second at mount) we cannot
         // place server timestamps on the local clock — skip, not guess.
         if (sync && clockOffset !== null) {
+          // Extend the playlist (embedded tiebreaker / direct Supabase fetch)
+          // before applying the round so both clients flip together.
+          if (sync.phase === "round") {
+            const covered = await ensurePlaylistCoversIndex(
+              sync.questionIndex,
+              questionIds,
+              questionBank
+            );
+            if (
+              !covered &&
+              sync.questionIndex >= useGameStore.getState().playlist.length
+            ) {
+              if (
+                useGameStore.getState().roundPhase !== "tiebreaker_loading" &&
+                useGameStore.getState().roundPhase !== "match_finished"
+              ) {
+                useGameStore.setState({ roundPhase: "tiebreaker_loading" });
+              }
+              return;
+            }
+          }
+
           applySync(sync, Date.now() + clockOffset);
         }
 
@@ -604,6 +709,7 @@ export function useServerMatchSync({
     applySync,
     clearFlipTimer,
     enabled,
+    ensurePlaylistCoversIndex,
     sessionId,
   ]);
 
