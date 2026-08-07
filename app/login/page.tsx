@@ -17,7 +17,8 @@ const loginErrors: Record<string, string> = {
     "That confirmation link has expired or was already used. Use “Resend verification email” on the sign-in form to get a fresh link.",
   auth_session_expired:
     "That sign-in link was already used or expired. Close any extra tabs and try again.",
-  reset_link_expired: "Your reset link has expired. Request a new one below.",
+  reset_link_expired:
+    "Your reset link has expired or was already used. On this page, tap “Forgot password?”, enter your email, and open the newest email link (use it only once).",
   email_not_verified:
     "Please verify your email before signing in. Check your inbox or use \"Resend verification email\" below.",
 };
