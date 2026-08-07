@@ -11,6 +11,7 @@ import {
   validateUsername,
 } from "@/lib/username";
 import { USERNAME_TAKEN_MESSAGE } from "@/lib/username-errors";
+import { validateNewPassword } from "@/lib/password-rules";
 import {
   getServerAuthCallbackUrl,
   getServerSignupEmailRedirectOrigin,
@@ -67,8 +68,9 @@ export async function validateSignUpInput(formData: FormData): Promise<AuthFormS
     return { error: usernameError };
   }
 
-  if (password.length < 6) {
-    return { error: "Password must be at least 6 characters." };
+  const passwordRules = validateNewPassword(password);
+  if (!passwordRules.ok) {
+    return { error: passwordRules.error };
   }
 
   if (await isEmailRegistered(email)) {

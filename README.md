@@ -116,6 +116,7 @@ Supabase’s built-in mailer sends from “Supabase Auth” and is rate-limited.
    - Reauthentication — `Your Italiarena verification code` → `reauthentication.html`
    Link-based templates should point to `{{ .RedirectTo }}auth/confirm/pending?token_hash={{ .TokenHash }}&type=…&next=/onboarding` (use `signup` for Confirm signup; for recovery use `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/login/reset-password`). `RedirectTo` is the signup origin (`http://localhost:3000/` locally or `https://italiarena.com/` in production). Inbox scanners are redirected to a confirmation button page before the one-time token is used.
 3. After saving, send a test signup or password reset to confirm the sender shows as **Italiarena** / `support@italiarena.com` and links open `/auth/confirm/pending` (then continue via the button).
+4. **Password reset timing** — Supabase → **Authentication** → **Providers / Email** (and **Sessions**): set **OTP / email link expiry** to at least `3600` seconds (1 hour), and **JWT expiry** to at least `3600`. The app also refreshes the recovery session while the user is on `/login/reset-password` so they have at least ~5 minutes to submit a new password.
 
 Optional features (for example Ask AI) may require additional keys configured only on the hosted instance.
 

@@ -20,6 +20,7 @@ import {
   isMatchScoreState,
   scoreStateToStorePatch,
 } from "@/lib/match-score-state";
+import { FRESH_ROUND_TIMER_STATE } from "@/lib/match-timer";
 import { determineWinner } from "@/lib/scoring";
 import { createClient } from "@/utils/supabase/client";
 import { useGameStore, useGameStoreHydrated } from "@/store/useGameStore";
@@ -142,7 +143,7 @@ export function MatchHydrator({
           playerAAnswer: null,
           playerBAnswer: null,
           roundStartedAt: null,
-          timeRemaining: 25,
+          ...FRESH_ROUND_TIMER_STATE,
           matchSaved: false,
           tiebreakerQuestion: null,
         });
@@ -162,7 +163,7 @@ export function MatchHydrator({
         playerAAnswer: null,
         playerBAnswer: null,
         roundStartedAt: null,
-        timeRemaining: 25,
+        ...FRESH_ROUND_TIMER_STATE,
         matchWinner: null,
         matchSaved: false,
         tiebreakerQuestion: null,

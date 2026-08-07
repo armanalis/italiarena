@@ -8,6 +8,7 @@ import {
   normalizeCategoryProgress,
 } from "@/lib/category-progress";
 import type { MatchRoundReview } from "@/lib/match-score-state";
+import { ROUND_DURATION_SEC } from "@/lib/match-timing";
 import { safeLocalStorage } from "@/lib/safe-storage";
 import {
   computePoints,
@@ -200,7 +201,7 @@ const gameplayDefaults: Pick<
   playerAResponseTimes: [],
   playerBResponseTimes: [],
   roundStartedAt: null,
-  timeRemaining: 25,
+  timeRemaining: ROUND_DURATION_SEC,
   lastRoundPointsA: 0,
   lastRoundPointsB: 0,
   matchWinner: null,
@@ -260,7 +261,9 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
           playerAAnswer: null,
           playerBAnswer: null,
           roundStartedAt: null,
-          timeRemaining: 25,
+          timeRemaining: ROUND_DURATION_SEC,
+          timerPauseOffsetMs: 0,
+          timerPauseStartedAt: null,
           lastRoundPointsA: 0,
           lastRoundPointsB: 0,
         })),
@@ -277,7 +280,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
         set({
           roundPhase: "playing",
           roundStartedAt: startedAt ?? Date.now(),
-          timeRemaining: 25,
+          timeRemaining: ROUND_DURATION_SEC,
           playerAAnswer: null,
           playerBAnswer: null,
           lastRoundPointsA: 0,
@@ -424,7 +427,9 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
           playerAAnswer: null,
           playerBAnswer: null,
           roundStartedAt: null,
-          timeRemaining: 25,
+          timeRemaining: ROUND_DURATION_SEC,
+          timerPauseOffsetMs: 0,
+          timerPauseStartedAt: null,
           lastRoundPointsA: 0,
           lastRoundPointsB: 0,
         });
