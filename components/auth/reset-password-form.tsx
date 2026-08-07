@@ -1,9 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Lock } from "lucide-react";
 import { navigateTo } from "@/lib/client-navigation";
+import {
+  isSamePasswordError,
+  isSessionMissingError,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_RULES_SUMMARY,
+  SAME_PASSWORD_MESSAGE,
+  validateNewPassword,
+} from "@/lib/password-rules";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,23 +21,68 @@ const SIGN_IN_AFTER_RESET =
   "/auth/sign-out?next=" +
   encodeURIComponent("/login?success=password_reset");
 
-const SAME_PASSWORD_MESSAGE =
-  "New password must be different from your current password.";
-
-function isSamePasswordError(message: string) {
-  const normalized = message.toLowerCase();
-  return (
-    normalized.includes("different from the old password") ||
-    normalized.includes("should be different") ||
-    normalized.includes("same as the old") ||
-    normalized.includes("same password")
-  );
-}
+/** Keep the recovery session alive for at least this long on the form. */
+const MIN_SESSION_MS = 5 * 60 * 1000;
+const KEEP_ALIVE_EVERY_MS = 60 * 1000;
 
 export function ResetPasswordForm() {
   const [error, setError] = useState<string | null>(null);
   const [linkExpired, setLinkExpired] = useState(false);
   const [pending, setPending] = useState(false);
+  const [minutesLeft, setMinutesLeft] = useState<number | null>(null);
+
+  // Keep the recovery session fresh while the user types (min 5 minutes).
+  useEffect(() => {
+    const supabase = createClient();
+    let cancelled = false;
+
+    async function ensureSession() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        if (!cancelled) {
+          setMinutesLeft(0);
+        }
+        return;
+      }
+
+      const expiresAtMs = (session.expires_at ?? 0) * 1000;
+      const remainingMs = expiresAtMs - Date.now();
+
+      if (remainingMs < MIN_SESSION_MS) {
+        const { data, error: refreshError } =
+          await supabase.auth.refreshSession();
+        if (refreshError || !data.session) {
+          if (!cancelled) {
+            setMinutesLeft(0);
+          }
+          return;
+        }
+        const refreshedRemaining =
+          (data.session.expires_at ?? 0) * 1000 - Date.now();
+        if (!cancelled) {
+          setMinutesLeft(Math.max(1, Math.ceil(refreshedRemaining / 60_000)));
+        }
+        return;
+      }
+
+      if (!cancelled) {
+        setMinutesLeft(Math.max(1, Math.ceil(remainingMs / 60_000)));
+      }
+    }
+
+    void ensureSession();
+    const intervalId = window.setInterval(() => {
+      void ensureSession();
+    }, KEEP_ALIVE_EVERY_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,18 +94,9 @@ export function ResetPasswordForm() {
     const password = String(formData.get("password") ?? "");
     const confirmPassword = String(formData.get("confirm_password") ?? "");
 
-    if (!password || !confirmPassword) {
-      setError("Both password fields are required.");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+    const rules = validateNewPassword(password, confirmPassword);
+    if (!rules.ok) {
+      setError(rules.error);
       return;
     }
 
@@ -60,11 +104,20 @@ export function ResetPasswordForm() {
 
     try {
       const supabase = createClient();
+
+      // Refresh first so a near-expiry token does not look "expired".
+      await supabase.auth.refreshSession();
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = session
+        ? await supabase.auth.getUser()
+        : { data: { user: null } };
 
-      if (!user?.email) {
+      if (!session || !user) {
         setLinkExpired(true);
         setError(
           "Your reset link has expired. Request a new one from the login page."
@@ -73,36 +126,26 @@ export function ResetPasswordForm() {
         return;
       }
 
-      // If the typed password still signs the user in, it is their current password.
-      const { error: currentPasswordError } =
-        await supabase.auth.signInWithPassword({
-          email: user.email,
-          password,
-        });
-
-      if (!currentPasswordError) {
-        setError(SAME_PASSWORD_MESSAGE);
-        setPending(false);
-        return;
-      }
-
+      // Do NOT call signInWithPassword here — it can destroy the recovery session.
       const { error: updateError } = await supabase.auth.updateUser({
         password,
       });
 
       if (updateError) {
-        setError(
-          isSamePasswordError(updateError.message)
-            ? SAME_PASSWORD_MESSAGE
-            : updateError.message
-        );
+        if (isSamePasswordError(updateError.message)) {
+          setError(SAME_PASSWORD_MESSAGE);
+        } else if (isSessionMissingError(updateError.message)) {
+          setLinkExpired(true);
+          setError(
+            "Your reset link has expired. Request a new one from the login page."
+          );
+        } else {
+          setError(updateError.message);
+        }
         setPending(false);
         return;
       }
 
-      // Hard navigation through a route that clears cookies on the redirect
-      // response — never leave the recovery session alive (that sends users
-      // to the dashboard as signed-in).
       navigateTo(SIGN_IN_AFTER_RESET);
     } catch {
       setError("Could not update password. Please try again.");
@@ -112,6 +155,18 @@ export function ResetPasswordForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <p className="text-xs text-muted-foreground">
+        Password rules: {PASSWORD_RULES_SUMMARY}. It must be different from your
+        current password.
+        {minutesLeft !== null && minutesLeft > 0 ? (
+          <>
+            {" "}
+            This reset session stays open for about {minutesLeft} minute
+            {minutesLeft === 1 ? "" : "s"}.
+          </>
+        ) : null}
+      </p>
+
       <div className="space-y-2">
         <Label htmlFor="reset-password">New password</Label>
         <div className="relative">
@@ -120,8 +175,8 @@ export function ResetPasswordForm() {
             id="reset-password"
             name="password"
             type="password"
-            placeholder="At least 6 characters"
-            minLength={6}
+            placeholder={PASSWORD_RULES_SUMMARY}
+            minLength={PASSWORD_MIN_LENGTH}
             autoComplete="new-password"
             required
             disabled={pending}
@@ -139,7 +194,7 @@ export function ResetPasswordForm() {
             name="confirm_password"
             type="password"
             placeholder="Repeat your new password"
-            minLength={6}
+            minLength={PASSWORD_MIN_LENGTH}
             autoComplete="new-password"
             required
             disabled={pending}

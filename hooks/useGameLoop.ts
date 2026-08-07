@@ -14,12 +14,12 @@ import {
   simulateBotAnswer,
 } from "@/lib/bot";
 import { pulseCountdownHaptic } from "@/lib/haptics";
-import { getRoundElapsedSec, getRoundPauseMs } from "@/lib/match-timer";
 import {
-  getRoundResultMs,
-  ROUND_DURATION_SEC,
-  TOPIC_REVEAL_MS,
-} from "@/lib/match-timing";
+  FRESH_ROUND_TIMER_STATE,
+  getRoundPauseMs,
+  getRoundTimeRemainingSec,
+} from "@/lib/match-timer";
+import { getRoundResultMs, TOPIC_REVEAL_MS } from "@/lib/match-timing";
 import { useGameAudio } from "@/hooks/useGameAudio";
 import { useServerMatchSync } from "@/hooks/useServerMatchSync";
 import { useGameStore } from "@/store/useGameStore";
@@ -247,8 +247,7 @@ export function useGameLoop({
 
       const startedAt = state.roundStartedAt ?? Date.now();
       const pauseMs = getRoundPauseMs(state);
-      const elapsedSec = getRoundElapsedSec(startedAt, pauseMs);
-      const remaining = Math.max(0, ROUND_DURATION_SEC - elapsedSec);
+      const remaining = getRoundTimeRemainingSec(startedAt, pauseMs);
 
       setTimeRemaining(remaining);
 
@@ -396,7 +395,7 @@ export function useGameLoop({
         playerAAnswer: null,
         playerBAnswer: null,
         roundStartedAt: null,
-        timeRemaining: ROUND_DURATION_SEC,
+        ...FRESH_ROUND_TIMER_STATE,
         lastRoundPointsA: 0,
         lastRoundPointsB: 0,
       });
