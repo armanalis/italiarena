@@ -35,14 +35,22 @@ function abandonSessionInBackground(sessionId: string, pathname: string) {
  * Leave the current match/matchmaking flow and go to the dashboard.
  * Uses a full page navigation so timers, sync loops, and client state cannot
  * block or cancel the transition.
+ *
+ * Finished matches are never abandoned — players may still be on the review
+ * screen (or returning later). Only active / waiting sessions are closed.
  */
 export function exitToDashboard() {
-  const sessionId = useGameStore.getState().gameSessionId;
+  const state = useGameStore.getState();
+  const sessionId = state.gameSessionId;
   const pathname = window.location.pathname;
+  const matchStillLive =
+    state.roundPhase !== "match_finished" &&
+    state.status !== "finished" &&
+    state.matchWinner === null;
 
   useGameStore.getState().reset();
 
-  if (sessionId) {
+  if (sessionId && matchStillLive) {
     abandonSessionInBackground(sessionId, pathname);
   }
 
