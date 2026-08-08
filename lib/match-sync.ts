@@ -20,6 +20,9 @@
 
 /**
  * Bumped on protocol changes; surfaced in the UI to verify deployed builds.
+ * v8: refresh mid-match resumes from score_state + sync without replaying an
+ * already-scored round (fixes desync when a player reloads on the result
+ * screen). Scores hydrate before the waiting flash when possible.
  * v7: sudden-death tiebreaker embeds the full question row in the playlist
  * payload so both clients enter Q11 from the same poll (no async server-action
  * playlist refetch that left the follower on the post-match screen).
@@ -28,7 +31,7 @@
  * action for that one write, which sat in the same per-tab action queue as
  * reports and could stall 2–6 minutes between questions.
  */
-export const MATCH_SYNC_VERSION = "v7";
+export const MATCH_SYNC_VERSION = "v8";
 
 /** Topic reveal duration before a question becomes answerable. */
 export { TOPIC_REVEAL_MS } from "@/lib/match-timing";

@@ -10,7 +10,9 @@
  * For BOT matches there is no live PvP sync loop, so we set up the match
  * locally via `startMatch`, then rehydrate cumulative scores (and the next
  * question index) from `game_sessions.score_state` so a refresh cannot wipe
- * the point process.
+ * the point process. Mid-question bot answers are not persisted — a refresh
+ * restarts the current unanswered question with a fresh timer (scores for
+ * completed rounds still survive).
  */
 "use client";
 
