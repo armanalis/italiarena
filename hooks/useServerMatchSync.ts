@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   estimateClockOffsetMs,
   publishMatchSync,
@@ -10,6 +10,7 @@ import {
   localResolvedThroughIndex,
   scoreStateToStorePatch,
   shouldApplyScoreState,
+  shouldResumeRoundResult,
   type MatchScoreState,
 } from "@/lib/match-score-state";
 import { createClient } from "@/utils/supabase/client";
@@ -44,6 +45,11 @@ type UseServerMatchSyncOptions = {
   onNewRound: () => void;
   /** Both locked answers are visible locally (poll/broadcast path). */
   onBothAnswersLocked: () => void;
+  /**
+   * Refresh landed on an already-scored round (result screen). Start the
+   * between-round countdown / host advance without re-scoring.
+   */
+  onResumedRoundResult: () => void;
 };
 
 /**
@@ -61,6 +67,10 @@ type UseServerMatchSyncOptions = {
  *
  * The question index is monotonic: clients never move backwards, and a client
  * already showing the round result for the current index is never yanked back.
+ *
+ * REFRESH: score_state is bootstrapped before the first poll. If the sync
+ * cursor still points at a round that score_state already resolved, we resume
+ * the result screen instead of replaying the question (v8).
  */
 export function useServerMatchSync({
   sessionId,
@@ -70,6 +80,7 @@ export function useServerMatchSync({
   onEnterPlaying,
   onNewRound,
   onBothAnswersLocked,
+  onResumedRoundResult,
 }: UseServerMatchSyncOptions) {
   const { play } = useGameAudio();
 
@@ -81,6 +92,8 @@ export function useServerMatchSync({
   onNewRoundRef.current = onNewRound;
   const onBothAnswersLockedRef = useRef(onBothAnswersLocked);
   onBothAnswersLockedRef.current = onBothAnswersLocked;
+  const onResumedRoundResultRef = useRef(onResumedRoundResult);
+  onResumedRoundResultRef.current = onResumedRoundResult;
   const sessionIdRef = useRef(sessionId);
   sessionIdRef.current = sessionId;
   const isLeaderRef = useRef(isLeader);
@@ -91,6 +104,10 @@ export function useServerMatchSync({
   const startingRef = useRef(false);
   const refreshingPlaylistRef = useRef(false);
   const initializedSessionRef = useRef<string | null>(null);
+  /** False until score_state bootstrap finishes so poll cannot race a wipe. */
+  const sessionReadyRef = useRef(false);
+  /** Bumped when bootstrap completes so the poll effect runs an immediate tick. */
+  const [sessionReadyGeneration, setSessionReadyGeneration] = useState(0);
   const supabaseRef = useRef(createClient());
   /** localClock + clockOffset ≈ serverClock. null until estimated. */
   const clockOffsetRef = useRef<number | null>(null);
@@ -273,6 +290,42 @@ export function useServerMatchSync({
       const localRoundStartedAt =
         Date.now() + (sync.roundStartedAt - serverNow);
 
+      const resolvedThrough = localResolvedThroughIndex(live.roundReviews);
+
+      // Refresh during/after the result screen: score_state already has this
+      // round, but sync has not advanced yet. Replaying it as "playing" made
+      // the refresher fight the opponent's clock (async / broken match).
+      if (shouldResumeRoundResult(sync.questionIndex, resolvedThrough)) {
+        if (
+          live.roundPhase !== "round_result" &&
+          live.roundPhase !== "match_finished"
+        ) {
+          console.log(
+            `[match-sync ${MATCH_SYNC_VERSION}] resume result round ${sync.questionIndex}`
+          );
+          onNewRoundRef.current();
+          clearFlipTimer();
+          useGameStore.setState({
+            currentQuestionIndex: sync.questionIndex,
+            roundPhase: "round_result",
+            roundStartedAt: null,
+            ...FRESH_ROUND_TIMER_STATE,
+            // Keep lastRoundPoints* from score_state (already applied).
+            lastRoundPointsA: live.lastRoundPointsA,
+            lastRoundPointsB: live.lastRoundPointsB,
+            ...(sync.questionIndex >= REGULAR_MATCH_QUESTIONS
+              ? {
+                  tiebreakerUsed: true,
+                  tiebreakerQuestion:
+                    live.playlist[sync.questionIndex] ?? live.tiebreakerQuestion,
+                }
+              : {}),
+          });
+          onResumedRoundResultRef.current();
+        }
+        return;
+      }
+
       const isNewRound =
         sync.questionIndex > live.currentQuestionIndex ||
         live.roundPhase === "waiting" ||
@@ -378,7 +431,13 @@ export function useServerMatchSync({
     (answerA: MatchAnswerRecord | null, answerB: MatchAnswerRecord | null) => {
       const live = useGameStore.getState();
 
-      if (live.roundPhase !== "playing" && live.roundPhase !== "topic_reveal") {
+      // Include round_result so a refresh on the reveal screen can restore
+      // both players' picks for the review UI.
+      if (
+        live.roundPhase !== "playing" &&
+        live.roundPhase !== "topic_reveal" &&
+        live.roundPhase !== "round_result"
+      ) {
         return;
       }
 
@@ -416,7 +475,11 @@ export function useServerMatchSync({
       useGameStore.setState(patch);
 
       const updated = useGameStore.getState();
-      if (updated.playerAAnswer && updated.playerBAnswer) {
+      if (
+        updated.roundPhase === "playing" &&
+        updated.playerAAnswer &&
+        updated.playerBAnswer
+      ) {
         onBothAnswersLockedRef.current();
       }
     },
@@ -538,8 +601,8 @@ export function useServerMatchSync({
   }, [leaderStartRound]);
 
   // Authoritative playlist + clean slate, exactly once per session id.
-  // Scores are rehydrated from game_sessions.score_state so a refresh does
-  // not wipe the point process.
+  // Await score_state before releasing the poll loop so a refresh restores
+  // points/reviews first, then the sync cursor — never 0–0 then a wrong replay.
   useEffect(() => {
     if (!enabled || serverPlaylist.length === 0) {
       return;
@@ -563,14 +626,15 @@ export function useServerMatchSync({
     }
 
     initializedSessionRef.current = sessionId;
+    sessionReadyRef.current = false;
     console.log(
       `[match-sync ${MATCH_SYNC_VERSION}] init session=${sessionId} leader=${isLeader}`
     );
 
     let cancelled = false;
 
-    const hydrate = async () => {
-      const { data: session, error } = await supabaseRef.current
+    const bootstrap = async () => {
+      const { data: session } = await supabaseRef.current
         .from("game_sessions")
         .select("score_state")
         .eq("id", sessionId)
@@ -583,29 +647,15 @@ export function useServerMatchSync({
       const score = isMatchScoreState(session?.score_state)
         ? session.score_state
         : null;
-
-      // Finished match: restore the review screen immediately. Do not flash
-      // "waiting" / topic reveal — that looked like the match restarting.
-      if (score?.matchFinished) {
-        useGameStore.setState({
-          gameSessionId: sessionId,
-          playlist: serverPlaylist,
-          currentQuestionIndex: Math.max(0, score.resolvedThroughIndex),
-          playerAAnswer: null,
-          playerBAnswer: null,
-          roundStartedAt: null,
-          ...FRESH_ROUND_TIMER_STATE,
-          tiebreakerQuestion: null,
-          ...scoreStateToStorePatch(score),
-        });
-        return;
-      }
+      const scorePatch = score ? scoreStateToStorePatch(score) : {};
 
       useGameStore.setState({
         gameSessionId: sessionId,
         playlist: serverPlaylist,
-        currentQuestionIndex: 0,
-        roundPhase: "waiting",
+        currentQuestionIndex: score?.matchFinished
+          ? Math.max(0, score.resolvedThroughIndex)
+          : 0,
+        roundPhase: score?.matchFinished ? "match_finished" : "waiting",
         playerAAnswer: null,
         playerBAnswer: null,
         roundStartedAt: null,
@@ -620,19 +670,24 @@ export function useServerMatchSync({
         tiebreakerUsed: false,
         tiebreakerQuestion: null,
         roundReviews: [],
+        ...scorePatch,
       });
 
-      if (score && !error) {
+      if (score && !score.matchFinished) {
         applyScoreState(score);
       }
+
+      sessionReadyRef.current = true;
+      setSessionReadyGeneration((value) => value + 1);
     };
 
-    void hydrate();
+    void bootstrap();
 
     return () => {
       cancelled = true;
+      sessionReadyRef.current = false;
     };
-  }, [applyScoreState, enabled, isLeader, serverPlaylist, sessionId]);
+  }, [enabled, isLeader, serverPlaylist, sessionId]);
 
   // Estimate the offset between this device's clock and the server clock
   // that stamps roundStartedAt. Min-RTT sample wins; runs once per session.
@@ -672,7 +727,7 @@ export function useServerMatchSync({
     let inFlight = false;
 
     const tick = async () => {
-      if (inFlight) {
+      if (inFlight || !sessionReadyRef.current) {
         return;
       }
       inFlight = true;
@@ -783,6 +838,7 @@ export function useServerMatchSync({
     enabled,
     ensurePlaylistCoversIndex,
     sessionId,
+    sessionReadyGeneration,
   ]);
 
   // Host kicks off round 0 as soon as the opponent appears in the row.

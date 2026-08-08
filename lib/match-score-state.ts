@@ -239,3 +239,19 @@ export function shouldApplyScoreState(
 
   return false;
 }
+
+/**
+ * After a refresh, the sync cursor may still point at a round that
+ * `score_state` already scored (result screen / between-round pause).
+ * Replaying that round as "playing" desyncs the refresher from the opponent.
+ */
+export function shouldResumeRoundResult(
+  syncQuestionIndex: number,
+  resolvedThroughIndex: number
+): boolean {
+  return (
+    Number.isFinite(syncQuestionIndex) &&
+    Number.isFinite(resolvedThroughIndex) &&
+    resolvedThroughIndex >= syncQuestionIndex
+  );
+}
