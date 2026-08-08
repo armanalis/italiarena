@@ -15,6 +15,7 @@ import {
   getBotDifficultyDescription,
   type BotDifficulty,
 } from "@/lib/bot";
+import { armMatchmakingAutosearch } from "@/lib/matchmaking-intent";
 import { cn } from "@/lib/utils";
 
 const BOT_DIFFICULTIES: BotDifficulty[] = ["easy", "medium", "hard"];
@@ -68,7 +69,10 @@ export function BotMatchCard() {
         </div>
 
         <Button asChild variant="secondary" className="min-h-11 w-full">
-          <Link href={`/dashboard/matchmaking?mode=bot&difficulty=${difficulty}`}>
+          <Link
+            href={`/dashboard/matchmaking?mode=bot&difficulty=${difficulty}`}
+            onClick={() => armMatchmakingAutosearch()}
+          >
             Start {DIFFICULTY_LABELS[difficulty].toLowerCase()} bot match
           </Link>
         </Button>
