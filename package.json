@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "audit:questions": "tsx scripts/audit-questions.ts"
+    "audit:questions": "tsx scripts/audit-questions.ts",
+    "test:match-resume": "tsx scripts/test-match-resume.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
