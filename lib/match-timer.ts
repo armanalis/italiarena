@@ -4,32 +4,47 @@ import { ROUND_DURATION_SEC } from "@/lib/match-timing";
 export function getRoundPauseMs(state: {
   timerPauseOffsetMs: number;
   timerPauseStartedAt: number | null;
-}): number {
+}, now: number = Date.now()): number {
   const activePause = state.timerPauseStartedAt
-    ? Date.now() - state.timerPauseStartedAt
+    ? now - state.timerPauseStartedAt
     : 0;
   return Math.max(0, state.timerPauseOffsetMs + activePause);
 }
 
-/** Seconds elapsed since the round became answerable (never negative). */
+/**
+ * Seconds elapsed since the round became answerable (never negative).
+ * A future `roundStartedAt` (clock skew / late sync stamp) counts as zero
+ * elapsed so the UI cannot open above `ROUND_DURATION_SEC`.
+ */
 export function getRoundElapsedSec(
   roundStartedAt: number,
-  pauseMs: number
+  pauseMs: number,
+  now: number = Date.now()
 ): number {
-  return Math.max(
-    0,
-    Math.floor((Date.now() - roundStartedAt - pauseMs) / 1000)
-  );
+  const startedAt = Math.min(roundStartedAt, now);
+  return Math.max(0, Math.floor((now - startedAt - pauseMs) / 1000));
+}
+
+/** Clamp a displayed/stored countdown into `[0, ROUND_DURATION_SEC]`. */
+export function clampRoundTimeRemainingSec(
+  seconds: number,
+  durationSec: number = ROUND_DURATION_SEC
+): number {
+  if (!Number.isFinite(seconds)) {
+    return durationSec;
+  }
+  return Math.min(durationSec, Math.max(0, Math.floor(seconds)));
 }
 
 /** Seconds left on the question clock — always in `[0, ROUND_DURATION_SEC]`. */
 export function getRoundTimeRemainingSec(
   roundStartedAt: number,
   pauseMs: number,
-  durationSec: number = ROUND_DURATION_SEC
+  durationSec: number = ROUND_DURATION_SEC,
+  now: number = Date.now()
 ): number {
-  const remaining = durationSec - getRoundElapsedSec(roundStartedAt, pauseMs);
-  return Math.min(durationSec, Math.max(0, remaining));
+  const remaining = durationSec - getRoundElapsedSec(roundStartedAt, pauseMs, now);
+  return clampRoundTimeRemainingSec(remaining, durationSec);
 }
 
 /** Cleared whenever a new question starts so pause time cannot inflate the next clock. */

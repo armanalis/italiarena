@@ -8,7 +8,10 @@ import {
   normalizeCategoryProgress,
 } from "@/lib/category-progress";
 import type { MatchRoundReview } from "@/lib/match-score-state";
-import { ROUND_DURATION_SEC } from "@/lib/match-timing";
+import {
+  clampRoundTimeRemainingSec,
+  FRESH_ROUND_TIMER_STATE,
+} from "@/lib/match-timer";
 import { safeLocalStorage } from "@/lib/safe-storage";
 import {
   computePoints,
@@ -179,6 +182,9 @@ const gameplayDefaults: Pick<
   | "playerBResponseTimes"
   | "roundStartedAt"
   | "timeRemaining"
+  | "timerPauseOffsetMs"
+  | "timerPauseStartedAt"
+  | "isReportDialogOpen"
   | "lastRoundPointsA"
   | "lastRoundPointsB"
   | "matchWinner"
@@ -201,7 +207,8 @@ const gameplayDefaults: Pick<
   playerAResponseTimes: [],
   playerBResponseTimes: [],
   roundStartedAt: null,
-  timeRemaining: ROUND_DURATION_SEC,
+  ...FRESH_ROUND_TIMER_STATE,
+  isReportDialogOpen: false,
   lastRoundPointsA: 0,
   lastRoundPointsB: 0,
   matchWinner: null,
@@ -218,9 +225,6 @@ const initialState: GameStoreState = {
   opponent: null,
   playlist: [],
   hasHydrated: false,
-  isReportDialogOpen: false,
-  timerPauseOffsetMs: 0,
-  timerPauseStartedAt: null,
   botDifficulty: null,
   ...gameplayDefaults,
 };
@@ -261,9 +265,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
           playerAAnswer: null,
           playerBAnswer: null,
           roundStartedAt: null,
-          timeRemaining: ROUND_DURATION_SEC,
-          timerPauseOffsetMs: 0,
-          timerPauseStartedAt: null,
+          ...FRESH_ROUND_TIMER_STATE,
           lastRoundPointsA: 0,
           lastRoundPointsB: 0,
         })),
@@ -277,18 +279,22 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
         })),
       setRoundPhase: (phase) => set({ roundPhase: phase }),
       beginRound: (startedAt) =>
-        set({
-          roundPhase: "playing",
-          roundStartedAt: startedAt ?? Date.now(),
-          timeRemaining: ROUND_DURATION_SEC,
-          playerAAnswer: null,
-          playerBAnswer: null,
-          lastRoundPointsA: 0,
-          lastRoundPointsB: 0,
-          timerPauseOffsetMs: 0,
-          timerPauseStartedAt: null,
+        set((state) => {
+          const dialogOpen = state.isReportDialogOpen;
+          return {
+            roundPhase: "playing",
+            // Never anchor the clock in the future — that used to show 35s.
+            roundStartedAt: Math.min(startedAt ?? Date.now(), Date.now()),
+            ...FRESH_ROUND_TIMER_STATE,
+            timerPauseStartedAt: dialogOpen ? Date.now() : null,
+            playerAAnswer: null,
+            playerBAnswer: null,
+            lastRoundPointsA: 0,
+            lastRoundPointsB: 0,
+          };
         }),
-      setTimeRemaining: (seconds) => set({ timeRemaining: seconds }),
+      setTimeRemaining: (seconds) =>
+        set({ timeRemaining: clampRoundTimeRemainingSec(seconds) }),
       lockLocalAnswer: (answer, responseTimeMs) => {
         const { localPlayerRole } = get();
         if (!localPlayerRole) {
@@ -401,6 +407,9 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
           lastRoundPointsB: pointsB,
           categoryProgress: nextCategoryProgress,
           roundReviews: [...state.roundReviews, roundReview],
+          // Drop question-clock pause so it cannot leak into the next round.
+          timerPauseOffsetMs: 0,
+          timerPauseStartedAt: null,
         });
       },
       advanceToNextRound: () => {
@@ -417,6 +426,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
               state.playerAResponseTimes,
               state.playerBResponseTimes
             ),
+            ...FRESH_ROUND_TIMER_STATE,
           });
           return;
         }
@@ -427,15 +437,18 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
           playerAAnswer: null,
           playerBAnswer: null,
           roundStartedAt: null,
-          timeRemaining: ROUND_DURATION_SEC,
-          timerPauseOffsetMs: 0,
-          timerPauseStartedAt: null,
+          ...FRESH_ROUND_TIMER_STATE,
           lastRoundPointsA: 0,
           lastRoundPointsB: 0,
         });
       },
       setPlaying: () => set({ status: "playing" }),
-      finishMatch: () => set({ status: "finished", roundPhase: "match_finished" }),
+      finishMatch: () =>
+        set({
+          status: "finished",
+          roundPhase: "match_finished",
+          ...FRESH_ROUND_TIMER_STATE,
+        }),
       markMatchSaved: () => set({ matchSaved: true }),
       setReportDialogOpen: (open) =>
         set((state) => {
@@ -443,7 +456,15 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
             return { isReportDialogOpen: open };
           }
 
+          // Only the in-question countdown uses pause offsets. Result/topic
+          // screens gate on `isReportDialogOpen` separately — accumulating
+          // pause there made the next question open at 35s instead of 25s.
+          const canPauseQuestionTimer = state.roundPhase === "playing";
+
           if (open) {
+            if (!canPauseQuestionTimer) {
+              return { isReportDialogOpen: true };
+            }
             if (state.timerPauseStartedAt !== null) {
               return { isReportDialogOpen: true };
             }
@@ -453,14 +474,19 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
             };
           }
 
-          const activePause = state.timerPauseStartedAt
-            ? Date.now() - state.timerPauseStartedAt
-            : 0;
+          if (!canPauseQuestionTimer || state.timerPauseStartedAt === null) {
+            return {
+              isReportDialogOpen: false,
+              timerPauseStartedAt: null,
+            };
+          }
+
+          const activePause = Date.now() - state.timerPauseStartedAt;
 
           return {
             isReportDialogOpen: false,
             timerPauseStartedAt: null,
-            timerPauseOffsetMs: state.timerPauseOffsetMs + activePause,
+            timerPauseOffsetMs: state.timerPauseOffsetMs + Math.max(0, activePause),
           };
         }),
       reset: () => set({ ...initialState, hasHydrated: true }),
@@ -472,7 +498,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
       // users' localStorage and zustand merges it on load regardless of the
       // current partialize, so devices would resume matches at different
       // question indices. Bumping the version discards those stale fields.
-      version: 2,
+      version: 3,
       migrate: (persistedState) => {
         const state = {
           ...((persistedState ?? {}) as Record<string, unknown>),
@@ -488,6 +514,10 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
         delete state.matchWinner;
         delete state.tiebreakerUsed;
         delete state.tiebreakerQuestion;
+        delete state.timeRemaining;
+        delete state.timerPauseOffsetMs;
+        delete state.timerPauseStartedAt;
+        delete state.isReportDialogOpen;
         return state as Partial<GameStoreState>;
       },
       // Keep persistence small — full playlists + review text can exceed localStorage

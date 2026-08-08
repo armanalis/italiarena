@@ -270,10 +270,11 @@ export function useServerMatchSync({
           playerAAnswer: null,
           playerBAnswer: null,
           // Clear report-pause carryover — leftover pause ms made the next
-          // question show 35–40s instead of 25s. Re-arm pause only if the
-          // report dialog is still open on this new round.
+          // question show 35–40s instead of 25s. Re-arm pause only when the
+          // question is already answerable and the report dialog is open.
           ...FRESH_ROUND_TIMER_STATE,
-          timerPauseStartedAt: live.isReportDialogOpen ? Date.now() : null,
+          timerPauseStartedAt:
+            playingDue && live.isReportDialogOpen ? Date.now() : null,
           roundStartedAt: playingDue
             ? Math.min(localRoundStartedAt, Date.now())
             : null,
