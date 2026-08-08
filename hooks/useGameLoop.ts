@@ -418,6 +418,179 @@ export function useGameLoop({
     setRoundResultSecondsLeft(null);
   }, [clearTimers]);
 
+  const leaderStartRoundRef = useRef<
+    ReturnType<typeof useServerMatchSync>["leaderStartRound"]
+  >(async () => false);
+  const leaderFinishMatchRef = useRef<
+    ReturnType<typeof useServerMatchSync>["leaderFinishMatch"]
+  >(async () => false);
+
+  const advanceAfterResult = useCallback(() => {
+    void (async () => {
+      resolvingRef.current = false;
+      setRoundResultSecondsLeft(null);
+
+      if (!isBotMatch && !isSyncLeader) {
+        return;
+      }
+
+      const latest = useGameStore.getState();
+      const finishedRegularRound =
+        latest.currentQuestionIndex === REGULAR_MATCH_QUESTIONS - 1;
+      const isScoreTied = latest.playerAScore === latest.playerBScore;
+
+      // Sudden-death: tied after the 10 regular questions → one extra round.
+      if (finishedRegularRound && isScoreTied && !latest.tiebreakerUsed) {
+        setRoundPhase("tiebreaker_loading");
+
+        const excludeIds = latest.playlist.map((item) => item.id);
+        let tiebreaker: Awaited<
+          ReturnType<typeof fetchTiebreakerQuestionClient>
+        > | null = null;
+
+        for (let attempt = 1; attempt <= 3; attempt += 1) {
+          // Browser → Supabase RPC (not a server action) so the fetch cannot
+          // stall behind the per-tab Next.js action queue.
+          tiebreaker = await fetchTiebreakerQuestionClient(supabase, {
+            language: TARGET_LANGUAGE,
+            level: proficiencyLevel,
+            userId: localUserId,
+            excludeIds,
+          });
+          if (tiebreaker.success) {
+            break;
+          }
+          console.error(
+            `[match] tiebreaker fetch failed (attempt ${attempt}): ${tiebreaker.error}`
+          );
+        }
+
+        if (tiebreaker?.success) {
+          if (isBotMatch) {
+            startTiebreakerRound(tiebreaker.data);
+            void persistScores();
+            return;
+          }
+
+          // Append locally so the host playlist covers Q11, but stay on
+          // tiebreaker_loading until publish/applySync advances BOTH clients
+          // from the same server-stamped round record.
+          useGameStore.setState((state) => ({
+            playlist: state.playlist.some(
+              (question) => question.id === tiebreaker.data.id
+            )
+              ? state.playlist
+              : [...state.playlist, tiebreaker.data],
+            tiebreakerQuestion: tiebreaker.data,
+            tiebreakerUsed: true,
+            roundPhase: "tiebreaker_loading",
+          }));
+          void persistScores();
+
+          const tiebreakerIndex = REGULAR_MATCH_QUESTIONS;
+          pendingNextRoundRef.current = tiebreakerIndex;
+          pendingAppendQuestionRef.current = tiebreaker.data;
+          const published = await leaderStartRoundRef.current(
+            tiebreakerIndex,
+            tiebreaker.data
+          );
+          if (published) {
+            pendingNextRoundRef.current = null;
+            pendingAppendQuestionRef.current = null;
+          }
+          return;
+        }
+
+        // No sudden-death question available — end as a true tie rather than
+        // inventing a winner from response times.
+        console.error(
+          "[match] tiebreaker unavailable; finishing tied match without sudden-death"
+        );
+      }
+
+      if (isBotMatch) {
+        advanceToNextRound();
+        const afterAdvance = useGameStore.getState();
+        void persistScores();
+        if (afterAdvance.roundPhase === "match_finished") {
+          return;
+        }
+        startTopicReveal(afterAdvance.currentQuestionIndex);
+        return;
+      }
+
+      const nextIndex = latest.currentQuestionIndex + 1;
+      if (nextIndex >= latest.playlist.length) {
+        pendingNextRoundRef.current = null;
+        pendingAppendQuestionRef.current = null;
+        advanceToNextRound();
+        void persistScores();
+        void leaderFinishMatchRef.current();
+        return;
+      }
+
+      pendingNextRoundRef.current = nextIndex;
+      pendingAppendQuestionRef.current = null;
+      const published = await leaderStartRoundRef.current(nextIndex);
+      if (published) {
+        pendingNextRoundRef.current = null;
+      }
+    })();
+  }, [
+    advanceToNextRound,
+    isBotMatch,
+    isSyncLeader,
+    localUserId,
+    persistScores,
+    proficiencyLevel,
+    setRoundPhase,
+    startTiebreakerRound,
+    startTopicReveal,
+    supabase,
+  ]);
+
+  const scheduleRoundResultCountdown = useCallback(() => {
+    if (resultTimerRef.current !== null) {
+      return;
+    }
+
+    resolvingRef.current = true;
+    resultRemainingMsRef.current = getRoundResultMs(isBotMatch);
+    setRoundResultSecondsLeft(resultRemainingMsRef.current / 1000);
+
+    resultTimerRef.current = window.setInterval(() => {
+      const latest = useGameStore.getState();
+
+      if (latest.roundPhase !== "round_result") {
+        clearResultTimer();
+        setRoundResultSecondsLeft(null);
+        return;
+      }
+
+      if (latest.isReportDialogOpen || opponentReportPausedRef.current) {
+        return;
+      }
+
+      resultRemainingMsRef.current -= ROUND_RESULT_TICK_MS;
+      setRoundResultSecondsLeft(
+        Math.max(0, resultRemainingMsRef.current / 1000)
+      );
+
+      if (resultRemainingMsRef.current <= 0) {
+        clearResultTimer();
+        advanceAfterResult();
+      }
+    }, ROUND_RESULT_TICK_MS);
+  }, [advanceAfterResult, clearResultTimer, isBotMatch]);
+
+  const handleResumedRoundResult = useCallback(() => {
+    // Refresh landed on an already-scored round — continue the between-round
+    // beat so the host can publish the next question (no double-scoring).
+    clearRoundTimers();
+    clearBotTimer();
+    scheduleRoundResultCountdown();
+  }, [clearBotTimer, clearRoundTimers, scheduleRoundResultCountdown]);
+
   const serverSync = useServerMatchSync({
     sessionId,
     isLeader: isSyncLeader,
@@ -430,11 +603,10 @@ export function useGameLoop({
         finalizeRoundRef.current();
       }
     },
+    onResumedRoundResult: handleResumedRoundResult,
   });
 
-  const leaderStartRoundRef = useRef(serverSync.leaderStartRound);
   leaderStartRoundRef.current = serverSync.leaderStartRound;
-  const leaderFinishMatchRef = useRef(serverSync.leaderFinishMatch);
   leaderFinishMatchRef.current = serverSync.leaderFinishMatch;
 
   const finalizeRound = useCallback(() => {
@@ -464,161 +636,13 @@ export function useGameLoop({
 
     resolveRound();
     void persistScores();
-
-    resultRemainingMsRef.current = getRoundResultMs(isBotMatch);
-    setRoundResultSecondsLeft(resultRemainingMsRef.current / 1000);
-
-    const advanceAfterResult = () => {
-      void (async () => {
-        resolvingRef.current = false;
-        setRoundResultSecondsLeft(null);
-
-        if (!isBotMatch && !isSyncLeader) {
-          return;
-        }
-
-        const latest = useGameStore.getState();
-        const finishedRegularRound =
-          latest.currentQuestionIndex === REGULAR_MATCH_QUESTIONS - 1;
-        const isScoreTied = latest.playerAScore === latest.playerBScore;
-
-        // Sudden-death: tied after the 10 regular questions → one extra round.
-        if (finishedRegularRound && isScoreTied && !latest.tiebreakerUsed) {
-          setRoundPhase("tiebreaker_loading");
-
-          const excludeIds = latest.playlist.map((item) => item.id);
-          let tiebreaker: Awaited<
-            ReturnType<typeof fetchTiebreakerQuestionClient>
-          > | null = null;
-
-          for (let attempt = 1; attempt <= 3; attempt += 1) {
-            // Browser → Supabase RPC (not a server action) so the fetch cannot
-            // stall behind the per-tab Next.js action queue.
-            tiebreaker = await fetchTiebreakerQuestionClient(supabase, {
-              language: TARGET_LANGUAGE,
-              level: proficiencyLevel,
-              userId: localUserId,
-              excludeIds,
-            });
-            if (tiebreaker.success) {
-              break;
-            }
-            console.error(
-              `[match] tiebreaker fetch failed (attempt ${attempt}): ${tiebreaker.error}`
-            );
-          }
-
-          if (tiebreaker?.success) {
-            if (isBotMatch) {
-              startTiebreakerRound(tiebreaker.data);
-              void persistScores();
-              return;
-            }
-
-            // Append locally so the host playlist covers Q11, but stay on
-            // tiebreaker_loading until publish/applySync advances BOTH clients
-            // from the same server-stamped round record.
-            useGameStore.setState((state) => ({
-              playlist: state.playlist.some(
-                (question) => question.id === tiebreaker.data.id
-              )
-                ? state.playlist
-                : [...state.playlist, tiebreaker.data],
-              tiebreakerQuestion: tiebreaker.data,
-              tiebreakerUsed: true,
-              roundPhase: "tiebreaker_loading",
-            }));
-            void persistScores();
-
-            const tiebreakerIndex = REGULAR_MATCH_QUESTIONS;
-            pendingNextRoundRef.current = tiebreakerIndex;
-            pendingAppendQuestionRef.current = tiebreaker.data;
-            const published = await leaderStartRoundRef.current(
-              tiebreakerIndex,
-              tiebreaker.data
-            );
-            if (published) {
-              pendingNextRoundRef.current = null;
-              pendingAppendQuestionRef.current = null;
-            }
-            return;
-          }
-
-          // No sudden-death question available — end as a true tie rather than
-          // inventing a winner from response times.
-          console.error(
-            "[match] tiebreaker unavailable; finishing tied match without sudden-death"
-          );
-        }
-
-        if (isBotMatch) {
-          advanceToNextRound();
-          const afterAdvance = useGameStore.getState();
-          void persistScores();
-          if (afterAdvance.roundPhase === "match_finished") {
-            return;
-          }
-          startTopicReveal(afterAdvance.currentQuestionIndex);
-          return;
-        }
-
-        const nextIndex = latest.currentQuestionIndex + 1;
-        if (nextIndex >= latest.playlist.length) {
-          pendingNextRoundRef.current = null;
-          pendingAppendQuestionRef.current = null;
-          advanceToNextRound();
-          void persistScores();
-          void leaderFinishMatchRef.current();
-          return;
-        }
-
-        pendingNextRoundRef.current = nextIndex;
-        pendingAppendQuestionRef.current = null;
-        const published = await leaderStartRoundRef.current(nextIndex);
-        if (published) {
-          pendingNextRoundRef.current = null;
-        }
-      })();
-    };
-
-    resultTimerRef.current = window.setInterval(() => {
-      const latest = useGameStore.getState();
-
-      if (latest.roundPhase !== "round_result") {
-        clearResultTimer();
-        setRoundResultSecondsLeft(null);
-        return;
-      }
-
-      if (latest.isReportDialogOpen || opponentReportPausedRef.current) {
-        return;
-      }
-
-      resultRemainingMsRef.current -= ROUND_RESULT_TICK_MS;
-      setRoundResultSecondsLeft(
-        Math.max(0, resultRemainingMsRef.current / 1000)
-      );
-
-      if (resultRemainingMsRef.current <= 0) {
-        clearResultTimer();
-        advanceAfterResult();
-      }
-    }, ROUND_RESULT_TICK_MS);
+    scheduleRoundResultCountdown();
   }, [
-    advanceToNextRound,
-    clearResultTimer,
     clearTimers,
-    isBotMatch,
-    isSyncLeader,
-    localUserId,
     persistScores,
     play,
-    proficiencyLevel,
     resolveRound,
-    setRoundPhase,
-    startTiebreakerRound,
-    startTopicReveal,
-    supabase,
+    scheduleRoundResultCountdown,
   ]);
 
   const finalizeRoundRef = useRef(finalizeRound);
