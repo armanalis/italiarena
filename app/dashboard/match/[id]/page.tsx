@@ -37,6 +37,9 @@ export default async function MatchPage({ params }: MatchPageProps) {
 
   const { sessionId, status, playlist, opponent } = result.data;
 
+  // Only bounce waiting lobbies back to matchmaking. Completed / abandoned
+  // sessions must stay on this route so players can review mistakes as long
+  // as they want.
   if (status === "waiting") {
     redirect("/dashboard/matchmaking");
   }
