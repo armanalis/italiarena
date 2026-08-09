@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { BotMatchCard } from "@/components/dashboard/bot-match-card";
+import { MatchmakingStartLink } from "@/components/matchmaking/matchmaking-start-link";
 import { getCurrentUserProfile, isGuestUser } from "@/lib/auth";
 import { PenLine, ShieldAlert, UserRound, Users } from "lucide-react";
 
@@ -98,7 +99,9 @@ export async function PlayDashboardContent({
             </CardHeader>
             <CardContent>
               <Button asChild className="min-h-11 w-full">
-                <Link href="/dashboard/matchmaking?mode=real">Find real opponent</Link>
+                <MatchmakingStartLink href="/dashboard/matchmaking?mode=real">
+                  Find real opponent
+                </MatchmakingStartLink>
               </Button>
             </CardContent>
           </Card>

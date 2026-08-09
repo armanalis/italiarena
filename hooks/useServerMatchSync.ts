@@ -21,6 +21,7 @@ import {
   type MatchSyncState,
 } from "@/lib/match-sync";
 import { REGULAR_MATCH_QUESTIONS } from "@/lib/match";
+import { disarmMatchmakingAutosearch } from "@/lib/matchmaking-intent";
 import { FRESH_ROUND_TIMER_STATE } from "@/lib/match-timer";
 import { resolveQuestionsByIds } from "@/lib/resolve-match-questions";
 import { parseQuestionPlaylist } from "@/lib/session-playlist";
@@ -217,7 +218,14 @@ export function useServerMatchSync({
     (sync: MatchSyncState, serverNow: number) => {
       const live = useGameStore.getState();
 
-      if (sync.phase === "match_finished") {
+      // Post-match review is sticky: once either client has finished, never
+      // yank them back into a round (stale poll / remount race). Players stay
+      // on scores + mistakes until they leave on purpose.
+      if (
+        live.roundPhase === "match_finished" ||
+        live.status === "finished" ||
+        live.matchWinner !== null
+      ) {
         if (live.roundPhase !== "match_finished") {
           clearFlipTimer();
           useGameStore.setState({
@@ -236,6 +244,24 @@ export function useServerMatchSync({
         return;
       }
 
+      if (sync.phase === "match_finished") {
+        clearFlipTimer();
+        disarmMatchmakingAutosearch();
+        useGameStore.setState({
+          roundPhase: "match_finished",
+          status: "finished",
+          matchWinner:
+            live.matchWinner ??
+            determineWinner(
+              live.playerAScore,
+              live.playerBScore,
+              live.playerAResponseTimes,
+              live.playerBResponseTimes
+            ),
+        });
+        return;
+      }
+
       // Monotonic guard: never move backwards (stale in-flight responses).
       if (sync.questionIndex < live.currentQuestionIndex) {
         return;
@@ -249,10 +275,7 @@ export function useServerMatchSync({
       // Poll loop calls ensurePlaylistCoversIndex first; if we're still short,
       // show the shared "Scores tied" screen instead of jumping to finished.
       if (sync.questionIndex >= live.playlist.length) {
-        if (
-          live.roundPhase !== "tiebreaker_loading" &&
-          live.roundPhase !== "match_finished"
-        ) {
+        if (live.roundPhase !== "tiebreaker_loading") {
           useGameStore.setState({ roundPhase: "tiebreaker_loading" });
         }
         return;
@@ -357,7 +380,6 @@ export function useServerMatchSync({
       // the next round arrives via a higher questionIndex.
       if (
         live.roundPhase === "round_result" ||
-        live.roundPhase === "match_finished" ||
         live.roundPhase === "tiebreaker_loading"
       ) {
         return;
@@ -538,6 +560,16 @@ export function useServerMatchSync({
       return;
     }
 
+    const live = useGameStore.getState();
+    if (
+      live.roundPhase === "match_finished" ||
+      live.status === "finished" ||
+      live.matchWinner !== null
+    ) {
+      matchStartedRef.current = true;
+      return;
+    }
+
     startingRef.current = true;
     try {
       const { data: session, error } = await supabaseRef.current
@@ -578,8 +610,16 @@ export function useServerMatchSync({
 
     if (initializedSessionRef.current === sessionId) {
       // Never shrink a mid-match playlist — sudden-death may have appended Q11.
-      const liveLength = useGameStore.getState().playlist.length;
-      if (serverPlaylist.length > liveLength) {
+      // Never clobber an in-progress or finished review with SSR playlist alone.
+      const live = useGameStore.getState();
+      if (
+        live.roundPhase === "match_finished" ||
+        live.status === "finished" ||
+        live.matchWinner !== null
+      ) {
+        return;
+      }
+      if (serverPlaylist.length > live.playlist.length) {
         useGameStore.setState({ playlist: serverPlaylist });
       }
       return;
@@ -612,7 +652,9 @@ export function useServerMatchSync({
       useGameStore.setState({
         gameSessionId: sessionId,
         playlist: serverPlaylist,
-        currentQuestionIndex: 0,
+        currentQuestionIndex: score?.matchFinished
+          ? Math.max(0, score.resolvedThroughIndex)
+          : 0,
         roundPhase: score?.matchFinished ? "match_finished" : "waiting",
         playerAAnswer: null,
         playerBAnswer: null,
@@ -630,6 +672,10 @@ export function useServerMatchSync({
         roundReviews: [],
         ...scorePatch,
       });
+
+      if (score && !score.matchFinished) {
+        applyScoreState(score);
+      }
 
       sessionReadyRef.current = true;
       setSessionReadyGeneration((value) => value + 1);

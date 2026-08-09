@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Ghost, Loader2, Users } from "lucide-react";
+import { Ghost, Loader2, Swords, Users } from "lucide-react";
 import {
   cancelMatchSearch,
   searchForMatch,
@@ -26,6 +26,11 @@ import {
   getBotDifficultyDescription,
   type BotDifficulty,
 } from "@/lib/bot";
+import {
+  armMatchmakingAutosearch,
+  disarmMatchmakingAutosearch,
+  shouldAutosearchMatchmaking,
+} from "@/lib/matchmaking-intent";
 import type { UserProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -72,19 +77,29 @@ export function MatchmakingLobby({
   const startMatch = useGameStore((state) => state.startMatch);
   const reset = useGameStore((state) => state.reset);
 
+  // After a finished match, Back/swipe must not auto-search again. Intentional
+  // entries (Find opponent / Play again) arm auto-search before navigating.
+  const [searchArmed, setSearchArmed] = useState(
+    () => mode === "bot" || shouldAutosearchMatchmaking()
+  );
   const [secondsLeft, setSecondsLeft] = useState(MATCH_SEARCH_SECONDS);
   const [onlineCount, setOnlineCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isExiting, setIsExiting] = useState(false);
   const [showNoMatchDialog, setShowNoMatchDialog] = useState(false);
   const [isStartingBot, setIsStartingBot] = useState(false);
-  const [statusMessage, setStatusMessage] = useState(
-    mode === "bot" ? "Summoning ghost opponent..." : "Searching for opponent..."
+  const [statusMessage, setStatusMessage] = useState(() =>
+    mode === "bot"
+      ? "Summoning ghost opponent..."
+      : shouldAutosearchMatchmaking()
+        ? "Searching for opponent..."
+        : "Ready when you are"
   );
 
   const language = profile.target_language!;
   const level = profile.proficiency_level!;
   const isBotMode = mode === "bot";
+  const isSearching = isBotMode || searchArmed;
 
   const clearTimers = useCallback(() => {
     if (searchIntervalRef.current !== null) {
@@ -123,10 +138,26 @@ export function MatchmakingLobby({
 
       redirectingRef.current = true;
       clearTimers();
-      router.push(`/dashboard/match/${sessionId}`);
+      // Replace (not push) so browser Back from the post-match review cannot
+      // return here and restart searching. Also disarm auto-search as a
+      // belt-and-suspenders guard for any residual history entry.
+      disarmMatchmakingAutosearch();
+      router.replace(`/dashboard/match/${sessionId}`);
     },
     [clearTimers, router]
   );
+
+  const beginSearch = useCallback(() => {
+    armMatchmakingAutosearch();
+    noMatchHandledRef.current = false;
+    cancelledRef.current = false;
+    setSecondsLeft(MATCH_SEARCH_SECONDS);
+    setShowNoMatchDialog(false);
+    setError(null);
+    setStatusMessage("Searching for opponent...");
+    setSearchArmed(true);
+    setSearching();
+  }, [setSearching]);
 
   const handleSearchTimeout = useCallback(async () => {
     if (
@@ -273,11 +304,14 @@ export function MatchmakingLobby({
   }, [handleActiveMatch, setSessionId]);
 
   useEffect(() => {
+    if (!isSearching) {
+      return;
+    }
     setSearching();
-  }, [setSearching]);
+  }, [isSearching, setSearching]);
 
   useEffect(() => {
-    if (isBotMode) {
+    if (!isSearching || isBotMode) {
       return;
     }
 
@@ -290,10 +324,10 @@ export function MatchmakingLobby({
         searchIntervalRef.current = null;
       }
     };
-  }, [isBotMode, runSearch]);
+  }, [isBotMode, isSearching, runSearch]);
 
   useEffect(() => {
-    if (isBotMode) {
+    if (!isSearching || isBotMode) {
       return;
     }
 
@@ -316,15 +350,20 @@ export function MatchmakingLobby({
         timerIntervalRef.current = null;
       }
     };
-  }, [isBotMode]);
+  }, [isBotMode, isSearching]);
 
   useEffect(() => {
-    if (isBotMode || secondsLeft !== 0 || noMatchHandledRef.current) {
+    if (
+      !isSearching ||
+      isBotMode ||
+      secondsLeft !== 0 ||
+      noMatchHandledRef.current
+    ) {
       return;
     }
 
     void handleSearchTimeout();
-  }, [handleSearchTimeout, isBotMode, secondsLeft]);
+  }, [handleSearchTimeout, isBotMode, isSearching, secondsLeft]);
 
   useEffect(() => {
     if (!isBotMode || cancelledRef.current) {
@@ -454,6 +493,64 @@ export function MatchmakingLobby({
       }
     };
   }, [isBotMode, language, level, profile.id, supabase]);
+
+  if (!isSearching) {
+    return (
+      <main className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-6 touch-scroll sm:px-6 sm:py-12">
+        <div className="glass-panel w-full max-w-lg overflow-hidden p-5 sm:p-8">
+          <div className="space-y-6 text-center sm:space-y-8">
+            <div className="mx-auto flex size-16 items-center justify-center rounded-full border border-border bg-muted/60 sm:size-20">
+              <Swords className="size-8 text-accent sm:size-10" />
+            </div>
+
+            <div className="space-y-2">
+              <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
+                Ready when you are
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Take your time reviewing the last match. Search only starts when
+                you choose to play again.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Badge variant="secondary" className="gap-1.5">
+                <Users className="size-3.5" />
+                {onlineCount} online in your bracket
+              </Badge>
+            </div>
+
+            {error && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+
+            <div className="flex w-full flex-col items-center gap-3 sm:flex-row sm:justify-center">
+              <Button
+                type="button"
+                className="min-h-11 w-full sm:w-auto"
+                onClick={beginSearch}
+              >
+                Find opponent
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11 w-full sm:w-auto"
+                disabled={isExiting}
+                onClick={() => {
+                  void exitLobby();
+                }}
+              >
+                {isExiting ? "Leaving..." : "Back to dashboard"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-6 touch-scroll sm:px-6 sm:py-12">
