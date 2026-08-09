@@ -296,10 +296,7 @@ export function useServerMatchSync({
       // round, but sync has not advanced yet. Replaying it as "playing" made
       // the refresher fight the opponent's clock (async / broken match).
       if (shouldResumeRoundResult(sync.questionIndex, resolvedThrough)) {
-        if (
-          live.roundPhase !== "round_result" &&
-          live.roundPhase !== "match_finished"
-        ) {
+        if (live.roundPhase !== "round_result") {
           console.log(
             `[match-sync ${MATCH_SYNC_VERSION}] resume result round ${sync.questionIndex}`
           );
