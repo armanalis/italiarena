@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { CheckCircle2, Loader2, Trophy, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,10 @@ import {
   usePlayerBScore,
 } from "@/store/useGameStore";
 import { BOT_DIFFICULTY_LABELS } from "@/lib/bot";
+import {
+  armMatchmakingAutosearch,
+  disarmMatchmakingAutosearch,
+} from "@/lib/matchmaking-intent";
 import { MATCH_SYNC_VERSION } from "@/lib/match-sync";
 import { formatCategoryLabel, isAnswerCorrect } from "@/lib/scoring";
 import { MatchMistakesReview } from "@/components/match/match-mistakes-review";
@@ -80,6 +85,13 @@ export function GameLoop({
     proficiencyLevel,
     serverPlaylist,
   });
+
+  // Keep review sticky against accidental Back into the lobby auto-search.
+  useEffect(() => {
+    if (roundPhase === "match_finished") {
+      disarmMatchmakingAutosearch();
+    }
+  }, [roundPhase]);
 
   if (!hydrated) {
     return (
@@ -208,7 +220,13 @@ export function GameLoop({
               </Link>
             </Button>
             <Button asChild className="min-h-11 w-full sm:w-auto">
-              <Link href="/dashboard/matchmaking" onClick={() => reset()}>
+              <Link
+                href="/dashboard/matchmaking"
+                onClick={() => {
+                  armMatchmakingAutosearch();
+                  reset();
+                }}
+              >
                 Play again
               </Link>
             </Button>
