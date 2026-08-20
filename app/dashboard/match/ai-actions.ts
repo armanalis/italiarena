@@ -105,28 +105,26 @@ export async function askQuestionExplanation(
     return { success: false, error: generated.error, asksRemaining };
   }
 
-  const { error: cacheWriteError } = await supabase
-    .from("question_ai_explanations")
-    .upsert({
-      cache_key: cacheKey,
-      question_id: payload.questionId,
-      selected_answer: payload.selectedAnswer,
-      explanation: generated.explanation,
-    });
-
-  if (cacheWriteError) {
-    return { success: false, error: cacheWriteError.message, asksRemaining };
-  }
-
-  const { error: usageError } = await supabase.from("match_ai_asks").insert({
-    user_id: user.id,
-    session_id: payload.sessionId,
-    question_id: payload.questionId,
-    cache_key: cacheKey,
+  // Writes go through a security-definer RPC (not a raw table upsert/insert)
+  // so the ask-limit is re-checked and recorded atomically server-side —
+  // see supabase/content-write-lockdown-migration.sql.
+  const { error: recordError } = await supabase.rpc("record_ai_explanation", {
+    p_session_id: payload.sessionId,
+    p_question_id: payload.questionId,
+    p_selected_answer: payload.selectedAnswer,
+    p_cache_key: cacheKey,
+    p_explanation: generated.explanation,
   });
 
-  if (usageError) {
-    return { success: false, error: usageError.message, asksRemaining };
+  if (recordError) {
+    if (recordError.message.includes("AI_ASK_LIMIT_REACHED")) {
+      return {
+        success: false,
+        error: `You have used all ${MAX_AI_ASKS_PER_MATCH} AI explanations for this session.`,
+        asksRemaining: 0,
+      };
+    }
+    return { success: false, error: recordError.message, asksRemaining };
   }
 
   return {
