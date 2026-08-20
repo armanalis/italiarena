@@ -74,10 +74,6 @@ export async function updateMatchSyncState(
         stamped,
         parsed.questionBank
       ),
-      // New round → previous round's locked answers are consumed. Clients
-      // also filter answers by questionIndex, so a stale write that races
-      // this clear is ignored anyway.
-      ...(state.phase === "round" ? { answer_a: null, answer_b: null } : {}),
     })
     .eq("id", sessionId)
     .select("id")
@@ -94,6 +90,15 @@ export async function updateMatchSyncState(
       success: false,
       error: "Sync write was blocked (no row updated). Check game_sessions RLS.",
     };
+  }
+
+  // answer_a/answer_b are no longer directly writable by clients — see
+  // supabase/match-answer-integrity-migration.sql — so the reset goes
+  // through the RPC instead.
+  if (state.phase === "round") {
+    await supabase.rpc("clear_match_round_answers", {
+      p_session_id: sessionId,
+    });
   }
 
   return { success: true, sync: stamped, serverNow: Date.now() };

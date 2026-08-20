@@ -130,9 +130,6 @@ export async function publishMatchSync(
         stamped,
         questionBank
       ),
-      ...(input.phase === "round"
-        ? { answer_a: null, answer_b: null }
-        : {}),
     })
     .eq("id", sessionId)
     .select("id")
@@ -148,6 +145,22 @@ export async function publishMatchSync(
       error:
         "Sync write was blocked (no row updated). Check game_sessions RLS and run supabase/match-answers-migration.sql if answers never arrive.",
     };
+  }
+
+  // Locked answers live in columns the client can no longer write directly
+  // (see supabase/match-answer-integrity-migration.sql) — route the reset
+  // through the RPC so a new round always starts from a clean slate.
+  if (input.phase === "round") {
+    const { error: clearError } = await supabase.rpc(
+      "clear_match_round_answers",
+      { p_session_id: sessionId }
+    );
+
+    if (clearError) {
+      console.error(
+        `[match-sync] answer clear failed: ${clearError.message}`
+      );
+    }
   }
 
   return { success: true, sync: stamped, serverNow };
