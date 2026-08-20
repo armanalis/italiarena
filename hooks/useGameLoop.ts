@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import type { MatchAnswerRecord } from "@/lib/match-sync";
 import { buildMatchScoreState } from "@/lib/match-score-state";
 import {
   fetchTiebreakerQuestionClient,
@@ -175,8 +174,11 @@ export function useGameLoop({
    * session row so the opponent's sync poll picks it up even if the realtime
    * message is dropped. Writes go DIRECTLY to Supabase (RLS-protected) — a
    * server action here would queue behind other actions and add latency.
-   * Each player only writes their own column, so writers never clobber
-   * each other.
+   *
+   * Goes through the submit_match_answer RPC (not a raw table update): the
+   * RPC looks up which column (answer_a/answer_b) the caller actually owns
+   * server-side, so a tampered client can no longer write the opponent's
+   * answer column. See supabase/match-answer-integrity-migration.sql.
    */
   const persistAnswer = useCallback(
     async (payload: {
@@ -188,17 +190,18 @@ export function useGameLoop({
         return;
       }
 
-      const column = localPlayerRole === "a" ? "answer_a" : "answer_b";
-      const record: MatchAnswerRecord = {
-        ...payload,
-        submittedAt: Date.now(),
-      };
+      const responseTimeMs =
+        payload.responseTimeMs === null
+          ? null
+          : Math.round(payload.responseTimeMs);
 
       for (let attempt = 1; attempt <= 3; attempt += 1) {
-        const { error } = await supabase
-          .from("game_sessions")
-          .update({ [column]: record })
-          .eq("id", sessionId);
+        const { error } = await supabase.rpc("submit_match_answer", {
+          p_session_id: sessionId,
+          p_question_index: payload.questionIndex,
+          p_answer: payload.answer,
+          p_response_time_ms: responseTimeMs,
+        });
 
         if (!error) {
           return;
@@ -208,7 +211,7 @@ export function useGameLoop({
         );
       }
     },
-    [isBotMatch, localPlayerRole, sessionId, supabase]
+    [isBotMatch, sessionId, supabase]
   );
 
   const bothAnswersLocked = useCallback(() => {
@@ -665,8 +668,12 @@ export function useGameLoop({
       }
 
       play("click");
-      const responseTimeMs =
-        Date.now() - state.roundStartedAt - getRoundPauseMs(state);
+      // roundStartedAt is derived from the Postgres clock (fractional ms),
+      // so this can come out non-integer — round once here since it feeds
+      // local state, the opponent broadcast, and the DB write.
+      const responseTimeMs = Math.round(
+        Date.now() - state.roundStartedAt - getRoundPauseMs(state)
+      );
       lockLocalAnswer(answer, responseTimeMs);
 
       broadcastAnswer({
