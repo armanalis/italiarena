@@ -17,7 +17,6 @@ import {
   type TargetLanguage,
 } from "@/lib/constants";
 import type { CategoryProgress, MatchHistoryEntry } from "@/lib/types";
-import { normalizeCategoryProgress } from "@/lib/category-progress";
 import {
   isUsernameTaken,
   normalizeUsername,
@@ -377,90 +376,19 @@ export async function saveMatchResult(payload: {
     return { success: false, error: "Not authenticated." };
   }
 
-  const categoryProgress = normalizeCategoryProgress(payload.categoryProgress);
+  // The score, result, and opponent type are no longer trusted from the
+  // client here — finalize_match_result derives them server-side from the
+  // session's own score_state (written incrementally as the match was
+  // played) and rejects sessions the caller wasn't a participant in.
+  // See supabase/match-result-integrity-migration.sql.
+  const { error: finalizeError } = await supabase.rpc("finalize_match_result", {
+    p_session_id: payload.sessionId,
+    p_opponent_display_name: payload.opponentDisplayName,
+    p_question_ids: payload.questionIds,
+  });
 
-  const { data: existing } = await supabase
-    .from("match_history")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("session_id", payload.sessionId)
-    .maybeSingle();
-
-  const historyAlreadySaved = Boolean(existing);
-
-  if (!historyAlreadySaved) {
-    const { error: historyError } = await supabase.from("match_history").insert({
-      user_id: user.id,
-      session_id: payload.sessionId,
-      opponent_type: payload.opponentType,
-      opponent_display_name: payload.opponentDisplayName,
-      user_score: payload.userScore,
-      opponent_score: payload.opponentScore,
-      result: payload.result,
-      language: payload.language,
-      level: payload.level,
-    });
-
-    if (historyError) {
-      return { success: false, error: historyError.message };
-    }
-
-    const { data: stats } = await supabase
-      .from("player_stats")
-      .select("*")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    const base = stats ?? {
-      user_id: user.id,
-      matches_played: 0,
-      matches_won: 0,
-      matches_lost: 0,
-      grammar_correct: 0,
-      grammar_total: 0,
-      vocab_correct: 0,
-      vocab_total: 0,
-      fill_blank_correct: 0,
-      fill_blank_total: 0,
-      idioms_correct: 0,
-      idioms_total: 0,
-      seen_questions: [],
-    };
-
-    const won = payload.result === "win" ? 1 : 0;
-    const lost = payload.result === "loss" ? 1 : 0;
-
-    const { error: statsError } = await supabase.from("player_stats").upsert({
-      user_id: user.id,
-      matches_played: base.matches_played + 1,
-      matches_won: base.matches_won + won,
-      matches_lost: base.matches_lost + lost,
-      grammar_correct:
-        base.grammar_correct + categoryProgress.grammar.correct,
-      grammar_total: base.grammar_total + categoryProgress.grammar.total,
-      vocab_correct:
-        base.vocab_correct + categoryProgress.vocabulary.correct,
-      vocab_total: base.vocab_total + categoryProgress.vocabulary.total,
-      fill_blank_correct:
-        base.fill_blank_correct + categoryProgress["fill-in-the-blank"].correct,
-      fill_blank_total:
-        base.fill_blank_total + categoryProgress["fill-in-the-blank"].total,
-      idioms_correct:
-        base.idioms_correct + categoryProgress.idioms.correct,
-      idioms_total: base.idioms_total + categoryProgress.idioms.total,
-      seen_questions: base.seen_questions,
-    });
-
-    if (statsError) {
-      return { success: false, error: statsError.message };
-    }
-
-    if (payload.questionIds.length > 0) {
-      await supabase.rpc("update_seen_questions", {
-        p_user_id: user.id,
-        p_question_ids: payload.questionIds,
-      });
-    }
+  if (finalizeError) {
+    return { success: false, error: finalizeError.message };
   }
 
   const mistakeResult = await recordMatchMistakes(
@@ -471,11 +399,6 @@ export async function saveMatchResult(payload: {
   if (!mistakeResult.success) {
     return mistakeResult;
   }
-
-  await supabase
-    .from("game_sessions")
-    .update({ status: "completed" })
-    .eq("id", payload.sessionId);
 
   revalidatePath("/dashboard/settings");
   revalidatePath("/dashboard/statistics");

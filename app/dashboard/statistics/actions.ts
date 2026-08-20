@@ -288,33 +288,13 @@ export async function resetPlayerStatistics(): Promise<ResetStatsResult> {
     return { success: false, error: "Not authenticated." };
   }
 
-  const { error: statsError } = await supabase.from("player_stats").upsert({
-    user_id: user.id,
-    matches_played: 0,
-    matches_won: 0,
-    matches_lost: 0,
-    grammar_correct: 0,
-    grammar_total: 0,
-    vocab_correct: 0,
-    vocab_total: 0,
-    fill_blank_correct: 0,
-    fill_blank_total: 0,
-    idioms_correct: 0,
-    idioms_total: 0,
-    seen_questions: [],
-  });
+  // player_stats/match_history are no longer directly writable by clients
+  // (see supabase/match-result-integrity-migration.sql) — this RPC does the
+  // zero-out + history delete server-side instead.
+  const { error: resetError } = await supabase.rpc("reset_player_stats");
 
-  if (statsError) {
-    return { success: false, error: statsError.message };
-  }
-
-  const { error: historyError } = await supabase
-    .from("match_history")
-    .delete()
-    .eq("user_id", user.id);
-
-  if (historyError) {
-    return { success: false, error: historyError.message };
+  if (resetError) {
+    return { success: false, error: resetError.message };
   }
 
   const { error: mistakesError } = await supabase
