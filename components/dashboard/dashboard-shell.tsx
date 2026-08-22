@@ -1,6 +1,7 @@
 "use client";
 
 import { GitHubLink } from "@/components/github-link";
+import { CoffeeLink } from "@/components/coffee-link";
 import { DashboardNavLink } from "@/components/dashboard/dashboard-nav-link";
 import { signOut } from "@/app/login/actions";
 import { Button } from "@/components/ui/button";
@@ -92,6 +93,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         </nav>
 
         <div className="space-y-1 border-t border-border/60 p-4">
+          <CoffeeLink showLabel className="w-full justify-start px-3" />
           <GitHubLink showLabel className="w-full justify-start px-3" />
           <form action={signOut}>
             <Button

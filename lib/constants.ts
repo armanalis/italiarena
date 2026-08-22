@@ -14,3 +14,5 @@ export const PROFICIENCY_LEVELS = [
 
 export type TargetLanguage = (typeof TARGET_LANGUAGES)[number];
 export type ProficiencyLevel = (typeof PROFICIENCY_LEVELS)[number];
+
+export const BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/armanalis";
