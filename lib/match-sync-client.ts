@@ -7,10 +7,7 @@
  * questions even after polling moved off the server.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-  isMatchScoreState,
-  type MatchScoreState,
-} from "@/lib/match-score-state";
+import type { MatchScoreState } from "@/lib/match-score-state";
 import { TOPIC_REVEAL_MS, type MatchSyncState } from "@/lib/match-sync";
 import {
   buildQuestionPlaylistPayload,
@@ -204,55 +201,50 @@ export async function fetchTiebreakerQuestionClient(
 }
 
 /**
- * Persist cumulative scores after a round resolves. Monotonic: never lets a
- * stale client overwrite a document that already includes more rounds.
+ * Persist cumulative scores for a BOT match only. A bot never writes
+ * answer_b, so resolve_match_round (server-computed PvP scoring) cannot
+ * apply here, and there is no second real player for a forged score_state
+ * to defraud — see supabase/match-score-integrity-migration.sql. Routes
+ * through commit_bot_match_score, which the database only accepts for
+ * sessions where the caller is the sole real participant against the ghost
+ * opponent; it enforces the same monotonic guard server-side.
  */
-export async function persistMatchScoreState(
+export async function persistBotMatchScoreState(
   supabase: SupabaseClient,
   sessionId: string,
   score: MatchScoreState
 ): Promise<{ success: true } | { success: false; error: string }> {
-  const { data: session, error: readError } = await supabase
-    .from("game_sessions")
-    .select("score_state")
-    .eq("id", sessionId)
-    .maybeSingle();
+  const { error } = await supabase.rpc("commit_bot_match_score", {
+    p_session_id: sessionId,
+    p_score: score,
+  });
 
-  if (readError) {
-    return { success: false, error: readError.message };
+  if (error) {
+    return { success: false, error: error.message };
   }
 
-  const existing = isMatchScoreState(session?.score_state)
-    ? session.score_state
-    : null;
+  return { success: true };
+}
 
-  if (
-    existing &&
-    (existing.resolvedThroughIndex > score.resolvedThroughIndex ||
-      (existing.resolvedThroughIndex === score.resolvedThroughIndex &&
-        existing.matchFinished &&
-        !score.matchFinished))
-  ) {
-    return { success: true };
-  }
+/**
+ * Resolve one PvP round server-side: points, correctness, and response time
+ * are all derived from data the database already owns (locked answers,
+ * questions_active, the round's server-stamped start time) instead of a
+ * client-built document. Idempotent and strictly sequential — see
+ * resolve_match_round in supabase/match-score-integrity-migration.sql.
+ */
+export async function resolveMatchRoundServer(
+  supabase: SupabaseClient,
+  sessionId: string,
+  questionIndex: number
+): Promise<{ success: true } | { success: false; error: string }> {
+  const { error } = await supabase.rpc("resolve_match_round", {
+    p_session_id: sessionId,
+    p_question_index: questionIndex,
+  });
 
-  const { data: updated, error: updateError } = await supabase
-    .from("game_sessions")
-    .update({ score_state: score })
-    .eq("id", sessionId)
-    .select("id")
-    .maybeSingle();
-
-  if (updateError) {
-    return { success: false, error: updateError.message };
-  }
-
-  if (!updated) {
-    return {
-      success: false,
-      error:
-        "Score write was blocked (no row updated). Check game_sessions RLS and run supabase/match-score-state-migration.sql.",
-    };
+  if (error) {
+    return { success: false, error: error.message };
   }
 
   return { success: true };

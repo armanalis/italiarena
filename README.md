@@ -1,10 +1,8 @@
 # Italiarena
 
-Italiarena is a live 1v1 Italian trivia game for learners.
+Italiarena is a live 1v1 Italian trivia game.
 
-It is built for people who want practice that feels competitive and social — not another static flashcard app. The goal is simple: jump into a short match, answer timed questions against a real person or a bot, and actually remember what you got wrong.
-
-I started Italiarena because most language tools feel like homework. This project is my attempt to build the kind of Italian practice I would actually open every day: fast rounds, clear feedback, and enough pressure to stay focused without burning out.
+I moved to Turin as an international student and Italian was the hardest part — every app I tried felt like homework, so I stopped using them. Italiarena is the practice I actually wanted: quick, competitive matches instead of flashcards. It's for anyone landing in Italy and needing to pick up the language fast.
 
 **[Play the live app →](https://italiarena.com)**
 
@@ -27,28 +25,40 @@ The **hosted backend and question database are not part of this repository**. Th
 | **Short, focused matches** | Ten timed questions per round — grammar, vocabulary, fill-in-the-blank, and idioms |
 | **Real opponents** | Matchmaking pairs players by Italian level (CEFR A1–C1) |
 | **No dead waiting** | Play vs bot for an instant ghost match, or search for a human opponent |
-| **Speed matters** | Faster correct answers score more; ties break on response time |
-| **Learn from mistakes** | Post-match review, mistake practice, and optional AI explanations |
-| **Community quality control** | Players can report bad questions; admins review the queue |
+| **Speed matters** | Faster correct answers score more; a tie after 10 questions goes to one sudden-death round |
+| **Learn from mistakes** | Post-match review, targeted mistake practice, and optional AI-generated explanations (Groq) |
+| **Community quality control** | Players can report bad questions; admins review a flagged/submission queue |
+| **Push reminders** | Opt-in web push nudges players back for a daily match (Vercel Cron + service worker) |
 | **Works like an app on your phone** | Add to home screen on iOS and Android for a full-screen experience |
 
 Supported language: **Italian**.
 
 ---
 
-## Project structure
+## Architecture
+
+Next.js (App Router) on Vercel, backed by Supabase (Postgres + Auth + Realtime). No separate game server — a `game_sessions` row **is** the match state, and both players' browsers just stay in sync with that row.
 
 ```
-app/            Next.js routes, layouts, and server actions
-components/     UI, match loop, dashboard, statistics, admin tools
-hooks/          Client hooks (game loop, audio)
-lib/            Auth helpers, scoring, bots, shared constants
-store/          Zustand match state (persisted on the client)
-utils/          Supabase browser, server, and middleware clients
-public/         Static assets and match sound effects
+app/            Routes, layouts, server actions — auth, matchmaking, admin
+components/     UI by feature: match, matchmaking, dashboard, statistics, admin, settings
+hooks/          useGameLoop (pacing) + useServerMatchSync (staying in sync)
+lib/            Scoring, bot simulation, match-sync protocol, AI explanations, auth
+store/          Zustand store — all in-match state
+utils/          Supabase clients (browser, server, middleware)
+public/         Static assets, PWA icons, sound effects
 ```
 
-Database schema and migrations live outside this public repo. See [`supabase/README.md`](supabase/README.md).
+Schema and migrations live outside this repo ([`supabase/README.md`](supabase/README.md)); the sync protocol that talks to them is fully readable in `lib/match-sync-client.ts` and `hooks/useServerMatchSync.ts`.
+
+**How a match stays in sync, briefly:**
+
+- One player's browser is the *sync leader* and writes "start round N" to the session row; both clients only trust what they read back from the database.
+- State reaches the other player three ways at once — a realtime broadcast (fastest), a DB-change subscription that triggers an instant poll, and a 300ms poll as a fallback. Any one dropping a message just costs a poll cycle, not a stuck match.
+- Round timing is stamped by Postgres, not either device — clients estimate their clock offset once at match start, so skewed phone clocks still flip screens at the same instant and scoring stays fair.
+- Answers and scores are computed by RPCs on the server, not trusted from the client — a tampered client can't write a fake score or the opponent's answer.
+- Server actions were pulled out of this hot path on purpose: one browser tab runs them in a single serial queue, so a slow one (like a report submit) used to stall the next round for minutes. Everything latency-sensitive now goes browser → Supabase directly.
+- Tied after 10 questions → one sudden-death question, same sync mechanism.
 
 ---
 
@@ -86,9 +96,25 @@ Open [http://localhost:3000](http://localhost:3000).
 ### Useful commands
 
 ```bash
-npm run build    # production build
-npm run lint     # ESLint
+npm run build              # production build
+npm run lint               # ESLint
+npm run audit:questions    # sanity-check the question bank for data issues
+npm run test:match-resume  # exercise match-sync resume logic (refresh mid-round, etc.)
 ```
+
+---
+
+## Tech stack
+
+| Layer | Choice |
+| --- | --- |
+| Framework | [Next.js](https://nextjs.org/) (App Router, Server Actions) |
+| Backend | [Supabase](https://supabase.com/) — Postgres, Auth, Realtime, RPC functions |
+| Client state | [Zustand](https://github.com/pmndrs/zustand) |
+| UI | Tailwind CSS + [shadcn/ui](https://ui.shadcn.com/) on [Radix](https://www.radix-ui.com/) primitives |
+| AI explanations | [Groq](https://groq.com/) (Llama 3.1 8B) for optional post-match answer explanations |
+| Push notifications | Web Push (`web-push`) + a Vercel Cron job for the daily reminder |
+| Hosting | [Vercel](https://vercel.com/) |
 
 ---
 
