@@ -33,7 +33,7 @@ export type QuestionLevel = ProficiencyLevel;
 export type QuestionLanguage = TargetLanguage;
 
 // One row per player — tracks match results and category accuracy
-export interface PlayerStats {
+export type PlayerStats = {
   user_id: string;
   matches_played: number;
   matches_won: number;
@@ -47,10 +47,10 @@ export interface PlayerStats {
   idioms_correct: number;
   idioms_total: number;
   seen_questions: string[];
-}
+};
 
 // A trivia question from the live pool
-export interface QuestionActive {
+export type QuestionActive = {
   id: string;
   language: QuestionLanguage;
   level: QuestionLevel;
@@ -62,15 +62,15 @@ export interface QuestionActive {
   option_d: string;
   correct_answer: CorrectAnswer;
   random_float: number;
-}
+};
 
 // Same as QuestionActive, but pulled from the flagged/review queue
-export interface QuestionFlagged extends QuestionActive {
+export type QuestionFlagged = QuestionActive & {
   report_count: number;
-}
+};
 
 // A question the user got wrong — tracked for review and practice
-export interface UserMistake {
+export type UserMistake = {
   id: string;
   user_id: string;
   question_id: string;
@@ -78,7 +78,7 @@ export interface UserMistake {
   practice_streak: number;
   last_mistaken_at: string;
   session_id: string | null;
-}
+};
 
 export type UserMistakeInsert = Pick<
   UserMistake,
@@ -92,7 +92,7 @@ export type UserMistakeInsert = Pick<
   >;
 
 // A completed match summary for history and statistics
-export interface MatchHistory {
+export type MatchHistory = {
   id: string;
   user_id: string;
   session_id: string | null;
@@ -104,7 +104,7 @@ export interface MatchHistory {
   language: QuestionLanguage;
   level: QuestionLevel;
   played_at: string;
-}
+};
 
 // Community question waiting for admin review
 export type QuestionSubmissionStatus = "pending" | "approved" | "rejected";
@@ -119,7 +119,7 @@ export type QuestionSubmissionAiRecommendation =
   | "review_carefully"
   | "likely_reject";
 
-export interface QuestionSubmission {
+export type QuestionSubmission = {
   id: string;
   submitter_id: string;
   language: QuestionLanguage;
@@ -142,7 +142,7 @@ export interface QuestionSubmission {
   ai_precheck_details: Record<string, unknown> | null;
   ai_precheck_at: string | null;
   created_at: string;
-}
+};
 
 export type QuestionSubmissionInsert = Pick<
   QuestionSubmission,
@@ -181,16 +181,16 @@ export type QuestionSubmissionUpdate = Partial<
 >;
 
 // A player-submitted issue report against an active question
-export interface Report {
+export type Report = {
   id: string;
   question_id: string;
   reporter_id: string;
   issue_type: ReportIssueType;
   created_at: string;
-}
+};
 
 // A 1v1 match between two players
-export interface GameSession {
+export type GameSession = {
   id: string;
   player_a_id: string;
   player_b_id: string | null;
@@ -205,7 +205,7 @@ export interface GameSession {
   /** Cumulative scores / round reviews so refresh cannot wipe the point process. */
   score_state: unknown;
   created_at: string;
-}
+};
 
 // One answer inside a saved ghost match replay
 export interface GhostMatchAnswer {
@@ -223,14 +223,14 @@ export interface GhostMatchData {
 }
 
 // A recorded match that can be replayed as a ghost opponent
-export interface GhostMatch {
+export type GhostMatch = {
   id: string;
   original_player_id: string;
   language: QuestionLanguage;
   level: QuestionLevel;
   match_data: GhostMatchData;
   created_at: string;
-}
+};
 
 // Partial types for inserts and updates — only required fields are enforced
 export type PlayerStatsInsert = Pick<PlayerStats, "user_id"> &
@@ -290,7 +290,7 @@ export type GhostMatchInsert = Pick<
   Partial<Pick<GhostMatch, "id" | "created_at">>;
 
 /** Browser push subscription endpoint stored for Web Push delivery. */
-export interface PushSubscriptionRow {
+export type PushSubscriptionRow = {
   id: string;
   user_id: string;
   endpoint: string;
@@ -299,7 +299,7 @@ export interface PushSubscriptionRow {
   user_agent: string | null;
   created_at: string;
   updated_at: string;
-}
+};
 
 export type PushSubscriptionInsert = Pick<
   PushSubscriptionRow,
