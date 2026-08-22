@@ -5,7 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import { buildMatchScoreState } from "@/lib/match-score-state";
 import {
   fetchTiebreakerQuestionClient,
-  persistMatchScoreState,
+  persistBotMatchScoreState,
 } from "@/lib/match-sync-client";
 import {
   getBotResponseDelayMs,
@@ -219,14 +219,23 @@ export function useGameLoop({
     return Boolean(state.playerAAnswer && state.playerBAnswer);
   }, []);
 
-  /** Push cumulative scores to the session row so a refresh cannot wipe them. */
+  /**
+   * Push cumulative scores to the session row so a refresh cannot wipe them.
+   * Bot matches only — PvP scoring is server-resolved from locked answers
+   * (see resolveMatchRoundServer in useServerMatchSync), and the database no
+   * longer accepts a client-written score_state for a real opponent.
+   */
   const persistScores = useCallback(async () => {
+    if (!isBotMatch) {
+      return;
+    }
+
     const state = useGameStore.getState();
     if (!state.gameSessionId) {
       return;
     }
 
-    const result = await persistMatchScoreState(
+    const result = await persistBotMatchScoreState(
       supabase,
       state.gameSessionId,
       buildMatchScoreState(state)
@@ -235,7 +244,7 @@ export function useGameLoop({
     if (!result.success) {
       console.error(`[match-sync] score persist failed: ${result.error}`);
     }
-  }, [supabase]);
+  }, [isBotMatch, supabase]);
 
   const startRoundTimer = useCallback(() => {
     if (roundTimerRef.current) {

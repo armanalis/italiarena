@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   estimateClockOffsetMs,
   publishMatchSync,
+  resolveMatchRoundServer,
 } from "@/lib/match-sync-client";
 import {
   isMatchScoreState,
@@ -111,6 +112,8 @@ export function useServerMatchSync({
   const supabaseRef = useRef(createClient());
   /** localClock + clockOffset ≈ serverClock. null until estimated. */
   const clockOffsetRef = useRef<number | null>(null);
+  /** Guards against firing a second resolve_match_round call before the first returns. */
+  const resolvingRoundRef = useRef(false);
 
   const clearFlipTimer = useCallback(() => {
     if (flipTimerRef.current !== null) {
@@ -752,14 +755,54 @@ export function useServerMatchSync({
 
         loggedFailure = false;
 
-        applyScoreState(
-          isMatchScoreState(session.score_state) ? session.score_state : null
-        );
+        const freshScore = isMatchScoreState(session.score_state)
+          ? session.score_state
+          : null;
+        applyScoreState(freshScore);
 
         const { questionIds, sync, questionBank } = parseQuestionPlaylist(
           session.question_playlist
         );
         const clockOffset = clockOffsetRef.current;
+
+        // Both locked answers are visible in the DB for the currently
+        // published round and it hasn't been scored yet — ask the server to
+        // resolve it. Idempotent/strictly-sequential on the SQL side (see
+        // resolve_match_round), so a duplicate call from either client (or
+        // this tab's next tick) is a harmless no-op.
+        const freshAnswerA = isMatchAnswerRecord(session.answer_a)
+          ? session.answer_a
+          : null;
+        const freshAnswerB = isMatchAnswerRecord(session.answer_b)
+          ? session.answer_b
+          : null;
+        const resolvedThrough = freshScore?.resolvedThroughIndex ?? -1;
+
+        if (
+          !resolvingRoundRef.current &&
+          sync?.phase === "round" &&
+          sync.questionIndex > resolvedThrough &&
+          freshAnswerA?.questionIndex === sync.questionIndex &&
+          freshAnswerB?.questionIndex === sync.questionIndex
+        ) {
+          resolvingRoundRef.current = true;
+          const roundToResolve = sync.questionIndex;
+          void resolveMatchRoundServer(
+            supabase,
+            sessionIdRef.current,
+            roundToResolve
+          )
+            .then((result) => {
+              if (!result.success) {
+                console.error(
+                  `[match-sync] round resolve failed: ${result.error}`
+                );
+              }
+            })
+            .finally(() => {
+              resolvingRoundRef.current = false;
+            });
+        }
 
         // Until the clock offset is estimated (sub-second at mount) we cannot
         // place server timestamps on the local clock — skip, not guess.

@@ -1,5 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,17 +16,6 @@ function authorizeCron(request: Request) {
   return false;
 }
 
-function createServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceRoleKey) {
-    throw new Error("Missing Supabase admin credentials.");
-  }
-  return createClient(url, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
-
 /**
  * Matchmaking only abandons a user's OWN zombie "waiting" lobby the next
  * time they search — there is no sweep for sessions nobody ever comes back
@@ -38,7 +27,7 @@ function createServiceClient() {
  * like every 30 minutes.
  */
 async function runStaleSessionCleanup() {
-  const admin = createServiceClient();
+  const admin = createAdminClient();
   const cutoff = new Date(
     Date.now() - STALE_AFTER_HOURS * 60 * 60 * 1000
   ).toISOString();
