@@ -1,6 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 export const GITHUB_REPO_URL = "https://github.com/armanalis/italiarena";
@@ -21,13 +22,18 @@ function GitHubIcon({ className }: { className?: string }) {
 type GitHubLinkProps = {
   className?: string;
   showLabel?: boolean;
+  variant?: VariantProps<typeof buttonVariants>["variant"];
 };
 
-export function GitHubLink({ className, showLabel = false }: GitHubLinkProps) {
+export function GitHubLink({
+  className,
+  showLabel = false,
+  variant = "ghost",
+}: GitHubLinkProps) {
   return (
     <Button
       asChild
-      variant="ghost"
+      variant={variant}
       size={showLabel ? "sm" : "icon"}
       className={cn(
         showLabel ? "min-h-10 gap-2 text-muted-foreground" : "size-10 shrink-0",
