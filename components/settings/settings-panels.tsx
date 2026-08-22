@@ -33,6 +33,8 @@ import { APP_NAME, SUPPORT_EMAIL } from "@/lib/legal";
 import { getSoundVolume, writeGameplayPreferences } from "@/lib/preferences";
 import type { MatchHistoryEntry, UserProfile } from "@/lib/types";
 import { SoundVolumeControl } from "@/components/sound-volume-control";
+import { CoffeeLink } from "@/components/coffee-link";
+import { GitHubLink } from "@/components/github-link";
 import { AddToHomeScreenGuide } from "@/components/settings/add-to-home-screen-guide";
 import { NotificationsSettingsCard } from "@/components/settings/notifications-settings-card";
 import { PrivacyDataCard } from "@/components/settings/privacy-data-card";
@@ -438,6 +440,27 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
               Send feedback
             </a>
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/60">
+        <CardHeader>
+          <CardTitle>Support the project</CardTitle>
+          <CardDescription>
+            {APP_NAME} is free and open source.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3 sm:flex-row">
+          <CoffeeLink
+            showLabel
+            variant="outline"
+            className="min-h-11 w-full justify-center px-4 text-foreground sm:w-auto"
+          />
+          <GitHubLink
+            showLabel
+            variant="outline"
+            className="min-h-11 w-full justify-center px-4 text-foreground sm:w-auto"
+          />
         </CardContent>
       </Card>
 
