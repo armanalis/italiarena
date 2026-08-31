@@ -1,4 +1,7 @@
-import { GROQ_EXPLANATION_MODEL } from "@/lib/ai-explanations";
+import {
+  GROQ_EXPLANATION_MODEL,
+  GROQ_REASONING_EFFORT,
+} from "@/lib/ai-explanations";
 import type { AskAiExplanationPayload } from "@/lib/ai-explanations";
 
 function formatAnswerLine(
@@ -64,6 +67,7 @@ export async function generateGroqExplanation(
     },
     body: JSON.stringify({
       model: GROQ_EXPLANATION_MODEL,
+      reasoning_effort: GROQ_REASONING_EFFORT,
       messages: [
         {
           role: "system",
@@ -76,11 +80,20 @@ export async function generateGroqExplanation(
         },
       ],
       temperature: 0.35,
-      max_tokens: 400,
+      max_tokens: 900,
     }),
   });
 
   if (!response.ok) {
+    // Log the upstream body: a decommissioned model returns 404 model_not_found,
+    // which is indistinguishable from any other failure once it is flattened
+    // into the generic message below.
+    console.error(
+      `[groq] explanation request failed (${response.status}): ${await response
+        .text()
+        .catch(() => "<unreadable body>")}`
+    );
+
     if (response.status === 429) {
       return {
         error: "AI is busy right now. Please try again in a minute.",

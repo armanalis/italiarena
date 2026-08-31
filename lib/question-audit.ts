@@ -1,4 +1,7 @@
-import { GROQ_EXPLANATION_MODEL } from "@/lib/ai-explanations";
+import {
+  GROQ_EXPLANATION_MODEL,
+  GROQ_REASONING_EFFORT,
+} from "@/lib/ai-explanations";
 import {
   CATEGORY_GUIDANCE,
   LEVEL_GUIDANCE,
@@ -296,6 +299,7 @@ export async function auditQuestionWithAi(
       },
       body: JSON.stringify({
         model: options?.model ?? GROQ_EXPLANATION_MODEL,
+        reasoning_effort: GROQ_REASONING_EFFORT,
         response_format: { type: "json_object" },
         messages: [
           {
@@ -309,12 +313,18 @@ export async function auditQuestionWithAi(
           },
         ],
         temperature: 0.1,
-        max_tokens: 700,
+        max_tokens: 1400,
       }),
     }
   );
 
   if (!response.ok) {
+    console.error(
+      `[groq] audit request failed (${response.status}): ${await response
+        .text()
+        .catch(() => "<unreadable body>")}`
+    );
+
     return {
       status: "unavailable",
       reason:
