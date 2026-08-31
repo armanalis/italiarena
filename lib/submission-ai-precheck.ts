@@ -1,4 +1,7 @@
-import { GROQ_EXPLANATION_MODEL } from "@/lib/ai-explanations";
+import {
+  GROQ_EXPLANATION_MODEL,
+  GROQ_REASONING_EFFORT,
+} from "@/lib/ai-explanations";
 import {
   CATEGORY_GUIDANCE,
   LEVEL_GUIDANCE,
@@ -206,6 +209,7 @@ export async function generateSubmissionAiPrecheck(
     },
     body: JSON.stringify({
       model: GROQ_EXPLANATION_MODEL,
+      reasoning_effort: GROQ_REASONING_EFFORT,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -219,11 +223,17 @@ export async function generateSubmissionAiPrecheck(
         },
       ],
       temperature: 0.1,
-      max_tokens: 550,
+      max_tokens: 1100,
     }),
   });
 
   if (!response.ok) {
+    console.error(
+      `[groq] pre-check request failed (${response.status}): ${await response
+        .text()
+        .catch(() => "<unreadable body>")}`
+    );
+
     return {
       status: "unavailable",
       reason:
