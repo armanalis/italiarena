@@ -75,13 +75,11 @@ async function fetchJson(
 
 function PreferenceToggle({
   label,
-  description,
   checked,
   disabled,
   onChange,
 }: {
   label: string;
-  description: string;
   checked: boolean;
   disabled?: boolean;
   onChange: (value: boolean) => void;
@@ -95,10 +93,7 @@ function PreferenceToggle({
           : "border-border/60 bg-muted/20"
       )}
     >
-      <div>
-        <p className="text-sm font-medium">{label}</p>
-        <p className="text-xs text-muted-foreground">{description}</p>
-      </div>
+      <p className="text-sm font-medium">{label}</p>
       <div className="flex shrink-0 items-center gap-2.5">
         <span
           className={cn(
@@ -324,7 +319,6 @@ export function NotificationsSettingsCard({
       <CardContent className="space-y-4">
         <PreferenceToggle
           label="Daily practice reminder"
-          description='Clash with someone while practicing your Italian.'
           checked={enabled}
           disabled={isBusy}
           onChange={(value) => {

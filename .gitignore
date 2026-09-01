@@ -43,3 +43,6 @@ next-env.d.ts
 
 # Database schema and migrations (private — kept locally, not published on GitHub)
 supabase/*.sql
+
+# Local Claude Code agent definitions
+.claude/
