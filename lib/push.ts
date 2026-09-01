@@ -135,6 +135,39 @@ export async function sendPushToSubscription(
   }
 }
 
+/**
+ * Runs tasks with a cap on how many are in flight at once. Unbounded
+ * Promise.all would open one socket per subscription, which a large audience
+ * turns into a self-inflicted burst against FCM and Apple.
+ */
+export async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  limit: number,
+  task: (item: T) => Promise<R>
+): Promise<R[]> {
+  if (items.length === 0) return [];
+
+  const results = new Array<R>(items.length);
+  let cursor = 0;
+
+  async function worker() {
+    for (;;) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= items.length) return;
+      results[index] = await task(items[index]);
+    }
+  }
+
+  const workerCount = Math.max(1, Math.min(limit, items.length));
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+
+  return results;
+}
+
+/** Devices per user sent in parallel. Users rarely have more than a handful. */
+const DEVICE_CONCURRENCY = 5;
+
 /** Send a push to every stored device for a user. Safe to call from chat later. */
 export async function sendPushToUser(
   userId: string,
@@ -151,12 +184,16 @@ export async function sendPushToUser(
   }
 
   const rows = (data ?? []) as PushSubscriptionRow[];
+
+  const results = await mapWithConcurrency(rows, DEVICE_CONCURRENCY, (row) =>
+    sendPushToSubscription(row, payload)
+  );
+
   let sent = 0;
   let failed = 0;
   let pruned = 0;
 
-  for (const row of rows) {
-    const result = await sendPushToSubscription(row, payload);
+  for (const result of results) {
     if (result.ok) {
       sent += 1;
     } else {

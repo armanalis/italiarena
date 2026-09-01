@@ -1,6 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { buildDailyReminderPayload, sendPushToUser } from "@/lib/push";
+import {
+  buildDailyReminderPayload,
+  mapWithConcurrency,
+  sendPushToUser,
+} from "@/lib/push";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +24,13 @@ const DEFAULT_REMINDER_HOUR = 18;
  * overlapping triggers within one day are rejected. Absorbs DST shifts too.
  */
 const REMINDER_COOLDOWN_HOURS = 23;
+
+/**
+ * Users processed in parallel. Each one is an independent claim-then-send, so
+ * the ceiling is about not opening too many push connections at once rather
+ * than correctness.
+ */
+const USER_CONCURRENCY = 10;
 
 function authorizeCron(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -117,13 +128,9 @@ async function runDailyReminderCron(options: { dryRun: boolean }) {
     };
   }
 
-  let sent = 0;
-  let failed = 0;
-  let pruned = 0;
-  let notified = 0;
-  let skippedByCooldown = 0;
+  const outcomes = await mapWithConcurrency(due, USER_CONCURRENCY, async (user) => {
+    const empty = { sent: 0, failed: 0, pruned: 0, notified: 0, skipped: 0 };
 
-  for (const user of due) {
     // Atomic claim: only succeeds if nobody notified this user recently.
     const { data: claimed, error: claimError } = await admin
       .from("users")
@@ -135,20 +142,40 @@ async function runDailyReminderCron(options: { dryRun: boolean }) {
       .select("id");
 
     if (claimError) {
-      failed += 1;
-      continue;
+      return { ...empty, failed: 1 };
     }
 
     if (!claimed || claimed.length === 0) {
-      skippedByCooldown += 1;
-      continue;
+      return { ...empty, skipped: 1 };
     }
 
-    const result = await sendPushToUser(user.id, buildDailyReminderPayload());
-    sent += result.sent;
-    failed += result.failed;
-    pruned += result.pruned;
-    if (result.sent > 0) notified += 1;
+    try {
+      const result = await sendPushToUser(user.id, buildDailyReminderPayload());
+      return {
+        sent: result.sent,
+        failed: result.failed,
+        pruned: result.pruned,
+        notified: result.sent > 0 ? 1 : 0,
+        skipped: 0,
+      };
+    } catch {
+      // One user's failure must not abandon the rest of the batch.
+      return { ...empty, failed: 1 };
+    }
+  });
+
+  let sent = 0;
+  let failed = 0;
+  let pruned = 0;
+  let notified = 0;
+  let skippedByCooldown = 0;
+
+  for (const outcome of outcomes) {
+    sent += outcome.sent;
+    failed += outcome.failed;
+    pruned += outcome.pruned;
+    notified += outcome.notified;
+    skippedByCooldown += outcome.skipped;
   }
 
   return {
