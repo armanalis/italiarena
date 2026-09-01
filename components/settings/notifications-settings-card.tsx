@@ -312,10 +312,8 @@ export function NotificationsSettingsCard({
         <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
           <Label htmlFor="daily-reminder-hour">Preferred reminder time</Label>
           <p className="text-xs text-muted-foreground">
-            Saved to your account. On the free hosting plan, reminders are
-            sent once per day for everyone (around 8:00 PM Turkey time / 5:00
-            PM UTC). Your preferred hour is kept for when hourly delivery is
-            available.
+            One reminder a day, at this hour in your own timezone. Delivery is
+            checked every hour, so it can arrive a little after the exact time.
           </p>
           <Select
             value={String(hour)}
