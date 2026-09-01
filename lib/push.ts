@@ -75,6 +75,15 @@ function toWebPushSubscription(row: PushSubscriptionRow) {
   };
 }
 
+/** Push service host only — the full endpoint is a delivery credential. */
+function safeHost(endpoint: string) {
+  try {
+    return new URL(endpoint).host;
+  } catch {
+    return "unknown";
+  }
+}
+
 function isGoneError(error: unknown) {
   if (!error || typeof error !== "object") return false;
   const statusCode = (error as { statusCode?: number }).statusCode;
@@ -105,8 +114,23 @@ export async function sendPushToSubscription(
       const admin = createAdminClient();
       await admin.from("push_subscriptions").delete().eq("id", row.id);
     }
+    const statusCode = (error as { statusCode?: number }).statusCode;
+    const body = (error as { body?: unknown }).body;
     const message =
       error instanceof Error ? error.message : "Failed to send push notification.";
+
+    if (!gone) {
+      // A live subscription that refused delivery. Without this the caller only
+      // sees a failure count and the cause is unrecoverable after the fact.
+      console.error("[push] delivery failed", {
+        subscriptionId: row.id,
+        pushService: safeHost(row.endpoint),
+        statusCode,
+        body: typeof body === "string" ? body.slice(0, 500) : undefined,
+        message,
+      });
+    }
+
     return { ok: false, gone, error: message };
   }
 }
