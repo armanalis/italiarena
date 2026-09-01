@@ -1,0 +1,49 @@
+# Hourly trigger for daily practice reminders.
+#
+# Vercel's Hobby plan only fires a cron once per day, which is not enough to
+# deliver each user a reminder at their own chosen hour. This workflow calls the
+# same endpoint every hour; the route itself decides who is actually due and
+# de-duplicates, so extra calls are harmless.
+#
+# Requires a repository secret named CRON_SECRET matching the CRON_SECRET
+# environment variable in the Vercel project.
+name: Daily reminder cron
+
+on:
+  schedule:
+    # Every hour, on the hour (UTC). GitHub may delay runs under load.
+    - cron: "0 * * * *"
+  # Allows a manual run from the Actions tab for testing.
+  workflow_dispatch:
+
+concurrency:
+  group: reminder-cron
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger reminder delivery
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET repository secret is not set."
+            exit 1
+          fi
+
+          status=$(curl -sS -o /tmp/response.json -w '%{http_code}' \
+            --max-time 120 \
+            -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            https://italiarena.com/api/cron/daily-reminder)
+
+          echo "HTTP $status"
+          cat /tmp/response.json
+          echo
+
+          if [ "$status" != "200" ]; then
+            exit 1
+          fi

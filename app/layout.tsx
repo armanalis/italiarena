@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppToaster } from "@/components/app-toaster";
+import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { StaleChunkRecovery } from "@/components/stale-chunk-recovery";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
@@ -58,6 +59,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <StaleChunkRecovery />
+          <ServiceWorkerRegister />
           <Suspense fallback={<SiteHeaderSkeleton />}>
             <SiteHeader />
           </Suspense>
