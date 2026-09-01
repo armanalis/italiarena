@@ -28,7 +28,6 @@ import {
   isPushSupported,
   isStandaloneDisplay,
   serializePushSubscription,
-  showLocalTestNotification,
   subscribeToPush,
 } from "@/lib/push-client";
 import { cn } from "@/lib/utils";
@@ -254,9 +253,6 @@ export function NotificationsSettingsCard({
 
     setBusy("testing");
     try {
-      // Show something immediately on-device (especially when the PWA is open).
-      await showLocalTestNotification().catch(() => undefined);
-
       const { ok, body } = await fetchJson("/api/push/test", {
         method: "POST",
       });

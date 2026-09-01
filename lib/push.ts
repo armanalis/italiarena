@@ -13,12 +13,32 @@ export type PushPayload = {
   badge?: string;
 };
 
-export const DAILY_REMINDER_PAYLOAD: PushPayload = {
-  title: APP_NAME,
-  body: "Clash with someone while practicing your Italian.",
-  url: "/dashboard/matchmaking",
-  tag: "daily-reminder",
-};
+/**
+ * Reminder copy pool. One is picked at random per send so a daily notification
+ * does not read identically every day and get tuned out.
+ */
+export const DAILY_REMINDER_MESSAGES = [
+  "Clash with someone while practicing your Italian.",
+  "Someone out there is ready to be beaten. Are you?",
+  "Five minutes, one clash. Your Italian will thank you.",
+  "Your Italian won't practice itself. Go find an opponent.",
+  "Andiamo! One quick match is all today needs.",
+] as const;
+
+export function pickDailyReminderMessage() {
+  const index = Math.floor(Math.random() * DAILY_REMINDER_MESSAGES.length);
+  return DAILY_REMINDER_MESSAGES[index] ?? DAILY_REMINDER_MESSAGES[0];
+}
+
+/** A fresh reminder payload with randomly chosen copy. */
+export function buildDailyReminderPayload(): PushPayload {
+  return {
+    title: APP_NAME,
+    body: pickDailyReminderMessage(),
+    url: "/dashboard/matchmaking",
+    tag: "daily-reminder",
+  };
+}
 
 type PushSubscriptionRow = {
   id: string;
