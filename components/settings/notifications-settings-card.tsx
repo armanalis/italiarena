@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Bell, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bell, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { updateDailyReminderPreferences } from "@/app/dashboard/settings/actions";
 import { Button } from "@/components/ui/button";
@@ -87,30 +87,49 @@ function PreferenceToggle({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
+    <div
+      className={cn(
+        "flex items-center justify-between gap-4 rounded-lg border px-4 py-3 transition-colors",
+        checked
+          ? "border-emerald-500/40 bg-emerald-500/10"
+          : "border-border/60 bg-muted/20"
+      )}
+    >
       <div>
         <p className="text-sm font-medium">{label}</p>
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        disabled={disabled}
-        onClick={() => onChange(!checked)}
-        className={cn(
-          "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors",
-          checked ? "bg-primary" : "bg-muted",
-          disabled && "opacity-60"
-        )}
-      >
+      <div className="flex shrink-0 items-center gap-2.5">
         <span
           className={cn(
-            "inline-block size-5 translate-x-1 rounded-full bg-white shadow transition-transform",
-            checked && "translate-x-6"
+            "text-xs font-semibold tabular-nums transition-colors",
+            checked ? "text-emerald-400" : "text-muted-foreground"
           )}
-        />
-      </button>
+        >
+          {checked ? "On" : "Off"}
+        </span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={checked}
+          aria-label={label}
+          disabled={disabled}
+          onClick={() => onChange(!checked)}
+          className={cn(
+            "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            checked ? "bg-emerald-500" : "bg-muted",
+            disabled && "cursor-not-allowed opacity-60"
+          )}
+        >
+          <span
+            className={cn(
+              "inline-block size-5 translate-x-1 rounded-full bg-white shadow transition-transform duration-200",
+              checked && "translate-x-6"
+            )}
+          />
+        </button>
+      </div>
     </div>
   );
 }
@@ -126,7 +145,15 @@ export function NotificationsSettingsCard({
       : 18
   );
   const [busy, setBusy] = useState<BusyState>("idle");
+  const [testSentAt, setTestSentAt] = useState<number | null>(null);
   const isBusy = busy !== "idle";
+  const justSentTest = testSentAt !== null;
+
+  useEffect(() => {
+    if (testSentAt === null) return;
+    const timer = window.setTimeout(() => setTestSentAt(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [testSentAt]);
 
   async function enableReminder() {
     if (isBusy) return;
@@ -261,6 +288,7 @@ export function NotificationsSettingsCard({
           body?.error ?? "Could not send a test notification."
         );
       }
+      setTestSentAt(Date.now());
       toast.success(
         "Test sent. If you don’t see a banner, check Notification Center (swipe down)."
       );
@@ -333,7 +361,11 @@ export function NotificationsSettingsCard({
           <Button
             type="button"
             variant="outline"
-            className="min-h-11"
+            className={cn(
+              "min-h-11 transition-colors",
+              justSentTest &&
+                "border-emerald-500/50 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/15 hover:text-emerald-300"
+            )}
             disabled={isBusy}
             onClick={() => void sendTest()}
           >
@@ -346,6 +378,11 @@ export function NotificationsSettingsCard({
               <>
                 <Loader2 className="size-4 animate-spin" />
                 Please wait...
+              </>
+            ) : justSentTest ? (
+              <>
+                <Check className="size-4" />
+                Sent — check your notifications
               </>
             ) : (
               "Send a test notification"
