@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { DAILY_REMINDER_PAYLOAD, sendPushToUser } from "@/lib/push";
+import { buildDailyReminderPayload, sendPushToUser } from "@/lib/push";
 import { isGuestAuthUser } from "@/lib/guest-auth";
 
 /** Sends one test notification to the signed-in user's devices. */
@@ -23,7 +23,7 @@ export async function POST() {
 
   try {
     const result = await sendPushToUser(user.id, {
-      ...DAILY_REMINDER_PAYLOAD,
+      ...buildDailyReminderPayload(),
       tag: "daily-reminder-test",
     });
 

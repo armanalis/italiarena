@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { DAILY_REMINDER_PAYLOAD, sendPushToUser } from "@/lib/push";
+import { buildDailyReminderPayload, sendPushToUser } from "@/lib/push";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -144,7 +144,7 @@ async function runDailyReminderCron(options: { dryRun: boolean }) {
       continue;
     }
 
-    const result = await sendPushToUser(user.id, DAILY_REMINDER_PAYLOAD);
+    const result = await sendPushToUser(user.id, buildDailyReminderPayload());
     sent += result.sent;
     failed += result.failed;
     pruned += result.pruned;

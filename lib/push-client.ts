@@ -180,27 +180,6 @@ export async function subscribeToPush() {
   }
 }
 
-/** Immediate on-device notification so iOS users get feedback while the app is open. */
-export async function showLocalTestNotification(options?: {
-  title?: string;
-  body?: string;
-}) {
-  const registration = await withTimeout(
-    navigator.serviceWorker.ready,
-    SW_TIMEOUT_MS,
-    "Notification service is still starting."
-  );
-
-  await registration.showNotification(options?.title ?? "Italiarena", {
-    body:
-      options?.body ?? "Clash with someone while practicing your Italian.",
-    icon: "/icon",
-    badge: "/icon",
-    tag: "daily-reminder-test-local",
-    data: { url: "/dashboard/matchmaking" },
-  });
-}
-
 export function serializePushSubscription(subscription: PushSubscription) {
   const json = subscription.toJSON();
   if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
