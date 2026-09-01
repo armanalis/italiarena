@@ -20,7 +20,7 @@ export type PushPayload = {
 export const DAILY_REMINDER_MESSAGES = [
   "Clash with someone while practicing your Italian.",
   "Someone out there is ready to be beaten. Are you?",
-  "Five minutes, one clash. Your Italian will thank you.",
+  "Two minutes, one clash. Your Italian will thank you.",
   "Your Italian won't practice itself. Go find an opponent.",
   "Andiamo! One quick match is all today needs.",
 ] as const;
