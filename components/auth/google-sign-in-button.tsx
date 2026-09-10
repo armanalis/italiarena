@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Script from "next/script";
 import { Loader2 } from "lucide-react";
-import { useTheme } from "next-themes";
 import {
   generateGoogleNoncePair,
   getGoogleWebClientId,
@@ -37,7 +36,6 @@ function GoogleIcon() {
 }
 
 export function GoogleSignInButton() {
-  const { resolvedTheme } = useTheme();
   const clientId = getGoogleWebClientId();
   const buttonHostRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
@@ -103,10 +101,6 @@ export function GoogleSignInButton() {
       return;
     }
 
-    const width = Math.max(
-      200,
-      Math.min(Math.floor(host.clientWidth || 320), 400)
-    );
     let cancelled = false;
 
     void (async () => {
@@ -138,13 +132,10 @@ export function GoogleSignInButton() {
         },
       });
       googleId.renderButton(host, {
-        type: "standard",
-        theme: resolvedTheme === "light" ? "outline" : "filled_black",
+        type: "icon",
+        theme: "outline",
         size: "large",
-        text: "continue_with",
-        shape: "pill",
-        width,
-        logo_alignment: "left",
+        shape: "circle",
       });
       if (!cancelled) {
         setGisButtonReady(true);
@@ -154,14 +145,7 @@ export function GoogleSignInButton() {
     return () => {
       cancelled = true;
     };
-  }, [
-    mounted,
-    clientId,
-    gsiReady,
-    gisUnavailable,
-    resolvedTheme,
-    signInWithGoogleIdToken,
-  ]);
+  }, [mounted, clientId, gsiReady, gisUnavailable, signInWithGoogleIdToken]);
 
   async function handleOAuthFallback() {
     setLoading(true);
@@ -179,67 +163,53 @@ export function GoogleSignInButton() {
     }
   }
 
+  async function handleGoogleSignIn() {
+    const googleButton = buttonHostRef.current?.querySelector<HTMLElement>(
+      '[role="button"]'
+    );
+
+    if (clientId && gisButtonReady && googleButton) {
+      googleButton.click();
+      return;
+    }
+
+    await handleOAuthFallback();
+  }
+
   return (
     <div className="space-y-2">
       {clientId && !gisUnavailable ? (
-        <>
-          <Script
-            src="https://accounts.google.com/gsi/client"
-            strategy="afterInteractive"
-            onReady={() => setGsiReady(true)}
-            onError={() => setGisUnavailable(true)}
-          />
-          <div className="relative min-h-11 w-full">
-            <div
-              ref={buttonHostRef}
-              className="flex h-11 w-full items-center justify-center overflow-hidden [&>div]:w-full"
-            />
-            {(!gisButtonReady || loading) && (
-              <div className="absolute inset-0">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 w-full gap-2.5 bg-background text-base font-medium"
-                  disabled={loading}
-                  onClick={() => void handleOAuthFallback()}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      Signing in with Google...
-                    </>
-                  ) : (
-                    <>
-                      <GoogleIcon />
-                      Continue with Google
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-          </div>
-        </>
-      ) : (
-        <Button
-          type="button"
-          variant="outline"
-          className="h-11 w-full gap-2.5 bg-background text-base font-medium"
-          disabled={loading}
-          onClick={() => void handleOAuthFallback()}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="size-4 animate-spin" />
-              Redirecting to Google...
-            </>
-          ) : (
-            <>
-              <GoogleIcon />
-              Continue with Google
-            </>
-          )}
-        </Button>
-      )}
+        <Script
+          src="https://accounts.google.com/gsi/client"
+          strategy="afterInteractive"
+          onReady={() => setGsiReady(true)}
+          onError={() => setGisUnavailable(true)}
+        />
+      ) : null}
+      <div
+        ref={buttonHostRef}
+        aria-hidden="true"
+        className="pointer-events-none fixed left-[-10000px] top-0 h-10 w-10 overflow-hidden"
+      />
+      <Button
+        type="button"
+        variant="outline"
+        className="h-11 w-full gap-2.5 border-border/60 bg-transparent text-base font-medium shadow-none dark:bg-white/5"
+        disabled={loading}
+        onClick={() => void handleGoogleSignIn()}
+      >
+        {loading ? (
+          <>
+            <Loader2 className="size-4 animate-spin" />
+            Signing in with Google...
+          </>
+        ) : (
+          <>
+            <GoogleIcon />
+            Continue with Google
+          </>
+        )}
+      </Button>
       {error && (
         <p className="text-sm text-destructive" role="alert">
           {error}
