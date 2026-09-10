@@ -124,6 +124,28 @@ The app is deployed on [Vercel](https://vercel.com/) at [italiarena.com](https:/
 
 For **local development**, set `NEXT_PUBLIC_SITE_URL=http://localhost:3000` in `.env.local` and add these to Supabase **Redirect URLs** as well: `http://localhost:3000/**` (or at minimum `http://localhost:3000/auth/callback`, `http://localhost:3000/auth/confirm`, and `http://localhost:3000/auth/confirm/pending`).
 
+### Google sign-in (trusted domain)
+
+The default Supabase OAuth hop uses a random project host (`https://<project-ref>.supabase.co/auth/v1/authorize`). Google then shows that URL as “Continue to …supabase.co”, which looks untrusted.
+
+**What the app does:** If `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is set, login uses [Google Identity Services](https://developers.google.com/identity/gsi/web) on `italiarena.com`. Google’s popup stays associated with this site; the ID token is sent to Supabase in the background. Users never see the random `*.supabase.co` URL.
+
+1. Copy the **Web** client ID from Google Cloud → **APIs & Services** → **Credentials** (same ID as Supabase → **Authentication** → **Providers** → **Google**).
+2. Set `NEXT_PUBLIC_GOOGLE_CLIENT_ID` in `.env.local` and in Vercel.
+3. In that OAuth client, under **Authorized JavaScript origins**, add:
+   - `https://italiarena.com`
+   - `https://www.italiarena.com`
+   - `http://localhost:3000`
+4. Keep the existing **Authorized redirect URI** `https://<project-ref>.supabase.co/auth/v1/callback` as a fallback. After a vanity/custom domain is live, add that host’s `/auth/v1/callback` too.
+5. In Google Auth Platform → **Branding**, set the app name to **Italiarena**, add the logo, privacy policy (`https://italiarena.com/privacy`), and terms. Verify the domain in Search Console so Google shows the brand instead of an unverified warning.
+
+**Branded Supabase API host (optional, dashboard/CLI — not app code):**
+
+- **Vanity subdomain** (free on a paid Supabase plan): `italiarena.supabase.co`. Activate with the [Supabase CLI](https://supabase.com/docs/guides/platform/custom-domains#vanity-subdomains), then set `NEXT_PUBLIC_SUPABASE_URL=https://italiarena.supabase.co`.
+- **Custom domain** (what larger products usually ship, paid add-on): `auth.italiarena.com` or `api.italiarena.com` via a CNAME. Google then shows “Continue to auth.italiarena.com”. See [Custom Domains](https://supabase.com/docs/guides/platform/custom-domains).
+
+You can use either a vanity subdomain or a custom domain, not both. The original `*.supabase.co` project URL keeps working after you activate one.
+
 ### Auth emails (custom sender + templates)
 
 Supabase’s built-in mailer sends from “Supabase Auth” and is rate-limited. For production, configure your own provider:

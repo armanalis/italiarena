@@ -1,7 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Script from "next/script";
 import { Loader2 } from "lucide-react";
+import { useTheme } from "next-themes";
+import {
+  generateGoogleNoncePair,
+  getGoogleWebClientId,
+  mapGoogleSignInError,
+} from "@/lib/google-identity";
 import { getClientAuthCallbackUrl } from "@/lib/site-url";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -30,13 +37,24 @@ function GoogleIcon() {
 }
 
 export function GoogleSignInButton() {
+  const { resolvedTheme } = useTheme();
+  const clientId = getGoogleWebClientId();
+  const buttonHostRef = useRef<HTMLDivElement>(null);
+  const initializedRef = useRef(false);
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [gsiReady, setGsiReady] = useState(false);
+  const [gisButtonReady, setGisButtonReady] = useState(false);
+  const [gisUnavailable, setGisUnavailable] = useState(false);
 
-  async function handleGoogleSignIn() {
-    setLoading(true);
-    setError(null);
+  useEffect(() => setMounted(true), []);
 
+  const finishWithSession = useCallback(() => {
+    window.location.assign("/onboarding");
+  }, []);
+
+  const startOAuthRedirect = useCallback(async () => {
     const supabase = createClient();
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -46,42 +64,182 @@ export function GoogleSignInButton() {
     });
 
     if (oauthError) {
-      const message = oauthError.message.toLowerCase();
-      if (
-        message.includes("provider is not enabled") ||
-        message.includes("unsupported provider")
-      ) {
-        setError(
-          "Google sign-in is not enabled for this app yet. Use email/username and password, or ask the admin to enable Google in Supabase."
-        );
-      } else {
-        setError(oauthError.message);
+      throw oauthError;
+    }
+  }, []);
+
+  const signInWithGoogleIdToken = useCallback(
+    async (credential: string, nonce: string) => {
+      const supabase = createClient();
+      const { error: tokenError } = await supabase.auth.signInWithIdToken({
+        provider: "google",
+        token: credential,
+        nonce,
+      });
+
+      if (tokenError) {
+        throw tokenError;
       }
+
+      finishWithSession();
+    },
+    [finishWithSession]
+  );
+
+  useEffect(() => {
+    if (
+      !mounted ||
+      !clientId ||
+      !gsiReady ||
+      initializedRef.current ||
+      gisUnavailable
+    ) {
+      return;
+    }
+
+    const host = buttonHostRef.current;
+    const googleId = window.google?.accounts.id;
+    if (!host || !googleId) {
+      return;
+    }
+
+    const width = Math.max(
+      200,
+      Math.min(Math.floor(host.clientWidth || 320), 400)
+    );
+    let cancelled = false;
+
+    void (async () => {
+      const { nonce, hashedNonce } = await generateGoogleNoncePair();
+      if (cancelled || !buttonHostRef.current || initializedRef.current) {
+        return;
+      }
+
+      initializedRef.current = true;
+      host.replaceChildren();
+      googleId.initialize({
+        client_id: clientId,
+        ux_mode: "popup",
+        itp_support: true,
+        nonce: hashedNonce,
+        callback: (response) => {
+          setLoading(true);
+          setError(null);
+          void signInWithGoogleIdToken(response.credential, nonce).catch(
+            (tokenError: unknown) => {
+              const message =
+                tokenError instanceof Error
+                  ? tokenError.message
+                  : "Google sign-in failed.";
+              setError(mapGoogleSignInError(message));
+              setLoading(false);
+            }
+          );
+        },
+      });
+      googleId.renderButton(host, {
+        type: "standard",
+        theme: resolvedTheme === "light" ? "outline" : "filled_black",
+        size: "large",
+        text: "continue_with",
+        shape: "pill",
+        width,
+        logo_alignment: "left",
+      });
+      if (!cancelled) {
+        setGisButtonReady(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    mounted,
+    clientId,
+    gsiReady,
+    gisUnavailable,
+    resolvedTheme,
+    signInWithGoogleIdToken,
+  ]);
+
+  async function handleOAuthFallback() {
+    setLoading(true);
+    setError(null);
+
+    try {
+      await startOAuthRedirect();
+    } catch (oauthError) {
+      const message =
+        oauthError instanceof Error
+          ? oauthError.message
+          : "Google sign-in failed.";
+      setError(mapGoogleSignInError(message));
       setLoading(false);
     }
   }
 
   return (
     <div className="space-y-2">
-      <Button
-        type="button"
-        variant="outline"
-        className="h-11 w-full gap-2.5 bg-background text-base font-medium"
-        disabled={loading}
-        onClick={() => void handleGoogleSignIn()}
-      >
-        {loading ? (
-          <>
-            <Loader2 className="size-4 animate-spin" />
-            Redirecting to Google...
-          </>
-        ) : (
-          <>
-            <GoogleIcon />
-            Continue with Google
-          </>
-        )}
-      </Button>
+      {clientId && !gisUnavailable ? (
+        <>
+          <Script
+            src="https://accounts.google.com/gsi/client"
+            strategy="afterInteractive"
+            onReady={() => setGsiReady(true)}
+            onError={() => setGisUnavailable(true)}
+          />
+          <div className="relative min-h-11 w-full">
+            <div
+              ref={buttonHostRef}
+              className="flex h-11 w-full items-center justify-center overflow-hidden [&>div]:w-full"
+            />
+            {(!gisButtonReady || loading) && (
+              <div className="absolute inset-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full gap-2.5 bg-background text-base font-medium"
+                  disabled={loading}
+                  onClick={() => void handleOAuthFallback()}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Signing in with Google...
+                    </>
+                  ) : (
+                    <>
+                      <GoogleIcon />
+                      Continue with Google
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11 w-full gap-2.5 bg-background text-base font-medium"
+          disabled={loading}
+          onClick={() => void handleOAuthFallback()}
+        >
+          {loading ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              Redirecting to Google...
+            </>
+          ) : (
+            <>
+              <GoogleIcon />
+              Continue with Google
+            </>
+          )}
+        </Button>
+      )}
       {error && (
         <p className="text-sm text-destructive" role="alert">
           {error}
