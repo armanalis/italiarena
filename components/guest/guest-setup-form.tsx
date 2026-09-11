@@ -104,7 +104,7 @@ export function GuestSetupForm(_props?: GuestSetupFormProps) {
             <li>
               Sign up later to save progress and pick your own username.{" "}
               <Link
-                href="/privacy"
+                href="/privacy?lang=en"
                 className="font-medium text-primary underline-offset-4 hover:underline"
               >
                 Privacy policy

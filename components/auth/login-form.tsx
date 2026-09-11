@@ -431,7 +431,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
               <p className="text-center text-xs text-muted-foreground">
                 By creating an account, you acknowledge our{" "}
                 <Link
-                  href="/privacy"
+                  href="/privacy?lang=en"
                   className="font-medium text-primary underline-offset-4 hover:underline"
                 >
                   Privacy policy
