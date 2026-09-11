@@ -22,8 +22,9 @@ export function PrivacyDataCard() {
           <CardTitle>Privacy &amp; data</CardTitle>
         </div>
         <CardDescription>
-          How we handle your data under the GDPR and Italian Privacy Code
-          (D.Lgs. 196/2003).
+          How we handle your data under the GDPR, the Italian Privacy Code
+          (D.Lgs. 196/2003), and related Italian rules on cookies, electronic
+          communications, and AI.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 text-sm text-muted-foreground">
@@ -39,8 +40,9 @@ export function PrivacyDataCard() {
                   >
                     delete your account
                   </a>{" "}
-                  at any time, or contact us to exercise your rights under the
-                  GDPR and Italian privacy law.
+                  at any time, or contact us to exercise your rights. You may
+                  also lodge a complaint with the Garante per la protezione dei
+                  dati personali.
                 </>
               ) : (
                 item
@@ -51,7 +53,7 @@ export function PrivacyDataCard() {
 
         <div className="flex flex-wrap gap-2 pt-1">
           <Link
-            href="/privacy"
+            href="/privacy?lang=en"
             className="inline-flex min-h-10 items-center rounded-lg border border-border/60 bg-muted/30 px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
           >
             Read full privacy notice
