@@ -89,7 +89,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               {authSuccess}
             </div>
           )}
-          <LoginForm initialMode={initialMode} />
+          {/* Keyed so client navigation between ?mode=signup and sign-in swaps the form */}
+          <LoginForm key={initialMode} initialMode={initialMode} />
         </div>
         <LegalFooter className="mt-8" />
       </main>
