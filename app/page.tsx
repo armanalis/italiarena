@@ -1,44 +1,34 @@
 /** Public landing page with sign-in and sign-up entry points. */
 import Link from "next/link";
-import { Saira } from "next/font/google";
 import { redirect } from "next/navigation";
-import { Trophy, Users, Zap } from "lucide-react";
+import { ArrowRight, Trophy, Users, Zap } from "lucide-react";
+import { AuroraCanvas } from "@/components/aurora-canvas";
+import { GlassPanel } from "@/components/glass-panel";
 import { DemoRound } from "@/components/landing/demo-round";
 import { Button } from "@/components/ui/button";
 import { LegalFooter } from "@/components/legal/privacy-policy";
 import { getPostAuthPath } from "@/lib/auth";
-import { pickDemoQuestions } from "@/lib/landing-demo-questions";
-import { cn } from "@/lib/utils";
+import { pickDemoOpponent, pickDemoQuestions } from "@/lib/landing-demo-questions";
 import { createClient } from "@/utils/supabase/server";
-
-/** Squared, width-variable display face — a nod to Turin's Nebiolo foundry (Eurostile). */
-const display = Saira({
-  subsets: ["latin"],
-  axes: ["wdth"],
-  variable: "--font-display",
-});
-
-const steps = [
-  "Choose your level and find an opponent.",
-  "Answer timed questions across grammar, vocab, and more.",
-  "Review mistakes and track progress on your dashboard.",
-];
 
 const features = [
   {
     icon: Zap,
+    num: "01",
     title: "Just a few minutes a day",
     description:
       "Short sessions that fit your schedule — learn Italian without blocking out hours of study time.",
   },
   {
     icon: Users,
+    num: "02",
     title: "Practice Italian with real people",
     description:
       "Practice Italian with others at your level through live quiz rounds at your pace.",
   },
   {
     icon: Trophy,
+    num: "03",
     title: "Watch your skills grow",
     description:
       "Track vocabulary, accuracy, and match history as you improve over time.",
@@ -56,11 +46,12 @@ export default async function HomePage() {
   }
 
   return (
-    <div className={cn("landing min-h-full w-full", display.variable)}>
+    <AuroraCanvas>
       <main className="mx-auto w-full max-w-6xl px-4 pb-[max(3rem,env(safe-area-inset-bottom,0px))] pt-10 sm:px-6 sm:pt-14 lg:px-8 lg:pt-20">
-        <section className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-16">
+        <section className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end lg:gap-14">
           <div className="space-y-8">
-            <h1 className="landing-display landing-headline max-w-2xl">
+            <p className="swiss-label">Italian · live quiz matches</p>
+            <h1 className="hero-headline max-w-xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-[3.25rem]">
               Learn Italian through quick, real practice
             </h1>
             <p className="max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
@@ -69,18 +60,21 @@ export default async function HomePage() {
               blocks.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              <Button asChild size="lg" className="h-12 min-w-[9.5rem] px-6 text-base">
-                <Link href="/login">Sign in</Link>
+              <Button asChild size="lg" className="h-12 min-w-[9.5rem] px-6">
+                <Link href="/login">
+                  Sign in
+                  <ArrowRight className="size-4" />
+                </Link>
               </Button>
               <Button
                 asChild
                 variant="outline"
                 size="lg"
-                className="h-12 min-w-[9.5rem] px-6 text-base"
+                className="glass-panel h-12 min-w-[9.5rem] border bg-transparent px-6 shadow-none"
               >
                 <Link href="/login?mode=signup">Create account</Link>
               </Button>
-              <Button asChild variant="secondary" size="lg" className="h-12 px-6 text-base">
+              <Button asChild variant="secondary" size="lg" className="h-12 px-6">
                 <Link href="/guest">Play as guest</Link>
               </Button>
             </div>
@@ -90,61 +84,38 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <DemoRound questions={pickDemoQuestions()} />
+          <DemoRound questions={pickDemoQuestions()} opponent={pickDemoOpponent()} />
         </section>
 
-        <section className="mt-20 sm:mt-28" aria-labelledby="how-a-match-works">
-          <h2
-            id="how-a-match-works"
-            className="landing-display text-2xl font-semibold sm:text-3xl"
-          >
-            How a match works
-          </h2>
-          <ol className="mt-8 grid gap-6 sm:grid-cols-3 sm:gap-10">
-            {steps.map((step, index) => (
-              <li
-                key={step}
-                className="flex items-baseline gap-5 border-t border-border pt-5 sm:block"
-              >
-                <span
-                  className="landing-display landing-step-number w-10 shrink-0 sm:w-auto"
-                  aria-hidden
-                >
-                  {index + 1}
-                </span>
-                <p className="max-w-xs text-base leading-relaxed sm:mt-4">{step}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        <section className="mt-20 sm:mt-28" aria-labelledby="daily-practice">
-          <h2
-            id="daily-practice"
-            className="landing-display text-2xl font-semibold sm:text-3xl"
-          >
-            Built for daily practice
-          </h2>
-          <ul className="mt-8">
-            {features.map(({ icon: Icon, title, description }) => (
-              <li
-                key={title}
-                className="grid gap-2 border-t border-border py-6 sm:grid-cols-[minmax(0,22rem)_1fr] sm:gap-10"
-              >
-                <h3 className="flex items-center gap-3 font-semibold">
-                  <Icon className="size-5 shrink-0 text-accent" aria-hidden />
-                  {title}
-                </h3>
-                <p className="max-w-xl leading-relaxed text-muted-foreground">
+        <section className="mt-16 sm:mt-20">
+          <div className="mb-8 flex items-end justify-between gap-4 border-b border-border pb-4">
+            <h2 className="text-lg font-semibold tracking-tight sm:text-xl">
+              Built for daily practice
+            </h2>
+            <span className="swiss-label hidden sm:inline">Features</span>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {features.map(({ icon: Icon, num, title, description }) => (
+              <GlassPanel key={title} className="p-5 sm:p-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="flex size-9 items-center justify-center rounded-md bg-muted/80 text-foreground">
+                    <Icon className="size-4" aria-hidden />
+                  </span>
+                  <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                    {num}
+                  </span>
+                </div>
+                <h3 className="font-semibold tracking-tight">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {description}
                 </p>
-              </li>
+              </GlassPanel>
             ))}
-          </ul>
+          </div>
         </section>
 
         <LegalFooter className="mt-12 sm:mt-16" />
       </main>
-    </div>
+    </AuroraCanvas>
   );
 }
