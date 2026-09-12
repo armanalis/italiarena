@@ -512,6 +512,25 @@ const POOL: PoolQuestion[] = [
   },
 ];
 
+/** Opponent names for the landing demo — five women, five men. */
+const OPPONENT_NAMES = [
+  "Giulia",
+  "Sofia",
+  "Chiara",
+  "Martina",
+  "Francesca",
+  "Marco",
+  "Luca",
+  "Matteo",
+  "Lorenzo",
+  "Davide",
+] as const;
+
+/** Random opponent, picked per request like the questions. */
+export function pickDemoOpponent(): string {
+  return OPPONENT_NAMES[Math.floor(Math.random() * OPPONENT_NAMES.length)];
+}
+
 function shuffle<T>(items: readonly T[]): T[] {
   const copy = [...items];
   for (let i = copy.length - 1; i > 0; i--) {
