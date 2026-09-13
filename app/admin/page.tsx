@@ -5,6 +5,7 @@ import {
   getAdminReviewQueue,
   getPendingQuestionSubmissions,
 } from "@/app/admin/actions";
+import { AdminQueueBadge } from "@/components/admin/admin-queue-badge";
 import { FlaggedQuestionsTable } from "@/components/admin/flagged-questions-table";
 import { QuestionSubmissionsTable } from "@/components/admin/question-submissions-table";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,13 @@ export default async function AdminPage() {
         <section>
           <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
             <div>
-              <h2 className="text-lg font-semibold">Community submissions</h2>
+              <h2 className="flex items-center gap-2 text-lg font-semibold">
+                Community submissions
+                <AdminQueueBadge
+                  count={pendingSubmissions.length}
+                  label="submissions waiting for approval"
+                />
+              </h2>
               <p className="text-sm text-muted-foreground">
                 {pendingSubmissions.length} question
                 {pendingSubmissions.length === 1 ? "" : "s"} waiting for approval
@@ -65,7 +72,13 @@ export default async function AdminPage() {
         <section>
         <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
           <div>
-            <h2 className="text-lg font-semibold">Reported questions</h2>
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
+              Reported questions
+              <AdminQueueBadge
+                count={reportedQuestions.length}
+                label="reports awaiting review"
+              />
+            </h2>
             <p className="text-sm text-muted-foreground">
               {reportedQuestions.length} report
               {reportedQuestions.length === 1 ? "" : "s"} awaiting review
