@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { signOut } from "@/app/login/actions";
+import { AdminQueueBadge } from "@/components/admin/admin-queue-badge";
 import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ type SiteHeaderNavProps = {
   displayName: string | null;
   showDashboard: boolean;
   isAdmin: boolean;
+  adminQueueCount: number;
 };
 
 export function SiteHeaderNav({
@@ -24,6 +26,7 @@ export function SiteHeaderNav({
   displayName,
   showDashboard,
   isAdmin,
+  adminQueueCount,
 }: SiteHeaderNavProps) {
   const pathname = usePathname();
   const leavingActiveMatch =
@@ -80,8 +83,19 @@ export function SiteHeaderNav({
                 </Button>
               )}
               {isAdmin && (
-                <Button asChild variant="outline" size="sm" className="hidden min-h-10 sm:inline-flex">
-                  <Link href="/admin">Admin</Link>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="hidden min-h-10 gap-1.5 sm:inline-flex"
+                >
+                  <Link href="/admin">
+                    Admin
+                    <AdminQueueBadge
+                      count={adminQueueCount}
+                      label="questions waiting for review"
+                    />
+                  </Link>
                 </Button>
               )}
               <form action={signOut}>

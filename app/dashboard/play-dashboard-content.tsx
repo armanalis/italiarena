@@ -9,8 +9,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { AdminQueueBadge } from "@/components/admin/admin-queue-badge";
 import { BotMatchCard } from "@/components/dashboard/bot-match-card";
 import { MatchmakingStartLink } from "@/components/matchmaking/matchmaking-start-link";
+import { getAdminQueueCounts } from "@/lib/admin-queue-counts";
 import { getCurrentUserProfile, isGuestUser } from "@/lib/auth";
 import { PenLine, ShieldAlert, UserRound, Users } from "lucide-react";
 
@@ -31,6 +33,10 @@ export async function PlayDashboardContent({
     return null;
   }
   const guest = isGuestUser(profile);
+  const adminQueue =
+    profile.role === "admin"
+      ? await getAdminQueueCounts()
+      : { reported: 0, submissions: 0, total: 0 };
 
   return (
     <main className="flex w-full min-w-0 flex-1 flex-col">
@@ -50,6 +56,10 @@ export async function PlayDashboardContent({
                 <Link href="/admin">
                   <ShieldAlert className="size-4" />
                   Admin
+                  <AdminQueueBadge
+                    count={adminQueue.total}
+                    label="questions waiting for review"
+                  />
                 </Link>
               </Button>
             )}
