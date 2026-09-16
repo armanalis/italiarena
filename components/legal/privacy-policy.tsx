@@ -84,7 +84,11 @@ export function PrivacyPolicyContent({
           const table = section.table;
 
           return (
-            <section key={section.title} className="space-y-2">
+            <section
+              key={section.title}
+              id={section.anchor}
+              className="space-y-2 scroll-mt-20"
+            >
               <h2 className="text-base font-semibold text-foreground">
                 {section.title}
               </h2>
