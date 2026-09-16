@@ -4,6 +4,8 @@ import { Suspense } from "react";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppToaster } from "@/components/app-toaster";
+import { ClarityAnalytics } from "@/components/clarity-analytics";
+import { CookieConsentBanner } from "@/components/cookie-consent-banner";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { StaleChunkRecovery } from "@/components/stale-chunk-recovery";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -67,6 +69,8 @@ export default function RootLayout({
             {children}
           </div>
           <AppToaster />
+          <ClarityAnalytics />
+          <CookieConsentBanner />
         </ThemeProvider>
       </body>
     </html>

@@ -4,14 +4,21 @@ export const APP_NAME = "Italiarena";
 export const APP_LEGAL_NAME = APP_NAME;
 export const APP_WEBSITE = "https://italiarena.com";
 
+/**
+ * Named data controller (art. 13, par. 1, lett. a, GDPR). A natural person
+ * running the service: the notice states a name and a monitored contact
+ * address, with no registered office because there is no business entity.
+ */
+export const CONTROLLER_NAME = "Ali Arman Dai";
+
 export const SUPPORT_EMAIL = "support@italiarena.com";
 
 /** Privacy and data-protection requests (same inbox as general support). */
 export const PRIVACY_CONTACT_EMAIL = SUPPORT_EMAIL;
 
-export const PRIVACY_POLICY_LAST_UPDATED_ISO = "2026-09-11";
-export const PRIVACY_POLICY_LAST_UPDATED_IT = "11 settembre 2026";
-export const PRIVACY_POLICY_LAST_UPDATED_EN = "11 September 2026";
+export const PRIVACY_POLICY_LAST_UPDATED_ISO = "2026-09-15";
+export const PRIVACY_POLICY_LAST_UPDATED_IT = "15 settembre 2026";
+export const PRIVACY_POLICY_LAST_UPDATED_EN = "15 September 2026";
 
 export const PRIVACY_HREF_IT = "/privacy";
 export const PRIVACY_HREF_EN = "/privacy?lang=en";
@@ -41,6 +48,7 @@ export const GOOGLE_PRIVACY_URL = "https://policies.google.com/privacy";
 export const SUPABASE_PRIVACY_URL = "https://supabase.com/privacy";
 export const VERCEL_PRIVACY_URL = "https://vercel.com/legal/privacy-policy";
 export const GROQ_PRIVACY_URL = "https://groq.com/privacy-policy";
+export const MICROSOFT_PRIVACY_URL = "https://privacy.microsoft.com/privacystatement";
 
 export type PrivacyLocale = "it" | "en";
 
@@ -55,6 +63,8 @@ export type PrivacyPolicyTable = {
 
 export type PrivacyPolicySection = {
   title: string;
+  /** Optional id, so other screens can deep-link to the section. */
+  anchor?: string;
   body: string;
   items?: readonly string[];
   table?: PrivacyPolicyTable;
@@ -118,8 +128,10 @@ function buildItalianCopy(): PrivacyCopy {
       {
         title: "2. Titolare del trattamento",
         body:
-          `Il titolare del trattamento è il gestore del servizio ${APP_LEGAL_NAME} ` +
-          `(sito: ${APP_WEBSITE}), stabilito in Italia. Per ogni questione relativa ai dati personali, ` +
+          `Il titolare del trattamento è ${CONTROLLER_NAME}, persona fisica che gestisce il servizio ` +
+          `${APP_LEGAL_NAME} (sito: ${APP_WEBSITE}), stabilito in Italia. Il servizio è offerto a titolo ` +
+          `gratuito e non svolge attività d’impresa: non esiste quindi una sede legale o un’unità ` +
+          `locale da indicare. Per ogni questione relativa ai dati personali, ` +
           `compreso l’esercizio dei diritti di cui agli artt. 15–22 GDPR, è possibile scrivere a ` +
           `${PRIVACY_CONTACT_EMAIL}. Non è nominato un rappresentante nell’Unione ai sensi dell’art. 27 GDPR, ` +
           `perché il titolare è stabilito nell’Unione europea.`,
@@ -179,6 +191,7 @@ function buildItalianCopy(): PrivacyCopy {
           "Spiegazioni «Ask AI»: consenso, art. 6, par. 1, lett. a, espresso con la richiesta puntuale; le spiegazioni possono restare in una cache condivisa per coppia domanda/risposta, in forma non nominativa; il conteggio delle richieste per partita resta per la durata dell’account. Il consenso è revocabile non usando più la funzione.",
           "Pre-controllo automatico dei contributi: esecuzione del contratto, art. 6, par. 1, lett. b, e, in quanto uso di un sistema di IA, nel rispetto dell’art. 4 della L. 132/2025 (informazione chiara e possibilità di non usare la funzione di invio). La decisione finale è sempre umana; non è una decisione automatizzata ex art. 22 GDPR.",
           "Promemoria giornaliero via push: consenso, art. 6, par. 1, lett. a, GDPR, prestato attivando la funzione nelle Impostazioni e accettando il permesso del browser. Si applica anche l’art. 122 Codice privacy (memorizzazione dell’abbonamento push sul dispositivo) e, per il carattere di sollecito a tornare nell’app, l’art. 130 Codice privacy (comunicazioni elettroniche: consenso preventivo, libero, specifico e documentato). Conservazione fino alla disattivazione o alla cancellazione dell’account.",
+          "Statistiche d’uso con Microsoft Clarity (mappe di calore e riproduzione delle sessioni con mascheramento del testo): consenso, art. 6, par. 1, lett. a, GDPR, e art. 122 Codice privacy, prestato tramite il banner cookie. In assenza di consenso il tag non viene caricato e nessun cookie di Clarity viene scritto. La conservazione segue l’informativa di Microsoft (di regola fino a 30 giorni per le registrazioni di sessione). Il consenso è revocabile in qualsiasi momento da Impostazioni → Privacy e dati.",
           "Sicurezza, prevenzione abusi e funzionamento tecnico: legittimo interesse, art. 6, par. 1, lett. f; log tecnici di regola fino a 90 giorni, salvo obbligo di legge di conservazione più lunga.",
           "Adempimento di obblighi di legge (es. risposta a richieste dell’autorità): art. 6, par. 1, lett. c, GDPR.",
         ],
@@ -197,6 +210,7 @@ function buildItalianCopy(): PrivacyCopy {
           `Vercel Inc. — hosting dell’applicazione web (${VERCEL_PRIVACY_URL}).`,
           `Groq Inc. — generazione delle spiegazioni «Ask AI» e pre-controllo dei contributi, solo se si usano quelle funzioni (${GROQ_PRIVACY_URL}).`,
           `Google LLC — autenticazione «Accedi con Google», solo se scelta dall’utente. Google è titolare autonomo per i trattamenti del proprio account (${GOOGLE_PRIVACY_URL}).`,
+          `Microsoft Ireland Operations Limited / Microsoft Corporation — statistiche d’uso tramite Microsoft Clarity, solo previo consenso prestato sul banner cookie (${MICROSOFT_PRIVACY_URL}).`,
           "Servizi di push del browser/sistema operativo (ad esempio Apple, Google FCM o Mozilla, a seconda del dispositivo) — recapito delle notifiche, solo se attivate.",
           "Autorità pubbliche, se ciò è imposto dalla legge.",
         ],
@@ -210,8 +224,9 @@ function buildItalianCopy(): PrivacyCopy {
       },
       {
         title: "11. Cookie e altri strumenti di memorizzazione sul dispositivo (art. 122 Codice privacy)",
+        anchor: "cookies",
         body:
-          "Ai sensi dell’art. 122 del Codice privacy e delle Linee guida del Garante del 10 giugno 2021, l’archiviazione di informazioni sull’apparecchio o l’accesso a informazioni già archiviate è consentita senza consenso solo se è tecnica, cioè strettamente necessaria a trasmettere una comunicazione o a erogare il servizio richiesto. Italiarena non usa cookie di profilazione, pubblicitari o di misurazione dell’audience. Non è quindi richiesto un banner di consenso ai cookie. Gli strumenti usati sono i seguenti:",
+          "Ai sensi dell’art. 122 del Codice privacy e delle Linee guida del Garante del 10 giugno 2021, l’archiviazione di informazioni sull’apparecchio o l’accesso a informazioni già archiviate è consentita senza consenso solo se è tecnica, cioè strettamente necessaria a trasmettere una comunicazione o a erogare il servizio richiesto. Italiarena non usa cookie di profilazione né pubblicitari e non vende dati a fini di marketing. Utilizziamo però uno strumento di misurazione dell’audience non anonimizzato, Microsoft Clarity, che non è strettamente necessario e richiede quindi il consenso preventivo dell’utente. Alla prima visita compare un banner con i pulsanti «Accetta» e «Rifiuta», equivalenti per dimensione, evidenza grafica e numero di clic necessari. Finché l’utente non sceglie, nessuno strumento non necessario viene caricato e nessun cookie di Clarity viene scritto; la chiusura del banner senza scelta non equivale a consenso. Il consenso è revocabile in qualsiasi momento, con la stessa facilità con cui è stato prestato, da Impostazioni → Privacy e dati. Gli strumenti usati sono i seguenti:",
         table: {
           headers: [
             "Strumento",
@@ -277,12 +292,28 @@ function buildItalianCopy(): PrivacyCopy {
               "Secondo le impostazioni e l’informativa di Google",
               "Google LLC",
             ],
+            [
+              "localStorage lq-cookie-consent",
+              "Tecnico",
+              "Ricordare la scelta espressa sul banner cookie, per non riproporla a ogni visita",
+              "Fino alla cancellazione da parte dell’utente",
+              "Prima parte",
+            ],
+            [
+              "Microsoft Clarity (cookie _clck e _clsk, più lo storage locale del tag)",
+              "Di misurazione dell’audience non anonimizzato — richiede consenso",
+              "Mappe di calore e riproduzione delle sessioni, con mascheramento predefinito del testo digitato, per individuare i punti dell’app che creano difficoltà",
+              "_clck fino a 1 anno, _clsk 1 giorno; le registrazioni sono conservate da Microsoft secondo la propria informativa, di regola fino a 30 giorni",
+              "Microsoft Ireland Operations Limited / Microsoft Corporation",
+            ],
           ],
         },
         items: [
           "Se l’accesso con Google è configurato, la pagina di accesso carica lo script Google Identity Services già all’apertura. Google può memorizzare cookie sul proprio dominio in quel momento, non solo dopo il clic su «Accedi con Google».",
           "L’utente può cancellare cookie e dati locali dalle impostazioni del browser; in tal caso potrebbe essere necessario ripetere l’accesso.",
-          "Non usiamo Google Analytics, pixel pubblicitari, social plugin di tracciamento né strumenti analoghi.",
+          "Non usiamo Google Analytics, pixel pubblicitari né social plugin di tracciamento. L’unico strumento non strettamente necessario è Microsoft Clarity, attivo soltanto previo consenso.",
+          "Microsoft Clarity maschera per impostazione predefinita il testo digitato nei campi di input e nei campi password. Non trasmettiamo a Clarity l’indirizzo e-mail, le credenziali né altri identificativi diretti dell’utente. Clarity assegna comunque un identificativo pseudonimo al dispositivo: la riproduzione delle sessioni è pertanto un trattamento di dati personali pseudonimizzati, non anonimi.",
+          "Il consenso può essere revocato in qualsiasi momento da Impostazioni → Privacy e dati, o cancellando i dati del sito dal browser. Alla revoca il tag viene disattivato e i cookie di prima parte _clck e _clsk sono rimossi.",
         ],
       },
       {
@@ -393,8 +424,9 @@ function buildEnglishCopy(): PrivacyCopy {
       {
         title: "2. Data controller",
         body:
-          `The data controller is the operator of ${APP_LEGAL_NAME} ` +
-          `(website: ${APP_WEBSITE}), established in Italy. For any request relating to your personal data, ` +
+          `The data controller is ${CONTROLLER_NAME}, a natural person operating ${APP_LEGAL_NAME} ` +
+          `(website: ${APP_WEBSITE}), established in Italy. The service is provided free of charge and is not a business activity, so there is no registered office or place of business to state. ` +
+          `For any request relating to your personal data, ` +
           `including rights under Articles 15–22 GDPR, contact ${PRIVACY_CONTACT_EMAIL}. ` +
           `No EU representative has been appointed under Article 27 GDPR, because the controller is established in the European Union.`,
       },
@@ -453,6 +485,7 @@ function buildEnglishCopy(): PrivacyCopy {
           "«Ask AI» explanations: consent, Article 6(1)(a), given by the specific request; generated explanations may be stored in a shared cache per question/answer pair in non-nominative form; per-match request counts are kept for the life of the account. You withdraw consent by no longer using the feature.",
           "Automatic pre-check of submissions: performance of a contract, Article 6(1)(b), and, as use of an AI system, in line with Article 4 of Law 132/2025 (clear information and the option not to use submissions). A human admin always makes the final decision; this is not automated decision-making under Article 22 GDPR.",
           "Daily push reminders: consent, Article 6(1)(a) GDPR, given by enabling the feature in Settings and granting the browser permission. Article 122 Codice privacy also applies (storing the push subscription on the device) and, because the message nudges you back into the app, Article 130 Codice privacy (electronic communications: prior, free, specific, informed, and documented consent). Kept until you disable reminders or delete the account.",
+          "Usage analytics with Microsoft Clarity (heatmaps and text-masked session replay): consent, Article 6(1)(a) GDPR and Article 122 Codice privacy, given through the cookie banner. Without consent the tag is not loaded and no Clarity cookie is written. Retention follows Microsoft’s notice (as a rule up to 30 days for session recordings). You can withdraw consent at any time in Settings → Privacy & data.",
           "Security, abuse prevention, and technical operation: legitimate interest, Article 6(1)(f); technical logs as a rule for up to 90 days, unless a longer legal retention applies.",
           "Compliance with legal obligations (for example responding to a competent authority): Article 6(1)(c) GDPR.",
         ],
@@ -471,6 +504,7 @@ function buildEnglishCopy(): PrivacyCopy {
           `Vercel Inc. — web application hosting (${VERCEL_PRIVACY_URL}).`,
           `Groq Inc. — «Ask AI» explanations and submission pre-checks, only if you use those features (${GROQ_PRIVACY_URL}).`,
           `Google LLC — «Sign in with Google», only if you choose it. Google is an independent controller for its own account processing (${GOOGLE_PRIVACY_URL}).`,
+          `Microsoft Ireland Operations Limited / Microsoft Corporation — usage analytics via Microsoft Clarity, only with the consent you give in the cookie banner (${MICROSOFT_PRIVACY_URL}).`,
           "Browser/OS push services (for example Apple, Google FCM, or Mozilla, depending on the device) — delivery of notifications, only if enabled.",
           "Public authorities, where required by law.",
         ],
@@ -484,8 +518,9 @@ function buildEnglishCopy(): PrivacyCopy {
       },
       {
         title: "11. Cookies and other device storage (Article 122 Codice privacy)",
+        anchor: "cookies",
         body:
-          "Under Article 122 of the Codice privacy and the Garante guidelines of 10 June 2021, storing information on a device or accessing information already stored is allowed without consent only if it is technical — strictly necessary to transmit a communication or to provide the service you requested. Italiarena does not use profiling, advertising, or audience-measurement cookies. A cookie-consent banner is therefore not required. The tools we use are:",
+          "Under Article 122 of the Codice privacy and the Garante guidelines of 10 June 2021, storing information on a device or accessing information already stored is allowed without consent only if it is technical — strictly necessary to transmit a communication or to provide the service you requested. Italiarena does not use profiling or advertising cookies and does not sell data for marketing. We do, however, use a non-anonymised audience-measurement tool, Microsoft Clarity, which is not strictly necessary and therefore requires your prior consent. On your first visit a banner offers «Accept» and «Reject», equal in size, visual prominence, and number of clicks. Until you choose, no non-essential tool is loaded and no Clarity cookie is written; closing the banner without choosing does not count as consent. You can withdraw consent at any time, as easily as you gave it, in Settings → Privacy & data. The tools we use are:",
         table: {
           headers: ["Tool", "Type", "Purpose", "Retention", "Party"],
           rows: [
@@ -545,12 +580,28 @@ function buildEnglishCopy(): PrivacyCopy {
               "According to Google’s settings and privacy notice",
               "Google LLC",
             ],
+            [
+              "localStorage lq-cookie-consent",
+              "Technical",
+              "Remember your answer to the cookie banner, so it is not shown on every visit",
+              "Until you clear it",
+              "First party",
+            ],
+            [
+              "Microsoft Clarity (_clck and _clsk cookies, plus the tag’s local storage)",
+              "Non-anonymised audience measurement — consent required",
+              "Heatmaps and session replay, with typed text masked by default, to find the parts of the app that confuse people",
+              "_clck up to 1 year, _clsk 1 day; recordings are kept by Microsoft under its own notice, as a rule up to 30 days",
+              "Microsoft Ireland Operations Limited / Microsoft Corporation",
+            ],
           ],
         },
         items: [
           "If Google sign-in is configured, the sign-in page loads the Google Identity Services script when it opens. Google may store cookies on its own domain at that point, not only after you tap «Sign in with Google».",
           "You can delete cookies and local data in your browser settings; you may then need to sign in again.",
-          "We do not use Google Analytics, advertising pixels, tracking social plugins, or similar tools.",
+          "We do not use Google Analytics, advertising pixels, or tracking social plugins. The only non-essential tool is Microsoft Clarity, active solely with your consent.",
+          "Microsoft Clarity masks text typed into input and password fields by default. We do not send Clarity your email address, credentials, or other direct identifiers. Clarity does assign a pseudonymous device identifier, so session replay is processing of pseudonymised — not anonymous — personal data.",
+          "You can withdraw consent at any time in Settings → Privacy & data, or by clearing site data in your browser. On withdrawal the tag is switched off and the first-party _clck and _clsk cookies are removed.",
         ],
       },
       {
@@ -638,6 +689,6 @@ export const PRIVACY_FOOTER_NOTICE =
 /** Short notice for the settings privacy card. */
 export const PRIVACY_SETTINGS_SUMMARY = [
   "We collect only data needed to run the app (account, gameplay, optional AI help, optional push reminders), as listed in our Italian privacy notice (Arts. 13–14 GDPR and the Codice privacy).",
-  "Data is stored securely (HTTPS), never sold, and not used for promotional emails (Art. 130 Codice privacy). We use only technical cookies for login and the app (Art. 122 Codice privacy).",
+  "Data is stored securely (HTTPS), never sold, and not used for promotional emails (Art. 130 Codice privacy). Beyond the technical cookies needed for login and gameplay, we load Microsoft Clarity analytics only if you accept it in the cookie banner (Art. 122 Codice privacy).",
   "You can update your profile in Settings, delete your account at any time, or contact us to exercise your rights. You may also lodge a complaint with the Garante per la protezione dei dati personali.",
 ] as const;

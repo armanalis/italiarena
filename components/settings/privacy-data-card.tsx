@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Shield } from "lucide-react";
+import { CookiePreferences } from "@/components/settings/cookie-preferences";
 import {
   Card,
   CardContent,
@@ -50,6 +51,8 @@ export function PrivacyDataCard() {
             </li>
           ))}
         </ul>
+
+        <CookiePreferences />
 
         <div className="flex flex-wrap gap-2 pt-1">
           <Link
