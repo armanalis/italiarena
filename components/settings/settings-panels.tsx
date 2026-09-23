@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useActionRedirect } from "@/hooks/use-action-redirect";
 import { Loader2, LogOut, Mail, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -31,6 +32,7 @@ import {
 import { PROFICIENCY_LEVELS, TARGET_LANGUAGE } from "@/lib/constants";
 import { APP_NAME, SUPPORT_EMAIL } from "@/lib/legal";
 import { getSoundVolume, writeGameplayPreferences } from "@/lib/preferences";
+import { resetWelcomeTour } from "@/lib/welcome-tour";
 import type { MatchHistoryEntry, UserProfile } from "@/lib/types";
 import { SoundVolumeControl } from "@/components/sound-volume-control";
 import { CoffeeLink } from "@/components/coffee-link";
@@ -95,6 +97,7 @@ function resultLabel(result: MatchHistoryEntry["result"]) {
 
 export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) {
   const guest = profile.is_guest;
+  const router = useRouter();
   const [proficiencyLevel, setProficiencyLevel] = useState(
     profile.proficiency_level ?? ""
   );
@@ -308,6 +311,25 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
             disabled={isPending}
             onChange={(value) => savePreferences(soundEnabled, value)}
           />
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
+            <div>
+              <p className="text-sm font-medium">Welcome tour</p>
+              <p className="text-xs text-muted-foreground">
+                Replay the quick intro on how to play.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                resetWelcomeTour();
+                router.push("/dashboard");
+              }}
+            >
+              Replay
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

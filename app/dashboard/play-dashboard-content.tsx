@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { AdminQueueBadge } from "@/components/admin/admin-queue-badge";
 import { BotMatchCard } from "@/components/dashboard/bot-match-card";
+import { WelcomeTour } from "@/components/dashboard/welcome-tour";
 import { MatchmakingStartLink } from "@/components/matchmaking/matchmaking-start-link";
 import { getAdminQueueCounts } from "@/lib/admin-queue-counts";
 import { getCurrentUserProfile, isGuestUser } from "@/lib/auth";
@@ -40,6 +41,7 @@ export async function PlayDashboardContent({
 
   return (
     <main className="flex w-full min-w-0 flex-1 flex-col">
+      <WelcomeTour />
       <header className="page-intro w-full px-4 pt-5 sm:px-8 sm:pt-6 lg:px-10 xl:px-12">
         <div className="flex w-full flex-wrap items-start justify-between gap-3 sm:items-center sm:gap-4">
           <div className="min-w-0">
