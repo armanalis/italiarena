@@ -115,9 +115,11 @@
     opacity: calc(var(--surface-grain) * 0.75);
   }
 
-  /* Frosted glass — cards float above the depth layer */
+  /* Frosted glass — cards float above the depth layer.
+     No backdrop-filter: the layer behind is already smooth, and a live blur on
+     side-by-side panels leaves stale strips in Chrome when a neighbour repaints. */
   .glass-panel {
-    @apply rounded-lg border shadow-sm backdrop-blur-xl;
+    @apply rounded-lg border shadow-sm;
     border-color: color-mix(in oklch, var(--foreground) 9%, transparent);
     background: color-mix(in oklch, var(--card) 78%, transparent);
     box-shadow: var(--glass-shadow);
