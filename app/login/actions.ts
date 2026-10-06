@@ -48,6 +48,13 @@ export async function signIn(
   });
 
   if (error) {
+    if (error.code === "email_not_confirmed") {
+      return {
+        error:
+          "Please confirm your email first. Check your inbox and spam folder, or use \"Resend verification email\" below.",
+      };
+    }
+
     return { error: error.message };
   }
 
