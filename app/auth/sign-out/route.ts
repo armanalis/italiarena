@@ -33,6 +33,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(destination, 308);
   }
 
+  // Link/browser prefetches also hit this GET. Signing out on one would end the
+  // session (globally) the moment a sign-out link scrolls into view.
+  if (
+    request.headers.get("next-router-prefetch") === "1" ||
+    request.headers.get("sec-purpose")?.includes("prefetch") ||
+    request.headers.get("purpose") === "prefetch"
+  ) {
+    return new NextResponse(null, { status: 204 });
+  }
+
   const origin = requestUrl.origin;
   const nextParam = requestUrl.searchParams.get("next");
   const nextPath =
