@@ -1,5 +1,4 @@
 /** Set a new password after following the email reset link. */
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { KeyRound } from "lucide-react";
 import { AuroraCanvas } from "@/components/aurora-canvas";
@@ -19,7 +18,9 @@ export default async function ResetPasswordPage() {
   return (
     <AuroraCanvas>
       <main className="mx-auto w-full max-w-[420px] px-4 pb-[max(3rem,env(safe-area-inset-bottom,0px))] pt-6 sm:px-6 sm:pb-12 sm:pt-8">
-        <Link
+        {/* Plain <a>: Next's <Link> prefetches in production, which would hit
+            /auth/sign-out and kill the recovery session before the user types. */}
+        <a
           href={
             "/auth/sign-out?next=" +
             encodeURIComponent("/login")
@@ -27,7 +28,7 @@ export default async function ResetPasswordPage() {
           className="mb-6 inline-flex text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
           ← Back to login
-        </Link>
+        </a>
         <div className="glass-panel overflow-hidden">
           <div className="border-b border-border px-5 pb-6 pt-6 sm:px-8 sm:pb-7 sm:pt-8">
             <div className="mb-5 flex size-12 items-center justify-center rounded-md border border-border bg-muted text-foreground">
