@@ -51,10 +51,11 @@ function mapSignUpError(message: string) {
   return message;
 }
 
+/** Supabase masks an already-registered email as a fake user with no identities. */
 function isDuplicateSignUp(data: {
   user: { identities?: { id: string }[] } | null;
 }) {
-  return !data.user || data.user.identities?.length === 0;
+  return data.user?.identities?.length === 0;
 }
 
 export type SignUpProfilePayload = {
@@ -134,8 +135,11 @@ export async function signUpOnClient(params: {
     return { ok: false, error: EXISTING_EMAIL_MESSAGE };
   }
 
+  // supabase-js >= 2.106 returns `user: null` whenever email confirmation is
+  // pending, so a missing user means "email sent", not "duplicate". Confirmed
+  // emails are already rejected by validateSignUpInput before we get here.
   if (!data.user) {
-    return { ok: false, error: EXISTING_EMAIL_MESSAGE };
+    return { ok: true, message: verificationSentMessage(), profile: null };
   }
 
   return {
