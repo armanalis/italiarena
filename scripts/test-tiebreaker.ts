@@ -5,7 +5,6 @@
 import assert from "node:assert/strict";
 import { REGULAR_MATCH_QUESTIONS } from "../lib/match";
 import {
-  buildQuestionPlaylistPayload,
   parseQuestionPlaylist,
 } from "../lib/session-playlist";
 import { determineWinner } from "../lib/scoring";
@@ -152,40 +151,27 @@ check("startTiebreakerRound appends an 11th question and moves to index 10", () 
 });
 
 check("server playlist payload can append the sudden-death question id", () => {
+  // Shape written by append_tiebreaker_question + publish_match_sync.
   const regularIds = Array.from({ length: 10 }, (_, i) => `q-${i}`);
-  const withSync = buildQuestionPlaylistPayload(regularIds, {
-    questionIndex: 9,
-    phase: "round",
-    roundStartedAt: Date.now(),
-  });
-  assert.deepEqual(parseQuestionPlaylist(withSync).questionIds, regularIds);
-
-  const appended = buildQuestionPlaylistPayload(
-    [...regularIds, "q-tie"],
-    {
-      questionIndex: 10,
-      phase: "round",
-      roundStartedAt: Date.now() + 1000,
-    }
-  );
+  const appended = {
+    questionIds: [...regularIds, "q-tie"],
+    sync: { questionIndex: 10, phase: "round", roundStartedAt: Date.now() + 1000 },
+  };
   const parsed = parseQuestionPlaylist(appended);
   assert.equal(parsed.questionIds.length, 11);
   assert.equal(parsed.questionIds[10], "q-tie");
   assert.equal(parsed.sync?.questionIndex, 10);
 });
 
-check("sudden-death payload embeds the full question for both clients", () => {
+check("sudden-death payload embeds the question for both clients, never its answer", () => {
   const regularIds = Array.from({ length: 10 }, (_, i) => `q-${i}`);
+  // Older sessions stored the full row, answer included.
   const tiebreaker = fakeQuestion("q-tie", 10);
-  const payload = buildQuestionPlaylistPayload(
-    [...regularIds, tiebreaker.id],
-    {
-      questionIndex: 10,
-      phase: "round",
-      roundStartedAt: Date.now() + 1000,
-    },
-    { [tiebreaker.id]: tiebreaker }
-  );
+  const payload = {
+    questionIds: [...regularIds, tiebreaker.id],
+    sync: { questionIndex: 10, phase: "round", roundStartedAt: Date.now() + 1000 },
+    questionBank: { [tiebreaker.id]: tiebreaker },
+  };
   const parsed = parseQuestionPlaylist(payload);
   assert.equal(parsed.questionIds.length, 11);
   assert.equal(parsed.questionBank["q-tie"]?.id, "q-tie");
@@ -193,6 +179,7 @@ check("sudden-death payload embeds the full question for both clients", () => {
     parsed.questionBank["q-tie"]?.question_text,
     tiebreaker.question_text
   );
+  assert.ok(!("correct_answer" in parsed.questionBank["q-tie"]!));
   // Follower can enter index 10 from the same poll without a refetch.
   assert.equal(parsed.sync?.questionIndex, 10);
   assert.ok(parsed.sync!.questionIndex < parsed.questionIds.length);

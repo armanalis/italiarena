@@ -7,8 +7,8 @@ import { REGULAR_MATCH_QUESTIONS } from "@/lib/match";
 import {
   getOptionText,
   normalizeQuestionCategory,
-  resolveQuestionsByIds,
 } from "@/lib/resolve-match-questions";
+import { resolveQuestionsWithAnswers } from "@/lib/questions-with-answers";
 import { createClient } from "@/utils/supabase/server";
 import type {
   CorrectAnswer,
@@ -122,7 +122,9 @@ async function fetchRecentMatchesWithQuestions(
     ...new Set([...sessionPlaylists.values()].flat()),
   ];
 
-  const questionsById = await resolveQuestionsByIds(supabase, allQuestionIds);
+  // Finished matches only (match_history is written by finalize_match_result),
+  // so every question here was already played.
+  const questionsById = await resolveQuestionsWithAnswers(allQuestionIds);
 
   const mistakesBySession = new Map<
     string,

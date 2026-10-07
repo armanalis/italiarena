@@ -1,4 +1,4 @@
-import type { QuestionActive, QuestionCategory } from "@/types/database.types";
+import type { PublicQuestion, QuestionCategory } from "@/types/database.types";
 
 export const REGULAR_MATCH_QUESTIONS = 10;
 
@@ -43,12 +43,12 @@ export function normalizeQuestionCategory(value: string): QuestionCategory {
 }
 
 function pickFromPool(
-  pool: QuestionActive[],
+  pool: PublicQuestion[],
   count: number,
   recentIds: ReadonlySet<string>,
   seenIds: ReadonlySet<string>,
   usedIds: ReadonlySet<string>
-): QuestionActive[] {
+): PublicQuestion[] {
   if (count <= 0 || pool.length === 0) {
     return [];
   }
@@ -69,7 +69,7 @@ function pickFromPool(
     ),
   ];
 
-  const picks: QuestionActive[] = [];
+  const picks: PublicQuestion[] = [];
 
   for (const bucket of buckets) {
     if (picks.length >= count) {
@@ -91,11 +91,11 @@ function pickFromPool(
 }
 
 export function buildMatchPlaylist(
-  pool: QuestionActive[],
+  pool: PublicQuestion[],
   recentIds: ReadonlySet<string>,
   seenIds: ReadonlySet<string>
-): QuestionActive[] {
-  const selected: QuestionActive[] = [];
+): PublicQuestion[] {
+  const selected: PublicQuestion[] = [];
   const usedIds = new Set<string>();
 
   for (const { category, count } of MATCH_CATEGORY_QUOTA) {

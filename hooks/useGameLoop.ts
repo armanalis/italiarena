@@ -4,14 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { buildMatchScoreState } from "@/lib/match-score-state";
 import {
-  fetchTiebreakerQuestionClient,
+  appendTiebreakerQuestion,
   persistBotMatchScoreState,
+  revealRoundAnswer,
+  type RoundReveal,
 } from "@/lib/match-sync-client";
-import {
-  getBotResponseDelayMs,
-  getBotResponseTimeMs,
-  simulateBotAnswer,
-} from "@/lib/bot";
+import { getBotResponseDelayMs, getBotResponseTimeMs } from "@/lib/bot";
 import { pulseCountdownHaptic } from "@/lib/haptics";
 import {
   FRESH_ROUND_TIMER_STATE,
@@ -23,13 +21,15 @@ import { useGameAudio } from "@/hooks/useGameAudio";
 import { useServerMatchSync } from "@/hooks/useServerMatchSync";
 import { useGameStore } from "@/store/useGameStore";
 import { REGULAR_MATCH_QUESTIONS } from "@/lib/match";
-import type { CorrectAnswer, QuestionActive } from "@/types/database.types";
-import {
-  TARGET_LANGUAGE,
-  type ProficiencyLevel,
-} from "@/lib/constants";
+import { isAnswerCorrect } from "@/lib/scoring";
+import type { CorrectAnswer, PublicQuestion } from "@/types/database.types";
+import type { ProficiencyLevel } from "@/lib/constants";
 
 const ROUND_RESULT_TICK_MS = 100;
+
+function wait(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
 
 type AnswerLockedPayload = {
   playerRole: "a" | "b";
@@ -48,7 +48,7 @@ type UseGameLoopOptions = {
   localPlayerRole: "a" | "b";
   isBotMatch: boolean;
   proficiencyLevel: ProficiencyLevel;
-  serverPlaylist: QuestionActive[];
+  serverPlaylist: PublicQuestion[];
 };
 
 export function useGameLoop({
@@ -95,8 +95,11 @@ export function useGameLoop({
   const resultRemainingMsRef = useRef(0);
   /** Host: round index we are trying to publish after the result screen. */
   const pendingNextRoundRef = useRef<number | null>(null);
-  /** Host: sudden-death question to re-append if the publish retries. */
-  const pendingAppendQuestionRef = useRef<QuestionActive | null>(null);
+  /** This client's in-flight answer write; the reveal waits for it to land. */
+  const answerWriteRef = useRef<{
+    questionIndex: number;
+    promise: Promise<void>;
+  } | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const channelReadyRef = useRef(false);
   const pendingBroadcastsRef = useRef<AnswerLockedPayload[]>([]);
@@ -186,10 +189,6 @@ export function useGameLoop({
       answer: CorrectAnswer | null;
       responseTimeMs: number | null;
     }) => {
-      if (isBotMatch) {
-        return;
-      }
-
       const responseTimeMs =
         payload.responseTimeMs === null
           ? null
@@ -203,7 +202,9 @@ export function useGameLoop({
           p_response_time_ms: responseTimeMs,
         });
 
-        if (!error) {
+        // Already locked (e.g. a retry whose first write did land): the
+        // server's copy is final, and the reveal reports it back.
+        if (!error || error.message.includes("already locked")) {
           return;
         }
         console.error(
@@ -211,7 +212,18 @@ export function useGameLoop({
         );
       }
     },
-    [isBotMatch, sessionId, supabase]
+    [sessionId, supabase]
+  );
+
+  /** Lock this player's answer locally and start the server write. */
+  const submitLocalAnswer = useCallback(
+    (questionIndex: number, answer: CorrectAnswer | null, responseTimeMs: number | null) => {
+      answerWriteRef.current = {
+        questionIndex,
+        promise: persistAnswer({ questionIndex, answer, responseTimeMs }),
+      };
+    },
+    [persistAnswer]
   );
 
   const bothAnswersLocked = useCallback(() => {
@@ -283,11 +295,7 @@ export function useGameLoop({
             answer: null,
             responseTimeMs: null,
           });
-          void persistAnswer({
-            questionIndex: state.currentQuestionIndex,
-            answer: null,
-            responseTimeMs: null,
-          });
+          submitLocalAnswer(state.currentQuestionIndex, null, null);
         }
 
         if (isBotMatch) {
@@ -307,8 +315,8 @@ export function useGameLoop({
     isBotMatch,
     lockLocalAnswer,
     lockOpponentAnswer,
-    persistAnswer,
     setTimeRemaining,
+    submitLocalAnswer,
   ]);
 
   const scheduleBotAnswer = useCallback(() => {
@@ -318,7 +326,6 @@ export function useGameLoop({
 
     const state = useGameStore.getState();
     const question = state.playlist[state.currentQuestionIndex];
-    const proficiency = state.proficiencyLevel ?? proficiencyLevel;
     const startedAt = state.roundStartedAt;
 
     if (!question || !startedAt) {
@@ -357,31 +364,17 @@ export function useGameLoop({
         return;
       }
 
-      const latestDifficulty = latest.botDifficulty ?? "medium";
-      const answer = simulateBotAnswer(question, proficiency, latestDifficulty);
-      const responseTimeMs = getBotResponseTimeMs(latestDifficulty);
-
-      lockOpponentAnswer(answer, responseTimeMs);
-
-      broadcastAnswer({
-        playerRole: botRole,
-        questionIndex,
-        answer,
-        responseTimeMs,
-      });
+      // The bot "locks in" at its usual time, but its pick stays hidden:
+      // the browser has no answer to choose from. reveal_round_answer
+      // decides the pick on the server and finalizeRound fills it in.
+      const responseTimeMs = getBotResponseTimeMs(latest.botDifficulty ?? "medium");
+      lockOpponentAnswer(null, responseTimeMs);
 
       if (bothAnswersLocked()) {
         finalizeRoundRef.current();
       }
     }, delay);
-  }, [
-    broadcastAnswer,
-    bothAnswersLocked,
-    isBotMatch,
-    localPlayerRole,
-    lockOpponentAnswer,
-    proficiencyLevel,
-  ]);
+  }, [bothAnswersLocked, isBotMatch, localPlayerRole, lockOpponentAnswer]);
 
   const beginRoundPlaying = useCallback(
     (questionIndex: number, startedAt: number) => {
@@ -455,20 +448,14 @@ export function useGameLoop({
       if (finishedRegularRound && isScoreTied && !latest.tiebreakerUsed) {
         setRoundPhase("tiebreaker_loading");
 
-        const excludeIds = latest.playlist.map((item) => item.id);
         let tiebreaker: Awaited<
-          ReturnType<typeof fetchTiebreakerQuestionClient>
+          ReturnType<typeof appendTiebreakerQuestion>
         > | null = null;
 
         for (let attempt = 1; attempt <= 3; attempt += 1) {
-          // Browser → Supabase RPC (not a server action) so the fetch cannot
-          // stall behind the per-tab Next.js action queue.
-          tiebreaker = await fetchTiebreakerQuestionClient(supabase, {
-            language: TARGET_LANGUAGE,
-            level: proficiencyLevel,
-            userId: localUserId,
-            excludeIds,
-          });
+          // The server picks the question and appends it to the session
+          // (idempotent, so a retry cannot add a second one).
+          tiebreaker = await appendTiebreakerQuestion(supabase, sessionId);
           if (tiebreaker.success) {
             break;
           }
@@ -501,14 +488,9 @@ export function useGameLoop({
 
           const tiebreakerIndex = REGULAR_MATCH_QUESTIONS;
           pendingNextRoundRef.current = tiebreakerIndex;
-          pendingAppendQuestionRef.current = tiebreaker.data;
-          const published = await leaderStartRoundRef.current(
-            tiebreakerIndex,
-            tiebreaker.data
-          );
+          const published = await leaderStartRoundRef.current(tiebreakerIndex);
           if (published) {
             pendingNextRoundRef.current = null;
-            pendingAppendQuestionRef.current = null;
           }
           return;
         }
@@ -534,7 +516,6 @@ export function useGameLoop({
       const nextIndex = latest.currentQuestionIndex + 1;
       if (nextIndex >= latest.playlist.length) {
         pendingNextRoundRef.current = null;
-        pendingAppendQuestionRef.current = null;
         advanceToNextRound();
         void persistScores();
         void leaderFinishMatchRef.current();
@@ -542,7 +523,6 @@ export function useGameLoop({
       }
 
       pendingNextRoundRef.current = nextIndex;
-      pendingAppendQuestionRef.current = null;
       const published = await leaderStartRoundRef.current(nextIndex);
       if (published) {
         pendingNextRoundRef.current = null;
@@ -552,9 +532,8 @@ export function useGameLoop({
     advanceToNextRound,
     isBotMatch,
     isSyncLeader,
-    localUserId,
     persistScores,
-    proficiencyLevel,
+    sessionId,
     setRoundPhase,
     startTiebreakerRound,
     startTopicReveal,
@@ -621,6 +600,52 @@ export function useGameLoop({
   leaderStartRoundRef.current = serverSync.leaderStartRound;
   leaderFinishMatchRef.current = serverSync.leaderFinishMatch;
 
+  /**
+   * Ask the server for this round's answer. It is only revealed once our own
+   * answer is locked there, so wait for that write first. Retries until it
+   * works or the match has moved past this round; null means "moved on".
+   */
+  const fetchRoundReveal = useCallback(
+    async (questionIndex: number): Promise<RoundReveal | null> => {
+      for (let attempt = 1; ; attempt += 1) {
+        const pending = answerWriteRef.current;
+        if (pending?.questionIndex === questionIndex) {
+          await pending.promise;
+        }
+
+        const live = useGameStore.getState();
+        if (
+          live.currentQuestionIndex !== questionIndex ||
+          live.roundPhase !== "playing"
+        ) {
+          return null;
+        }
+
+        const result = await revealRoundAnswer(supabase, sessionId, questionIndex);
+        if (result.success) {
+          return result.data;
+        }
+
+        console.error(`[match] reveal failed (attempt ${attempt}): ${result.error}`);
+
+        // Our write never landed (dropped request, or a refresh lost it):
+        // lock what this screen shows, then ask again.
+        if (result.error.includes("Answer this round first")) {
+          const local =
+            live.localPlayerRole === "a" ? live.playerAAnswer : live.playerBAnswer;
+          submitLocalAnswer(
+            questionIndex,
+            local?.answer ?? null,
+            local?.responseTimeMs ?? null
+          );
+        }
+
+        await wait(Math.min(2_000, 300 * attempt));
+      }
+    },
+    [sessionId, submitLocalAnswer, supabase]
+  );
+
   const finalizeRound = useCallback(() => {
     if (resolvingRef.current) {
       return;
@@ -629,28 +654,61 @@ export function useGameLoop({
     resolvingRef.current = true;
     clearTimers();
 
-    const state = useGameStore.getState();
-    const question = state.playlist[state.currentQuestionIndex];
-    const answerA = state.playerAAnswer;
-    const answerB = state.playerBAnswer;
-    const role = state.localPlayerRole;
+    const questionIndex = useGameStore.getState().currentQuestionIndex;
 
-    const localCorrect =
-      question &&
-      ((role === "a" && answerA?.answer === question.correct_answer) ||
-        (role === "b" && answerB?.answer === question.correct_answer));
+    void (async () => {
+      const reveal = await fetchRoundReveal(questionIndex);
+      const live = useGameStore.getState();
+      // The match may have moved on while the reveal was in flight; never
+      // score a newer round with this round's answer.
+      if (
+        !reveal ||
+        live.currentQuestionIndex !== questionIndex ||
+        live.roundPhase !== "playing"
+      ) {
+        return;
+      }
 
-    if (localCorrect) {
-      play("correct");
-    } else {
-      play("incorrect");
-    }
+      const localKey = live.localPlayerRole === "a" ? "playerAAnswer" : "playerBAnswer";
+      const opponentKey = live.localPlayerRole === "a" ? "playerBAnswer" : "playerAAnswer";
+      const local = live[localKey];
+      const opponent = live[opponentKey];
 
-    resolveRound();
-    void persistScores();
-    scheduleRoundResultCountdown();
+      // The server's copy of our answer is the one that counts (it differs
+      // only if a refresh made us answer twice).
+      const patch: Partial<Pick<typeof live, "playerAAnswer" | "playerBAnswer">> = {};
+      if (reveal.selectedAnswer !== (local?.answer ?? null)) {
+        patch[localKey] = {
+          answer: reveal.selectedAnswer,
+          responseTimeMs: reveal.selectedResponseTimeMs,
+        };
+      }
+      // The bot locked a hidden pick at its answer time; fill it in. A bot
+      // that never locked (responseTimeMs null) timed out.
+      if (isBotMatch && opponent?.responseTimeMs != null) {
+        patch[opponentKey] = {
+          answer: reveal.botAnswer,
+          responseTimeMs: opponent.responseTimeMs,
+        };
+      }
+      if (Object.keys(patch).length > 0) {
+        useGameStore.setState(patch);
+      }
+
+      play(
+        isAnswerCorrect(reveal.selectedAnswer, reveal.correctAnswer)
+          ? "correct"
+          : "incorrect"
+      );
+
+      resolveRound(reveal.correctAnswer);
+      void persistScores();
+      scheduleRoundResultCountdown();
+    })();
   }, [
     clearTimers,
+    fetchRoundReveal,
+    isBotMatch,
     persistScores,
     play,
     resolveRound,
@@ -691,11 +749,7 @@ export function useGameLoop({
         answer,
         responseTimeMs,
       });
-      void persistAnswer({
-        questionIndex: state.currentQuestionIndex,
-        answer,
-        responseTimeMs,
-      });
+      submitLocalAnswer(state.currentQuestionIndex, answer, responseTimeMs);
 
       if (bothAnswersLocked()) {
         finalizeRound();
@@ -706,8 +760,8 @@ export function useGameLoop({
       broadcastAnswer,
       finalizeRound,
       lockLocalAnswer,
-      persistAnswer,
       play,
+      submitLocalAnswer,
     ]
   );
 
@@ -907,17 +961,12 @@ export function useGameLoop({
 
       if (live.currentQuestionIndex >= pending) {
         pendingNextRoundRef.current = null;
-        pendingAppendQuestionRef.current = null;
         return;
       }
 
-      void leaderStartRoundRef.current(
-        pending,
-        pendingAppendQuestionRef.current ?? undefined
-      ).then((published) => {
+      void leaderStartRoundRef.current(pending).then((published) => {
         if (published) {
           pendingNextRoundRef.current = null;
-          pendingAppendQuestionRef.current = null;
         }
       });
     }, 2_000);

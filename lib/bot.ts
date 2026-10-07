@@ -1,13 +1,7 @@
-import type { ProficiencyLevel } from "@/lib/constants";
-import type { CorrectAnswer, QuestionActive } from "@/types/database.types";
 
 /** Player-facing bot tiers. `standard` is kept only for older links — same as medium. */
 export type BotDifficulty = "easy" | "medium" | "hard";
 export type BotDifficultyParam = BotDifficulty | "standard";
-
-const BOT_ACCURACY = 0.7;
-
-const OPTIONS: CorrectAnswer[] = ["A", "B", "C", "D"];
 
 /** Default bot match — medium answers after 10 seconds. */
 export const BOT_RESPONSE_TIME_MS = 10_000;
@@ -72,48 +66,11 @@ export function botDifficultyFromDisplayName(
   return "medium";
 }
 
-function pickWrongAnswer(correct: CorrectAnswer): CorrectAnswer {
-  const wrong = OPTIONS.filter((option) => option !== correct);
-  return wrong[Math.floor(Math.random() * wrong.length)];
-}
-
-const LEVEL_ACCURACY: Record<ProficiencyLevel, number> = {
-  A1: 0.62,
-  "A1-A2": 0.65,
-  A2: 0.67,
-  "A2-B1": 0.68,
-  B1: 0.7,
-  B2: 0.72,
-  C1: 0.74,
-};
-
-const DIFFICULTY_ACCURACY_BONUS: Record<BotDifficulty, number> = {
-  easy: -0.12,
-  medium: 0.08,
-  hard: 0,
-};
-
-/** Bot answers based on difficulty — hard always picks the correct option. */
-export function simulateBotAnswer(
-  question: QuestionActive,
-  proficiency: ProficiencyLevel,
-  difficulty: BotDifficulty = "medium"
-): CorrectAnswer {
-  if (difficulty === "hard") {
-    return question.correct_answer;
-  }
-
-  const baseAccuracy = LEVEL_ACCURACY[proficiency] ?? BOT_ACCURACY;
-  const bonus = DIFFICULTY_ACCURACY_BONUS[difficulty];
-  const accuracy = Math.min(0.95, Math.max(0.45, baseAccuracy + bonus));
-  const isCorrect = Math.random() < accuracy;
-
-  if (isCorrect) {
-    return question.correct_answer;
-  }
-
-  return pickWrongAnswer(question.correct_answer);
-}
+// The bot's pick is decided on the server (reveal_round_answer in
+// supabase/answer-secrecy-1-functions-2026-10.sql): the browser never holds a
+// question's answer before the player has answered. Accuracy there: hard is
+// always right; easy/medium use a per-level base (A1 0.62 … C1 0.74) with a
+// −0.12 / +0.08 tier bonus, clamped to [0.45, 0.95].
 
 export function getBotDifficultyDescription(difficulty: BotDifficulty): string {
   switch (difficulty) {

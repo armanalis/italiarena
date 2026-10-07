@@ -1,23 +1,23 @@
 import { isMatchSyncState, type MatchSyncState } from "@/lib/match-sync";
-import type { QuestionActive } from "@/types/database.types";
+import type { PublicQuestion } from "@/types/database.types";
 
 export type SessionPlaylistData = {
   questionIds: string[];
   sync: MatchSyncState | null;
   /**
-   * Full question rows for ids appended mid-match (sudden-death tiebreaker).
-   * Both clients read this from the same poll so the follower does not need a
-   * separate server-action refetch before entering the round.
+   * Question rows (without answers) for ids appended mid-match by
+   * append_tiebreaker_question. Both clients read this from the same poll so
+   * the follower does not need a separate refetch before entering the round.
    */
-  questionBank: Record<string, QuestionActive>;
+  questionBank: Record<string, PublicQuestion>;
 };
 
-function isQuestionActive(value: unknown): value is QuestionActive {
+function isPublicQuestion(value: unknown): value is PublicQuestion {
   if (!value || typeof value !== "object") {
     return false;
   }
 
-  const question = value as QuestionActive;
+  const question = value as PublicQuestion;
   return (
     typeof question.id === "string" &&
     typeof question.language === "string" &&
@@ -28,23 +28,23 @@ function isQuestionActive(value: unknown): value is QuestionActive {
     typeof question.option_b === "string" &&
     typeof question.option_c === "string" &&
     typeof question.option_d === "string" &&
-    (question.correct_answer === "A" ||
-      question.correct_answer === "B" ||
-      question.correct_answer === "C" ||
-      question.correct_answer === "D") &&
     typeof question.random_float === "number"
   );
 }
 
-function parseQuestionBank(raw: unknown): Record<string, QuestionActive> {
+function parseQuestionBank(raw: unknown): Record<string, PublicQuestion> {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return {};
   }
 
-  const bank: Record<string, QuestionActive> = {};
+  const bank: Record<string, PublicQuestion> = {};
   for (const [id, value] of Object.entries(raw)) {
-    if (isQuestionActive(value) && value.id === id) {
-      bank[id] = value;
+    if (isPublicQuestion(value) && value.id === id) {
+      // Older sessions stored full rows; never pass an answer on to the client.
+      const { correct_answer: _answer, ...question } = value as PublicQuestion & {
+        correct_answer?: unknown;
+      };
+      bank[id] = question;
     }
   }
   return bank;
@@ -80,24 +80,9 @@ export function parseQuestionPlaylist(raw: unknown): SessionPlaylistData {
   return { questionIds: [], sync: null, questionBank: {} };
 }
 
-export function buildQuestionPlaylistPayload(
-  questionIds: string[],
-  sync: MatchSyncState | null = null,
-  questionBank: Record<string, QuestionActive> = {}
-) {
-  const bankEntries = Object.entries(questionBank).filter(
-    ([id, question]) => questionIds.includes(id) && isQuestionActive(question)
-  );
-
-  if (bankEntries.length === 0) {
-    return { questionIds, sync };
-  }
-
-  return {
-    questionIds,
-    sync,
-    questionBank: Object.fromEntries(bankEntries),
-  };
+/** Initial playlist for a new session (server only; players cannot write it). */
+export function buildQuestionPlaylistPayload(questionIds: string[]) {
+  return { questionIds, sync: null };
 }
 
 export function extractQuestionIds(raw: unknown): string[] {

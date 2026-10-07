@@ -1,8 +1,13 @@
 "use server";
 
+import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 import { getCurrentUserProfile, isOnboardingComplete } from "@/lib/auth";
-import { BOT_DIFFICULTY_LABELS, type BotDifficulty } from "@/lib/bot";
+import {
+  BOT_DIFFICULTY_LABELS,
+  normalizeBotDifficulty,
+  type BotDifficulty,
+} from "@/lib/bot";
 import { GHOST_PLAYER_ID, GHOST_PLAYER_NAME } from "@/lib/ghost";
 import { getPublicDisplayName } from "@/lib/display-name";
 import {
@@ -15,13 +20,14 @@ import {
   extractQuestionIds,
   parseQuestionPlaylist,
 } from "@/lib/session-playlist";
-import type { QuestionActive } from "@/types/database.types";
+import { PUBLIC_QUESTION_COLUMNS } from "@/lib/resolve-match-questions";
+import type { PublicQuestion } from "@/types/database.types";
 import type { UserProfile } from "@/lib/types";
 
 type MatchmakingSuccess = {
   sessionId: string;
   status: "waiting" | "active";
-  playlist: QuestionActive[];
+  playlist: PublicQuestion[];
   opponent: {
     id: string;
     isGhost: boolean;
@@ -99,7 +105,8 @@ export async function getMatchPlayerNames(session: {
   return { playerAName, playerBName };
 }
 
-async function fetchQuestionsByIds(ids: string[]): Promise<QuestionActive[]> {
+/** Playlist questions WITHOUT answers — this is what reaches the browser. */
+async function fetchQuestionsByIds(ids: string[]): Promise<PublicQuestion[]> {
   if (ids.length === 0) {
     return [];
   }
@@ -107,17 +114,19 @@ async function fetchQuestionsByIds(ids: string[]): Promise<QuestionActive[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("questions_active")
-    .select("*")
+    .select(PUBLIC_QUESTION_COLUMNS)
     .in("id", ids);
 
   if (error || !data) {
     return [];
   }
 
-  const byId = new Map(data.map((question) => [question.id, question]));
+  const byId = new Map(
+    (data as PublicQuestion[]).map((question) => [question.id, question])
+  );
   return ids
     .map((id) => byId.get(id))
-    .filter((question): question is QuestionActive => Boolean(question));
+    .filter((question): question is PublicQuestion => Boolean(question));
 }
 
 async function resolveSessionQuestions(questionIds: string[]) {
@@ -175,7 +184,7 @@ async function generateMatchQuestions(
     await Promise.all([
       supabase
         .from("questions_active")
-        .select("*")
+        .select(PUBLIC_QUESTION_COLUMNS)
         .eq("language", language)
         .eq("level", level),
       getQuestionRotationContext(userId),
@@ -185,7 +194,11 @@ async function generateMatchQuestions(
     throw new Error(poolError.message);
   }
 
-  const regular = buildMatchPlaylist(pool ?? [], recentIds, seenIds);
+  const regular = buildMatchPlaylist(
+    (pool ?? []) as PublicQuestion[],
+    recentIds,
+    seenIds
+  );
 
   if (regular.length < REGULAR_MATCH_QUESTIONS) {
     throw new Error(
@@ -408,7 +421,9 @@ export async function searchForMatch(
     };
   }
 
-  const { data: createdSession, error: createError } = await supabase
+  // Service role: players cannot create sessions themselves, so they cannot
+  // choose a match's question ids (see answer-secrecy-2-lockdown-2026-10.sql).
+  const { data: createdSession, error: createError } = await createAdminClient()
     .from("game_sessions")
     .insert({
       player_a_id: profile.id,
@@ -448,9 +463,9 @@ export async function startBotMatch(
   }
 
   const { profile } = auth;
-  const supabase = await createClient();
   const language = profile.target_language!;
   const level = profile.proficiency_level!;
+  const botDifficulty = normalizeBotDifficulty(difficulty);
 
   let matchQuestions;
 
@@ -466,7 +481,9 @@ export async function startBotMatch(
     };
   }
 
-  const { data: createdSession, error: createError } = await supabase
+  // Service role, as above. The bot tier is stored so the server can play
+  // the bot (reveal_round_answer) and a refresh keeps the right tier.
+  const { data: createdSession, error: createError } = await createAdminClient()
     .from("game_sessions")
     .insert({
       player_a_id: profile.id,
@@ -475,6 +492,7 @@ export async function startBotMatch(
       language,
       level,
       question_playlist: buildQuestionPlaylistPayload(matchQuestions.sessionIds),
+      bot_difficulty: botDifficulty,
     })
     .select("*")
     .single();
@@ -497,7 +515,7 @@ export async function startBotMatch(
       opponent: {
         id: GHOST_PLAYER_ID,
         isGhost: true,
-        displayName: BOT_DIFFICULTY_LABELS[difficulty],
+        displayName: BOT_DIFFICULTY_LABELS[botDifficulty],
       },
     },
   };
@@ -703,7 +721,9 @@ export async function getMatchSession(sessionId: string) {
             id: opponentId,
             isGhost,
             displayName: isGhost
-              ? GHOST_PLAYER_NAME
+              ? session.bot_difficulty
+                ? BOT_DIFFICULTY_LABELS[normalizeBotDifficulty(session.bot_difficulty)]
+                : GHOST_PLAYER_NAME
               : await getPlayerDisplayName(opponentId),
           }
         : null,
