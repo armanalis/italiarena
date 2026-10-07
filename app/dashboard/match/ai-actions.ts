@@ -1,12 +1,16 @@
 "use server";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   buildAiExplanationCacheKey,
   MAX_AI_ASKS_PER_MATCH,
+  MAX_NEW_AI_ASKS_PER_DAY,
   type AskAiExplanationPayload,
 } from "@/lib/ai-explanations";
 import { generateGroqExplanation } from "@/lib/groq";
+import { createAdminClientOrNull } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
+import type { CorrectAnswer } from "@/types/database.types";
 
 export type AskAiExplanationResult =
   | {
@@ -20,6 +24,33 @@ export type AskAiExplanationResult =
       error: string;
       asksRemaining: number;
     };
+
+type ExplainableQuestion = {
+  id: string;
+  category: string;
+  question_text: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_answer: CorrectAnswer;
+};
+
+const ANSWER_LETTERS: readonly CorrectAnswer[] = ["A", "B", "C", "D"];
+
+function isAnswerLetter(value: unknown): value is CorrectAnswer {
+  return ANSWER_LETTERS.includes(value as CorrectAnswer);
+}
+
+function optionText(question: ExplainableQuestion, letter: CorrectAnswer) {
+  const options: Record<CorrectAnswer, string> = {
+    A: question.option_a,
+    B: question.option_b,
+    C: question.option_c,
+    D: question.option_d,
+  };
+  return options[letter];
+}
 
 async function countMatchAiAsks(
   userId: string,
@@ -39,6 +70,54 @@ async function countMatchAiAsks(
   return count ?? 0;
 }
 
+async function countAiAsksLastDay(userId: string): Promise<number> {
+  const supabase = await createClient();
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count, error } = await supabase
+    .from("match_ai_asks")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .gte("created_at", since);
+
+  if (error) {
+    return MAX_NEW_AI_ASKS_PER_DAY;
+  }
+
+  return count ?? 0;
+}
+
+/**
+ * Reads the question from the database with the service-role client;
+ * quarantined questions live in questions_flagged.
+ */
+async function loadExplainableQuestion(
+  supabase: SupabaseClient,
+  questionId: string
+): Promise<ExplainableQuestion | null> {
+  const columns =
+    "id, category, question_text, option_a, option_b, option_c, option_d, correct_answer";
+
+  for (const table of ["questions_active", "questions_flagged"]) {
+    const { data } = await supabase
+      .from(table)
+      .select(columns)
+      .eq("id", questionId)
+      .maybeSingle()
+      .returns<ExplainableQuestion>();
+
+    if (data) {
+      return data;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Only the ids and the chosen letter come from the browser. The question text
+ * and correct answer are read from the database, and the explanation is stored
+ * with the service role, so a player cannot plant text in the shared cache.
+ */
 export async function askQuestionExplanation(
   payload: AskAiExplanationPayload
 ): Promise<AskAiExplanationResult> {
@@ -55,7 +134,11 @@ export async function askQuestionExplanation(
     };
   }
 
-  if (!payload.sessionId || !payload.questionId || !payload.questionText.trim()) {
+  const selectedAnswer = isAnswerLetter(payload.selectedAnswer)
+    ? payload.selectedAnswer
+    : null;
+
+  if (!payload.sessionId || !payload.questionId) {
     return {
       success: false,
       error: "Missing question context.",
@@ -63,10 +146,7 @@ export async function askQuestionExplanation(
     };
   }
 
-  const cacheKey = buildAiExplanationCacheKey(
-    payload.questionId,
-    payload.selectedAnswer
-  );
+  const cacheKey = buildAiExplanationCacheKey(payload.questionId, selectedAnswer);
 
   const asksUsed = await countMatchAiAsks(user.id, payload.sessionId);
   const asksRemaining = Math.max(0, MAX_AI_ASKS_PER_MATCH - asksUsed);
@@ -99,20 +179,58 @@ export async function askQuestionExplanation(
     };
   }
 
-  const generated = await generateGroqExplanation(payload);
+  if ((await countAiAsksLastDay(user.id)) >= MAX_NEW_AI_ASKS_PER_DAY) {
+    return {
+      success: false,
+      error: `You have reached today's limit of ${MAX_NEW_AI_ASKS_PER_DAY} new AI explanations. Try again tomorrow.`,
+      asksRemaining,
+    };
+  }
+
+  const admin = createAdminClientOrNull();
+  if (!admin) {
+    return {
+      success: false,
+      error: "AI explanations are not configured yet.",
+      asksRemaining,
+    };
+  }
+
+  // Service role: players will lose read access to correct_answer (and never
+  // see questions_flagged), but the explanation still needs both.
+  const question = await loadExplainableQuestion(admin, payload.questionId);
+  if (!question) {
+    return {
+      success: false,
+      error: "This question is no longer available.",
+      asksRemaining,
+    };
+  }
+
+  const generated = await generateGroqExplanation({
+    sessionId: payload.sessionId,
+    questionId: question.id,
+    category: question.category,
+    questionText: question.question_text,
+    correctAnswer: question.correct_answer,
+    correctOptionText: optionText(question, question.correct_answer),
+    selectedAnswer,
+    selectedOptionText: selectedAnswer ? optionText(question, selectedAnswer) : null,
+    wasCorrect: selectedAnswer === question.correct_answer,
+  });
 
   if ("error" in generated) {
     return { success: false, error: generated.error, asksRemaining };
   }
 
-  // Writes go through a security-definer RPC (not a raw table upsert/insert)
-  // so the ask-limit is re-checked and recorded atomically server-side —
-  // see supabase/content-write-lockdown-migration.sql.
-  const { error: recordError } = await supabase.rpc("record_ai_explanation", {
+  // Service-role only RPC: re-checks the per-session limit, derives the cache
+  // key itself, and never overwrites an existing explanation — see
+  // supabase/security-hardening-2026-10.sql.
+  const { error: recordError } = await admin.rpc("record_ai_explanation_for_user", {
+    p_user_id: user.id,
     p_session_id: payload.sessionId,
-    p_question_id: payload.questionId,
-    p_selected_answer: payload.selectedAnswer,
-    p_cache_key: cacheKey,
+    p_question_id: question.id,
+    p_selected_answer: selectedAnswer,
     p_explanation: generated.explanation,
   });
 

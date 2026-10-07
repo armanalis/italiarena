@@ -2,6 +2,13 @@ import type { CorrectAnswer } from "@/types/database.types";
 
 export const MAX_AI_ASKS_PER_MATCH = 3;
 
+/**
+ * Practice sessions get a fresh browser-generated id, so the per-match limit
+ * alone does not bound Groq spend. This caps new generations per player per
+ * rolling 24 hours; cached explanations stay free.
+ */
+export const MAX_NEW_AI_ASKS_PER_DAY = 30;
+
 // Groq decommissioned the llama-3.1 chat models. gpt-oss is a reasoning model:
 // its hidden reasoning tokens count against max_tokens, so every call site must
 // send GROQ_REASONING_EFFORT or long answers get truncated mid-sentence.
