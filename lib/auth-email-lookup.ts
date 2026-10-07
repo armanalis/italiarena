@@ -15,10 +15,13 @@ export async function isEmailRegistered(email: string): Promise<boolean> {
     return false;
   }
 
+  // Exact match, not ilike: ilike treats % and _ in the input as wildcards, which
+  // let anyone probe for unknown addresses ("a%@gmail.com"). Auth stores emails
+  // lowercased; the admin API check below covers any legacy mixed-case row.
   const { data: profileUser, error: profileError } = await admin
     .from("users")
     .select("id")
-    .ilike("email", trimmed)
+    .eq("email", trimmed.toLowerCase())
     .maybeSingle();
 
   if (profileError) {
