@@ -859,7 +859,9 @@ export function useGameLoop({
     }
   }, [finalizeRound, playerAAnswer, playerBAnswer, roundPhase]);
 
-  // Reschedule the bot answer when the report dialog pauses the round timer.
+  // Runs when a question starts and when the report dialog pauses or resumes
+  // it: reschedule the bot answer, and save the question clock so a refresh
+  // resumes the countdown instead of granting a fresh 25 seconds.
   useEffect(() => {
     if (!isBotMatch || roundPhase !== "playing" || !roundStartedAt) {
       return;
@@ -867,10 +869,12 @@ export function useGameLoop({
 
     clearBotTimer();
     scheduleBotAnswer();
+    void persistScores();
   }, [
     clearBotTimer,
     isBotMatch,
     isReportDialogOpen,
+    persistScores,
     roundPhase,
     roundStartedAt,
     scheduleBotAnswer,

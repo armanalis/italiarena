@@ -31,6 +31,14 @@ export type MatchRoundReview = {
   pointsEarned: number;
 };
 
+/** Clock of the question in play when the doc was written (bot matches only). */
+export type ActiveRoundClock = {
+  questionIndex: number;
+  startedAt: number;
+  pauseOffsetMs: number;
+  pauseStartedAt: number | null;
+};
+
 export type MatchScoreState = {
   /** Highest question index that has already been scored (−1 = none yet). */
   resolvedThroughIndex: number;
@@ -45,6 +53,8 @@ export type MatchScoreState = {
   tiebreakerUsed: boolean;
   matchFinished: boolean;
   matchWinner: MatchWinner | null;
+  /** Lets a refresh resume the question clock instead of restarting it. */
+  activeRound?: ActiveRoundClock | null;
 };
 
 const QUESTION_CATEGORIES: QuestionCategory[] = [
@@ -129,6 +139,9 @@ export type ScoreSnapshotInput = {
   tiebreakerUsed: boolean;
   roundPhase: string;
   matchWinner: MatchWinner | null;
+  roundStartedAt: number | null;
+  timerPauseOffsetMs: number;
+  timerPauseStartedAt: number | null;
 };
 
 export function buildMatchScoreState(input: ScoreSnapshotInput): MatchScoreState {
@@ -160,7 +173,36 @@ export function buildMatchScoreState(input: ScoreSnapshotInput): MatchScoreState
             input.playerBResponseTimes
           )
         : null),
+    activeRound:
+      input.roundPhase === "playing" && input.roundStartedAt !== null
+        ? {
+            questionIndex: input.currentQuestionIndex,
+            startedAt: input.roundStartedAt,
+            pauseOffsetMs: input.timerPauseOffsetMs,
+            pauseStartedAt: input.timerPauseStartedAt,
+          }
+        : null,
   };
+}
+
+/** The saved question clock, only if it belongs to `questionIndex`. */
+export function readActiveRoundClock(
+  score: MatchScoreState,
+  questionIndex: number
+): ActiveRoundClock | null {
+  const clock = score.activeRound;
+  if (
+    !clock ||
+    typeof clock !== "object" ||
+    clock.questionIndex !== questionIndex ||
+    typeof clock.startedAt !== "number" ||
+    typeof clock.pauseOffsetMs !== "number" ||
+    (clock.pauseStartedAt !== null && typeof clock.pauseStartedAt !== "number")
+  ) {
+    return null;
+  }
+
+  return clock;
 }
 
 /** Patch applied to the Zustand store when rehydrating from the server. */
