@@ -180,28 +180,14 @@ export async function requestPasswordReset(
     return { error: "Email is required.", success: null };
   }
 
-  const admin = createAdminClientOrNull();
-  if (!admin) {
+  if (!createAdminClientOrNull()) {
     return {
       error: "Password reset is temporarily unavailable. Please try again later.",
       success: null,
     };
   }
 
-  const { data: registeredUser, error: lookupError } = await admin
-    .from("users")
-    .select("id")
-    .ilike("email", email)
-    .maybeSingle();
-
-  const emailKnown =
-    Boolean(registeredUser) || (await isEmailRegistered(email));
-
-  if (lookupError) {
-    return { error: lookupError.message, success: null };
-  }
-
-  if (!emailKnown) {
+  if (!(await isEmailRegistered(email))) {
     return {
       error: "There is no registered email for this address.",
       success: null,
