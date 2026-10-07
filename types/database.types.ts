@@ -421,6 +421,16 @@ export interface Database {
         Args: Record<string, never>;
         Returns: void;
       };
+      record_ai_explanation_for_user: {
+        Args: {
+          p_user_id: string;
+          p_session_id: string;
+          p_question_id: string;
+          p_selected_answer: string | null;
+          p_explanation: string;
+        };
+        Returns: void;
+      };
       resolve_login_email: {
         Args: { p_identifier: string };
         Returns: string | null;
