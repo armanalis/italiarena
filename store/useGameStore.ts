@@ -192,7 +192,10 @@ const gameplayDefaults: Pick<
   playerAScore: 0,
   playerBScore: 0,
   isBotMatch: false,
-  roundPhase: "topic_reveal",
+  // Neutral until a match is set up. "topic_reveal" here made the bot loop
+  // start question 1 on every page load and made MatchHydrator think the
+  // match was already running, so a refreshed finished match replayed.
+  roundPhase: "waiting",
   localPlayerRole: null,
   localUserId: null,
   proficiencyLevel: null,
