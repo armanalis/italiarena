@@ -30,9 +30,17 @@ function getAdminClientOrNull() {
   }
 }
 
+/**
+ * resolve_login_email turns a public username into a private email, so only the
+ * service role may call it (see supabase/security-hardening-2026-10.sql).
+ */
 async function lookupEmailViaRpc(identifier: string): Promise<string | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("resolve_login_email", {
+  const admin = getAdminClientOrNull();
+  if (!admin) {
+    return null;
+  }
+
+  const { data, error } = await admin.rpc("resolve_login_email", {
     p_identifier: identifier,
   });
 
@@ -51,16 +59,21 @@ async function lookupEmailViaAdmin(username: string): Promise<string | null> {
 
   const { data, error } = await admin
     .from("users")
-    .select("email")
+    .select("email, display_name")
     .ilike("display_name", username)
-    .limit(1)
-    .returns<{ email: string }[]>();
+    .limit(10)
+    .returns<{ email: string; display_name: string | null }[]>();
 
   if (error || !data?.length) {
     return null;
   }
 
-  return data[0].email;
+  // ilike treats % and _ as wildcards; only accept an exact case-insensitive match.
+  const wanted = username.trim().toLowerCase();
+  return (
+    data.find((row) => row.display_name?.trim().toLowerCase() === wanted)
+      ?.email ?? null
+  );
 }
 
 /** Case-insensitive lookup — always reads the current display_name from the database. */
