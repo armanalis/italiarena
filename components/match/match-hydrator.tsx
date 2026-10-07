@@ -10,9 +10,9 @@
  * For BOT matches there is no live PvP sync loop, so we set up the match
  * locally via `startMatch`, then rehydrate cumulative scores (and the next
  * question index) from `game_sessions.score_state` so a refresh cannot wipe
- * the point process. Mid-question bot answers are not persisted — a refresh
- * restarts the current unanswered question with a fresh timer (scores for
- * completed rounds still survive).
+ * the point process. A refresh mid-question resumes that question's clock
+ * from `score_state.activeRound`; an answer locked before the refresh is not
+ * saved, so the player answers again against the time that is left.
  */
 "use client";
 
@@ -20,9 +20,13 @@ import { useEffect, useRef } from "react";
 import { botDifficultyFromDisplayName } from "@/lib/bot";
 import {
   isMatchScoreState,
+  readActiveRoundClock,
   scoreStateToStorePatch,
 } from "@/lib/match-score-state";
-import { FRESH_ROUND_TIMER_STATE } from "@/lib/match-timer";
+import {
+  FRESH_ROUND_TIMER_STATE,
+  getRoundTimeRemainingSec,
+} from "@/lib/match-timer";
 import { determineWinner } from "@/lib/scoring";
 import { createClient } from "@/utils/supabase/client";
 import { useGameStore, useGameStoreHydrated } from "@/store/useGameStore";
@@ -152,6 +156,30 @@ export function MatchHydrator({
         return;
       }
 
+      // Refreshed mid-question: keep the original clock running. Time the
+      // report dialog was open before the refresh still counts as paused.
+      const clock = readActiveRoundClock(score, nextIndex);
+      const pauseOffsetMs = clock
+        ? clock.pauseOffsetMs +
+          (clock.pauseStartedAt ? Date.now() - clock.pauseStartedAt : 0)
+        : 0;
+      const roundState = clock
+        ? {
+            roundPhase: "playing" as const,
+            roundStartedAt: clock.startedAt,
+            timerPauseOffsetMs: pauseOffsetMs,
+            timerPauseStartedAt: null,
+            timeRemaining: getRoundTimeRemainingSec(
+              clock.startedAt,
+              pauseOffsetMs
+            ),
+          }
+        : {
+            roundPhase: "topic_reveal" as const,
+            roundStartedAt: null,
+            ...FRESH_ROUND_TIMER_STATE,
+          };
+
       useGameStore.setState({
         gameSessionId: sessionId,
         status: "playing",
@@ -161,11 +189,9 @@ export function MatchHydrator({
         botDifficulty,
         ...patch,
         currentQuestionIndex: nextIndex,
-        roundPhase: "topic_reveal",
+        ...roundState,
         playerAAnswer: null,
         playerBAnswer: null,
-        roundStartedAt: null,
-        ...FRESH_ROUND_TIMER_STATE,
         matchWinner: null,
         matchSaved: false,
         tiebreakerQuestion: null,
