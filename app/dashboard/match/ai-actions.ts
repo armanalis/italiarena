@@ -8,6 +8,8 @@ import {
   type AskAiExplanationPayload,
 } from "@/lib/ai-explanations";
 import { generateGroqExplanation } from "@/lib/groq";
+import { isMatchScoreState } from "@/lib/match-score-state";
+import { extractQuestionIds } from "@/lib/session-playlist";
 import { createAdminClientOrNull } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 import type { CorrectAnswer } from "@/types/database.types";
@@ -114,6 +116,51 @@ async function loadExplainableQuestion(
 }
 
 /**
+ * An explanation states the correct answer, so it is only given for a
+ * question the player has already answered: one in their mistakes list, or
+ * one from their own match that is finished or has already scored it.
+ */
+async function canExplainQuestion(
+  admin: SupabaseClient,
+  userId: string,
+  sessionId: string,
+  questionId: string
+): Promise<boolean> {
+  const { data: mistake } = await admin
+    .from("user_mistakes")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("question_id", questionId)
+    .maybeSingle();
+
+  if (mistake) {
+    return true;
+  }
+
+  // Practice sessions use a browser-made id; a non-uuid simply finds nothing.
+  const { data: session } = await admin
+    .from("game_sessions")
+    .select("player_a_id, player_b_id, status, question_playlist, score_state")
+    .eq("id", sessionId)
+    .maybeSingle();
+
+  if (!session || (session.player_a_id !== userId && session.player_b_id !== userId)) {
+    return false;
+  }
+
+  if (!extractQuestionIds(session.question_playlist).includes(questionId)) {
+    return false;
+  }
+
+  if (session.status !== "waiting" && session.status !== "active") {
+    return true;
+  }
+
+  const score = isMatchScoreState(session.score_state) ? session.score_state : null;
+  return Boolean(score?.roundReviews.some((round) => round.questionId === questionId));
+}
+
+/**
  * Only the ids and the chosen letter come from the browser. The question text
  * and correct answer are read from the database, and the explanation is stored
  * with the service role, so a player cannot plant text in the shared cache.
@@ -146,12 +193,31 @@ export async function askQuestionExplanation(
     };
   }
 
+  const admin = createAdminClientOrNull();
+  if (!admin) {
+    return {
+      success: false,
+      error: "AI explanations are not configured yet.",
+      asksRemaining: 0,
+    };
+  }
+
+  if (!(await canExplainQuestion(admin, user.id, payload.sessionId, payload.questionId))) {
+    return {
+      success: false,
+      error: "AI explanations open once you have answered this question.",
+      asksRemaining: 0,
+    };
+  }
+
   const cacheKey = buildAiExplanationCacheKey(payload.questionId, selectedAnswer);
 
   const asksUsed = await countMatchAiAsks(user.id, payload.sessionId);
   const asksRemaining = Math.max(0, MAX_AI_ASKS_PER_MATCH - asksUsed);
 
-  const { data: cached, error: cacheReadError } = await supabase
+  // Service role: players cannot read the shared cache directly (each entry
+  // states an answer) — see answer-secrecy-2-lockdown-2026-10.sql.
+  const { data: cached, error: cacheReadError } = await admin
     .from("question_ai_explanations")
     .select("explanation")
     .eq("cache_key", cacheKey)
@@ -183,15 +249,6 @@ export async function askQuestionExplanation(
     return {
       success: false,
       error: `You have reached today's limit of ${MAX_NEW_AI_ASKS_PER_DAY} new AI explanations. Try again tomorrow.`,
-      asksRemaining,
-    };
-  }
-
-  const admin = createAdminClientOrNull();
-  if (!admin) {
-    return {
-      success: false,
-      error: "AI explanations are not configured yet.",
       asksRemaining,
     };
   }

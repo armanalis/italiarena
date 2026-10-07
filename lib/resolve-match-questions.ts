@@ -1,35 +1,44 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   CorrectAnswer,
-  QuestionActive,
+  PublicQuestion,
   QuestionCategory,
 } from "@/types/database.types";
 
-/** Load questions by id from the active pool and the flagged (quarantined) pool. */
+/**
+ * Columns players may read from questions_active / questions_flagged. Every
+ * column except correct_answer — see supabase/answer-secrecy-2-lockdown-2026-10.sql.
+ */
+export const PUBLIC_QUESTION_COLUMNS =
+  "id, language, level, category, question_text, option_a, option_b, option_c, option_d, random_float";
+
+/**
+ * Load questions by id from the active pool and the flagged (quarantined)
+ * pool, without their answers. Safe for any client.
+ */
 export async function resolveQuestionsByIds(
   supabase: SupabaseClient,
   ids: string[]
-): Promise<Map<string, QuestionActive>> {
+): Promise<Map<string, PublicQuestion>> {
   if (ids.length === 0) {
     return new Map();
   }
 
   const uniqueIds = [...new Set(ids)];
-  const byId = new Map<string, QuestionActive>();
+  const byId = new Map<string, PublicQuestion>();
 
   const [{ data: active }, { data: flagged }] = await Promise.all([
-    supabase.from("questions_active").select("*").in("id", uniqueIds),
-    supabase.from("questions_flagged").select("*").in("id", uniqueIds),
+    supabase.from("questions_active").select(PUBLIC_QUESTION_COLUMNS).in("id", uniqueIds),
+    supabase.from("questions_flagged").select(PUBLIC_QUESTION_COLUMNS).in("id", uniqueIds),
   ]);
 
-  for (const question of active ?? []) {
-    byId.set(question.id, question as QuestionActive);
+  for (const question of (active ?? []) as PublicQuestion[]) {
+    byId.set(question.id, question);
   }
 
-  for (const question of flagged ?? []) {
+  for (const question of (flagged ?? []) as PublicQuestion[]) {
     if (!byId.has(question.id)) {
-      const { report_count: _reportCount, ...rest } = question;
-      byId.set(question.id, rest as QuestionActive);
+      byId.set(question.id, question);
     }
   }
 
@@ -37,7 +46,7 @@ export async function resolveQuestionsByIds(
 }
 
 export function getOptionText(
-  question: QuestionActive,
+  question: PublicQuestion,
   answer: CorrectAnswer
 ): string {
   const key = `option_${answer.toLowerCase()}` as

@@ -64,6 +64,12 @@ export type QuestionActive = {
   random_float: number;
 };
 
+/**
+ * A question as players receive it during a match. The answer stays on the
+ * server until the player's own answer is locked (reveal_round_answer).
+ */
+export type PublicQuestion = Omit<QuestionActive, "correct_answer">;
+
 // Same as QuestionActive, but pulled from the flagged/review queue
 export type QuestionFlagged = QuestionActive & {
   report_count: number;
@@ -195,9 +201,12 @@ export type GameSession = {
   player_a_id: string;
   player_b_id: string | null;
   status: GameSessionStatus;
-  question_playlist: string[];
+  /** `{ questionIds, sync?, questionBank? }` (legacy rows: a bare id array). Parse with lib/session-playlist. */
+  question_playlist: unknown;
   language: QuestionLanguage | null;
   level: QuestionLevel | null;
+  /** Bot tier for ghost matches; the server plays the bot from this. */
+  bot_difficulty: "easy" | "medium" | "hard" | null;
   /** Player A's locked answer for the current round (MatchAnswerRecord JSON). */
   answer_a: unknown;
   /** Player B's locked answer for the current round (MatchAnswerRecord JSON). */
@@ -267,7 +276,14 @@ export type GameSessionInsert = Pick<GameSession, "player_a_id"> &
   Partial<
     Pick<
       GameSession,
-      "id" | "player_b_id" | "status" | "question_playlist" | "created_at"
+      | "id"
+      | "player_b_id"
+      | "status"
+      | "question_playlist"
+      | "language"
+      | "level"
+      | "bot_difficulty"
+      | "created_at"
     >
   >;
 

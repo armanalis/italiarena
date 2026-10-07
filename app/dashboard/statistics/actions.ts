@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getAuthUserId } from "@/lib/auth";
 import { cachedDashboardQuery, dashboardTag, revalidateUserDashboard } from "@/lib/dashboard-cache";
-import { resolveQuestionsByIds } from "@/lib/resolve-match-questions";
+import { resolveQuestionsWithAnswers } from "@/lib/questions-with-answers";
 import { isAnswerCorrect } from "@/lib/scoring";
 import { createClient } from "@/utils/supabase/server";
 import type {
@@ -44,11 +44,11 @@ type MatchMistakeInput = {
 
 const PRACTICE_MASTER_STREAK = 3;
 
+/** Only for questions already in the player's own mistakes list. */
 async function resolveQuestionById(
-  supabase: Awaited<ReturnType<typeof createClient>>,
   questionId: string
 ): Promise<QuestionActive | null> {
-  const questions = await resolveQuestionsByIds(supabase, [questionId]);
+  const questions = await resolveQuestionsWithAnswers([questionId]);
   return questions.get(questionId) ?? null;
 }
 
@@ -99,8 +99,7 @@ async function fetchUserMistakes(userId: string): Promise<UserMistakeWithQuestio
     return [];
   }
 
-  const questionsById = await resolveQuestionsByIds(
-    supabase,
+  const questionsById = await resolveQuestionsWithAnswers(
     data.map((row) => row.question_id)
   );
 
@@ -142,42 +141,15 @@ export async function recordMatchMistakes(
     return { success: false, error: "Not authenticated." };
   }
 
-  for (const mistake of mistakes) {
-    const { data: existing } = await supabase
-      .from("user_mistakes")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("question_id", mistake.questionId)
-      .maybeSingle();
+  // The database only accepts questions from the caller's own finished match
+  // (record_match_mistakes), so this cannot be used to look up answers.
+  const { error } = await supabase.rpc("record_match_mistakes", {
+    p_session_id: sessionId,
+    p_mistakes: mistakes,
+  });
 
-    if (existing) {
-      const { error } = await supabase
-        .from("user_mistakes")
-        .update({
-          selected_answer: mistake.selectedAnswer,
-          practice_streak: 0,
-          last_mistaken_at: new Date().toISOString(),
-          session_id: sessionId,
-        })
-        .eq("id", existing.id);
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-      continue;
-    }
-
-    const { error } = await supabase.from("user_mistakes").insert({
-      user_id: user.id,
-      question_id: mistake.questionId,
-      selected_answer: mistake.selectedAnswer,
-      practice_streak: 0,
-      session_id: sessionId,
-    });
-
-    if (error) {
-      return { success: false, error: error.message };
-    }
+  if (error) {
+    return { success: false, error: error.message };
   }
 
   revalidatePath("/dashboard/statistics");
@@ -209,7 +181,7 @@ export async function submitMistakePracticeAnswer(
     return { success: false, error: "Mistake not found." };
   }
 
-  const question = await resolveQuestionById(supabase, questionId);
+  const question = await resolveQuestionById(questionId);
 
   if (!question) {
     return { success: false, error: "Question not found." };

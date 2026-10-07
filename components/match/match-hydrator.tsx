@@ -30,7 +30,7 @@ import {
 import { determineWinner } from "@/lib/scoring";
 import { createClient } from "@/utils/supabase/client";
 import { useGameStore, useGameStoreHydrated } from "@/store/useGameStore";
-import type { QuestionActive } from "@/types/database.types";
+import type { PublicQuestion } from "@/types/database.types";
 
 type MatchHydratorProps = {
   sessionId: string;
@@ -39,7 +39,7 @@ type MatchHydratorProps = {
     isGhost: boolean;
     displayName: string;
   } | null;
-  playlist: QuestionActive[];
+  playlist: PublicQuestion[];
 };
 
 export function MatchHydrator({

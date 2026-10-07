@@ -29,7 +29,7 @@ import { parseQuestionPlaylist } from "@/lib/session-playlist";
 import { determineWinner } from "@/lib/scoring";
 import { useGameAudio } from "@/hooks/useGameAudio";
 import { useGameStore, type LockedAnswer } from "@/store/useGameStore";
-import type { QuestionActive } from "@/types/database.types";
+import type { PublicQuestion } from "@/types/database.types";
 
 const POLL_MS = 300;
 const LEADER_START_RETRY_MS = 600;
@@ -38,7 +38,7 @@ const WRITE_ATTEMPTS = 3;
 type UseServerMatchSyncOptions = {
   sessionId: string;
   isLeader: boolean;
-  serverPlaylist: QuestionActive[];
+  serverPlaylist: PublicQuestion[];
   enabled: boolean;
   /** Called whenever a round enters the "playing" phase. */
   onEnterPlaying: () => void;
@@ -159,7 +159,7 @@ export function useServerMatchSync({
     async (
       questionIndex: number,
       questionIds: string[],
-      questionBank: Record<string, QuestionActive>
+      questionBank: Record<string, PublicQuestion>
     ): Promise<boolean> => {
       const live = useGameStore.getState();
       if (questionIndex < live.playlist.length) {
@@ -196,7 +196,7 @@ export function useServerMatchSync({
 
       const nextPlaylist = questionIds
         .map((id) => byId.get(id))
-        .filter((question): question is QuestionActive => Boolean(question));
+        .filter((question): question is PublicQuestion => Boolean(question));
 
       if (nextPlaylist.length <= questionIndex) {
         return false;
@@ -492,27 +492,19 @@ export function useServerMatchSync({
    * will see via polling. Both devices therefore flip to the question at the
    * same server-clock moment, regardless of their own clock settings.
    */
+  // A sudden-death question is appended on the server first
+  // (append_tiebreaker_question); publishing only moves the round cursor.
   const leaderStartRound = useCallback(
-    async (
-      questionIndex: number,
-      appendQuestion?: QuestionActive | string
-    ) => {
+    async (questionIndex: number) => {
       if (!isLeaderRef.current) {
         return false;
       }
-
-      const appendPayload =
-        typeof appendQuestion === "string"
-          ? { appendQuestionId: appendQuestion }
-          : appendQuestion
-            ? { appendQuestion }
-            : {};
 
       for (let attempt = 1; attempt <= WRITE_ATTEMPTS; attempt += 1) {
         const result = await publishMatchSync(
           supabaseRef.current,
           sessionIdRef.current,
-          { questionIndex, phase: "round", ...appendPayload }
+          { questionIndex, phase: "round" }
         );
         if (result.success) {
           applySync(result.sync, result.serverNow);

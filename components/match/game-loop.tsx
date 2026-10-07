@@ -18,12 +18,16 @@ import {
   disarmMatchmakingAutosearch,
 } from "@/lib/matchmaking-intent";
 import { MATCH_SYNC_VERSION } from "@/lib/match-sync";
-import { formatCategoryLabel, isAnswerCorrect } from "@/lib/scoring";
+import {
+  formatCategoryLabel,
+  getOptionText,
+  isAnswerCorrect,
+} from "@/lib/scoring";
 import { MatchMistakesReview } from "@/components/match/match-mistakes-review";
 import { MatchReviewBoundary } from "@/components/match/match-review-boundary";
 import { ReportQuestionButton } from "@/components/match/report-question-button";
 import { SoundVolumeControl } from "@/components/sound-volume-control";
-import type { CorrectAnswer, QuestionActive } from "@/types/database.types";
+import type { CorrectAnswer, PublicQuestion } from "@/types/database.types";
 import type { ProficiencyLevel } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -35,7 +39,7 @@ type GameLoopProps = {
   proficiencyLevel: ProficiencyLevel;
   playerAName: string;
   playerBName: string;
-  serverPlaylist: QuestionActive[];
+  serverPlaylist: PublicQuestion[];
 };
 
 const OPTIONS: { key: CorrectAnswer; label: string }[] = [
@@ -65,6 +69,13 @@ export function GameLoop({
   const reset = useGameStore((state) => state.reset);
   const tiebreakerUsed = useGameStore((state) => state.tiebreakerUsed);
   const botDifficulty = useGameStore((state) => state.botDifficulty);
+  // Known only after the server reveals the round (resolveRound records it).
+  const revealedAnswer = useGameStore(
+    (state) =>
+      state.roundReviews.find(
+        (round) => round.questionIndex === state.currentQuestionIndex
+      )?.correctAnswer ?? null
+  );
 
   const {
     roundPhase,
@@ -148,12 +159,12 @@ export function GameLoop({
     localPlayerRoleStore === "a" ? playerBAnswer : playerAAnswer;
   const isLocked = Boolean(localAnswer);
   const localWasCorrect =
-    localAnswer?.answer && currentQuestion
-      ? isAnswerCorrect(localAnswer.answer, currentQuestion.correct_answer)
+    localAnswer?.answer && revealedAnswer
+      ? isAnswerCorrect(localAnswer.answer, revealedAnswer)
       : null;
   const opponentWasCorrect =
-    opponentAnswer?.answer && currentQuestion
-      ? isAnswerCorrect(opponentAnswer.answer, currentQuestion.correct_answer)
+    opponentAnswer?.answer && revealedAnswer
+      ? isAnswerCorrect(opponentAnswer.answer, revealedAnswer)
       : null;
   const showWaiting =
     roundPhase === "playing" && isLocked && !opponentAnswer;
@@ -472,7 +483,7 @@ export function GameLoop({
                 const text = currentQuestion[label as keyof typeof currentQuestion] as string;
                 const isLocalPick = localAnswer?.answer === key;
                 const isOpponentPick = opponentAnswer?.answer === key;
-                const isCorrectOption = key === currentQuestion.correct_answer;
+                const isCorrectOption = key === revealedAnswer;
                 const showLocalWrong = isLocalPick && localWasCorrect === false;
                 const showLocalCorrect = isLocalPick && localWasCorrect === true;
                 const showOpponentWrong =
@@ -562,25 +573,19 @@ export function GameLoop({
               })}
             </div>
 
-            <div className="w-full shrink-0 rounded-2xl border border-border/60 bg-card/80 px-4 py-3 text-center sm:py-4">
-              <p className="text-xs uppercase tracking-wider text-muted-foreground sm:text-sm">
-                Correct answer
-              </p>
-              <p className="mt-1.5 text-base leading-snug sm:mt-2 sm:text-lg">
-                <span className="font-bold text-emerald-400">
-                  {currentQuestion.correct_answer}.
-                </span>{" "}
-                {
-                  currentQuestion[
-                    `option_${currentQuestion.correct_answer.toLowerCase()}` as
-                      | "option_a"
-                      | "option_b"
-                      | "option_c"
-                      | "option_d"
-                  ]
-                }
-              </p>
-            </div>
+            {revealedAnswer && (
+              <div className="w-full shrink-0 rounded-2xl border border-border/60 bg-card/80 px-4 py-3 text-center sm:py-4">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground sm:text-sm">
+                  Correct answer
+                </p>
+                <p className="mt-1.5 text-base leading-snug sm:mt-2 sm:text-lg">
+                  <span className="font-bold text-emerald-400">
+                    {revealedAnswer}.
+                  </span>{" "}
+                  {getOptionText(currentQuestion, revealedAnswer)}
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

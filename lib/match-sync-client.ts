@@ -8,12 +8,8 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { MatchScoreState } from "@/lib/match-score-state";
-import { TOPIC_REVEAL_MS, type MatchSyncState } from "@/lib/match-sync";
-import {
-  buildQuestionPlaylistPayload,
-  parseQuestionPlaylist,
-} from "@/lib/session-playlist";
-import type { QuestionActive } from "@/types/database.types";
+import { isMatchSyncState, type MatchSyncState } from "@/lib/match-sync";
+import type { CorrectAnswer, PublicQuestion } from "@/types/database.types";
 
 const CLOCK_SAMPLES = 3;
 
@@ -59,19 +55,14 @@ export async function estimateClockOffsetMs(
 type PublishSyncInput = {
   questionIndex: number;
   phase: MatchSyncState["phase"];
-  /** Legacy: append only the id (follower must refetch). Prefer appendQuestion. */
-  appendQuestionId?: string;
-  /**
-   * Sudden-death question to append. The full row is stored in the playlist
-   * payload so both clients enter the round from the same poll.
-   */
-  appendQuestion?: QuestionActive;
 };
 
 /**
- * Host publishes the next round (or match_finished). Stamps `roundStartedAt`
- * with the Postgres clock via `get_server_time_ms`, clears per-round answers,
- * and returns the exact record every client will read on the next poll.
+ * Host publishes the next round (or match_finished) through the
+ * publish_match_sync RPC: the database stamps `roundStartedAt` with its own
+ * clock, clears answers left from earlier rounds, and never lets a client
+ * rewrite the session's question ids. Returns the exact record every client
+ * will read on the next poll.
  */
 export async function publishMatchSync(
   supabase: SupabaseClient,
@@ -81,109 +72,39 @@ export async function publishMatchSync(
   | { success: true; sync: MatchSyncState; serverNow: number }
   | { success: false; error: string }
 > {
-  const { data: session, error: readError } = await supabase
-    .from("game_sessions")
-    .select("status, question_playlist")
-    .eq("id", sessionId)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("publish_match_sync", {
+    p_session_id: sessionId,
+    p_question_index: input.questionIndex,
+    p_phase: input.phase,
+  });
 
-  if (readError || !session) {
-    return {
-      success: false,
-      error: readError?.message ?? "Session not found.",
-    };
+  if (error) {
+    return { success: false, error: error.message };
   }
 
-  if (session.status !== "active") {
-    return { success: false, error: "Match is not active." };
+  const result = data as { sync?: unknown; serverNow?: unknown } | null;
+  const serverNow = Number(result?.serverNow);
+  if (!isMatchSyncState(result?.sync) || !Number.isFinite(serverNow)) {
+    return { success: false, error: "Unexpected publish response." };
   }
 
-  const parsed = parseQuestionPlaylist(session.question_playlist);
-  const appendId = input.appendQuestion?.id ?? input.appendQuestionId;
-  const questionIds =
-    appendId && !parsed.questionIds.includes(appendId)
-      ? [...parsed.questionIds, appendId]
-      : parsed.questionIds;
-
-  const questionBank = { ...parsed.questionBank };
-  if (input.appendQuestion) {
-    questionBank[input.appendQuestion.id] = input.appendQuestion;
-  }
-
-  const serverNow = (await fetchServerTimeMs(supabase)) ?? Date.now();
-  const stamped: MatchSyncState = {
-    questionIndex: input.questionIndex,
-    phase: input.phase,
-    roundStartedAt:
-      input.phase === "round" ? serverNow + TOPIC_REVEAL_MS : serverNow,
-    updatedAt: serverNow,
-  };
-
-  const { data: updated, error: updateError } = await supabase
-    .from("game_sessions")
-    .update({
-      question_playlist: buildQuestionPlaylistPayload(
-        questionIds,
-        stamped,
-        questionBank
-      ),
-    })
-    .eq("id", sessionId)
-    .select("id")
-    .maybeSingle();
-
-  if (updateError) {
-    return { success: false, error: updateError.message };
-  }
-
-  if (!updated) {
-    return {
-      success: false,
-      error:
-        "Sync write was blocked (no row updated). Check game_sessions RLS and run supabase/match-answers-migration.sql if answers never arrive.",
-    };
-  }
-
-  // Locked answers live in columns the client can no longer write directly
-  // (see supabase/match-answer-integrity-migration.sql) — route the reset
-  // through the RPC so a new round always starts from a clean slate.
-  if (input.phase === "round") {
-    const { error: clearError } = await supabase.rpc(
-      "clear_match_round_answers",
-      { p_session_id: sessionId }
-    );
-
-    if (clearError) {
-      console.error(
-        `[match-sync] answer clear failed: ${clearError.message}`
-      );
-    }
-  }
-
-  return { success: true, sync: stamped, serverNow };
+  return { success: true, sync: result.sync, serverNow };
 }
 
 /**
- * Host fetches a sudden-death question via browser → Supabase RPC.
- * Avoids the per-tab Next.js server-action queue that can stall mid-match.
+ * Appends a server-picked sudden-death question to the session (idempotent)
+ * and returns it WITHOUT its answer. Browser → Supabase RPC, so it cannot
+ * stall behind the per-tab Next.js server-action queue mid-match.
  */
-export async function fetchTiebreakerQuestionClient(
+export async function appendTiebreakerQuestion(
   supabase: SupabaseClient,
-  input: {
-    language: string;
-    level: string;
-    userId: string;
-    excludeIds: string[];
-  }
+  sessionId: string
 ): Promise<
-  | { success: true; data: QuestionActive }
+  | { success: true; data: PublicQuestion }
   | { success: false; error: string }
 > {
-  const { data, error } = await supabase.rpc("get_tiebreaker_question", {
-    p_language: input.language,
-    p_level: input.level,
-    p_user_id: input.userId,
-    p_exclude_ids: input.excludeIds,
+  const { data, error } = await supabase.rpc("append_tiebreaker_question", {
+    p_session_id: sessionId,
   });
 
   if (error) {
@@ -197,7 +118,59 @@ export async function fetchTiebreakerQuestionClient(
     };
   }
 
-  return { success: true, data: data as QuestionActive };
+  return { success: true, data: data as PublicQuestion };
+}
+
+export type RoundReveal = {
+  correctAnswer: CorrectAnswer;
+  /** The caller's answer as locked on the server (null = timed out). */
+  selectedAnswer: CorrectAnswer | null;
+  selectedResponseTimeMs: number | null;
+  /** Bot matches only: the bot's pick, decided on the server. */
+  botAnswer: CorrectAnswer | null;
+};
+
+function asAnswer(value: unknown): CorrectAnswer | null {
+  return value === "A" || value === "B" || value === "C" || value === "D"
+    ? value
+    : null;
+}
+
+/**
+ * The round's correct answer. The database only reveals it once the caller's
+ * own answer for that round is locked (reveal_round_answer), so the browser
+ * never holds an answer before the player has committed.
+ */
+export async function revealRoundAnswer(
+  supabase: SupabaseClient,
+  sessionId: string,
+  questionIndex: number
+): Promise<{ success: true; data: RoundReveal } | { success: false; error: string }> {
+  const { data, error } = await supabase.rpc("reveal_round_answer", {
+    p_session_id: sessionId,
+    p_question_index: questionIndex,
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  const reveal = data as Record<string, unknown> | null;
+  const correctAnswer = asAnswer(reveal?.correctAnswer);
+  if (!correctAnswer) {
+    return { success: false, error: "Unexpected reveal response." };
+  }
+
+  return {
+    success: true,
+    data: {
+      correctAnswer,
+      selectedAnswer: asAnswer(reveal?.selectedAnswer),
+      selectedResponseTimeMs:
+        typeof reveal?.responseTimeMs === "number" ? reveal.responseTimeMs : null,
+      botAnswer: asAnswer(reveal?.botAnswer),
+    },
+  };
 }
 
 /**

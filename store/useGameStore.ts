@@ -20,7 +20,7 @@ import {
 import type { BotDifficulty } from "@/lib/bot";
 import type { ProficiencyLevel } from "@/lib/constants";
 import type { CategoryProgress } from "@/lib/types";
-import type { CorrectAnswer, QuestionActive, QuestionCategory } from "@/types/database.types";
+import type { CorrectAnswer, PublicQuestion, QuestionCategory } from "@/types/database.types";
 
 export type { MatchRoundReview };
 
@@ -49,7 +49,8 @@ type GameStoreState = {
   gameSessionId: string | null;
   status: GameStoreStatus;
   opponent: GameOpponent | null;
-  playlist: QuestionActive[];
+  /** No answers: each round's answer comes from reveal_round_answer. */
+  playlist: PublicQuestion[];
   hasHydrated: boolean;
   currentQuestionIndex: number;
   playerAScore: number;
@@ -71,7 +72,7 @@ type GameStoreState = {
   matchWinner: MatchWinner | null;
   categoryProgress: CategoryProgress;
   matchSaved: boolean;
-  tiebreakerQuestion: QuestionActive | null;
+  tiebreakerQuestion: PublicQuestion | null;
   tiebreakerUsed: boolean;
   roundReviews: MatchRoundReview[];
   isReportDialogOpen: boolean;
@@ -88,10 +89,10 @@ type GameStoreActions = {
   startMatch: (payload: {
     gameSessionId: string;
     opponent: GameOpponent;
-    playlist: QuestionActive[];
+    playlist: PublicQuestion[];
     botDifficulty?: BotDifficulty | null;
   }) => void;
-  startTiebreakerRound: (question: QuestionActive) => void;
+  startTiebreakerRound: (question: PublicQuestion) => void;
   initGameplay: (payload: {
     localUserId: string;
     localPlayerRole: "a" | "b";
@@ -103,7 +104,8 @@ type GameStoreActions = {
   setTimeRemaining: (seconds: number) => void;
   lockLocalAnswer: (answer: CorrectAnswer | null, responseTimeMs: number | null) => void;
   lockOpponentAnswer: (answer: CorrectAnswer | null, responseTimeMs: number | null) => void;
-  resolveRound: () => void;
+  /** Scores the current round once the server has revealed its answer. */
+  resolveRound: (correctAnswer: CorrectAnswer) => void;
   advanceToNextRound: () => void;
   setPlaying: () => void;
   finishMatch: () => void;
@@ -320,7 +322,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
           set({ playerAAnswer: locked });
         }
       },
-      resolveRound: () => {
+      resolveRound: (correctAnswer) => {
         const state = get();
         const question = state.playlist[state.currentQuestionIndex];
         if (!question) {
@@ -341,14 +343,8 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
         const answerA = state.playerAAnswer;
         const answerB = state.playerBAnswer;
 
-        const correctA = isAnswerCorrect(
-          answerA?.answer ?? null,
-          question.correct_answer
-        );
-        const correctB = isAnswerCorrect(
-          answerB?.answer ?? null,
-          question.correct_answer
-        );
+        const correctA = isAnswerCorrect(answerA?.answer ?? null, correctAnswer);
+        const correctB = isAnswerCorrect(answerB?.answer ?? null, correctAnswer);
 
         const pointsA = computePoints(correctA, answerA?.responseTimeMs ?? null);
         const pointsB = computePoints(correctB, answerB?.responseTimeMs ?? null);
@@ -367,7 +363,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
         const localAnswer =
           localRole === "a" ? answerA?.answer ?? null : answerB?.answer ?? null;
         const localPoints = localRole === "a" ? pointsA : pointsB;
-        const wasCorrect = isAnswerCorrect(localAnswer, question.correct_answer);
+        const wasCorrect = isAnswerCorrect(localAnswer, correctAnswer);
         const nextCategoryProgress = normalizeCategoryProgress(
           state.categoryProgress
         );
@@ -384,8 +380,8 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
           questionId: question.id,
           category,
           questionText: question.question_text,
-          correctAnswer: question.correct_answer,
-          correctOptionText: getOptionText(question, question.correct_answer),
+          correctAnswer,
+          correctOptionText: getOptionText(question, correctAnswer),
           selectedAnswer: localAnswer,
           selectedOptionText: localAnswer
             ? getOptionText(question, localAnswer)
