@@ -101,7 +101,12 @@ export function GameLoop({
     );
   }
 
-  if (!currentQuestion && roundPhase !== "match_finished" && roundPhase !== "tiebreaker_loading") {
+  // Bot matches sit in "waiting" while MatchHydrator restores score_state.
+  if (
+    (!currentQuestion || (isBotMatch && roundPhase === "waiting")) &&
+    roundPhase !== "match_finished" &&
+    roundPhase !== "tiebreaker_loading"
+  ) {
     return (
       <div className="flex flex-1 items-center justify-center p-8">
         <p className="text-muted-foreground">Loading match...</p>
