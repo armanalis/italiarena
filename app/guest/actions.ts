@@ -9,7 +9,6 @@ import {
 } from "@/lib/constants";
 import { generateGuestDisplayName } from "@/lib/guest";
 import { isUsernameTaken } from "@/lib/username";
-import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
 export type GuestFormState = {
@@ -134,46 +133,4 @@ export async function completeGuestProfile(
   revalidatePath("/dashboard");
 
   return { error: null, redirectTo: "/dashboard" };
-}
-
-/**
- * Last-resort guest provisioning when browser anonymous/sign-up is unavailable.
- * Requires SUPABASE_SERVICE_ROLE_KEY on the server.
- */
-export async function provisionGuestViaAdmin(): Promise<GuestFormState> {
-  let admin;
-  try {
-    admin = createAdminClient();
-  } catch {
-    return {
-      error:
-        "Guest sign-in is not available yet. Enable Anonymous sign-in in Supabase (Authentication → Providers), then try again.",
-    };
-  }
-
-  const email = `guest-${randomUUID()}@guest.local`;
-  const password = randomUUID();
-
-  const { data: created, error: createError } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  });
-
-  if (createError || !created.user) {
-    return { error: createError?.message ?? "Could not start a guest session." };
-  }
-
-  const supabase = await createClient();
-  const { error: signInError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (signInError) {
-    await admin.auth.admin.deleteUser(created.user.id);
-    return { error: signInError.message };
-  }
-
-  return { error: null };
 }

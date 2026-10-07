@@ -6,10 +6,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, GraduationCap, UserRound } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
-import {
-  completeGuestProfile,
-  provisionGuestViaAdmin,
-} from "@/app/guest/actions";
+import { completeGuestProfile } from "@/app/guest/actions";
 import { PROFICIENCY_LEVELS } from "@/lib/constants";
 import { signInGuestOnClient } from "@/lib/guest-auth-client";
 import { Button } from "@/components/ui/button";
@@ -47,14 +44,13 @@ export function GuestSetupForm(_props?: GuestSetupFormProps) {
       const supabase = createClient();
       await supabase.auth.signOut();
 
+      // No server-side fallback: it created accounts with the service role,
+      // which bypassed Supabase's per-IP limit on anonymous sign-ins.
       const auth = await signInGuestOnClient();
 
       if (!auth.ok) {
-        const adminResult = await provisionGuestViaAdmin();
-        if (adminResult.error) {
-          setError(adminResult.error);
-          return;
-        }
+        setError(auth.error);
+        return;
       }
 
       const result = await completeGuestProfile(proficiencyLevel);
