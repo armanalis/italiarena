@@ -1,5 +1,5 @@
 import { getCurrentUserProfile } from "@/lib/auth";
-import { getPublicDisplayName } from "@/lib/display-name";
+import { formatDisplayName } from "@/lib/display-name";
 import { getAdminQueueCounts } from "@/lib/admin-queue-counts";
 import { SiteHeaderNav } from "@/components/site-header-nav";
 
@@ -14,7 +14,7 @@ export async function SiteHeader() {
       isAuthenticated={Boolean(profile)}
       displayName={
         profile
-          ? getPublicDisplayName(profile)
+          ? formatDisplayName(profile)
           : null
       }
       showDashboard={Boolean(
