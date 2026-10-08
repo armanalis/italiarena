@@ -585,6 +585,7 @@ export function useGameLoop({
   const serverSync = useServerMatchSync({
     sessionId,
     isLeader: isSyncLeader,
+    localPlayerRole,
     serverPlaylist,
     enabled: !isBotMatch,
     onEnterPlaying: startRoundTimer,

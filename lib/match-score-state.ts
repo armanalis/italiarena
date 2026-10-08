@@ -16,6 +16,14 @@ import { determineWinner, type MatchWinner } from "@/lib/scoring";
 import type { CategoryProgress } from "@/lib/types";
 import type { CorrectAnswer, QuestionCategory } from "@/types/database.types";
 
+/** One player's side of a resolved PvP round. */
+export type RoundPlayerResult = {
+  selectedAnswer: CorrectAnswer | null;
+  selectedOptionText: string | null;
+  wasCorrect: boolean;
+  pointsEarned: number;
+};
+
 /** One completed round, stored for end-of-match review and server rehydration. */
 export type MatchRoundReview = {
   questionIndex: number;
@@ -29,6 +37,11 @@ export type MatchRoundReview = {
   selectedOptionText: string | null;
   wasCorrect: boolean;
   pointsEarned: number;
+  /**
+   * PvP rounds scored by resolve_match_round carry both players' results; the
+   * top-level answer fields are player A's. Read through scoreStateForRole.
+   */
+  byRole?: { a: RoundPlayerResult; b: RoundPlayerResult };
 };
 
 /** Clock of the question in play when the doc was written (bot matches only). */
@@ -55,7 +68,52 @@ export type MatchScoreState = {
   matchWinner: MatchWinner | null;
   /** Lets a refresh resume the question clock instead of restarting it. */
   activeRound?: ActiveRoundClock | null;
+  /** PvP: category stats per player (`categoryProgress` is player A's). */
+  categoryProgressByRole?: { a: CategoryProgress; b: CategoryProgress };
 };
+
+function isRoundPlayerResult(value: unknown): value is RoundPlayerResult {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const result = value as RoundPlayerResult;
+  return (
+    (result.selectedAnswer === null || isCorrectAnswer(result.selectedAnswer)) &&
+    (result.selectedOptionText === null ||
+      typeof result.selectedOptionText === "string") &&
+    typeof result.wasCorrect === "boolean" &&
+    typeof result.pointsEarned === "number"
+  );
+}
+
+/**
+ * A PvP score document holds both players' results. Keep only this player's
+ * answers, right/wrong, points and category stats, so nobody sees (or saves
+ * as their mistakes) the opponent's picks. Bot documents pass through as is.
+ */
+export function scoreStateForRole(
+  score: MatchScoreState,
+  role: "a" | "b"
+): MatchScoreState {
+  const byRoleProgress = score.categoryProgressByRole?.[role];
+
+  return {
+    ...score,
+    roundReviews: score.roundReviews.map((round) => {
+      const mine = round.byRole?.[role];
+      if (!isRoundPlayerResult(mine)) {
+        return round;
+      }
+      const { byRole: _byRole, ...shared } = round;
+      return { ...shared, ...mine };
+    }),
+    categoryProgress:
+      byRoleProgress && typeof byRoleProgress === "object"
+        ? byRoleProgress
+        : score.categoryProgress,
+  };
+}
 
 const QUESTION_CATEGORIES: QuestionCategory[] = [
   "grammar",

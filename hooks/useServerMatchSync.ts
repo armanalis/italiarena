@@ -9,6 +9,7 @@ import {
 import {
   isMatchScoreState,
   localResolvedThroughIndex,
+  scoreStateForRole,
   scoreStateToStorePatch,
   shouldApplyScoreState,
   shouldResumeRoundResult,
@@ -38,6 +39,8 @@ const WRITE_ATTEMPTS = 3;
 type UseServerMatchSyncOptions = {
   sessionId: string;
   isLeader: boolean;
+  /** This player's side of the session; score documents hold both. */
+  localPlayerRole: "a" | "b";
   serverPlaylist: PublicQuestion[];
   enabled: boolean;
   /** Called whenever a round enters the "playing" phase. */
@@ -76,6 +79,7 @@ type UseServerMatchSyncOptions = {
 export function useServerMatchSync({
   sessionId,
   isLeader,
+  localPlayerRole,
   serverPlaylist,
   enabled,
   onEnterPlaying,
@@ -99,6 +103,8 @@ export function useServerMatchSync({
   sessionIdRef.current = sessionId;
   const isLeaderRef = useRef(isLeader);
   isLeaderRef.current = isLeader;
+  const localPlayerRoleRef = useRef(localPlayerRole);
+  localPlayerRoleRef.current = localPlayerRole;
 
   const flipTimerRef = useRef<number | null>(null);
   const matchStartedRef = useRef(false);
@@ -637,7 +643,7 @@ export function useServerMatchSync({
       }
 
       const score = isMatchScoreState(session?.score_state)
-        ? session.score_state
+        ? scoreStateForRole(session.score_state, localPlayerRoleRef.current)
         : null;
       const scorePatch = score ? scoreStateToStorePatch(score) : {};
 
@@ -748,7 +754,7 @@ export function useServerMatchSync({
         loggedFailure = false;
 
         const freshScore = isMatchScoreState(session.score_state)
-          ? session.score_state
+          ? scoreStateForRole(session.score_state, localPlayerRoleRef.current)
           : null;
         applyScoreState(freshScore);
 
