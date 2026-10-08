@@ -263,6 +263,38 @@ export function readActiveRoundClock(
   return clock;
 }
 
+export type BotResumePlan =
+  | { kind: "fresh" }
+  | { kind: "finished" }
+  | { kind: "resume"; questionIndex: number; clock: ActiveRoundClock | null };
+
+/**
+ * What a reloaded bot match should do. A saved question clock counts even
+ * before any round is scored — a refresh on question 1 must keep its clock,
+ * not restart the match.
+ */
+export function planBotMatchResume(
+  score: MatchScoreState | null,
+  playlistLength: number
+): BotResumePlan {
+  if (!score) {
+    return { kind: "fresh" };
+  }
+
+  const nextIndex = score.resolvedThroughIndex + 1;
+  const clock = readActiveRoundClock(score, nextIndex);
+
+  if (score.resolvedThroughIndex < 0 && !clock) {
+    return { kind: "fresh" };
+  }
+
+  if (score.matchFinished || nextIndex >= playlistLength) {
+    return { kind: "finished" };
+  }
+
+  return { kind: "resume", questionIndex: nextIndex, clock };
+}
+
 /** Patch applied to the Zustand store when rehydrating from the server. */
 export function scoreStateToStorePatch(score: MatchScoreState) {
   const categoryProgress = normalizeCategoryProgress(

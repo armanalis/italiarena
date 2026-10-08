@@ -3,9 +3,11 @@
  * Run: npx tsx scripts/test-match-resume.ts
  */
 import assert from "node:assert/strict";
+import { getRoundTimeRemainingSec } from "../lib/match-timer";
 import {
   buildMatchScoreState,
   localResolvedThroughIndex,
+  planBotMatchResume,
   scoreStateForRole,
   shouldResumeRoundResult,
   type MatchRoundReview,
@@ -130,6 +132,77 @@ check("PvP review shows only this player's own pick", () => {
   const forA = scoreStateForRole(score, "a");
   assert.equal(forA.roundReviews[0].selectedAnswer, "A");
   assert.equal(forA.roundReviews[0].wasCorrect, true);
+});
+
+
+function botDoc(input: {
+  index: number;
+  reviews: number;
+  phase: string;
+  startedAgoMs?: number;
+  finished?: boolean;
+}) {
+  // Built exactly like the browser does, then JSON round-tripped like the DB.
+  const doc = buildMatchScoreState({
+    currentQuestionIndex: input.index,
+    playerAScore: 0,
+    playerBScore: 0,
+    playerAResponseTimes: [],
+    playerBResponseTimes: [],
+    lastRoundPointsA: 0,
+    lastRoundPointsB: 0,
+    categoryProgress: {} as never,
+    roundReviews: Array.from({ length: input.reviews }, (_, i) => review(i)),
+    tiebreakerUsed: false,
+    roundPhase: input.finished ? "match_finished" : input.phase,
+    matchWinner: input.finished ? "a" : null,
+    roundStartedAt:
+      input.startedAgoMs === undefined ? null : Date.now() - input.startedAgoMs,
+    timerPauseOffsetMs: 0,
+    timerPauseStartedAt: null,
+  });
+  return JSON.parse(JSON.stringify(doc));
+}
+
+check("bot refresh on question 1 keeps its clock (20s left stays ~20s)", () => {
+  const plan = planBotMatchResume(
+    botDoc({ index: 0, reviews: 0, phase: "playing", startedAgoMs: 5_000 }),
+    10
+  );
+  assert.equal(plan.kind, "resume");
+  if (plan.kind !== "resume") return;
+  assert.equal(plan.questionIndex, 0);
+  assert.ok(plan.clock);
+  assert.equal(getRoundTimeRemainingSec(plan.clock!.startedAt, plan.clock!.pauseOffsetMs), 20);
+});
+
+check("bot refresh mid-match keeps that question's clock", () => {
+  const plan = planBotMatchResume(
+    botDoc({ index: 4, reviews: 4, phase: "playing", startedAgoMs: 10_000 }),
+    10
+  );
+  assert.equal(plan.kind === "resume" && plan.questionIndex, 4);
+  assert.equal(
+    plan.kind === "resume" && plan.clock
+      ? getRoundTimeRemainingSec(plan.clock.startedAt, plan.clock.pauseOffsetMs)
+      : null,
+    15
+  );
+});
+
+check("bot refresh before question 1 starts begins the match fresh", () => {
+  assert.equal(planBotMatchResume(null, 10).kind, "fresh");
+  assert.equal(
+    planBotMatchResume(botDoc({ index: 0, reviews: 0, phase: "topic_reveal" }), 10).kind,
+    "fresh"
+  );
+});
+
+check("bot refresh after the last round shows the result", () => {
+  assert.equal(
+    planBotMatchResume(botDoc({ index: 9, reviews: 10, phase: "x", finished: true }), 10).kind,
+    "finished"
+  );
 });
 
 console.log(`\n${passed} checks passed`);

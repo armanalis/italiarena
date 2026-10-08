@@ -20,7 +20,7 @@ import { useEffect, useRef } from "react";
 import { botDifficultyFromDisplayName } from "@/lib/bot";
 import {
   isMatchScoreState,
-  readActiveRoundClock,
+  planBotMatchResume,
   scoreStateToStorePatch,
 } from "@/lib/match-score-state";
 import {
@@ -114,7 +114,9 @@ export function MatchHydrator({
         ? session.score_state
         : null;
 
-      if (!score || score.resolvedThroughIndex < 0) {
+      const plan = planBotMatchResume(score, playlist.length);
+
+      if (!score || plan.kind === "fresh") {
         startMatch({
           gameSessionId: sessionId,
           opponent,
@@ -125,11 +127,8 @@ export function MatchHydrator({
       }
 
       const patch = scoreStateToStorePatch(score);
-      const nextIndex = score.resolvedThroughIndex + 1;
-      const finished =
-        score.matchFinished || nextIndex >= playlist.length;
 
-      if (finished) {
+      if (plan.kind === "finished") {
         useGameStore.setState({
           gameSessionId: sessionId,
           opponent,
@@ -156,9 +155,10 @@ export function MatchHydrator({
         return;
       }
 
-      // Refreshed mid-question: keep the original clock running. Time the
-      // report dialog was open before the refresh still counts as paused.
-      const clock = readActiveRoundClock(score, nextIndex);
+      // Refreshed mid-question (question 1 included): keep the original
+      // clock running. Time the report dialog was open before the refresh
+      // still counts as paused.
+      const { clock, questionIndex: nextIndex } = plan;
       const pauseOffsetMs = clock
         ? clock.pauseOffsetMs +
           (clock.pauseStartedAt ? Date.now() - clock.pauseStartedAt : 0)
