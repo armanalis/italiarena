@@ -3,6 +3,7 @@
 import { GitHubLink } from "@/components/github-link";
 import { CoffeeLink } from "@/components/coffee-link";
 import { DashboardNavLink } from "@/components/dashboard/dashboard-nav-link";
+import { SidebarResizeHandle } from "@/components/dashboard/sidebar-resize-handle";
 import { signOut } from "@/app/login/actions";
 import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
@@ -72,7 +73,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
   return (
     <>
-      <aside className="glass-sidebar sticky top-below-header z-40 hidden h-app w-64 shrink-0 self-start flex-col overflow-y-auto md:flex lg:w-72">
+      <aside className="glass-sidebar dashboard-sidebar sticky top-below-header z-40 hidden h-app shrink-0 self-start flex-col overflow-y-auto md:flex">
         <nav className="flex-1 space-y-1 px-3 py-5">
           {navItems.map(({ href, label, icon, exact }) => {
             const isActive = exact
@@ -107,6 +108,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
           </form>
         </div>
       </aside>
+      <SidebarResizeHandle />
 
       <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto touch-scroll pb-mobile-nav md:pb-0">
         {children}
