@@ -9,6 +9,7 @@ import { CookieConsentBanner } from "@/components/cookie-consent-banner";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { StaleChunkRecovery } from "@/components/stale-chunk-recovery";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SIDEBAR_WIDTH_BOOT_SCRIPT } from "@/lib/sidebar-width";
 import { SiteHeader } from "@/components/site-header";
 import { SiteHeaderSkeleton } from "@/components/site-header-skeleton";
 import { PRODUCTION_SITE_URL } from "@/lib/site-url";
@@ -54,6 +55,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={cn("font-sans", inter.variable)}>
       <body className="flex h-dvh min-h-dvh w-full min-w-[320px] flex-col antialiased">
+        {/* Saved sidebar width before first paint (no jump on load). */}
+        <script dangerouslySetInnerHTML={{ __html: SIDEBAR_WIDTH_BOOT_SCRIPT }} />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

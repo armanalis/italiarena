@@ -37,6 +37,19 @@
     );
   }
 
+  /* Desktop sidebar. Players drag its edge (SidebarResizeHandle), which sets
+     --sidebar-width; the clamp keeps it between 200px and 40% of the window
+     whatever is saved. Keep in sync with lib/sidebar-width.ts. */
+  .dashboard-sidebar {
+    width: clamp(200px, var(--sidebar-width, 16rem), max(200px, 40vw));
+  }
+
+  @media (min-width: 1024px) {
+    .dashboard-sidebar {
+      width: clamp(200px, var(--sidebar-width, 18rem), max(200px, 40vw));
+    }
+  }
+
   .top-below-header {
     top: calc(var(--app-header-height) + env(safe-area-inset-top, 0px));
   }
