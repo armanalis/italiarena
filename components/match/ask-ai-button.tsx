@@ -7,6 +7,7 @@ import { askQuestionExplanation } from "@/app/dashboard/match/ai-actions";
 import { MAX_AI_ASKS_PER_MATCH } from "@/lib/ai-explanations";
 import { formatCategoryLabel } from "@/lib/scoring";
 import { Button } from "@/components/ui/button";
+import { ExplanationMarkdown } from "@/components/match/explanation-markdown";
 import {
   Dialog,
   DialogContent,
@@ -129,9 +130,10 @@ export function AskAiButton({
                   Loaded from cache — no AI slot used.
                 </p>
               )}
-              <div className="rounded-lg border border-border bg-primary/5 px-3 py-3 text-sm leading-relaxed whitespace-pre-wrap">
-                {explanation}
-              </div>
+              <ExplanationMarkdown
+                content={explanation}
+                className="rounded-lg border border-border bg-primary/5 px-3 py-3 text-sm leading-relaxed"
+              />
             </div>
           )}
         </DialogContent>
