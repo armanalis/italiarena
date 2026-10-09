@@ -6,6 +6,7 @@ import { buildMatchScoreState } from "@/lib/match-score-state";
 import {
   appendTiebreakerQuestion,
   persistBotMatchScoreState,
+  resolveMatchRoundServer,
   revealRoundAnswer,
   type RoundReveal,
 } from "@/lib/match-sync-client";
@@ -439,7 +440,29 @@ export function useGameLoop({
         return;
       }
 
+      if (!isBotMatch) {
+        // Rounds score strictly in order, so a round the opponent never
+        // answered (they left) would block every later round and the result.
+        // The server scores it once both answers are in or its clock ran out.
+        const roundIndex = useGameStore.getState().currentQuestionIndex;
+        for (;;) {
+          const resolved = await resolveMatchRoundServer(supabase, sessionId, roundIndex);
+          if (resolved.success || !resolved.error.includes("Round is still open")) {
+            break;
+          }
+          if (useGameStore.getState().roundPhase !== "round_result") {
+            return;
+          }
+          await wait(1_000);
+        }
+      }
+
       const latest = useGameStore.getState();
+      // Meanwhile the last round's score may have finished the match, or the
+      // opponent may have left.
+      if (latest.roundPhase !== "round_result") {
+        return;
+      }
       const finishedRegularRound =
         latest.currentQuestionIndex === REGULAR_MATCH_QUESTIONS - 1;
       const isScoreTied = latest.playerAScore === latest.playerBScore;
@@ -992,5 +1015,6 @@ export function useGameLoop({
     playerAAnswer,
     playerBAnswer,
     roundResultSecondsLeft,
+    matchClosed: serverSync.matchClosed,
   };
 }
