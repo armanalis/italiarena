@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "audit:questions": "tsx scripts/audit-questions.ts",
     "test:match-resume": "tsx scripts/test-match-resume.ts"
   },
@@ -35,7 +35,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/web-push": "^3.6.4",
-    "eslint": "^8",
+    "eslint": "^9.39.5",
     "eslint-config-next": "^16.2.6",
     "postcss": "^8.5.10",
     "shadcn": "^4.8.0",
