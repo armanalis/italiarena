@@ -115,8 +115,14 @@ export function useServerMatchSync({
   const sessionReadyRef = useRef(false);
   /** Bumped when bootstrap completes so the poll effect runs an immediate tick. */
   const [sessionReadyGeneration, setSessionReadyGeneration] = useState(0);
-  /** The session was abandoned before the end (a player left). */
-  const [matchClosed, setMatchClosed] = useState(false);
+  /**
+   * Set when the session was abandoned before the end (a player left).
+   * `result` is this player's forfeit result, null when it does not count.
+   */
+  const [matchClosed, setMatchClosed] = useState<{
+    result: "win" | "loss" | null;
+    points: number;
+  } | null>(null);
   const supabaseRef = useRef(createClient());
   /** localClock + clockOffset ≈ serverClock. null until estimated. */
   const clockOffsetRef = useRef<number | null>(null);
@@ -725,9 +731,10 @@ export function useServerMatchSync({
     let cancelled = false;
     let loggedFailure = false;
     let inFlight = false;
+    let closed = false;
 
     const tick = async () => {
-      if (inFlight || !sessionReadyRef.current) {
+      if (inFlight || closed || !sessionReadyRef.current) {
         return;
       }
       inFlight = true;
@@ -756,21 +763,36 @@ export function useServerMatchSync({
         loggedFailure = false;
 
         // A player left (Exit) or the stale-session sweep closed the match:
-        // every write is now refused, so stop instead of retrying forever.
-        // gameSessionId is cleared when this player is the one leaving.
+        // every write is now refused, so stop polling instead of retrying
+        // forever. gameSessionId is cleared when this player is the leaver.
         if (session.status === "abandoned") {
+          closed = true;
           const live = useGameStore.getState();
           const finished =
             live.roundPhase === "match_finished" ||
             live.status === "finished" ||
             live.matchWinner !== null;
-          if (live.gameSessionId === sessionIdRef.current && !finished) {
-            clearFlipTimer();
-            if (live.roundPhase !== "waiting") {
-              useGameStore.setState({ roundPhase: "waiting" });
-            }
-            setMatchClosed(true);
+          if (live.gameSessionId !== sessionIdRef.current || finished) {
+            return;
           }
+
+          clearFlipTimer();
+          // status "finished" also stops the header's leave warning.
+          useGameStore.setState({ roundPhase: "waiting", status: "finished" });
+          // The server records a forfeit the moment the match is abandoned.
+          const { data: history } = await supabase
+            .from("match_history")
+            .select("result, user_score")
+            .eq("session_id", sessionIdRef.current)
+            .eq("user_id", live.localUserId ?? "")
+            .maybeSingle();
+          setMatchClosed({
+            result:
+              history?.result === "win" || history?.result === "loss"
+                ? history.result
+                : null,
+            points: history?.user_score ?? 0,
+          });
           return;
         }
 

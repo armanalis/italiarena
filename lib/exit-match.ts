@@ -31,6 +31,30 @@ function abandonSessionInBackground(sessionId: string, pathname: string) {
   }
 }
 
+function isMatchStillLive(state: ReturnType<typeof useGameStore.getState>) {
+  return (
+    state.roundPhase !== "match_finished" &&
+    state.status !== "finished" &&
+    state.matchWinner === null
+  );
+}
+
+/**
+ * Leaving now is a forfeit: a live PvP match with a scored round. The
+ * server then records a loss for the leaver and a win for the opponent
+ * (supabase/pvp-forfeit-2026-10-09.sql).
+ */
+export function exitCountsAsLoss() {
+  const state = useGameStore.getState();
+  return (
+    Boolean(state.gameSessionId) &&
+    !state.isBotMatch &&
+    window.location.pathname.startsWith("/dashboard/match/") &&
+    isMatchStillLive(state) &&
+    state.roundReviews.length > 0
+  );
+}
+
 /**
  * Leave the current match/matchmaking flow and go to the dashboard.
  * Uses a full page navigation so timers, sync loops, and client state cannot
@@ -43,10 +67,7 @@ export function exitToDashboard() {
   const state = useGameStore.getState();
   const sessionId = state.gameSessionId;
   const pathname = window.location.pathname;
-  const matchStillLive =
-    state.roundPhase !== "match_finished" &&
-    state.status !== "finished" &&
-    state.matchWinner === null;
+  const matchStillLive = isMatchStillLive(state);
 
   useGameStore.getState().reset();
 
