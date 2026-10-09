@@ -88,6 +88,7 @@ export function GameLoop({
     playerAAnswer,
     playerBAnswer,
     roundResultSecondsLeft,
+    matchClosed,
   } = useGameLoop({
     sessionId,
     localUserId,
@@ -108,6 +109,24 @@ export function GameLoop({
     return (
       <div className="flex flex-1 items-center justify-center">
         <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (matchClosed) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+        <div className="space-y-1">
+          <p className="text-lg font-semibold">Match ended</p>
+          <p className="text-sm text-muted-foreground">
+            A player left before the last question, so this match does not count.
+          </p>
+        </div>
+        <Button asChild className="min-h-11">
+          <Link href="/dashboard" onClick={() => reset()}>
+            Back to dashboard
+          </Link>
+        </Button>
       </div>
     );
   }

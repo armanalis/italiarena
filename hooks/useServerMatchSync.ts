@@ -115,6 +115,8 @@ export function useServerMatchSync({
   const sessionReadyRef = useRef(false);
   /** Bumped when bootstrap completes so the poll effect runs an immediate tick. */
   const [sessionReadyGeneration, setSessionReadyGeneration] = useState(0);
+  /** The session was abandoned before the end (a player left). */
+  const [matchClosed, setMatchClosed] = useState(false);
   const supabaseRef = useRef(createClient());
   /** localClock + clockOffset ≈ serverClock. null until estimated. */
   const clockOffsetRef = useRef<number | null>(null);
@@ -733,7 +735,7 @@ export function useServerMatchSync({
       try {
         const { data: session, error } = await supabase
           .from("game_sessions")
-          .select("question_playlist, answer_a, answer_b, score_state")
+          .select("status, question_playlist, answer_a, answer_b, score_state")
           .eq("id", sessionIdRef.current)
           .maybeSingle();
 
@@ -752,6 +754,25 @@ export function useServerMatchSync({
         }
 
         loggedFailure = false;
+
+        // A player left (Exit) or the stale-session sweep closed the match:
+        // every write is now refused, so stop instead of retrying forever.
+        // gameSessionId is cleared when this player is the one leaving.
+        if (session.status === "abandoned") {
+          const live = useGameStore.getState();
+          const finished =
+            live.roundPhase === "match_finished" ||
+            live.status === "finished" ||
+            live.matchWinner !== null;
+          if (live.gameSessionId === sessionIdRef.current && !finished) {
+            clearFlipTimer();
+            if (live.roundPhase !== "waiting") {
+              useGameStore.setState({ roundPhase: "waiting" });
+            }
+            setMatchClosed(true);
+          }
+          return;
+        }
 
         const freshScore = isMatchScoreState(session.score_state)
           ? scoreStateForRole(session.score_state, localPlayerRoleRef.current)
@@ -898,5 +919,6 @@ export function useServerMatchSync({
   return {
     leaderStartRound,
     leaderFinishMatch,
+    matchClosed,
   };
 }
