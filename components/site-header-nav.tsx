@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
@@ -9,6 +10,15 @@ import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  exitCountsAsLoss,
   exitToDashboard,
   isImmersiveMatchRoute,
 } from "@/lib/exit-match";
@@ -31,6 +41,7 @@ export function SiteHeaderNav({
   const pathname = usePathname();
   const leavingActiveMatch =
     showDashboard && isImmersiveMatchRoute(pathname);
+  const [confirmLeave, setConfirmLeave] = useState(false);
 
   function handleDashboardExit(event: React.MouseEvent<HTMLAnchorElement>) {
     if (!leavingActiveMatch) {
@@ -38,6 +49,10 @@ export function SiteHeaderNav({
     }
 
     event.preventDefault();
+    if (exitCountsAsLoss()) {
+      setConfirmLeave(true);
+      return;
+    }
     exitToDashboard();
   }
 
@@ -108,6 +123,25 @@ export function SiteHeaderNav({
           )}
         </div>
       </div>
+
+      <Dialog open={confirmLeave} onOpenChange={setConfirmLeave}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Leave this match?</DialogTitle>
+            <DialogDescription>
+              It counts as a loss, and your opponent gets the win.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setConfirmLeave(false)}>
+              Keep playing
+            </Button>
+            <Button type="button" variant="destructive" onClick={exitToDashboard}>
+              Leave match
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 }

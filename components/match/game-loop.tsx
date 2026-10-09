@@ -117,10 +117,31 @@ export function GameLoop({
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
         <div className="space-y-1">
-          <p className="text-lg font-semibold">Match ended</p>
-          <p className="text-sm text-muted-foreground">
-            A player left before the last question, so this match does not count.
-          </p>
+          {matchClosed.result === "win" ? (
+            <>
+              <Trophy className="mx-auto mb-2 size-10 text-primary" />
+              <p className="text-lg font-semibold">You win!</p>
+              <p className="text-sm text-muted-foreground">
+                Your opponent left the match, so the win and your{" "}
+                {matchClosed.points} points count.
+              </p>
+            </>
+          ) : matchClosed.result === "loss" ? (
+            <>
+              <p className="text-lg font-semibold">Match lost</p>
+              <p className="text-sm text-muted-foreground">
+                You left this match after it started, so it counts as a loss.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-semibold">Match ended</p>
+              <p className="text-sm text-muted-foreground">
+                A player left before the first round was scored, so this match
+                does not count.
+              </p>
+            </>
+          )}
         </div>
         <Button asChild className="min-h-11">
           <Link href="/dashboard" onClick={() => reset()}>
