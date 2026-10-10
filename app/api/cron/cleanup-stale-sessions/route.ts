@@ -1,20 +1,11 @@
 import { NextResponse } from "next/server";
+import { authorizeCron } from "@/lib/cron-auth";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const STALE_AFTER_HOURS = 1;
-
-function authorizeCron(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-
-  const authHeader = request.headers.get("authorization");
-  if (authHeader === `Bearer ${secret}`) return true;
-
-  return false;
-}
 
 /**
  * Matchmaking only abandons a user's OWN zombie "waiting" lobby the next

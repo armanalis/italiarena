@@ -1,7 +1,4 @@
-import {
-  GROQ_EXPLANATION_MODEL,
-  GROQ_REASONING_EFFORT,
-} from "@/lib/ai-explanations";
+import { groqChat, unavailableReason } from "@/lib/groq";
 import {
   CATEGORY_GUIDANCE,
   LEVEL_GUIDANCE,
@@ -284,65 +281,26 @@ export async function auditQuestionWithAi(
   | { status: "ready"; result: QuestionAuditAiResult }
   | { status: "unavailable"; reason: string }
 > {
-  const apiKey = options?.apiKey ?? process.env.GROQ_API_KEY;
-  if (!apiKey) {
-    return { status: "unavailable", reason: "GROQ_API_KEY is not configured." };
-  }
+  const ai = await groqChat({
+    label: "audit",
+    system:
+      "You audit Italian quiz questions for correctness before public release. Output JSON only.",
+    user: buildAuditPrompt(question),
+    temperature: 0.1,
+    maxTokens: 1400,
+    json: true,
+    apiKey: options?.apiKey,
+    model: options?.model,
+  });
 
-  const response = await fetch(
-    "https://api.groq.com/openai/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: options?.model ?? GROQ_EXPLANATION_MODEL,
-        reasoning_effort: GROQ_REASONING_EFFORT,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content:
-              "You audit Italian quiz questions for correctness before public release. Output JSON only.",
-          },
-          {
-            role: "user",
-            content: buildAuditPrompt(question),
-          },
-        ],
-        temperature: 0.1,
-        max_tokens: 1400,
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    console.error(
-      `[groq] audit request failed (${response.status}): ${await response
-        .text()
-        .catch(() => "<unreadable body>")}`
-    );
-
+  if (!ai.ok) {
     return {
       status: "unavailable",
-      reason:
-        response.status === 429
-          ? "AI rate limit reached."
-          : `AI audit request failed (${response.status}).`,
+      reason: unavailableReason(ai, `AI audit request failed (${ai.status ?? "network"}).`),
     };
   }
 
-  const data = (await response.json()) as {
-    choices?: { message?: { content?: string } }[];
-  };
-  const content = data.choices?.[0]?.message?.content?.trim();
-  if (!content) {
-    return { status: "unavailable", reason: "AI returned an empty response." };
-  }
-
-  const result = parseAiAuditJson(content);
+  const result = parseAiAuditJson(ai.content);
   if (!result) {
     return { status: "unavailable", reason: "AI response could not be parsed." };
   }
