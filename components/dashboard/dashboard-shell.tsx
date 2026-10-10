@@ -3,6 +3,7 @@
 import { GitHubLink } from "@/components/github-link";
 import { CoffeeLink } from "@/components/coffee-link";
 import { DashboardNavLink } from "@/components/dashboard/dashboard-nav-link";
+import { FriendsPanel } from "@/components/dashboard/friends-panel";
 import { SidebarResizeHandle } from "@/components/dashboard/sidebar-resize-handle";
 import { signOut } from "@/app/login/actions";
 import { Button } from "@/components/ui/button";
@@ -113,6 +114,8 @@ export function DashboardShell({ children }: DashboardShellProps) {
       <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto touch-scroll pb-mobile-nav md:pb-0">
         {children}
       </div>
+
+      <FriendsPanel />
 
       <nav
         aria-label="Dashboard"

@@ -213,6 +213,10 @@ export type GameSession = {
   answer_b: unknown;
   /** Cumulative scores / round reviews so refresh cannot wipe the point process. */
   score_state: unknown;
+  /** A challenge lobby: shared by link or sent to one friend, never matchmade. */
+  is_private: boolean;
+  /** Set when the challenge was sent to one friend: only they may join. */
+  challenged_id: string | null;
   created_at: string;
 };
 
@@ -283,6 +287,8 @@ export type GameSessionInsert = Pick<GameSession, "player_a_id"> &
       | "language"
       | "level"
       | "bot_difficulty"
+      | "is_private"
+      | "challenged_id"
       | "created_at"
     >
   >;
