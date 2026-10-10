@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Delete } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PROFICIENCY_LEVELS } from "@/lib/constants";
@@ -19,6 +20,9 @@ import {
 import { createClient } from "@/utils/supabase/client";
 
 const KEY_ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+/** A tile turns edge-on in HALF_FLIP_MS, shows its color, turns back; the next starts FLIP_GAP_MS later. */
+const HALF_FLIP_MS = 250;
+const FLIP_GAP_MS = 300;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const TILE: Record<WordleMark, string> = {
@@ -36,6 +40,19 @@ const MARK_WORDS: Record<WordleMark, string> = {
 function formatDay(date: string) {
   const [, month, day] = date.split("-").map(Number);
   return `${day} ${MONTHS[month - 1]}`;
+}
+
+function prefersMotion() {
+  return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function shake(row: HTMLElement | null) {
+  if (row && prefersMotion()) {
+    row.animate(
+      [{ translate: "0" }, { translate: "-6px" }, { translate: "6px" }, { translate: "-4px" }, { translate: "4px" }, { translate: "0" }],
+      { duration: 300 }
+    );
+  }
 }
 
 function statusLabel(status: WordleStatus | null) {
@@ -59,8 +76,11 @@ export function WordleGame({
   const [archive, setArchive] = useState<WordleArchiveDay[]>(initial.ok ? initial.archive ?? [] : []);
   const [input, setInput] = useState("");
   const [message, setMessage] = useState<string | null>(initial.ok ? null : initial.error);
-  // A guess or a level/day switch on its way to the database.
+  // A guess or a level/day switch on its way to the database, or a row still flipping.
   const [pending, setPending] = useState(false);
+  // The row being flipped and how many of its tiles show their color yet.
+  const [revealing, setRevealing] = useState<{ row: number; shown: number } | null>(null);
+  const currentRow = useRef<HTMLDivElement>(null);
 
   const playing = view?.status === "playing";
 
@@ -85,23 +105,57 @@ export function WordleGame({
   }
 
   const submit = useCallback(async () => {
-    if (!view) {
+    const rowElement = currentRow.current;
+    if (!view || !rowElement) {
       return;
     }
     setPending(true);
+    // The tiles start turning right away: the colors usually arrive before the
+    // first one is edge-on, so the wait for the database is hidden in the flip.
+    const tiles = [...rowElement.children] as HTMLElement[];
+    const turns = prefersMotion()
+      ? tiles.map((tile, index) =>
+          tile.animate([{ rotate: "x 0deg" }, { rotate: "x 90deg" }], {
+            duration: HALF_FLIP_MS,
+            delay: index * FLIP_GAP_MS,
+            easing: "ease-in",
+            fill: "forwards",
+          })
+        )
+      : [];
+
     const next = await playWordle(supabase, view.level, view.date, input);
-    setPending(false);
     if (!next.ok) {
+      turns.forEach((turn) => turn.cancel());
+      shake(rowElement);
+      setPending(false);
       setMessage(next.error);
       return;
     }
+    const row = next.view.guesses.length - 1;
     setInput("");
     setMessage(null);
+    setRevealing(turns.length ? { row, shown: 0 } : null);
     setView(next.view);
     // The archive only changes for this day, and only its status.
     setArchive((days) =>
       days.map((day) => (day.date === next.view.date ? { ...day, status: next.view.status } : day))
     );
+
+    // Each tile waits edge-on (if the database was slow), takes its color, turns back.
+    let last: Animation | undefined;
+    for (const [index, turn] of turns.entries()) {
+      await turn.finished;
+      flushSync(() => setRevealing({ row, shown: index + 1 }));
+      last = tiles[index].animate([{ rotate: "x 90deg" }, { rotate: "x 0deg" }], {
+        duration: HALF_FLIP_MS,
+        easing: "ease-out",
+      });
+      turn.cancel();
+    }
+    await last?.finished;
+    setRevealing(null);
+    setPending(false);
   }, [input, supabase, view]);
 
   const press = useCallback(
@@ -112,6 +166,7 @@ export function WordleGame({
       if (key === "Enter") {
         if (input.length < WORDLE_LENGTH) {
           setMessage(`Type a ${WORDLE_LENGTH}-letter word.`);
+          shake(currentRow.current);
           return;
         }
         void submit();
@@ -146,17 +201,25 @@ export function WordleGame({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [press]);
 
-  const keys = keyboardMarks(view?.guesses ?? []);
+  // The keyboard and the result wait until the last row has finished flipping.
+  const keys = keyboardMarks(view?.guesses.slice(0, revealing?.row) ?? []);
   const rows = Array.from({ length: WORDLE_MAX_GUESSES }, (_, index) => {
     const guess = view?.guesses[index];
     if (guess) {
-      return { letters: [...guess.word], marks: guess.marks as (WordleMark | null)[], checking: false };
+      const shown = revealing?.row === index ? revealing.shown : WORDLE_LENGTH;
+      return {
+        letters: [...guess.word],
+        marks: guess.marks.map((mark, letter) => (letter < shown ? mark : null)),
+        revealed: shown === WORDLE_LENGTH,
+        current: false,
+      };
     }
     const current = playing && index === (view?.guesses.length ?? 0);
     return {
       letters: Array.from({ length: WORDLE_LENGTH }, (_, letter) => (current ? input[letter] ?? "" : "")),
       marks: Array.from({ length: WORDLE_LENGTH }, () => null as WordleMark | null),
-      checking: current && pending,
+      revealed: false,
+      current,
     };
   });
 
@@ -206,10 +269,11 @@ export function WordleGame({
         {rows.map((row, rowIndex) => (
           <div
             key={rowIndex}
+            ref={row.current ? currentRow : undefined}
             className="grid grid-cols-5 gap-1.5"
             role="group"
             aria-label={
-              view?.guesses[rowIndex]
+              row.revealed
                 ? `Guess ${rowIndex + 1}: ${row.letters
                     .map((letter, index) => `${letter.toUpperCase()} ${MARK_WORDS[row.marks[index]!]}`)
                     .join(", ")}`
@@ -224,8 +288,7 @@ export function WordleGame({
                   aria-hidden
                   className={cn(
                     "flex size-12 items-center justify-center rounded-lg border-2 text-xl font-bold uppercase sm:size-14",
-                    mark ? TILE[mark] : letter ? "border-foreground/50" : "border-border",
-                    row.checking && "animate-pulse"
+                    mark ? TILE[mark] : letter ? "border-foreground/50" : "border-border"
                   )}
                 >
                   {letter}
@@ -240,7 +303,7 @@ export function WordleGame({
         {message}
       </p>
 
-      {view && view.status !== "playing" && (
+      {view && view.status !== "playing" && !revealing && (
         <div className="glass-panel space-y-1 p-4 text-center">
           <p className="font-semibold">
             {view.status === "won"
@@ -259,7 +322,7 @@ export function WordleGame({
         </div>
       )}
 
-      {playing && (
+      {(playing || revealing) && (
         <div className="space-y-1.5" aria-label="Keyboard">
           {KEY_ROWS.map((keyRow, rowIndex) => (
             <div key={keyRow} className="flex justify-center gap-1">
