@@ -11,6 +11,7 @@ import {
 import { AdminQueueBadge } from "@/components/admin/admin-queue-badge";
 import { BotMatchCard } from "@/components/dashboard/bot-match-card";
 import { ChallengeLinkButton } from "@/components/challenge/challenge-link-button";
+import { JoinCodeForm } from "@/components/challenge/join-code-form";
 import { OnlineLevelBadge } from "@/components/dashboard/online-players";
 import { WelcomeTour } from "@/components/dashboard/welcome-tour";
 import { MatchmakingStartLink } from "@/components/matchmaking/matchmaking-start-link";
@@ -132,6 +133,7 @@ export async function PlayDashboardContent({
                 </MatchmakingStartLink>
               </Button>
               <ChallengeLinkButton className="mt-2 min-h-11" />
+              <JoinCodeForm />
             </CardContent>
           </Card>
 
