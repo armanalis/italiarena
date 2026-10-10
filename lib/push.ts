@@ -30,11 +30,17 @@ export function pickDailyReminderMessage() {
   return DAILY_REMINDER_MESSAGES[index] ?? DAILY_REMINDER_MESSAGES[0];
 }
 
-/** A fresh reminder payload with randomly chosen copy. */
-export function buildDailyReminderPayload(): PushPayload {
+/**
+ * A fresh reminder payload with randomly chosen copy. A streak that today's
+ * match would extend gets its own line instead.
+ */
+export function buildDailyReminderPayload(streakAtRisk = 0): PushPayload {
   return {
     title: APP_NAME,
-    body: pickDailyReminderMessage(),
+    body:
+      streakAtRisk > 0
+        ? `Keep your ${streakAtRisk}-day streak alive: one quick match is enough.`
+        : pickDailyReminderMessage(),
     url: "/dashboard/matchmaking",
     tag: "daily-reminder",
   };

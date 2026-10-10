@@ -492,6 +492,10 @@ export interface Database {
           total_points: number;
         }>;
       };
+      match_streak: {
+        Args: { p_user_id: string };
+        Returns: Array<{ streak: number; played_today: boolean }>;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

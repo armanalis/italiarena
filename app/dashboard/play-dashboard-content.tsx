@@ -16,7 +16,8 @@ import { WelcomeTour } from "@/components/dashboard/welcome-tour";
 import { MatchmakingStartLink } from "@/components/matchmaking/matchmaking-start-link";
 import { getAdminQueueCounts } from "@/lib/admin-queue-counts";
 import { getCurrentUserProfile, isGuestUser } from "@/lib/auth";
-import { PenLine, ShieldAlert, UserRound, Users } from "lucide-react";
+import { Flame, PenLine, ShieldAlert, UserRound, Users } from "lucide-react";
+import { createClient } from "@/utils/supabase/server";
 
 type PlayDashboardContentProps = {
   searchParams: Promise<{
@@ -39,6 +40,8 @@ export async function PlayDashboardContent({
     profile.role === "admin"
       ? await getAdminQueueCounts()
       : { reported: 0, submissions: 0, total: 0 };
+  const { data: streakRows } = await (await createClient()).rpc("get_my_streak");
+  const streak = (streakRows as { streak: number; played_today: boolean }[] | null)?.[0];
 
   return (
     <main className="flex w-full min-w-0 flex-1 flex-col">
@@ -65,6 +68,20 @@ export async function PlayDashboardContent({
                   />
                 </Link>
               </Button>
+            )}
+            {streak && streak.streak > 0 && (
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/10 px-3 py-1.5 text-sm font-medium text-orange-600 dark:text-orange-400"
+                title={
+                  streak.played_today
+                    ? "You played today. Come back tomorrow to keep it going."
+                    : "Finish a match today to keep your streak."
+                }
+              >
+                <Flame className="size-4" aria-hidden />
+                {streak.streak}-day streak
+                {!streak.played_today && <span className="sr-only">, play today to keep it</span>}
+              </span>
             )}
             <OnlineLevelBadge level={profile.proficiency_level} />
           </div>

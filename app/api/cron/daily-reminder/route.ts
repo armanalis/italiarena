@@ -143,7 +143,10 @@ async function runDailyReminderCron(options: { dryRun: boolean }) {
     }
 
     try {
-      const result = await sendPushToUser(user.id, buildDailyReminderPayload());
+      const { data: streakRows } = await admin.rpc("match_streak", { p_user_id: user.id });
+      const streak = streakRows?.[0];
+      const streakAtRisk = streak && !streak.played_today ? streak.streak : 0;
+      const result = await sendPushToUser(user.id, buildDailyReminderPayload(streakAtRisk));
       return {
         sent: result.sent,
         failed: result.failed,
