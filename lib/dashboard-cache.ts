@@ -3,14 +3,17 @@ import { updateTag, unstable_cache } from "next/cache";
 /** Cache tags for dashboard read queries — invalidated after match/settings changes. */
 export function dashboardTag(
   userId: string,
-  segment: "statistics" | "leaderboard" | "recent-matches" | "settings"
+  segment: "statistics" | "recent-matches" | "settings"
 ) {
   return `dashboard:${userId}:${segment}`;
 }
 
+/** One ranking per level, shared by every viewer. */
+export const LEADERBOARD_TAG = "leaderboard";
+
 export function revalidateUserDashboard(userId: string) {
   updateTag(dashboardTag(userId, "statistics"));
-  updateTag(dashboardTag(userId, "leaderboard"));
+  updateTag(LEADERBOARD_TAG);
   updateTag(dashboardTag(userId, "recent-matches"));
   updateTag(dashboardTag(userId, "settings"));
 }
