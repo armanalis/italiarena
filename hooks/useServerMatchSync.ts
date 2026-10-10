@@ -15,6 +15,7 @@ import {
   shouldResumeRoundResult,
   type MatchScoreState,
 } from "@/lib/match-score-state";
+import { refreshDashboardAfterMatch } from "@/app/dashboard/settings/actions";
 import { createClient } from "@/utils/supabase/client";
 import {
   MATCH_SYNC_VERSION,
@@ -258,9 +259,7 @@ export function useServerMatchSync({
               live.matchWinner ??
               determineWinner(
                 live.playerAScore,
-                live.playerBScore,
-                live.playerAResponseTimes,
-                live.playerBResponseTimes
+                live.playerBScore
               ),
           });
         }
@@ -277,9 +276,7 @@ export function useServerMatchSync({
             live.matchWinner ??
             determineWinner(
               live.playerAScore,
-              live.playerBScore,
-              live.playerAResponseTimes,
-              live.playerBResponseTimes
+              live.playerBScore
             ),
         });
         return;
@@ -799,6 +796,9 @@ export function useServerMatchSync({
                 : null,
             points: history?.user_score ?? 0,
           });
+          // The match ended here, not through a server action: clear the
+          // cached dashboard so the result shows right away.
+          void refreshDashboardAfterMatch();
           return;
         }
 
@@ -883,6 +883,27 @@ export function useServerMatchSync({
           isMatchAnswerRecord(session.answer_a) ? session.answer_a : null,
           isMatchAnswerRecord(session.answer_b) ? session.answer_b : null
         );
+
+        // A refresh on the result screen skips the reveal, so take the
+        // opponent's pick from the scored round instead.
+        const live = useGameStore.getState();
+        const otherRole = localPlayerRoleRef.current === "a" ? "b" : "a";
+        const shownPick =
+          otherRole === "a" ? live.playerAAnswer : live.playerBAnswer;
+        const scoredPick = isMatchScoreState(session.score_state)
+          ? session.score_state.roundReviews.find(
+              (round) => round.questionIndex === live.currentQuestionIndex
+            )?.byRole?.[otherRole].selectedAnswer
+          : null;
+        if (live.roundPhase === "round_result" && scoredPick && !shownPick?.answer) {
+          const pick = {
+            answer: scoredPick,
+            responseTimeMs: shownPick?.responseTimeMs ?? null,
+          };
+          useGameStore.setState(
+            otherRole === "a" ? { playerAAnswer: pick } : { playerBAnswer: pick }
+          );
+        }
       } catch {
         // Transient network error — next poll retries.
       } finally {

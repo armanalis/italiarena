@@ -1,3 +1,4 @@
+import { refreshDashboardAfterMatch } from "@/app/dashboard/settings/actions";
 import { navigateTo } from "@/lib/client-navigation";
 import { useGameStore } from "@/store/useGameStore";
 import { createClient } from "@/utils/supabase/client";
@@ -70,6 +71,10 @@ export async function exitToDashboard() {
   try {
     if (sessionId && isMatchStillLive(state)) {
       await abandonSession(sessionId, pathname);
+      if (pathname.startsWith("/dashboard/match/")) {
+        // A forfeit is recorded by the database; show it on the dashboard now.
+        await refreshDashboardAfterMatch();
+      }
     }
   } finally {
     useGameStore.getState().reset();

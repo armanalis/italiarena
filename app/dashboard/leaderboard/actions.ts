@@ -1,7 +1,7 @@
 "use server";
 
 import { getAuthUserId } from "@/lib/auth";
-import { cachedDashboardQuery, dashboardTag } from "@/lib/dashboard-cache";
+import { cachedDashboardQuery, LEADERBOARD_TAG } from "@/lib/dashboard-cache";
 import { createClient } from "@/utils/supabase/server";
 
 export type LeaderboardEntry = {
@@ -36,18 +36,20 @@ export async function getLeaderboard(
     };
   }
 
-  return cachedDashboardQuery(
-    ["leaderboard", userId, language, level],
-    dashboardTag(userId, "leaderboard"),
-    async () => fetchLeaderboard(language, level, userId)
+  // The ranking is the same for every viewer of a level, so it is cached once.
+  const shared = await cachedDashboardQuery(
+    ["leaderboard", language, level],
+    LEADERBOARD_TAG,
+    async () => fetchLeaderboard(language, level)
   );
+
+  return { ...shared, currentUserId: userId };
 }
 
 async function fetchLeaderboard(
   language: string,
-  level: string,
-  userId: string
-): Promise<LeaderboardData> {
+  level: string
+): Promise<Omit<LeaderboardData, "currentUserId">> {
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("get_leaderboard", {
@@ -62,7 +64,6 @@ async function fetchLeaderboard(
       language,
       level,
       entries: [],
-      currentUserId: userId,
     };
   }
 
@@ -89,6 +90,5 @@ async function fetchLeaderboard(
     language,
     level,
     entries,
-    currentUserId: userId,
   };
 }
