@@ -6,13 +6,6 @@ export const TOPIC_REVEAL_MS = 1_200;
 /** Seconds on the round clock for each question. */
 export const ROUND_DURATION_SEC = 25;
 
-/**
- * How long an opponent may stay silent (no answer, no next round) after the
- * round clock runs out before the match ends as their forfeit.
- * KEEP IN SYNC with claim_silent_opponent (supabase/silent-opponent-2026-10-10.sql).
- */
-export const SILENT_OPPONENT_MS = 30_000;
-
 /** How long the answer-reveal screen stays up before the next question. */
 export const ROUND_RESULT_MS = {
   /** Bot / ghost — solo read time, no sync wait. */

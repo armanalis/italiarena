@@ -17,11 +17,7 @@ import {
   getRoundPauseMs,
   getRoundTimeRemainingSec,
 } from "@/lib/match-timer";
-import {
-  getRoundResultMs,
-  SILENT_OPPONENT_MS,
-  TOPIC_REVEAL_MS,
-} from "@/lib/match-timing";
+import { getRoundResultMs, TOPIC_REVEAL_MS } from "@/lib/match-timing";
 import { useGameAudio } from "@/hooks/useGameAudio";
 import { useServerMatchSync } from "@/hooks/useServerMatchSync";
 import { useGameStore } from "@/store/useGameStore";
@@ -31,7 +27,9 @@ import type { CorrectAnswer, PublicQuestion } from "@/types/database.types";
 import type { ProficiencyLevel } from "@/lib/constants";
 
 const ROUND_RESULT_TICK_MS = 100;
-const SILENT_CLAIM_RETRY_MS = 5_000;
+/** Longer than the 5 s result screen, so a healthy match never asks. */
+const SILENT_CHECK_AFTER_MS = 7_000;
+const SILENT_CHECK_EVERY_MS = 3_000;
 
 function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -984,9 +982,10 @@ export function useGameLoop({
   ]);
 
   // An opponent who goes silent (closed the tab, lost connection) must not
-  // leave this player waiting. After SILENT_OPPONENT_MS with nothing
-  // happening, ask the server: it checks who went silent and, if it is the
-  // opponent, ends the match as their forfeit (claim_silent_opponent).
+  // leave this player waiting. Once the screen has waited a while with
+  // nothing happening, ask the server: it checks who went silent and, if it
+  // is the opponent, ends the match as their forfeit (claim_silent_opponent:
+  // 5 s after the question clock, or 10 s after a scored round).
   useEffect(() => {
     if (isBotMatch) {
       return;
@@ -1017,11 +1016,17 @@ export function useGameLoop({
         return;
       }
 
+      // During a question the local clock moves the round on by itself.
+      const waiting =
+        live.roundPhase === "waiting" ||
+        live.roundPhase === "round_result" ||
+        live.roundPhase === "tiebreaker_loading";
+
       if (
-        live.roundPhase === "match_finished" ||
+        !waiting ||
         live.status === "finished" ||
-        now - lastProgressAt < SILENT_OPPONENT_MS ||
-        now - lastClaimAt < SILENT_CLAIM_RETRY_MS
+        now - lastProgressAt < SILENT_CHECK_AFTER_MS ||
+        now - lastClaimAt < SILENT_CHECK_EVERY_MS
       ) {
         return;
       }
