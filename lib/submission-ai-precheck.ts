@@ -1,7 +1,4 @@
-import {
-  GROQ_EXPLANATION_MODEL,
-  GROQ_REASONING_EFFORT,
-} from "@/lib/ai-explanations";
+import { groqChat, unavailableReason } from "@/lib/groq";
 import {
   CATEGORY_GUIDANCE,
   LEVEL_GUIDANCE,
@@ -34,8 +31,6 @@ export type SubmissionAiPrecheck = {
   summary: string;
   flags: string[];
 };
-
-export type SubmissionAiPrecheckStatus = "pending" | "ready" | "unavailable";
 
 const VALID_LEVELS: ProficiencyLevel[] = [
   "A1",
@@ -195,64 +190,21 @@ export async function generateSubmissionAiPrecheck(
   | { status: "ready"; precheck: SubmissionAiPrecheck }
   | { status: "unavailable"; reason: string }
 > {
-  const apiKey = process.env.GROQ_API_KEY;
-
-  if (!apiKey) {
-    return { status: "unavailable", reason: "GROQ_API_KEY is not configured." };
-  }
-
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: GROQ_EXPLANATION_MODEL,
-      reasoning_effort: GROQ_REASONING_EFFORT,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content:
-            "You review Italian quiz questions. First check the content is real Italian suitable for learning Italian; then check CEFR level and category. Reject non-Italian, gibberish, or spam. Output JSON only.",
-        },
-        {
-          role: "user",
-          content: buildPrecheckPrompt(payload),
-        },
-      ],
-      temperature: 0.1,
-      max_tokens: 1100,
-    }),
+  const result = await groqChat({
+    label: "pre-check",
+    system:
+      "You review Italian quiz questions. First check the content is real Italian suitable for learning Italian; then check CEFR level and category. Reject non-Italian, gibberish, or spam. Output JSON only.",
+    user: buildPrecheckPrompt(payload),
+    temperature: 0.1,
+    maxTokens: 1100,
+    json: true,
   });
 
-  if (!response.ok) {
-    console.error(
-      `[groq] pre-check request failed (${response.status}): ${await response
-        .text()
-        .catch(() => "<unreadable body>")}`
-    );
-
-    return {
-      status: "unavailable",
-      reason:
-        response.status === 429
-          ? "AI rate limit reached."
-          : "AI pre-check request failed.",
-    };
+  if (!result.ok) {
+    return { status: "unavailable", reason: unavailableReason(result, "AI pre-check request failed.") };
   }
 
-  const data = (await response.json()) as {
-    choices?: { message?: { content?: string } }[];
-  };
-
-  const content = data.choices?.[0]?.message?.content?.trim();
-  if (!content) {
-    return { status: "unavailable", reason: "AI returned an empty response." };
-  }
-
-  const precheck = parsePrecheckJson(content);
+  const precheck = parsePrecheckJson(result.content);
   if (!precheck) {
     return { status: "unavailable", reason: "AI response could not be parsed." };
   }

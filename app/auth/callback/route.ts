@@ -1,15 +1,6 @@
-/** OAuth callback: exchanges provider codes or email token hashes for a session. */
-import { type EmailOtpType } from "@supabase/supabase-js";
+/** OAuth callback: exchanges a provider code for a session. */
 import { type NextRequest, NextResponse } from "next/server";
-import {
-  AUTH_CONFIRM_FINALIZE_PARAM,
-  buildAuthConfirmPendingPath,
-  getAuthConfirmErrorCode,
-  isPasswordRecoveryFlow,
-  resolveAuthConfirmDestination,
-  resolveAuthNextPath,
-  verifyEmailTokenHash,
-} from "@/lib/auth-email-confirm";
+import { resolveAuthNextPath } from "@/lib/auth-email-confirm";
 import { getPostAuthPathForUser } from "@/lib/auth";
 import {
   getProductionSiteUrl,
@@ -30,82 +21,18 @@ export async function GET(request: NextRequest) {
 
   const origin = requestUrl.origin;
   const tokenHash = requestUrl.searchParams.get("token_hash");
-  const tokenType = requestUrl.searchParams.get("type") as EmailOtpType | null;
+  const tokenType = requestUrl.searchParams.get("type");
   const code = requestUrl.searchParams.get("code");
   const next = requestUrl.searchParams.get("next");
   const oauthError = requestUrl.searchParams.get("error");
   const oauthErrorCode = requestUrl.searchParams.get("error_code");
 
+  // Email links (token_hash) are verified by /auth/confirm; this keeps older
+  // links that point here working.
   if (tokenHash && tokenType) {
-    if (requestUrl.searchParams.get(AUTH_CONFIRM_FINALIZE_PARAM) !== "1") {
-      const pendingPath = buildAuthConfirmPendingPath({
-        tokenHash,
-        type: tokenType,
-        next,
-      });
-      return NextResponse.redirect(new URL(pendingPath, origin));
-    }
-
-    const explicitDestination =
-      resolveAuthConfirmDestination(tokenType, next, origin);
-    const successResponse = NextResponse.redirect(
-      `${origin}${explicitDestination ?? "/onboarding"}`
+    return NextResponse.redirect(
+      new URL(`/auth/confirm${requestUrl.search}`, origin)
     );
-    const supabase = createSupabaseRouteClient(request, successResponse);
-    const { error, verifiedType } = await verifyEmailTokenHash(
-      supabase,
-      tokenHash,
-      tokenType
-    );
-
-    if (error) {
-      const isRecovery =
-        isPasswordRecoveryFlow(tokenType, next, origin) ||
-        isPasswordRecoveryFlow(verifiedType, next, origin);
-
-      if (isRecovery) {
-        // A live session (already signed in, or token consumed by a prefetch)
-        // can still set a new password — go to the reset form, not the dashboard.
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (user) {
-          successResponse.headers.set(
-            "Location",
-            `${origin}/login/reset-password`
-          );
-          return successResponse;
-        }
-      }
-
-      const loginUrl = new URL("/login", origin);
-      loginUrl.searchParams.set(
-        "error",
-        isRecovery
-          ? "reset_link_expired"
-          : getAuthConfirmErrorCode(error.message)
-      );
-      return NextResponse.redirect(loginUrl);
-    }
-
-    if (isPasswordRecoveryFlow(verifiedType, next, origin)) {
-      successResponse.headers.set("Location", `${origin}/login/reset-password`);
-      return successResponse;
-    }
-
-    if (!explicitDestination) {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        const destinationPath = await getPostAuthPathForUser(supabase, user);
-        successResponse.headers.set("Location", `${origin}${destinationPath}`);
-      }
-    }
-
-    return successResponse;
   }
 
   if (oauthError) {

@@ -1,10 +1,11 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { authorizeCron } from "@/lib/cron-auth";
 import {
   buildDailyReminderPayload,
   mapWithConcurrency,
   sendPushToUser,
 } from "@/lib/push";
+import { createAdminClient } from "@/utils/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,26 +33,8 @@ const REMINDER_COOLDOWN_HOURS = 23;
  */
 const USER_CONCURRENCY = 10;
 
-function authorizeCron(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-
-  const authHeader = request.headers.get("authorization");
-  if (authHeader === `Bearer ${secret}`) return true;
-
-  return false;
-}
-
-function createServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceRoleKey) {
-    throw new Error("Missing Supabase admin credentials.");
-  }
-  return createClient(url, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
+/** Supabase returns at most 1,000 rows per request, so users are read in pages. */
+const USER_PAGE_SIZE = 1_000;
 
 /**
  * Current hour (0-23) in an IANA timezone. Returns null for a zone Postgres
@@ -96,23 +79,32 @@ function isDueNow(user: ReminderUser, now: Date) {
  * overlapping triggers cannot both notify the same person.
  */
 async function runDailyReminderCron(options: { dryRun: boolean }) {
-  const admin = createServiceClient();
+  const admin = createAdminClient();
   const now = new Date();
   const cooldownCutoff = new Date(
     now.getTime() - REMINDER_COOLDOWN_HOURS * 60 * 60 * 1000
   ).toISOString();
 
-  const { data, error } = await admin
-    .from("users")
-    .select("id, daily_reminder_hour, timezone, last_reminder_sent_at")
-    .eq("daily_reminder_enabled", true)
-    .eq("is_guest", false);
+  const users: ReminderUser[] = [];
+  for (let from = 0; ; from += USER_PAGE_SIZE) {
+    const { data, error } = await admin
+      .from("users")
+      .select("id, daily_reminder_hour, timezone, last_reminder_sent_at")
+      .eq("daily_reminder_enabled", true)
+      .eq("is_guest", false)
+      .order("id")
+      .range(from, from + USER_PAGE_SIZE - 1);
 
-  if (error) {
-    throw new Error(error.message);
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    users.push(...(data as ReminderUser[]));
+    if (data.length < USER_PAGE_SIZE) {
+      break;
+    }
   }
 
-  const users = (data ?? []) as ReminderUser[];
   const due = users.filter((user) => isDueNow(user, now));
 
   if (options.dryRun) {
@@ -134,7 +126,8 @@ async function runDailyReminderCron(options: { dryRun: boolean }) {
     // Atomic claim: only succeeds if nobody notified this user recently.
     const { data: claimed, error: claimError } = await admin
       .from("users")
-      .update({ last_reminder_sent_at: now.toISOString() })
+      // `users` is not in the generated Database type.
+      .update({ last_reminder_sent_at: now.toISOString() } as never)
       .eq("id", user.id)
       .or(
         `last_reminder_sent_at.is.null,last_reminder_sent_at.lt.${cooldownCutoff}`
