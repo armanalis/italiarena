@@ -15,6 +15,8 @@ import { createClient } from "@/utils/supabase/client";
 type ChallengeLobbyProps = {
   sessionId: string;
   link: string;
+  /** Six digits a friend can type on their Play page; null if not available. */
+  code: string | null;
   state: "host" | "guest" | "not_for_you" | "closed";
   hostName: string | null;
   level: string | null;
@@ -23,10 +25,10 @@ type ChallengeLobbyProps = {
 /** How often the host checks whether the friend has joined. */
 const JOIN_POLL_MS = 3_000;
 
-export function ChallengeLobby({ sessionId, link, state, hostName, level }: ChallengeLobbyProps) {
+export function ChallengeLobby({ sessionId, link, code, state, hostName, level }: ChallengeLobbyProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"link" | "code" | null>(null);
 
   // Host: go to the match as soon as the friend joins.
   useEffect(() => {
@@ -50,19 +52,25 @@ export function ChallengeLobby({ sessionId, link, state, hostName, level }: Chal
     return () => window.clearInterval(interval);
   }, [router, sessionId, state]);
 
-  async function copyLink() {
-    await navigator.clipboard.writeText(link);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 2_000);
+  async function copy(what: "link" | "code") {
+    await navigator.clipboard.writeText(what === "code" && code ? code : link);
+    setCopied(what);
+    window.setTimeout(() => setCopied(null), 2_000);
   }
 
   async function shareLink() {
     if (!navigator.share) {
-      await copyLink();
+      await copy("link");
       return;
     }
     try {
-      await navigator.share({ title: "Italiarena challenge", text: "Play an Italian quiz match with me:", url: link });
+      await navigator.share({
+        title: "Italiarena challenge",
+        text: code
+          ? `Play an Italian quiz match with me! Open the link, or enter code ${code} on the Play page:`
+          : "Play an Italian quiz match with me:",
+        url: link,
+      });
     } catch {
       // Closing the share sheet is not an error.
     }
@@ -99,17 +107,29 @@ export function ChallengeLobby({ sessionId, link, state, hostName, level }: Chal
             <div className="space-y-1">
               <h1 className="text-xl font-bold tracking-tight">Challenge a friend</h1>
               <p className="text-sm text-muted-foreground">
-                Send this link to a friend. The match starts as soon as they open it
-                {level ? ` (level ${level})` : ""}. It works for 1 hour.
+                Send this link to a friend{code ? ", or tell them the code to enter on their Play page" : ""}.
+                The match starts as soon as they join{level ? ` (level ${level})` : ""}. It works for 1 hour.
               </p>
             </div>
             <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 p-2 text-left">
               <span className="min-w-0 flex-1 truncate px-2 text-sm">{link}</span>
-              <Button type="button" size="sm" variant="secondary" onClick={copyLink}>
-                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                {copied ? "Copied" : "Copy"}
+              <Button type="button" size="sm" variant="secondary" onClick={() => copy("link")}>
+                {copied === "link" ? <Check className="size-4" /> : <Copy className="size-4" />}
+                {copied === "link" ? "Copied" : "Copy"}
               </Button>
             </div>
+            {code && (
+              <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 p-2 text-left">
+                <span className="flex-1 px-2">
+                  <span className="block text-xs text-muted-foreground">Code</span>
+                  <span className="font-mono text-2xl font-bold tracking-[0.25em]">{code}</span>
+                </span>
+                <Button type="button" size="sm" variant="secondary" onClick={() => copy("code")}>
+                  {copied === "code" ? <Check className="size-4" /> : <Copy className="size-4" />}
+                  {copied === "code" ? "Copied" : "Copy"}
+                </Button>
+              </div>
+            )}
             <Button type="button" className="min-h-11 w-full" onClick={shareLink}>
               <Share2 className="size-4" />
               Share link

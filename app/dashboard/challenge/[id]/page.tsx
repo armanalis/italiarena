@@ -38,11 +38,17 @@ export default async function ChallengePage({ params }: ChallengePageProps) {
   const sentToSomeoneElse = Boolean(
     open && !isHost && session?.challenged_id && session.challenged_id !== profile.id
   );
+  // Null until challenge-codes-2026-10-10.sql runs: the page then shows only the link.
+  const code =
+    open && isHost
+      ? ((await supabase.rpc("challenge_code", { p_session_id: id })).data as string | null)
+      : null;
 
   return (
     <ChallengeLobby
       sessionId={id}
       link={`${await getServerSiteUrl()}/dashboard/challenge/${id}`}
+      code={code}
       state={!open ? "closed" : isHost ? "host" : sentToSomeoneElse ? "not_for_you" : "guest"}
       hostName={open && !isHost ? await getPlayerDisplayName(session!.player_a_id) : null}
       level={session?.level ?? null}

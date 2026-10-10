@@ -581,6 +581,32 @@ export async function joinChallenge(sessionId: string): Promise<ChallengeResult>
   return { success: true, sessionId: joined.id };
 }
 
+/**
+ * Joins a challenge by the 6-digit code its host shared.
+ * shortcut: no limit on wrong guesses. Open challenges are already listed to
+ * every player by the "joinable waiting sessions" policy, so a limit here
+ * protects nothing until that policy hides private sessions.
+ */
+export async function joinChallengeByCode(code: string): Promise<ChallengeResult> {
+  const trimmed = code.trim();
+  if (!/^\d{6}$/.test(trimmed)) {
+    return { success: false, error: "Enter the 6-digit code." };
+  }
+
+  const supabase = await createClient();
+  const { data: sessionId, error } = await supabase.rpc("challenge_by_code", {
+    p_code: trimmed,
+  });
+  if (error) {
+    return { success: false, error: "Could not check the code. Try again." };
+  }
+  if (!sessionId) {
+    return { success: false, error: "No open challenge has this code. Check it, or ask for a new one." };
+  }
+
+  return joinChallenge(sessionId as string);
+}
+
 export async function cancelMatchSearch(
   sessionId?: string | null
 ): Promise<{ success: true } | { success: false; error: string }> {
