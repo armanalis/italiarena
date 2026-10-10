@@ -17,7 +17,7 @@ import { WelcomeTour } from "@/components/dashboard/welcome-tour";
 import { MatchmakingStartLink } from "@/components/matchmaking/matchmaking-start-link";
 import { getAdminQueueCounts } from "@/lib/admin-queue-counts";
 import { getCurrentUserProfile, isGuestUser } from "@/lib/auth";
-import { Flame, PenLine, ShieldAlert, UserRound, Users } from "lucide-react";
+import { Flame, PenLine, ShieldAlert, Swords, UserRound } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 
 type PlayDashboardContentProps = {
@@ -117,19 +117,18 @@ export async function PlayDashboardContent({
           <Card className="border-border/60">
             <CardHeader>
               <div className="mb-2 flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Users className="size-5" />
+                <Swords className="size-5" />
               </div>
-              <CardTitle>Play vs real user</CardTitle>
+              <CardTitle>Arena Duel</CardTitle>
               <CardDescription>
-                Match with a live opponent at your Italian level. After 10
-                seconds with no match, you can play vs bot or return to the
-                dashboard.
+                Face a live player at your Italian level. After 10 seconds with
+                no match, you can play the bot or return to the dashboard.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild className="min-h-11 w-full">
                 <MatchmakingStartLink href="/dashboard/matchmaking?mode=real">
-                  Find real opponent
+                  Enter the Arena
                 </MatchmakingStartLink>
               </Button>
               <ChallengeLinkButton className="mt-2 min-h-11" />
