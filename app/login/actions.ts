@@ -14,9 +14,7 @@ import { USERNAME_TAKEN_MESSAGE } from "@/lib/username-errors";
 import { validateNewPassword } from "@/lib/password-rules";
 import {
   getServerAuthCallbackUrl,
-  getServerSignupEmailRedirectOrigin,
 } from "@/lib/site-url-server";
-import { createAdminClientOrNull } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
 export type AuthFormState = {
@@ -91,85 +89,6 @@ export async function validateSignUpInput(formData: FormData): Promise<AuthFormS
   return { error: null };
 }
 
-export async function finalizeSignUp(profile: {
-  userId: string;
-  email: string;
-  username: string;
-}): Promise<AuthFormState> {
-  const admin = createAdminClientOrNull();
-  if (!admin) {
-    return { error: null };
-  }
-
-  const {
-    data: { user },
-    error: userError,
-  } = await admin.auth.admin.getUserById(profile.userId);
-
-  if (userError || !user) {
-    return { error: null };
-  }
-
-  if (user.email?.toLowerCase() !== profile.email.toLowerCase()) {
-    return { error: "Invalid signup request." };
-  }
-
-  await admin.auth.admin.updateUserById(profile.userId, {
-    user_metadata: {
-      ...user.user_metadata,
-      pending_display_name: profile.username,
-    },
-  });
-
-  return { error: null };
-}
-
-/** @deprecated Prefer client-side signUp via `signUpOnClient` in `lib/auth-signup-client.ts`. */
-export async function signUp(
-  _prevState: AuthFormState,
-  formData: FormData
-): Promise<AuthFormState> {
-  const validation = await validateSignUpInput(formData);
-  if (validation.error) {
-    return validation;
-  }
-
-  return {
-    error:
-      "Sign up must be completed in the browser. Please refresh the page and try again.",
-  };
-}
-
-export async function resendVerificationEmail(
-  _prevState: AuthFormState,
-  formData: FormData
-): Promise<AuthFormState> {
-  const email = String(formData.get("email") ?? "").trim();
-
-  if (!email) {
-    return { error: "Email is required.", success: null };
-  }
-
-  const supabase = await createClient();
-  const { error } = await supabase.auth.resend({
-    type: "signup",
-    email,
-    options: {
-      emailRedirectTo: await getServerSignupEmailRedirectOrigin(),
-    },
-  });
-
-  if (error) {
-    return { error: error.message, success: null };
-  }
-
-  return {
-    error: null,
-    success:
-      "Verification email sent. Check your inbox for a new confirmation link.",
-  };
-}
-
 export async function requestPasswordReset(
   _prevState: AuthFormState,
   formData: FormData
@@ -178,20 +97,6 @@ export async function requestPasswordReset(
 
   if (!email) {
     return { error: "Email is required.", success: null };
-  }
-
-  if (!createAdminClientOrNull()) {
-    return {
-      error: "Password reset is temporarily unavailable. Please try again later.",
-      success: null,
-    };
-  }
-
-  if (!(await isEmailRegistered(email))) {
-    return {
-      error: "There is no registered email for this address.",
-      success: null,
-    };
   }
 
   const supabase = await createClient();
@@ -205,7 +110,8 @@ export async function requestPasswordReset(
 
   return {
     error: null,
-    success: "Password reset email sent. Check your inbox.",
+    // Same answer either way, so the form cannot reveal who has an account.
+    success: "If that email has an account, we sent a reset link. Check your inbox.",
   };
 }
 

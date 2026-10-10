@@ -10,7 +10,6 @@ import { ArrowLeft, Lock, Mail, Sparkles, UserRound } from "lucide-react";
 import { ItalianBrandIcon } from "@/components/italian-brand-icon";
 import { APP_NAME, PRIVACY_FOOTER_NOTICE } from "@/lib/legal";
 import {
-  finalizeSignUp,
   requestPasswordReset,
   signIn,
   validateSignUpInput,
@@ -27,8 +26,6 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 type AuthMode = "signin" | "signup" | "forgot" | "resend";
-
-export const LOGIN_SIGNUP_PATH = "/login?mode=signup";
 
 const initialState: AuthFormState = { error: null, success: null };
 
@@ -131,14 +128,6 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
           setClientAuthError(result.error);
           setSignInSuccess(null);
           return;
-        }
-
-        if (result.profile) {
-          const finalizeState = await finalizeSignUp(result.profile);
-          if (finalizeState.error) {
-            setClientAuthError(finalizeState.error);
-            return;
-          }
         }
 
         if (result.redirectTo) {

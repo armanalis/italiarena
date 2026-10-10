@@ -11,8 +11,7 @@ import { isGuestAuthEmail, isGuestAuthUser } from "@/lib/guest-auth";
 
 const fetchUserRow = cache(async (userId: string) => {
   const supabase = await createClient();
-
-  const withRole = await supabase
+  const { data, error } = await supabase
     .from("users")
     .select(
       "id, email, display_name, target_language, proficiency_level, role, is_guest, sound_enabled, haptics_enabled, daily_reminder_enabled, daily_reminder_hour, timezone"
@@ -20,67 +19,7 @@ const fetchUserRow = cache(async (userId: string) => {
     .eq("id", userId)
     .maybeSingle();
 
-  if (!withRole.error && withRole.data) {
-    return withRole.data;
-  }
-
-  const withoutReminder = await supabase
-    .from("users")
-    .select(
-      "id, email, display_name, target_language, proficiency_level, role, is_guest, sound_enabled, haptics_enabled"
-    )
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (!withoutReminder.error && withoutReminder.data) {
-    return {
-      ...withoutReminder.data,
-      daily_reminder_enabled: false,
-      daily_reminder_hour: 18,
-      timezone: "UTC",
-    };
-  }
-
-  const withoutExtras = await supabase
-    .from("users")
-    .select("id, email, target_language, proficiency_level, role")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (!withoutExtras.error && withoutExtras.data) {
-    return {
-      ...withoutExtras.data,
-      display_name: null,
-      is_guest: false,
-      sound_enabled: true,
-      haptics_enabled: true,
-      daily_reminder_enabled: false,
-      daily_reminder_hour: 18,
-      timezone: "UTC",
-    };
-  }
-
-  const withoutRole = await supabase
-    .from("users")
-    .select("id, email, target_language, proficiency_level")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (withoutRole.error || !withoutRole.data) {
-    return null;
-  }
-
-  return {
-    ...withoutRole.data,
-    display_name: null,
-    role: "user" as UserRole,
-    is_guest: false,
-    sound_enabled: true,
-    haptics_enabled: true,
-    daily_reminder_enabled: false,
-    daily_reminder_hour: 18,
-    timezone: "UTC",
-  };
+  return error ? null : data;
 });
 
 export function isGuestUser(profile: UserProfile) {
@@ -160,34 +99,18 @@ export async function getPostAuthPathForUser(
   supabase: SupabaseClient,
   user: User
 ): Promise<"/dashboard" | "/onboarding" | "/guest"> {
-  const withGuest = await supabase
+  const { data } = await supabase
     .from("users")
     .select("target_language, proficiency_level, is_guest, email")
     .eq("id", user.id)
     .maybeSingle();
 
-  const data =
-    !withGuest.error && withGuest.data
-      ? withGuest.data
-      : (
-          await supabase
-            .from("users")
-            .select("target_language, proficiency_level, email")
-            .eq("id", user.id)
-            .maybeSingle()
-        ).data;
-
   if (data?.target_language && data?.proficiency_level) {
     return "/dashboard";
   }
 
-  const guestFlag =
-    withGuest.data && "is_guest" in withGuest.data
-      ? Boolean((withGuest.data as { is_guest?: boolean }).is_guest)
-      : false;
-
   if (
-    guestFlag ||
+    data?.is_guest ||
     isGuestAuthUser(user) ||
     isGuestAuthEmail(data?.email ?? user.email)
   ) {

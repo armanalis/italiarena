@@ -58,14 +58,8 @@ function isDuplicateSignUp(data: {
   return data.user?.identities?.length === 0;
 }
 
-export type SignUpProfilePayload = {
-  userId: string;
-  email: string;
-  username: string;
-};
-
 export type ClientSignUpResult =
-  | { ok: true; message: string; profile: SignUpProfilePayload | null; redirectTo?: string }
+  | { ok: true; message: string; redirectTo?: string }
   | { ok: false; error: string };
 
 async function sendSignupVerificationEmail(email: string) {
@@ -106,7 +100,6 @@ export async function signUpOnClient(params: {
       return {
         ok: true,
         message: RATE_LIMIT_MESSAGE,
-        profile: null,
       };
     }
 
@@ -119,14 +112,12 @@ export async function signUpOnClient(params: {
       return {
         ok: true,
         message: verificationSentMessage(),
-        profile: { userId: data.user.id, email, username },
       };
     }
 
     return {
       ok: true,
       message: verificationSentMessage(),
-      profile: { userId: data.user.id, email, username },
       redirectTo: "/onboarding",
     };
   }
@@ -139,13 +130,12 @@ export async function signUpOnClient(params: {
   // pending, so a missing user means "email sent", not "duplicate". Confirmed
   // emails are already rejected by validateSignUpInput before we get here.
   if (!data.user) {
-    return { ok: true, message: verificationSentMessage(), profile: null };
+    return { ok: true, message: verificationSentMessage() };
   }
 
   return {
     ok: true,
     message: verificationSentMessage(),
-    profile: { userId: data.user.id, email, username },
   };
 }
 
