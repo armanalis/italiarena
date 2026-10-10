@@ -1,3 +1,4 @@
+import { CONNECTION_ERROR_MESSAGE, errorFromUnknown, isConnectionError } from "@/lib/errors";
 import { createAdminClientOrNull } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
@@ -87,8 +88,12 @@ export async function findUserEmailByUsername(
     }
 
     return { email };
-  } catch {
-    return { error: "Could not look up that username. Please try again." };
+  } catch (error) {
+    return {
+      error: isConnectionError(errorFromUnknown(error))
+        ? CONNECTION_ERROR_MESSAGE
+        : "Could not look up that username. Please try again.",
+    };
   }
 }
 

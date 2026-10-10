@@ -25,6 +25,9 @@ const CHUNK_LOAD_PATTERNS = [
 
 const CHUNK_RELOAD_KEY = "language-quiz-chunk-reload";
 
+export const CONNECTION_ERROR_MESSAGE =
+  "Can't reach the server. Check your internet connection and try again.";
+
 export function isConnectionError(error: Error): boolean {
   const message = `${error.name} ${error.message}`.toLowerCase();
   return CONNECTION_PATTERNS.some((pattern) => message.includes(pattern));
@@ -61,6 +64,10 @@ export function clearChunkReloadFlag() {
 export function errorFromUnknown(value: unknown): Error {
   if (value instanceof Error) {
     return value;
+  }
+  // supabase-js returns plain { message } objects, e.g. "TypeError: fetch failed" when offline.
+  if (value && typeof value === "object" && "message" in value) {
+    return new Error(String(value.message));
   }
   return new Error(typeof value === "string" ? value : "Unknown error");
 }

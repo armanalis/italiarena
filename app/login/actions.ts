@@ -11,6 +11,7 @@ import {
   validateUsername,
 } from "@/lib/username";
 import { USERNAME_TAKEN_MESSAGE } from "@/lib/username-errors";
+import { CONNECTION_ERROR_MESSAGE, isConnectionError } from "@/lib/errors";
 import { validateNewPassword } from "@/lib/password-rules";
 import {
   getServerAuthCallbackUrl,
@@ -51,6 +52,10 @@ export async function signIn(
         error:
           "Please confirm your email first. Check your inbox and spam folder, or use \"Resend verification email\" below.",
       };
+    }
+
+    if (isConnectionError(error)) {
+      return { error: CONNECTION_ERROR_MESSAGE };
     }
 
     return { error: error.message };
