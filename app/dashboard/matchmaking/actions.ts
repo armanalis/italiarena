@@ -273,7 +273,9 @@ export async function searchForMatch(
     .from("game_sessions")
     .update({ status: "abandoned" })
     .eq("player_a_id", profile.id)
-    .eq("status", "waiting");
+    .eq("status", "waiting")
+    // A pending challenge stays open while its host searches.
+    .eq("is_private", false);
 
   if (ownWaitingSession) {
     staleCleanup = staleCleanup.neq("id", ownWaitingSession.id);
@@ -288,6 +290,7 @@ export async function searchForMatch(
     .from("game_sessions")
     .select("*")
     .eq("status", "waiting")
+    .eq("is_private", false)
     .eq("language", language)
     .eq("level", level)
     .is("player_b_id", null)
@@ -486,6 +489,96 @@ export async function startBotMatch(
       },
     },
   };
+}
+
+type ChallengeResult =
+  | { success: true; sessionId: string }
+  | { success: false; error: string };
+
+/**
+ * A private lobby at the host's level: shared as a link, or sent to one
+ * friend (friendId), who then sees it in their friends panel. Matchmaking
+ * never joins it, and the stale-session cleanup closes it after an hour.
+ */
+export async function createChallenge(
+  friendId: string | null
+): Promise<ChallengeResult> {
+  const auth = await getAuthenticatedProfile();
+  if ("error" in auth) {
+    return { success: false, error: auth.error };
+  }
+
+  const { profile } = auth;
+  const language = profile.target_language!;
+  const level = profile.proficiency_level!;
+
+  let matchQuestions;
+  try {
+    matchQuestions = await generateMatchQuestions(profile.id, language, level);
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : insufficientQuestionsMessage(level),
+    };
+  }
+
+  // Service role, as for every new session (players cannot pick question ids).
+  const { data, error } = await createAdminClient()
+    .from("game_sessions")
+    .insert({
+      player_a_id: profile.id,
+      status: "waiting",
+      language,
+      level,
+      question_playlist: buildQuestionPlaylistPayload(matchQuestions.sessionIds),
+      is_private: true,
+      challenged_id: friendId,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    return { success: false, error: error?.message ?? "Could not create the challenge." };
+  }
+
+  return { success: true, sessionId: data.id };
+}
+
+/** Joins a friend's challenge; the database refuses one sent to someone else. */
+export async function joinChallenge(sessionId: string): Promise<ChallengeResult> {
+  const auth = await getAuthenticatedProfile();
+  if ("error" in auth) {
+    return { success: false, error: auth.error };
+  }
+
+  const supabase = await createClient();
+  const { data: joined, error } = await supabase
+    .from("game_sessions")
+    .update({ player_b_id: auth.profile.id, status: "active" })
+    .eq("id", sessionId)
+    .eq("is_private", true)
+    .eq("status", "waiting")
+    .is("player_b_id", null)
+    .neq("player_a_id", auth.profile.id)
+    .select("id, question_playlist")
+    .maybeSingle();
+
+  if (error) {
+    return {
+      success: false,
+      error: error.message.includes("another player")
+        ? "This challenge was sent to someone else."
+        : error.message,
+    };
+  }
+
+  if (!joined) {
+    return { success: false, error: "This challenge has already started or expired." };
+  }
+
+  await markQuestionsSeen(auth.profile.id, extractQuestionIds(joined.question_playlist));
+  return { success: true, sessionId: joined.id };
 }
 
 export async function cancelMatchSearch(
