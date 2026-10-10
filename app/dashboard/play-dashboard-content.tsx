@@ -1,6 +1,5 @@
 /** Main dashboard — choose real-player or bot matchmaking. */
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { AdminQueueBadge } from "@/components/admin/admin-queue-badge";
 import { BotMatchCard } from "@/components/dashboard/bot-match-card";
+import { OnlineLevelBadge } from "@/components/dashboard/online-players";
 import { WelcomeTour } from "@/components/dashboard/welcome-tour";
 import { MatchmakingStartLink } from "@/components/matchmaking/matchmaking-start-link";
 import { getAdminQueueCounts } from "@/lib/admin-queue-counts";
@@ -65,9 +65,7 @@ export async function PlayDashboardContent({
                 </Link>
               </Button>
             )}
-            <Badge variant="secondary" className="rounded-full px-4 py-1.5 text-sm">
-              {profile.proficiency_level}
-            </Badge>
+            <OnlineLevelBadge level={profile.proficiency_level} />
           </div>
         </div>
       </header>
