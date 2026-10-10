@@ -32,7 +32,8 @@ import { useGameAudio } from "@/hooks/useGameAudio";
 import { useGameStore, type LockedAnswer } from "@/store/useGameStore";
 import type { PublicQuestion } from "@/types/database.types";
 
-const POLL_MS = 300;
+// Backup only: realtime already triggers an immediate poll on every row change.
+const POLL_MS = 1_500;
 const LEADER_START_RETRY_MS = 600;
 const WRITE_ATTEMPTS = 3;
 
@@ -90,21 +91,26 @@ export function useServerMatchSync({
   const { play } = useGameAudio();
 
   const playRef = useRef(play);
-  playRef.current = play;
   const onEnterPlayingRef = useRef(onEnterPlaying);
-  onEnterPlayingRef.current = onEnterPlaying;
   const onNewRoundRef = useRef(onNewRound);
-  onNewRoundRef.current = onNewRound;
   const onBothAnswersLockedRef = useRef(onBothAnswersLocked);
-  onBothAnswersLockedRef.current = onBothAnswersLocked;
   const onResumedRoundResultRef = useRef(onResumedRoundResult);
-  onResumedRoundResultRef.current = onResumedRoundResult;
   const sessionIdRef = useRef(sessionId);
-  sessionIdRef.current = sessionId;
   const isLeaderRef = useRef(isLeader);
-  isLeaderRef.current = isLeader;
   const localPlayerRoleRef = useRef(localPlayerRole);
-  localPlayerRoleRef.current = localPlayerRole;
+
+  // Latest props for timers and poll callbacks. Declared before every other
+  // effect here, so those always see the current values.
+  useEffect(() => {
+    playRef.current = play;
+    onEnterPlayingRef.current = onEnterPlaying;
+    onNewRoundRef.current = onNewRound;
+    onBothAnswersLockedRef.current = onBothAnswersLocked;
+    onResumedRoundResultRef.current = onResumedRoundResult;
+    sessionIdRef.current = sessionId;
+    isLeaderRef.current = isLeader;
+    localPlayerRoleRef.current = localPlayerRole;
+  });
 
   const flipTimerRef = useRef<number | null>(null);
   const matchStartedRef = useRef(false);
@@ -693,7 +699,7 @@ export function useServerMatchSync({
       cancelled = true;
       sessionReadyRef.current = false;
     };
-  }, [enabled, isLeader, serverPlaylist, sessionId]);
+  }, [applyScoreState, enabled, isLeader, serverPlaylist, sessionId]);
 
   // Estimate the offset between this device's clock and the server clock
   // that stamps roundStartedAt. Min-RTT sample wins; runs once per session.

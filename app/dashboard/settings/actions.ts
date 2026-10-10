@@ -14,9 +14,8 @@ import {
   PROFICIENCY_LEVELS,
   TARGET_LANGUAGE,
   type ProficiencyLevel,
-  type TargetLanguage,
 } from "@/lib/constants";
-import type { CategoryProgress, MatchHistoryEntry } from "@/lib/types";
+import type { MatchHistoryEntry } from "@/lib/types";
 import {
   isUsernameTaken,
   normalizeUsername,
@@ -28,12 +27,7 @@ import {
   validateNewPassword,
 } from "@/lib/password-rules";
 import { mapUsernameSaveError, USERNAME_TAKEN_MESSAGE } from "@/lib/username-errors";
-import type {
-  CorrectAnswer,
-  MatchResult,
-  OpponentType,
-  PlayerStats,
-} from "@/types/database.types";
+import type { CorrectAnswer, PlayerStats } from "@/types/database.types";
 
 export type SettingsActionResult =
   | { success: true; redirectTo?: string }
@@ -350,17 +344,10 @@ export async function getPlayerStatistics(): Promise<PlayerStats | null> {
   );
 }
 
+/** Score, result and opponent type are worked out on the server (finalize_match_result). */
 export async function saveMatchResult(payload: {
   sessionId: string;
-  userScore: number;
-  opponentScore: number;
-  result: MatchResult;
-  opponentType: OpponentType;
   opponentDisplayName: string;
-  language: string;
-  level: string;
-  categoryProgress: CategoryProgress;
-  questionIds: string[];
   mistakes: Array<{
     questionId: string;
     selectedAnswer: CorrectAnswer | null;
@@ -376,15 +363,11 @@ export async function saveMatchResult(payload: {
     return { success: false, error: "Not authenticated." };
   }
 
-  // The score, result, and opponent type are no longer trusted from the
-  // client here — finalize_match_result derives them server-side from the
-  // session's own score_state (written incrementally as the match was
-  // played) and rejects sessions the caller wasn't a participant in.
-  // See supabase/match-result-integrity-migration.sql.
   const { error: finalizeError } = await supabase.rpc("finalize_match_result", {
     p_session_id: payload.sessionId,
     p_opponent_display_name: payload.opponentDisplayName,
-    p_question_ids: payload.questionIds,
+    // Already marked as seen when the match was created or joined.
+    p_question_ids: [],
   });
 
   if (finalizeError) {

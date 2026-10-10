@@ -3,12 +3,10 @@ import { redirect } from "next/navigation";
 import { MatchResultRecorder } from "@/components/match/match-result-recorder";
 import { GameLoop } from "@/components/match/game-loop";
 import { MatchHydrator } from "@/components/match/match-hydrator";
-import {
-  getMatchPlayerNames,
-  getMatchSession,
-} from "@/app/dashboard/matchmaking/actions";
+import { getMatchSession } from "@/app/dashboard/matchmaking/actions";
 import { requireOnboardingComplete } from "@/lib/auth";
-import { createClient } from "@/utils/supabase/server";
+import { getPublicDisplayName } from "@/lib/display-name";
+import { GHOST_PLAYER_NAME } from "@/lib/ghost";
 
 type MatchPageProps = {
   params: Promise<{
@@ -18,16 +16,7 @@ type MatchPageProps = {
 
 export default async function MatchPage({ params }: MatchPageProps) {
   const profile = await requireOnboardingComplete();
-  const supabase = await createClient();
   const { id: sessionIdFromRoute } = await params;
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
 
   const result = await getMatchSession(sessionIdFromRoute);
 
@@ -35,7 +24,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
     redirect("/dashboard");
   }
 
-  const { sessionId, status, playlist, opponent } = result.data;
+  const { sessionId, status, playlist, opponent, localPlayerRole } = result.data;
 
   // Only bounce waiting lobbies back to matchmaking. Completed / abandoned
   // sessions must stay on this route so players can review mistakes as long
@@ -44,29 +33,13 @@ export default async function MatchPage({ params }: MatchPageProps) {
     redirect("/dashboard/matchmaking");
   }
 
-  const { data: session } = await supabase
-    .from("game_sessions")
-    .select("player_a_id, player_b_id")
-    .eq("id", sessionId)
-    .single();
-
-  if (!session) {
-    redirect("/dashboard");
-  }
-
-  const localPlayerRole =
-    session.player_a_id === user.id
-      ? "a"
-      : session.player_b_id === user.id
-        ? "b"
-        : null;
-
-  if (!localPlayerRole) {
-    redirect("/dashboard");
-  }
-
   const isBotMatch = opponent?.isGhost ?? false;
-  const { playerAName, playerBName } = await getMatchPlayerNames(session);
+  const localName = getPublicDisplayName(profile);
+  const opponentName = isBotMatch
+    ? GHOST_PLAYER_NAME
+    : (opponent?.displayName ?? "Waiting...");
+  const [playerAName, playerBName] =
+    localPlayerRole === "a" ? [localName, opponentName] : [opponentName, localName];
 
   return (
     <>
@@ -75,13 +48,10 @@ export default async function MatchPage({ params }: MatchPageProps) {
         opponent={opponent}
         playlist={playlist}
       />
-      <MatchResultRecorder
-        language={profile.target_language!}
-        level={profile.proficiency_level!}
-      />
+      <MatchResultRecorder />
       <GameLoop
         sessionId={sessionId}
-        localUserId={user.id}
+        localUserId={profile.id}
         localPlayerRole={localPlayerRole}
         isBotMatch={isBotMatch}
         proficiencyLevel={profile.proficiency_level!}
