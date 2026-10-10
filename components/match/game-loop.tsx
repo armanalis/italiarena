@@ -122,9 +122,13 @@ export function GameLoop({
               <Trophy className="mx-auto mb-2 size-10 text-primary" />
               <p className="text-lg font-semibold">You win!</p>
               <p className="text-sm text-muted-foreground">
-                Your opponent left the match, so the win and your{" "}
-                {matchClosed.points} points count.
+                Your opponent left the match, so the victory is yours.
               </p>
+              {matchClosed.points > 0 && (
+                <p className="text-sm font-medium text-foreground">
+                  +{matchClosed.points} points added to your leaderboard total.
+                </p>
+              )}
             </>
           ) : matchClosed.result === "loss" ? (
             <>
