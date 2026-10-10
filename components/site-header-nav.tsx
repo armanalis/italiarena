@@ -53,7 +53,7 @@ export function SiteHeaderNav({
       setConfirmLeave(true);
       return;
     }
-    exitToDashboard();
+    void exitToDashboard();
   }
 
   return (
@@ -136,7 +136,7 @@ export function SiteHeaderNav({
             <Button type="button" variant="outline" onClick={() => setConfirmLeave(false)}>
               Keep playing
             </Button>
-            <Button type="button" variant="destructive" onClick={exitToDashboard}>
+            <Button type="button" variant="destructive" onClick={() => void exitToDashboard()}>
               Leave match
             </Button>
           </DialogFooter>
