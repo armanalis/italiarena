@@ -707,11 +707,12 @@ export function useGameLoop({
           responseTimeMs: reveal.selectedResponseTimeMs,
         };
       }
-      // The bot locked a hidden pick at its answer time; fill it in. A bot
-      // that never locked (responseTimeMs null) timed out.
-      if (isBotMatch && opponent?.responseTimeMs != null) {
+      // The opponent's pick stays on the server until ours is locked (a bot's
+      // is decided there); fill it in now. An opponent that never locked
+      // (responseTimeMs null) timed out.
+      if (opponent?.responseTimeMs != null) {
         patch[opponentKey] = {
-          answer: reveal.botAnswer,
+          answer: isBotMatch ? reveal.botAnswer : reveal.opponentAnswer,
           responseTimeMs: opponent.responseTimeMs,
         };
       }
@@ -767,10 +768,11 @@ export function useGameLoop({
       );
       lockLocalAnswer(answer, responseTimeMs);
 
+      // "Answered" only: the letter stays hidden until the opponent locks too.
       broadcastAnswer({
         playerRole: state.localPlayerRole!,
         questionIndex: state.currentQuestionIndex,
-        answer,
+        answer: null,
         responseTimeMs,
       });
       submitLocalAnswer(state.currentQuestionIndex, answer, responseTimeMs);
