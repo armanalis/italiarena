@@ -39,8 +39,3 @@ export async function getServerAuthCallbackUrl(nextPath?: string) {
   }
   return `${callback}?next=${encodeURIComponent(nextPath)}`;
 }
-
-/** See {@link getClientSignupEmailRedirectOrigin} in `lib/site-url.ts`. */
-export async function getServerSignupEmailRedirectOrigin() {
-  return `${await getServerSiteUrl()}/`;
-}

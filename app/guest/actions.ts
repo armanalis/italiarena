@@ -23,49 +23,33 @@ async function saveGuestProfile(
   proficiencyLevel: ProficiencyLevel
 ): Promise<string | null> {
   const supabase = await createClient();
-  const baseProfile = {
-    id: userId,
-    email,
+  const profile = {
     display_name: displayName,
     target_language: TARGET_LANGUAGE,
     proficiency_level: proficiencyLevel,
+    is_guest: true,
   };
 
-  const withGuest = { ...baseProfile, is_guest: true };
-
-  const { error: updateError } = await supabase
+  // The sign-up trigger creates the row; insert only if it is missing.
+  // (Players may not change `email` on an existing row.)
+  const { data: updated, error: updateError } = await supabase
     .from("users")
-    .update(withGuest)
-    .eq("id", userId);
+    .update(profile)
+    .eq("id", userId)
+    .select("id");
 
-  if (!updateError) {
+  if (updateError) {
+    return updateError.message;
+  }
+
+  if (updated.length > 0) {
     return null;
   }
 
-  if (updateError.message.includes("is_guest")) {
-    const { error: fallbackUpdateError } = await supabase
-      .from("users")
-      .update(baseProfile)
-      .eq("id", userId);
-
-    if (!fallbackUpdateError) {
-      return null;
-    }
-  }
-
-  const { error: upsertError } = await supabase.from("users").upsert(withGuest);
-  if (!upsertError) {
-    return null;
-  }
-
-  if (upsertError.message.includes("is_guest")) {
-    const { error: fallbackUpsertError } = await supabase
-      .from("users")
-      .upsert(baseProfile);
-    return fallbackUpsertError?.message ?? null;
-  }
-
-  return upsertError.message;
+  const { error: insertError } = await supabase
+    .from("users")
+    .insert({ id: userId, email, ...profile });
+  return insertError?.message ?? null;
 }
 
 async function allocateGuestDisplayName(userId: string): Promise<string> {

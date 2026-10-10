@@ -66,7 +66,6 @@ export async function saveOnboarding(
     ? await supabase
         .from("users")
         .update({
-          email: profilePayload.email,
           target_language: TARGET_LANGUAGE,
           proficiency_level: proficiencyLevel,
           display_name: username,
