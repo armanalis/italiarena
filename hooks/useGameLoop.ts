@@ -17,7 +17,11 @@ import {
   getRoundPauseMs,
   getRoundTimeRemainingSec,
 } from "@/lib/match-timer";
-import { getRoundResultMs, TOPIC_REVEAL_MS } from "@/lib/match-timing";
+import {
+  getRoundResultMs,
+  SILENT_OPPONENT_MS,
+  TOPIC_REVEAL_MS,
+} from "@/lib/match-timing";
 import { useGameAudio } from "@/hooks/useGameAudio";
 import { useServerMatchSync } from "@/hooks/useServerMatchSync";
 import { useGameStore } from "@/store/useGameStore";
@@ -27,6 +31,7 @@ import type { CorrectAnswer, PublicQuestion } from "@/types/database.types";
 import type { ProficiencyLevel } from "@/lib/constants";
 
 const ROUND_RESULT_TICK_MS = 100;
+const SILENT_CLAIM_RETRY_MS = 5_000;
 
 function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -452,6 +457,22 @@ export function useGameLoop({
           }
           if (useGameStore.getState().roundPhase !== "round_result") {
             return;
+          }
+          await wait(1_000);
+        }
+
+        // The opponent never answered this round, not even "timed out": they
+        // may be gone. Wait for them instead of playing on alone; if they stay
+        // silent, the silent-opponent check below ends the match.
+        for (;;) {
+          const live = useGameStore.getState();
+          if (live.roundPhase !== "round_result") {
+            return;
+          }
+          const opponentAnswer =
+            live.localPlayerRole === "a" ? live.playerBAnswer : live.playerAAnswer;
+          if (opponentAnswer) {
+            break;
           }
           await wait(1_000);
         }
@@ -961,6 +982,62 @@ export function useGameLoop({
     timerPauseOffsetMs,
     timerPauseStartedAt,
   ]);
+
+  // An opponent who goes silent (closed the tab, lost connection) must not
+  // leave this player waiting. After SILENT_OPPONENT_MS with nothing
+  // happening, ask the server: it checks who went silent and, if it is the
+  // opponent, ends the match as their forfeit (claim_silent_opponent).
+  useEffect(() => {
+    if (isBotMatch) {
+      return;
+    }
+
+    let lastSignature = "";
+    let lastProgressAt = Date.now();
+    let lastClaimAt = 0;
+
+    const interval = window.setInterval(() => {
+      const live = useGameStore.getState();
+      const now = Date.now();
+      const signature = [
+        live.currentQuestionIndex,
+        live.roundPhase,
+        Boolean(live.playerAAnswer),
+        Boolean(live.playerBAnswer),
+      ].join(":");
+
+      // A report dialog pauses the round on both screens; that is not silence.
+      if (
+        signature !== lastSignature ||
+        live.isReportDialogOpen ||
+        opponentReportPausedRef.current
+      ) {
+        lastSignature = signature;
+        lastProgressAt = now;
+        return;
+      }
+
+      if (
+        live.roundPhase === "match_finished" ||
+        live.status === "finished" ||
+        now - lastProgressAt < SILENT_OPPONENT_MS ||
+        now - lastClaimAt < SILENT_CLAIM_RETRY_MS
+      ) {
+        return;
+      }
+
+      lastClaimAt = now;
+      // Refused until the server agrees the opponent is silent; on success the
+      // sync poll sees the ended match. (`.then` is what sends the request.)
+      void supabase
+        .rpc("claim_silent_opponent", { p_session_id: sessionId })
+        .then(() => undefined);
+    }, 1_000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [isBotMatch, sessionId, supabase]);
 
   // Host safety net: if the result screen finished but the round publish did
   // not land (network blip, RLS, etc.), retry every 2s until both clients move.
