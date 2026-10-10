@@ -1,8 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { exitCountsAsLoss } from "@/lib/exit-match";
 import { createClient } from "@/utils/supabase/client";
-import { buildMatchScoreState } from "@/lib/match-score-state";
+import {
+  buildMatchScoreState,
+  isOpponentMissing,
+  shouldCheckSilentOpponent,
+} from "@/lib/match-score-state";
 import {
   appendTiebreakerQuestion,
   persistBotMatchScoreState,
@@ -27,9 +32,6 @@ import type { CorrectAnswer, PublicQuestion } from "@/types/database.types";
 import type { ProficiencyLevel } from "@/lib/constants";
 
 const ROUND_RESULT_TICK_MS = 100;
-/** Longer than the 5 s result screen, so a healthy match never asks. */
-const SILENT_CHECK_AFTER_MS = 7_000;
-const SILENT_CHECK_EVERY_MS = 3_000;
 
 function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -467,9 +469,7 @@ export function useGameLoop({
           if (live.roundPhase !== "round_result") {
             return;
           }
-          const opponentAnswer =
-            live.localPlayerRole === "a" ? live.playerBAnswer : live.playerAAnswer;
-          if (opponentAnswer) {
+          if (!isOpponentMissing(live)) {
             break;
           }
           await wait(1_000);
@@ -1016,17 +1016,13 @@ export function useGameLoop({
         return;
       }
 
-      // During a question the local clock moves the round on by itself.
-      const waiting =
-        live.roundPhase === "waiting" ||
-        live.roundPhase === "round_result" ||
-        live.roundPhase === "tiebreaker_loading";
-
       if (
-        !waiting ||
-        live.status === "finished" ||
-        now - lastProgressAt < SILENT_CHECK_AFTER_MS ||
-        now - lastClaimAt < SILENT_CHECK_EVERY_MS
+        !shouldCheckSilentOpponent({
+          roundPhase: live.roundPhase,
+          finished: live.status === "finished",
+          stalledMs: now - lastProgressAt,
+          sinceLastCheckMs: now - lastClaimAt,
+        })
       ) {
         return;
       }
@@ -1043,6 +1039,28 @@ export function useGameLoop({
       window.clearInterval(interval);
     };
   }, [isBotMatch, sessionId, supabase]);
+
+  // Closing the tab after a scored round counts as leaving (the opponent's app
+  // ends the match), so let the browser ask first, like the header's Dashboard
+  // link does. Browsers cannot tell a reload apart, so a reload asks too.
+  useEffect(() => {
+    if (isBotMatch) {
+      return;
+    }
+
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
+      if (exitCountsAsLoss()) {
+        event.preventDefault();
+        // Older Chrome and Edge only ask when returnValue is set.
+        event.returnValue = true;
+      }
+    };
+
+    window.addEventListener("beforeunload", warnBeforeLeaving);
+    return () => {
+      window.removeEventListener("beforeunload", warnBeforeLeaving);
+    };
+  }, [isBotMatch]);
 
   // Host safety net: if the result screen finished but the round publish did
   // not land (network blip, RLS, etc.), retry every 2s until both clients move.

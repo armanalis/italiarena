@@ -6,9 +6,11 @@ import assert from "node:assert/strict";
 import { getRoundTimeRemainingSec } from "../lib/match-timer";
 import {
   buildMatchScoreState,
+  isOpponentMissing,
   localResolvedThroughIndex,
   planBotMatchResume,
   scoreStateForRole,
+  shouldCheckSilentOpponent,
   shouldResumeRoundResult,
   type MatchRoundReview,
 } from "../lib/match-score-state";
@@ -203,6 +205,25 @@ check("bot refresh after the last round shows the result", () => {
     planBotMatchResume(botDoc({ index: 9, reviews: 10, phase: "x", finished: true }), 10).kind,
     "finished"
   );
+});
+
+check("host waits only for an opponent who never locked this round", () => {
+  const timedOut = { answer: null, responseTimeMs: null };
+  assert.equal(isOpponentMissing({ localPlayerRole: "a", playerAAnswer: timedOut, playerBAnswer: null }), true);
+  assert.equal(isOpponentMissing({ localPlayerRole: "a", playerAAnswer: null, playerBAnswer: timedOut }), false);
+  assert.equal(isOpponentMissing({ localPlayerRole: "b", playerAAnswer: timedOut, playerBAnswer: null }), false);
+});
+
+check("silent-opponent check: waiting screens only, after a 7 s stall, every 3 s", () => {
+  const base = { roundPhase: "round_result", finished: false, stalledMs: 7_000, sinceLastCheckMs: 3_000 };
+  assert.equal(shouldCheckSilentOpponent(base), true);
+  assert.equal(shouldCheckSilentOpponent({ ...base, roundPhase: "waiting" }), true);
+  assert.equal(shouldCheckSilentOpponent({ ...base, roundPhase: "tiebreaker_loading" }), true);
+  assert.equal(shouldCheckSilentOpponent({ ...base, roundPhase: "playing" }), false);
+  assert.equal(shouldCheckSilentOpponent({ ...base, roundPhase: "match_finished" }), false);
+  assert.equal(shouldCheckSilentOpponent({ ...base, finished: true }), false);
+  assert.equal(shouldCheckSilentOpponent({ ...base, stalledMs: 5_500 }), false);
+  assert.equal(shouldCheckSilentOpponent({ ...base, sinceLastCheckMs: 2_000 }), false);
 });
 
 console.log(`\n${passed} checks passed`);
