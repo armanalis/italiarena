@@ -11,6 +11,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Gamepad2,
+  Grid3x3,
   History,
   LogOut,
   Settings,
@@ -19,6 +20,13 @@ import {
 
 const navItems = [
   { href: "/dashboard", label: "Play", shortLabel: "Play", icon: Gamepad2, exact: true },
+  {
+    href: "/dashboard/wordle",
+    label: "Wordle",
+    shortLabel: "Wordle",
+    icon: Grid3x3,
+    exact: false,
+  },
   {
     href: "/dashboard/statistics",
     label: "Stats",
@@ -121,7 +129,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         aria-label="Dashboard"
         className="glass-header fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom,0px)] md:hidden"
       >
-        <div className="mx-auto grid max-w-lg grid-cols-5 gap-0.5 px-1 py-2 sm:gap-1 sm:px-2">
+        <div className="mx-auto grid max-w-lg grid-cols-6 gap-0.5 px-1 py-2 sm:gap-1 sm:px-2">
           {navItems.map(({ href, label, shortLabel, icon, exact }) => {
             const isActive = exact
               ? pathname === href
