@@ -54,7 +54,7 @@ Schema and migrations live outside this repo ([`supabase/README.md`](supabase/RE
 **How a match stays in sync, briefly:**
 
 - One player's browser is the *sync leader* and writes "start round N" to the session row; both clients only trust what they read back from the database.
-- State reaches the other player three ways at once — a realtime broadcast (fastest), a DB-change subscription that triggers an instant poll, and a 300ms poll as a fallback. Any one dropping a message just costs a poll cycle, not a stuck match.
+- State reaches the other player three ways at once — a realtime broadcast (fastest), a DB-change subscription that triggers an instant poll, and a 1.5-second poll as a fallback. Any one dropping a message just costs a poll cycle, not a stuck match.
 - Round timing is stamped by Postgres, not either device — clients estimate their clock offset once at match start, so skewed phone clocks still flip screens at the same instant and scoring stays fair.
 - Answers and scores are computed by RPCs on the server, not trusted from the client — a tampered client can't write a fake score or the opponent's answer.
 - Server actions were pulled out of this hot path on purpose: one browser tab runs them in a single serial queue, so a slow one (like a report submit) used to stall the next round for minutes. Everything latency-sensitive now goes browser → Supabase directly.

@@ -2,6 +2,11 @@
 
 import { getAuthUserId } from "@/lib/auth";
 import { cachedDashboardQuery, dashboardTag } from "@/lib/dashboard-cache";
+import {
+  isMatchScoreState,
+  scoreStateForRole,
+  type MatchRoundReview,
+} from "@/lib/match-score-state";
 import { extractQuestionIds } from "@/lib/session-playlist";
 import { REGULAR_MATCH_QUESTIONS } from "@/lib/match";
 import {
@@ -29,7 +34,7 @@ export type RecentMatchQuestion = {
   questionText: string;
   correctAnswer: CorrectAnswer;
   options: RecentMatchQuestionOption[];
-  /** User's pick when wrong; inferred as the correct key when right. */
+  /** The player's pick; null when they ran out of time. */
   selectedAnswer: CorrectAnswer | null;
   wasCorrect: boolean;
 };
@@ -102,11 +107,15 @@ async function fetchRecentMatchesWithQuestions(
     .filter((id): id is string => Boolean(id));
 
   const sessionPlaylists = new Map<string, string[]>();
+  // This player's own pick per question, as scored on the server. (Inferring
+  // it from user_mistakes was wrong once practice or a later match changed
+  // that table.)
+  const reviewsBySession = new Map<string, Map<string, MatchRoundReview>>();
 
   if (sessionIds.length > 0) {
     const { data: sessions } = await supabase
       .from("game_sessions")
-      .select("id, question_playlist")
+      .select("id, question_playlist, score_state, player_a_id")
       .in("id", sessionIds);
 
     for (const session of sessions ?? []) {
@@ -115,65 +124,44 @@ async function fetchRecentMatchesWithQuestions(
         REGULAR_MATCH_QUESTIONS
       );
       sessionPlaylists.set(session.id, ids);
+
+      if (isMatchScoreState(session.score_state)) {
+        const role = session.player_a_id === userId ? "a" : "b";
+        const reviews = scoreStateForRole(session.score_state, role).roundReviews;
+        reviewsBySession.set(
+          session.id,
+          new Map(reviews.map((round) => [round.questionId, round]))
+        );
+      }
     }
   }
 
-  const allQuestionIds = [
-    ...new Set([...sessionPlaylists.values()].flat()),
+  // Played rounds only: a forfeit leaves later questions unanswered, and
+  // their answers must not be shown.
+  const playedQuestionIds = [
+    ...new Set(
+      [...reviewsBySession.values()].flatMap((reviews) => [...reviews.keys()])
+    ),
   ];
-
-  // Finished matches only (match_history is written by finalize_match_result),
-  // so every question here was already played.
-  const questionsById = await resolveQuestionsWithAnswers(allQuestionIds);
-
-  const mistakesBySession = new Map<
-    string,
-    Map<string, CorrectAnswer | null>
-  >();
-
-  if (sessionIds.length > 0) {
-    const { data: mistakes } = await supabase
-      .from("user_mistakes")
-      .select("session_id, question_id, selected_answer")
-      .eq("user_id", userId)
-      .in("session_id", sessionIds);
-
-    for (const mistake of mistakes ?? []) {
-      if (!mistake.session_id) {
-        continue;
-      }
-      let sessionMistakes = mistakesBySession.get(mistake.session_id);
-      if (!sessionMistakes) {
-        sessionMistakes = new Map();
-        mistakesBySession.set(mistake.session_id, sessionMistakes);
-      }
-      sessionMistakes.set(
-        mistake.question_id,
-        mistake.selected_answer as CorrectAnswer | null
-      );
-    }
-  }
+  const questionsById = await resolveQuestionsWithAnswers(playedQuestionIds);
 
   const matches = history.map((row) => {
     const questionIds = row.session_id
       ? (sessionPlaylists.get(row.session_id) ?? [])
       : [];
-    const sessionMistakes = row.session_id
-      ? mistakesBySession.get(row.session_id)
+    const sessionReviews = row.session_id
+      ? reviewsBySession.get(row.session_id)
       : undefined;
 
     const questions: RecentMatchQuestion[] = questionIds.flatMap(
       (questionId, index) => {
         const question = questionsById.get(questionId);
-        if (!question) {
+        // No review = the round was never played (e.g. a forfeit).
+        const review = sessionReviews?.get(questionId);
+        if (!question || !review) {
           return [];
         }
 
-        const mistakeAnswer = sessionMistakes?.get(questionId);
-        const wasCorrect = !sessionMistakes?.has(questionId);
-        const selectedAnswer = wasCorrect
-          ? question.correct_answer
-          : (mistakeAnswer ?? null);
         const options = OPTION_KEYS.map((key) => ({
           key,
           text: getOptionText(question, key),
@@ -187,8 +175,8 @@ async function fetchRecentMatchesWithQuestions(
             questionText: question.question_text,
             correctAnswer: question.correct_answer,
             options,
-            selectedAnswer,
-            wasCorrect,
+            selectedAnswer: review.selectedAnswer,
+            wasCorrect: review.wasCorrect,
           },
         ];
       }

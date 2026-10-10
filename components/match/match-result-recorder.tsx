@@ -3,14 +3,10 @@
 import { useEffect, useRef } from "react";
 import { saveMatchResult } from "@/app/dashboard/settings/actions";
 import { useGameStore } from "@/store/useGameStore";
-import type { TargetLanguage, ProficiencyLevel } from "@/lib/constants";
 
-type MatchResultRecorderProps = {
-  language: TargetLanguage;
-  level: ProficiencyLevel;
-};
+const SAVE_ATTEMPTS = 3;
 
-export function MatchResultRecorder({ language, level }: MatchResultRecorderProps) {
+export function MatchResultRecorder() {
   const roundPhase = useGameStore((state) => state.roundPhase);
   const matchSaved = useGameStore((state) => state.matchSaved);
   const markMatchSaved = useGameStore((state) => state.markMatchSaved);
@@ -28,50 +24,37 @@ export function MatchResultRecorder({ language, level }: MatchResultRecorderProp
 
     savingRef.current = true;
 
-    const localScore =
-      state.localPlayerRole === "a" ? state.playerAScore : state.playerBScore;
-    const opponentScore =
-      state.localPlayerRole === "a" ? state.playerBScore : state.playerAScore;
-
-    // Equal scores are always a tie — never persist a win/loss from a stale
-    // matchWinner that used response-time as a silent breaker.
-    const result =
-      localScore === opponentScore || state.matchWinner === "tie"
-        ? "tie"
-        : state.matchWinner === state.localPlayerRole
-          ? "win"
-          : "loss";
-
-    void saveMatchResult({
+    const payload = {
       sessionId: state.gameSessionId,
-      userScore: localScore,
-      opponentScore,
-      result,
-      opponentType: state.isBotMatch ? "ghost" : "real",
       opponentDisplayName: state.opponent?.displayName ?? "Opponent",
-      language,
-      level,
-      categoryProgress: state.categoryProgress,
-      questionIds: state.playlist.map((question) => question.id),
       mistakes: state.roundReviews
         .filter((round) => !round.wasCorrect && !round.isTiebreaker)
         .map((round) => ({
           questionId: round.questionId,
           selectedAnswer: round.selectedAnswer,
         })),
-    })
-      .then((response) => {
-        if (response.success) {
-          markMatchSaved();
+    };
+
+    // A dropped request (mobile network) must not lose the match: this
+    // effect does not run again on its own. finalize_match_result is
+    // idempotent, so a retry after a lost response is safe.
+    void (async () => {
+      try {
+        for (let attempt = 1; attempt <= SAVE_ATTEMPTS; attempt += 1) {
+          const response = await saveMatchResult(payload).catch(() => null);
+          if (response?.success) {
+            markMatchSaved();
+            return;
+          }
+          if (attempt < SAVE_ATTEMPTS) {
+            await new Promise((resolve) => window.setTimeout(resolve, 1_500 * attempt));
+          }
         }
-      })
-      .catch(() => {
-        // saveMatchResult should always return a result; swallow stray rejections.
-      })
-      .finally(() => {
+      } finally {
         savingRef.current = false;
-      });
-  }, [language, level, markMatchSaved, matchSaved, roundPhase]);
+      }
+    })();
+  }, [markMatchSaved, matchSaved, roundPhase]);
 
   return null;
 }

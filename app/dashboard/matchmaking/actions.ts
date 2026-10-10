@@ -9,7 +9,6 @@ import {
   type BotDifficulty,
 } from "@/lib/bot";
 import { GHOST_PLAYER_ID, GHOST_PLAYER_NAME } from "@/lib/ghost";
-import { getPublicDisplayName } from "@/lib/display-name";
 import {
   REGULAR_MATCH_QUESTIONS,
   buildMatchPlaylist,
@@ -64,45 +63,12 @@ async function getAuthenticatedProfile(): Promise<
 }
 
 export async function getPlayerDisplayName(userId: string): Promise<string> {
+  // Players can read only their own users row, so names come from this RPC.
   const supabase = await createClient();
-  const { data: rpcName, error: rpcError } = await supabase.rpc(
-    "get_public_display_name",
-    { p_user_id: userId }
-  );
-
-  if (!rpcError && typeof rpcName === "string" && rpcName.trim()) {
-    return rpcName.trim();
-  }
-
-  const { data } = await supabase
-    .from("users")
-    .select("display_name, email")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (!data) {
-    return "Player";
-  }
-
-  return getPublicDisplayName(data);
-}
-
-export async function getMatchPlayerNames(session: {
-  player_a_id: string;
-  player_b_id: string | null;
-}) {
-  const playerAName = await getPlayerDisplayName(session.player_a_id);
-
-  if (!session.player_b_id) {
-    return { playerAName, playerBName: "Waiting..." };
-  }
-
-  const playerBName =
-    session.player_b_id === GHOST_PLAYER_ID
-      ? GHOST_PLAYER_NAME
-      : await getPlayerDisplayName(session.player_b_id);
-
-  return { playerAName, playerBName };
+  const { data } = await supabase.rpc("get_public_display_name", {
+    p_user_id: userId,
+  });
+  return typeof data === "string" && data.trim() ? data.trim() : "Player";
 }
 
 /** Playlist questions WITHOUT answers — this is what reaches the browser. */
@@ -521,129 +487,6 @@ export async function startBotMatch(
   };
 }
 
-export async function startGhostMatch(
-  sessionId: string
-): Promise<MatchmakingResult> {
-  const auth = await getAuthenticatedProfile();
-  if ("error" in auth) {
-    return { success: false, error: auth.error };
-  }
-
-  const supabase = await createClient();
-  const { data: updatedSession, error } = await supabase
-    .from("game_sessions")
-    .update({
-      player_b_id: GHOST_PLAYER_ID,
-      status: "active",
-    })
-    .eq("id", sessionId)
-    .eq("player_a_id", auth.profile.id)
-    .eq("status", "waiting")
-    .select("*")
-    .maybeSingle();
-
-  if (error) {
-    return { success: false, error: error.message };
-  }
-
-  if (!updatedSession) {
-    const { data: existingSession } = await supabase
-      .from("game_sessions")
-      .select("*")
-      .eq("id", sessionId)
-      .maybeSingle();
-
-    if (existingSession?.status === "active") {
-      const questionIds = extractQuestionIds(existingSession.question_playlist);
-      const playlist = await resolveSessionQuestions(questionIds);
-      const opponentId = existingSession.player_b_id;
-      const isGhost = opponentId === GHOST_PLAYER_ID;
-
-      return {
-        success: true,
-        data: {
-          sessionId: existingSession.id,
-          status: "active",
-          playlist,
-          opponent: opponentId
-            ? {
-                id: opponentId,
-                isGhost,
-                displayName: isGhost
-                  ? GHOST_PLAYER_NAME
-                  : await getPlayerDisplayName(opponentId),
-              }
-            : null,
-        },
-      };
-    }
-
-    return { success: false, error: "Session is no longer waiting." };
-  }
-
-  const questionIds = extractQuestionIds(updatedSession.question_playlist);
-  const playlist = await resolveSessionQuestions(questionIds);
-
-  return {
-    success: true,
-    data: {
-      sessionId: updatedSession.id,
-      status: "active",
-      playlist,
-      opponent: {
-        id: GHOST_PLAYER_ID,
-        isGhost: true,
-        displayName: GHOST_PLAYER_NAME,
-      },
-    },
-  };
-}
-
-/** Mark an active match as abandoned when a participant leaves mid-game. */
-export async function abandonActiveMatch(
-  sessionId: string
-): Promise<{ success: true } | { success: false; error: string }> {
-  const auth = await getAuthenticatedProfile();
-  if ("error" in auth) {
-    return { success: false, error: auth.error };
-  }
-
-  const supabase = await createClient();
-  const { data: session, error: readError } = await supabase
-    .from("game_sessions")
-    .select("player_a_id, player_b_id, status")
-    .eq("id", sessionId)
-    .maybeSingle();
-
-  if (readError) {
-    return { success: false, error: readError.message };
-  }
-
-  if (!session || session.status !== "active") {
-    return { success: true };
-  }
-
-  const isParticipant =
-    session.player_a_id === auth.profile.id ||
-    session.player_b_id === auth.profile.id;
-
-  if (!isParticipant) {
-    return { success: false, error: "Not part of this match." };
-  }
-
-  const { error } = await supabase
-    .from("game_sessions")
-    .update({ status: "abandoned" })
-    .eq("id", sessionId)
-    .eq("status", "active");
-
-  if (error) {
-    return { success: false, error: error.message };
-  }
-
-  return { success: true };
-}
-
 export async function cancelMatchSearch(
   sessionId?: string | null
 ): Promise<{ success: true } | { success: false; error: string }> {
@@ -713,6 +556,7 @@ export async function getMatchSession(sessionId: string) {
     success: true as const,
     data: {
       sessionId: session.id,
+      localPlayerRole: (session.player_a_id === auth.profile.id ? "a" : "b") as "a" | "b",
       status: session.status as "waiting" | "active" | "completed" | "abandoned",
       playlist,
       matchSync,
