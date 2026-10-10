@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { isGuestAuthUser } from "@/lib/guest-auth";
+import { isPushServiceEndpoint, MAX_SUBSCRIPTIONS_PER_USER } from "@/lib/push";
 
 type SubscribeBody = {
   endpoint?: string;
@@ -54,6 +55,13 @@ export async function POST(request: Request) {
     );
   }
 
+  if (!isPushServiceEndpoint(endpoint)) {
+    return NextResponse.json(
+      { error: "This browser's push service is not supported." },
+      { status: 400 }
+    );
+  }
+
   const timezone =
     typeof body.timezone === "string" && isValidTimezone(body.timezone)
       ? body.timezone
@@ -83,6 +91,20 @@ export async function POST(request: Request) {
 
   if (upsertError) {
     return NextResponse.json({ error: upsertError.message }, { status: 500 });
+  }
+
+  const { data: devices } = await supabase
+    .from("push_subscriptions")
+    .select("id")
+    .eq("user_id", user.id)
+    .order("updated_at", { ascending: false });
+
+  const oldDeviceIds = (devices ?? [])
+    .slice(MAX_SUBSCRIPTIONS_PER_USER)
+    .map((device) => device.id);
+
+  if (oldDeviceIds.length > 0) {
+    await supabase.from("push_subscriptions").delete().in("id", oldDeviceIds);
   }
 
   const { error: profileError } = await supabase

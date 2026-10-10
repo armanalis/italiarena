@@ -47,6 +47,31 @@ type PushSubscriptionRow = {
   auth: string;
 };
 
+// The server POSTs every notification to this address, so it must be a real
+// browser push service; any other host would let a player aim our servers at
+// arbitrary sites.
+const PUSH_SERVICE_HOSTS = [
+  /(^|\.)fcm\.googleapis\.com$/,
+  /(^|\.)push\.services\.mozilla\.com$/,
+  /(^|\.)push\.apple\.com$/,
+  /(^|\.)notify\.windows\.com$/,
+];
+
+/** Newest devices kept per player; older ones are usually dead browsers. */
+export const MAX_SUBSCRIPTIONS_PER_USER = 10;
+
+export function isPushServiceEndpoint(endpoint: string) {
+  try {
+    const url = new URL(endpoint);
+    return (
+      url.protocol === "https:" &&
+      PUSH_SERVICE_HOSTS.some((host) => host.test(url.hostname))
+    );
+  } catch {
+    return false;
+  }
+}
+
 let vapidConfigured = false;
 
 function ensureVapidConfigured() {
