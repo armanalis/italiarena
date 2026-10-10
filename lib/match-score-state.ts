@@ -226,9 +226,7 @@ export function buildMatchScoreState(input: ScoreSnapshotInput): MatchScoreState
       (matchFinished
         ? determineWinner(
             input.playerAScore,
-            input.playerBScore,
-            input.playerAResponseTimes,
-            input.playerBResponseTimes
+            input.playerBScore
           )
         : null),
     activeRound:
@@ -318,9 +316,7 @@ export function scoreStateToStorePatch(score: MatchScoreState) {
         score.matchWinner ??
         determineWinner(
           score.playerAScore,
-          score.playerBScore,
-          score.playerAResponseTimes,
-          score.playerBResponseTimes
+          score.playerBScore
         ),
     };
   }
@@ -385,5 +381,42 @@ export function shouldResumeRoundResult(
     Number.isFinite(syncQuestionIndex) &&
     Number.isFinite(resolvedThroughIndex) &&
     resolvedThroughIndex >= syncQuestionIndex
+  );
+}
+
+/** The opponent has not locked this round at all, not even "timed out". */
+export function isOpponentMissing(state: {
+  localPlayerRole: "a" | "b" | null;
+  playerAAnswer: unknown;
+  playerBAnswer: unknown;
+}): boolean {
+  return !(state.localPlayerRole === "a" ? state.playerBAnswer : state.playerAAnswer);
+}
+
+/** Longer than the 5 s result screen, so a healthy match never asks. */
+export const SILENT_CHECK_AFTER_MS = 7_000;
+export const SILENT_CHECK_EVERY_MS = 3_000;
+
+/**
+ * Whether to ask the server if the opponent went silent: only on a waiting
+ * screen (during a question the local clock moves the round on by itself)
+ * that has not changed for a while.
+ */
+export function shouldCheckSilentOpponent(input: {
+  roundPhase: string;
+  finished: boolean;
+  stalledMs: number;
+  sinceLastCheckMs: number;
+}): boolean {
+  const waiting =
+    input.roundPhase === "waiting" ||
+    input.roundPhase === "round_result" ||
+    input.roundPhase === "tiebreaker_loading";
+
+  return (
+    waiting &&
+    !input.finished &&
+    input.stalledMs >= SILENT_CHECK_AFTER_MS &&
+    input.sinceLastCheckMs >= SILENT_CHECK_EVERY_MS
   );
 }

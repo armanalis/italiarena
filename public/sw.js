@@ -55,7 +55,9 @@ self.addEventListener("notificationclick", (event) => {
       for (const client of clientList) {
         if ("focus" in client) {
           await client.focus();
-          if ("navigate" in client) {
+          // Leaving a live match page would count as leaving the match.
+          const onMatch = new URL(client.url).pathname.startsWith("/dashboard/match/");
+          if (!onMatch && "navigate" in client) {
             try {
               await client.navigate(targetUrl);
             } catch {
