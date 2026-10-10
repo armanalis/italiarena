@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/utils/supabase/admin";
+import { createAdminClientOrNull } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
 export const USERNAME_MIN_LENGTH = 2;
@@ -22,20 +22,12 @@ export function validateUsername(value: string): string | null {
   return null;
 }
 
-function getAdminClientOrNull() {
-  try {
-    return createAdminClient();
-  } catch {
-    return null;
-  }
-}
-
 /**
  * resolve_login_email turns a public username into a private email, so only the
  * service role may call it (see supabase/security-hardening-2026-10.sql).
  */
 async function lookupEmailViaRpc(identifier: string): Promise<string | null> {
-  const admin = getAdminClientOrNull();
+  const admin = createAdminClientOrNull();
   if (!admin) {
     return null;
   }
@@ -52,7 +44,7 @@ async function lookupEmailViaRpc(identifier: string): Promise<string | null> {
 }
 
 async function lookupEmailViaAdmin(username: string): Promise<string | null> {
-  const admin = getAdminClientOrNull();
+  const admin = createAdminClientOrNull();
   if (!admin) {
     return null;
   }
@@ -168,7 +160,7 @@ async function isUsernameTakenViaAdmin(
   username: string,
   excludeUserId?: string
 ): Promise<boolean | null> {
-  const admin = getAdminClientOrNull();
+  const admin = createAdminClientOrNull();
   if (!admin) {
     return null;
   }

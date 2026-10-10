@@ -72,9 +72,9 @@ check("regular match is exactly 10 questions", () => {
 });
 
 check("equal scores are a true tie (no silent speed winner)", () => {
-  assert.equal(determineWinner(1230, 1230, [1000], [5000]), "tie");
-  assert.equal(determineWinner(1200, 1100, [], []), "a");
-  assert.equal(determineWinner(1000, 1400, [], []), "b");
+  assert.equal(determineWinner(1230, 1230), "tie");
+  assert.equal(determineWinner(1200, 1100), "a");
+  assert.equal(determineWinner(1000, 1400), "b");
 });
 
 check("after Q10 with tied scores → start tiebreaker", () => {

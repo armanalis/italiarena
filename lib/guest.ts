@@ -8,5 +8,3 @@ export function generateGuestDisplayName(seed?: string): string {
   const source = (seed ?? randomUUID()).replace(/-/g, "").toLowerCase();
   return `${GUEST_PREFIX}${source.slice(0, GUEST_SUFFIX_LENGTH)}`;
 }
-
-export { isGuestAuthEmail, isGuestAuthUser } from "@/lib/guest-auth";

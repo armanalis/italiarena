@@ -140,9 +140,7 @@ export function MatchHydrator({
           roundPhase: "match_finished",
           matchWinner: determineWinner(
             score.playerAScore,
-            score.playerBScore,
-            score.playerAResponseTimes,
-            score.playerBResponseTimes
+            score.playerBScore
           ),
           currentQuestionIndex: Math.max(0, score.resolvedThroughIndex),
           playerAAnswer: null,

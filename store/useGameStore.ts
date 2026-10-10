@@ -412,9 +412,7 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
             status: "finished",
             matchWinner: determineWinner(
               state.playerAScore,
-              state.playerBScore,
-              state.playerAResponseTimes,
-              state.playerBResponseTimes
+              state.playerBScore
             ),
           });
           return;
