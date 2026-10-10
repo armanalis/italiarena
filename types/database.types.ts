@@ -496,19 +496,6 @@ export interface Database {
         Args: { p_user_id: string };
         Returns: Array<{ streak: number; played_today: boolean }>;
       };
-      wordle_play: {
-        Args: { p_user_id: string; p_level: string; p_date: string; p_guess: string | null };
-        Returns: Array<{
-          guesses: string[];
-          status: "playing" | "won" | "lost";
-          answer: string;
-          meaning: string | null;
-        }>;
-      };
-      wordle_history: {
-        Args: { p_user_id: string; p_level: string; p_from: string };
-        Returns: Array<{ puzzle_date: string; status: "playing" | "won" | "lost" }>;
-      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

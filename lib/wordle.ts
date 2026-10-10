@@ -1,4 +1,5 @@
-/** Daily Italian Wordle: scoring and puzzle dates (shared by server and browser). */
+/** Daily Italian Wordle: puzzle dates and game state (shared by server and browser). */
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const WORDLE_LENGTH = 5;
 /** KEEP IN SYNC with wordle_play (supabase/wordle-2026-10-10.sql). */
@@ -36,44 +37,6 @@ export function puzzleNumber(date: string): number {
   );
 }
 
-/** A real calendar day from puzzle #1 up to today (no future puzzles). */
-export function isPlayableDate(date: string, today: string): boolean {
-  return (
-    /^\d{4}-\d{2}-\d{2}$/.test(date) &&
-    addDays(date, 0) === date &&
-    date >= WORDLE_FIRST_DAY &&
-    date <= today
-  );
-}
-
-/**
- * Green for the right letter in the right place, yellow for a letter that is
- * elsewhere in the word. A repeated letter is yellow only as many times as
- * the answer still has it.
- */
-export function scoreGuess(guess: string, answer: string): WordleMark[] {
-  const marks: WordleMark[] = Array.from({ length: guess.length }, () => "absent");
-  const unmatched = new Map<string, number>();
-
-  for (let index = 0; index < guess.length; index += 1) {
-    if (guess[index] === answer[index]) {
-      marks[index] = "correct";
-    } else {
-      unmatched.set(answer[index], (unmatched.get(answer[index]) ?? 0) + 1);
-    }
-  }
-
-  for (let index = 0; index < guess.length; index += 1) {
-    const left = unmatched.get(guess[index]) ?? 0;
-    if (marks[index] !== "correct" && left > 0) {
-      marks[index] = "present";
-      unmatched.set(guess[index], left - 1);
-    }
-  }
-
-  return marks;
-}
-
 const MARK_RANK: Record<WordleMark, number> = { absent: 0, present: 1, correct: 2 };
 
 /** Best mark seen so far for each letter, for the on-screen keyboard. */
@@ -90,4 +53,110 @@ export function keyboardMarks(
     });
   }
   return best;
+}
+
+export type WordleStatus = "playing" | "won" | "lost";
+
+export type WordleView = {
+  level: string;
+  date: string;
+  number: number;
+  isToday: boolean;
+  guesses: { word: string; marks: WordleMark[] }[];
+  status: WordleStatus;
+  /** Only once the game is over. */
+  answer: string | null;
+  meaning: string | null;
+};
+
+export type WordleArchiveDay = {
+  date: string;
+  number: number;
+  status: WordleStatus | null;
+};
+
+/** What wordle_turn returns (supabase/wordle-fast-2026-10-10.sql). */
+type WordleTurn = {
+  today: string;
+  guesses: string[];
+  marks: string[];
+  status: WordleStatus;
+  answer: string | null;
+  meaning: string | null;
+  history: Record<string, WordleStatus> | null;
+};
+
+const MARK_CODES: Record<string, WordleMark> = { c: "correct", p: "present", a: "absent" };
+
+export function toWordleView(level: string, date: string, turn: WordleTurn): WordleView {
+  return {
+    level,
+    date,
+    number: puzzleNumber(date),
+    isToday: date === turn.today,
+    guesses: turn.guesses.map((word, index) => ({
+      word,
+      marks: [...(turn.marks[index] ?? "")].map((code) => MARK_CODES[code] ?? "absent"),
+    })),
+    status: turn.status,
+    answer: turn.answer,
+    meaning: turn.meaning,
+  };
+}
+
+/** The last WORDLE_ARCHIVE_DAYS days before today, newest first. */
+export function toWordleArchive(
+  today: string,
+  history: Record<string, WordleStatus>
+): WordleArchiveDay[] {
+  const from = [addDays(today, -WORDLE_ARCHIVE_DAYS), WORDLE_FIRST_DAY].sort().at(-1)!;
+  const days: WordleArchiveDay[] = [];
+  for (let day = addDays(today, -1); day >= from; day = addDays(day, -1)) {
+    days.push({ date: day, number: puzzleNumber(day), status: history[day] ?? null });
+  }
+  return days;
+}
+
+const ERRORS: Record<string, string> = {
+  not_a_word: "Not in the word list.",
+  already_finished: "You already played this puzzle.",
+  no_such_puzzle: "This puzzle does not exist.",
+  no_words_for_level: "No words for this level yet.",
+};
+
+export function wordleErrorMessage(message: string | undefined): string {
+  const known = Object.keys(ERRORS).find((code) => message?.includes(code));
+  return known ? ERRORS[known] : "Could not reach the puzzle. Try again.";
+}
+
+/**
+ * Loads a puzzle (guess null, with the archive) or plays one guess, straight
+ * against the database: one round trip. Works with the browser and the
+ * server Supabase client alike.
+ */
+export type WordleTurnResult =
+  | { ok: true; today: string; view: WordleView; archive: WordleArchiveDay[] | null }
+  | { ok: false; error: string };
+
+export async function playWordle(
+  supabase: SupabaseClient,
+  level: string,
+  date: string,
+  guess: string | null
+): Promise<WordleTurnResult> {
+  const { data, error } = await supabase.rpc("wordle_turn", {
+    p_level: level,
+    p_date: date,
+    p_guess: guess,
+  });
+  if (error || !data) {
+    return { ok: false, error: wordleErrorMessage(error?.message) };
+  }
+  const turn = data as WordleTurn;
+  return {
+    ok: true,
+    today: turn.today,
+    view: toWordleView(level, date, turn),
+    archive: turn.history ? toWordleArchive(turn.today, turn.history) : null,
+  };
 }
