@@ -128,6 +128,8 @@ export type RoundReveal = {
   selectedResponseTimeMs: number | null;
   /** Bot matches only: the bot's pick, decided on the server. */
   botAnswer: CorrectAnswer | null;
+  /** PvP only: the opponent's pick, shown once our own answer is locked. */
+  opponentAnswer: CorrectAnswer | null;
 };
 
 function asAnswer(value: unknown): CorrectAnswer | null {
@@ -169,6 +171,7 @@ export async function revealRoundAnswer(
       selectedResponseTimeMs:
         typeof reveal?.responseTimeMs === "number" ? reveal.responseTimeMs : null,
       botAnswer: asAnswer(reveal?.botAnswer),
+      opponentAnswer: asAnswer(reveal?.opponentAnswer),
     },
   };
 }

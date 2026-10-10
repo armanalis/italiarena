@@ -70,7 +70,11 @@ export function isMatchSyncState(value: unknown): value is MatchSyncState {
  */
 export type MatchAnswerRecord = {
   questionIndex: number;
-  /** null = the player timed out without answering. */
+  /**
+   * Always null from the server: the letter is kept private until the other
+   * player has locked too (reveal_round_answer hands it over). A record with
+   * responseTimeMs null means the player timed out.
+   */
   answer: "A" | "B" | "C" | "D" | null;
   responseTimeMs: number | null;
   submittedAt: number;
