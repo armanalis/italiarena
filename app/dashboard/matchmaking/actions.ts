@@ -545,7 +545,10 @@ export async function createChallenge(
   return { success: true, sessionId: data.id };
 }
 
-/** Joins a friend's challenge; the database refuses one sent to someone else. */
+/**
+ * Joins a challenge. Other players cannot see private lobbies, so this goes
+ * through join_challenge, which also refuses one sent to someone else.
+ */
 export async function joinChallenge(sessionId: string): Promise<ChallengeResult> {
   const auth = await getAuthenticatedProfile();
   if ("error" in auth) {
@@ -553,40 +556,26 @@ export async function joinChallenge(sessionId: string): Promise<ChallengeResult>
   }
 
   const supabase = await createClient();
-  const { data: joined, error } = await supabase
-    .from("game_sessions")
-    .update({ player_b_id: auth.profile.id, status: "active" })
-    .eq("id", sessionId)
-    .eq("is_private", true)
-    .eq("status", "waiting")
-    .is("player_b_id", null)
-    .neq("player_a_id", auth.profile.id)
-    .select("id, question_playlist")
-    .maybeSingle();
+  const { data: playlist, error } = await supabase.rpc("join_challenge", {
+    p_session_id: sessionId,
+  });
 
   if (error) {
+    return { success: false, error: "Could not join the challenge. Try again." };
+  }
+
+  if (!playlist) {
     return {
       success: false,
-      error: error.message.includes("another player")
-        ? "This challenge was sent to someone else."
-        : error.message,
+      error: "This challenge has already started, expired, or was sent to someone else.",
     };
   }
 
-  if (!joined) {
-    return { success: false, error: "This challenge has already started or expired." };
-  }
-
-  await markQuestionsSeen(auth.profile.id, extractQuestionIds(joined.question_playlist));
-  return { success: true, sessionId: joined.id };
+  await markQuestionsSeen(auth.profile.id, extractQuestionIds(playlist));
+  return { success: true, sessionId };
 }
 
-/**
- * Joins a challenge by the 6-digit code its host shared.
- * shortcut: no limit on wrong guesses. Open challenges are already listed to
- * every player by the "joinable waiting sessions" policy, so a limit here
- * protects nothing until that policy hides private sessions.
- */
+/** Joins a challenge by the 6-digit code its host shared. */
 export async function joinChallengeByCode(code: string): Promise<ChallengeResult> {
   const trimmed = code.trim();
   if (!/^\d{6}$/.test(trimmed)) {
@@ -598,7 +587,12 @@ export async function joinChallengeByCode(code: string): Promise<ChallengeResult
     p_code: trimmed,
   });
   if (error) {
-    return { success: false, error: "Could not check the code. Try again." };
+    return {
+      success: false,
+      error: error.message.includes("too_many_tries")
+        ? "Too many wrong codes. Try again in 15 minutes."
+        : "Could not check the code. Try again.",
+    };
   }
   if (!sessionId) {
     return { success: false, error: "No open challenge has this code. Check it, or ask for a new one." };

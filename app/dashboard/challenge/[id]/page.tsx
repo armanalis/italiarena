@@ -4,6 +4,7 @@ import { ChallengeLobby } from "@/components/challenge/challenge-lobby";
 import { getPlayerDisplayName } from "@/app/dashboard/matchmaking/actions";
 import { requireOnboardingComplete } from "@/lib/auth";
 import { getServerSiteUrl } from "@/lib/site-url-server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
 type ChallengePageProps = {
@@ -16,8 +17,8 @@ export default async function ChallengePage({ params }: ChallengePageProps) {
   const profile = await requireOnboardingComplete();
   const { id } = await params;
 
-  const supabase = await createClient();
-  const { data: session } = await supabase
+  // Service role: other players cannot read a private lobby; the link is the invitation.
+  const { data: session } = await createAdminClient()
     .from("game_sessions")
     .select("id, player_a_id, player_b_id, status, level, is_private, challenged_id")
     .eq("id", id)
@@ -41,7 +42,7 @@ export default async function ChallengePage({ params }: ChallengePageProps) {
   // Null until challenge-codes-2026-10-10.sql runs: the page then shows only the link.
   const code =
     open && isHost
-      ? ((await supabase.rpc("challenge_code", { p_session_id: id })).data as string | null)
+      ? ((await (await createClient()).rpc("challenge_code", { p_session_id: id })).data as string | null)
       : null;
 
   return (
