@@ -10,25 +10,24 @@ export function isImmersiveMatchRoute(pathname: string) {
   );
 }
 
-function abandonSessionInBackground(sessionId: string, pathname: string) {
-  const supabase = createClient();
+async function abandonSession(sessionId: string, pathname: string) {
+  const fromStatus = pathname.startsWith("/dashboard/match/")
+    ? "active"
+    : pathname === "/dashboard/matchmaking"
+      ? "waiting"
+      : null;
 
-  if (pathname.startsWith("/dashboard/match/")) {
-    void supabase
-      .from("game_sessions")
-      .update({ status: "abandoned" })
-      .eq("id", sessionId)
-      .eq("status", "active");
+  if (!fromStatus) {
     return;
   }
 
-  if (pathname === "/dashboard/matchmaking") {
-    void supabase
-      .from("game_sessions")
-      .update({ status: "abandoned" })
-      .eq("id", sessionId)
-      .eq("status", "waiting");
-  }
+  // Must be awaited: a Supabase query only sends its request when awaited,
+  // and the page unloads right after this.
+  await createClient()
+    .from("game_sessions")
+    .update({ status: "abandoned" })
+    .eq("id", sessionId)
+    .eq("status", fromStatus);
 }
 
 function isMatchStillLive(state: ReturnType<typeof useGameStore.getState>) {
@@ -63,17 +62,17 @@ export function exitCountsAsLoss() {
  * Finished matches are never abandoned — players may still be on the review
  * screen (or returning later). Only active / waiting sessions are closed.
  */
-export function exitToDashboard() {
+export async function exitToDashboard() {
   const state = useGameStore.getState();
   const sessionId = state.gameSessionId;
   const pathname = window.location.pathname;
-  const matchStillLive = isMatchStillLive(state);
 
-  useGameStore.getState().reset();
-
-  if (sessionId && matchStillLive) {
-    abandonSessionInBackground(sessionId, pathname);
+  try {
+    if (sessionId && isMatchStillLive(state)) {
+      await abandonSession(sessionId, pathname);
+    }
+  } finally {
+    useGameStore.getState().reset();
+    navigateTo("/dashboard");
   }
-
-  navigateTo("/dashboard");
 }
