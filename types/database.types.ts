@@ -217,6 +217,10 @@ export type GameSession = {
   is_private: boolean;
   /** Set when the challenge was sent to one friend: only they may join. */
   challenged_id: string | null;
+  /** When the second player joined (a rematch starts with both). */
+  joined_at: string | null;
+  /** The rematch both players agreed to after this match (supabase/rematch-2026-10-10.sql). */
+  rematch_session_id: string | null;
   created_at: string;
 };
 
@@ -289,6 +293,7 @@ export type GameSessionInsert = Pick<GameSession, "player_a_id"> &
       | "bot_difficulty"
       | "is_private"
       | "challenged_id"
+      | "joined_at"
       | "created_at"
     >
   >;
@@ -302,6 +307,7 @@ export type GameSessionUpdate = Partial<
     | "answer_a"
     | "answer_b"
     | "score_state"
+    | "rematch_session_id"
   >
 >;
 
