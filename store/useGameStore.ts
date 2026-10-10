@@ -524,30 +524,6 @@ export function useGameStoreHydrated() {
   return useGameStore((state) => state.hasHydrated);
 }
 
-export function useLocalScore() {
-  return useGameStore((state) => {
-    if (state.localPlayerRole === "a") {
-      return state.playerAScore;
-    }
-    if (state.localPlayerRole === "b") {
-      return state.playerBScore;
-    }
-    return 0;
-  });
-}
-
-export function useOpponentScore() {
-  return useGameStore((state) => {
-    if (state.localPlayerRole === "a") {
-      return state.playerBScore;
-    }
-    if (state.localPlayerRole === "b") {
-      return state.playerAScore;
-    }
-    return 0;
-  });
-}
-
 export function usePlayerAScore() {
   return useGameStore((state) => state.playerAScore);
 }

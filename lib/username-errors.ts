@@ -1,8 +1,3 @@
-import {
-  normalizeUsername,
-  validateUsername,
-} from "./username";
-
 export const USERNAME_TAKEN_MESSAGE = "That username is already taken.";
 
 export function isUniqueUsernameConstraintError(error: {
@@ -30,8 +25,4 @@ export function mapUsernameSaveError(error: {
   }
 
   return error.message ?? "Could not save username.";
-}
-
-export function usernameValidationError(value: string): string | null {
-  return validateUsername(normalizeUsername(value));
 }

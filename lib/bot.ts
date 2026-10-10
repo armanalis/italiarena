@@ -1,10 +1,6 @@
 
-/** Player-facing bot tiers. `standard` is kept only for older links — same as medium. */
+/** Player-facing bot tiers. */
 export type BotDifficulty = "easy" | "medium" | "hard";
-export type BotDifficultyParam = BotDifficulty | "standard";
-
-/** Default bot match — medium answers after 10 seconds. */
-export const BOT_RESPONSE_TIME_MS = 10_000;
 
 const BOT_RESPONSE_MS: Record<BotDifficulty, number> = {
   easy: 15_000,
@@ -25,17 +21,6 @@ export function normalizeBotDifficulty(
     return value;
   }
   return "medium";
-}
-
-export function isBotDifficultyParam(
-  value: string | null | undefined
-): value is BotDifficultyParam {
-  return (
-    value === "standard" ||
-    value === "easy" ||
-    value === "medium" ||
-    value === "hard"
-  );
 }
 
 export function getBotResponseTimeMs(difficulty: BotDifficulty = "medium"): number {

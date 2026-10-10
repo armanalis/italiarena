@@ -27,14 +27,6 @@ export function computePoints(
   return 0;
 }
 
-export function averageResponseTime(times: number[]): number | null {
-  if (times.length === 0) {
-    return null;
-  }
-
-  return times.reduce((sum, time) => sum + time, 0) / times.length;
-}
-
 export type MatchWinner = "a" | "b" | "tie";
 
 /**

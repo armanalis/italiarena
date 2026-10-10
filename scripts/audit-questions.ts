@@ -11,8 +11,6 @@
  * Writes JSONL + summary under tmp/question-audit/.
  * --quarantine-fails moves final_verdict=fail rows into questions_flagged.
  */
-import "dotenv/config";
-import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import { mkdir, readFile, writeFile, appendFile } from "node:fs/promises";
 import path from "node:path";
@@ -24,7 +22,7 @@ import { PROFICIENCY_LEVELS, type ProficiencyLevel } from "../lib/constants";
 import { normalizeQuestionCategory } from "../lib/match";
 import type { Database, QuestionActive } from "../types/database.types";
 
-config({ path: ".env.local" });
+process.loadEnvFile(".env.local");
 
 type CliOptions = {
   level: ProficiencyLevel | null;

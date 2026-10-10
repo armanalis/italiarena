@@ -213,7 +213,7 @@ export function MatchmakingLobby({
       `${BOT_DIFFICULTY_LABELS[botDifficulty]} ready — starting match...`
     );
     goToMatch(result.data.sessionId);
-  }, [botDifficulty, clearTimers, goToMatch, setSessionId, startMatch]);
+  }, [botDifficulty, clearTimers, goToMatch, isStartingBot, setSessionId, startMatch]);
 
   const handleReturnToDashboard = useCallback(async () => {
     if (redirectingRef.current) {
@@ -255,7 +255,10 @@ export function MatchmakingLobby({
     [botDifficulty, goToMatch, startMatch]
   );
 
-  handleActiveMatchRef.current = handleActiveMatch;
+  // Before the effects below, so they always call the current handler.
+  useEffect(() => {
+    handleActiveMatchRef.current = handleActiveMatch;
+  }, [handleActiveMatch]);
 
   const runSearch = useCallback(async () => {
     if (

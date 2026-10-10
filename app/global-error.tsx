@@ -24,7 +24,6 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
   const [attempt, setAttempt] = useState(0);
   const staleBundle = isChunkLoadError(error);
   const connectionDrop = isConnectionError(error);
-  const recoverable = connectionDrop || staleBundle;
 
   useEffect(() => {
     if (staleBundle) {

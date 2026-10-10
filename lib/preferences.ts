@@ -55,10 +55,6 @@ export function writeGameplayPreferences(preferences: GameplayPreferences) {
   );
 }
 
-export function isSoundEnabled() {
-  return readGameplayPreferences().soundEnabled;
-}
-
 export function getSoundVolume() {
   return readGameplayPreferences().soundVolume;
 }
