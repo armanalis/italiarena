@@ -50,6 +50,15 @@ export async function submitQuestionReport(
       return { success: false, error: "You already reported this question." };
     }
 
+    // The database refuses reports past 5 a day, or for a question that was
+    // not in one of this player's matches.
+    if (error.code === "42501") {
+      return {
+        success: false,
+        error: "You can report up to 5 questions a day. Try again tomorrow.",
+      };
+    }
+
     if (error.message.includes("questions_flagged_category_check")) {
       return {
         success: false,
