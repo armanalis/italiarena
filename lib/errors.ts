@@ -36,10 +36,6 @@ export function isChunkLoadError(error: Error): boolean {
   return CHUNK_LOAD_PATTERNS.some((pattern) => message.includes(pattern));
 }
 
-export function isRecoverableClientError(error: Error): boolean {
-  return isConnectionError(error) || isChunkLoadError(error);
-}
-
 /** Full reload once; returns false if we already retried (avoid infinite loops). */
 export function reloadOnceAfterChunkError(): boolean {
   if (typeof window === "undefined") {

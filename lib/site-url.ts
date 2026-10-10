@@ -73,12 +73,6 @@ export function getClientAuthCallbackUrl() {
   return getAuthCallbackUrl(getClientSiteOrigin());
 }
 
-/** Post-confirmation destination for email sign-up and resend flows. */
-export function getClientEmailRedirectUrl(nextPath = "/onboarding") {
-  const path = nextPath.startsWith("/") ? nextPath : `/${nextPath}`;
-  return `${getClientSiteOrigin()}${path}`;
-}
-
 /**
  * Origin passed as `emailRedirectTo` during signup so email templates can build
  * confirm links on the same host as the browser (localhost vs production).
@@ -87,10 +81,6 @@ export function getClientEmailRedirectUrl(nextPath = "/onboarding") {
  */
 export function getClientSignupEmailRedirectOrigin() {
   return `${getClientSiteOrigin()}/`;
-}
-
-export function getRequestOrigin(request: Request) {
-  return new URL(request.url).origin;
 }
 
 export function resolveCanonicalOriginForHostname(hostname: string) {

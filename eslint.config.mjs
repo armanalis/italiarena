@@ -18,6 +18,10 @@ const eslintConfig = defineConfig([
           destructuredArrayIgnorePattern: "^_",
         },
       ],
+      // Flags the standard "read browser-only state after mount" pattern
+      // (mounted flags, localStorage, display mode) used across the UI.
+      // Kept visible as a warning; rewriting those components gains nothing.
+      "react-hooks/set-state-in-effect": "warn",
     },
   },
   globalIgnores([

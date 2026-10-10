@@ -19,7 +19,6 @@ function NavLinkInner({
   label,
   shortLabel,
   icon: Icon,
-  isActive,
   variant,
 }: Omit<DashboardNavLinkProps, "href">) {
   const { pending } = useLinkStatus();

@@ -59,10 +59,6 @@ export function readCookieConsent(): CookieConsentState {
   return readStored()?.choice ?? null;
 }
 
-export function getCookieConsentDecidedAt(): string | null {
-  return readStored()?.decidedAt || null;
-}
-
 const listeners = new Set<() => void>();
 
 function notify() {
@@ -159,22 +155,5 @@ export function setCookieConsent(choice: CookieConsentChoice) {
     clearAnalyticsCookies();
   }
 
-  notify();
-}
-
-/** Re-opens the banner so the user can change a previous answer. */
-export function resetCookieConsent() {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    window.localStorage.removeItem(COOKIE_CONSENT_STORAGE_KEY);
-  } catch {
-    // ignore
-  }
-
-  signalAnalyticsConsent(false);
-  clearAnalyticsCookies();
   notify();
 }
