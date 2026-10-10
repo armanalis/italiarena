@@ -164,11 +164,6 @@ export async function getAdminReviewQueue(): Promise<AdminReviewQuestion[]> {
   return queue;
 }
 
-/** @deprecated Use getAdminReviewQueue */
-export async function getFlaggedQuestions() {
-  return getAdminReviewQueue();
-}
-
 async function clearQuestionReports(
   supabase: Awaited<ReturnType<typeof createClient>>,
   questionId: string
@@ -346,24 +341,6 @@ export async function deleteReportedQuestion(
   return { success: true };
 }
 
-/** @deprecated Use dismissReportedQuestion */
-export async function dismissFlaggedQuestion(questionId: string) {
-  return dismissReportedQuestion(questionId);
-}
-
-/** @deprecated Use approveReportedQuestion */
-export async function approveFlaggedQuestion(
-  questionId: string,
-  updates: FlaggedQuestionUpdate
-) {
-  return approveReportedQuestion(questionId, updates);
-}
-
-/** @deprecated Use deleteReportedQuestion */
-export async function deleteFlaggedQuestion(questionId: string) {
-  return deleteReportedQuestion(questionId);
-}
-
 export type AdminSubmissionReview = QuestionSubmission & {
   submitter_label: string;
 };
@@ -447,12 +424,10 @@ export async function approveQuestionSubmission(
   submissionId: string,
   overrides: ApproveSubmissionInput = {}
 ): Promise<AdminActionResult> {
-  await requireAdmin();
+  // The service-role client has no signed-in user; the id comes from here.
+  const reviewer = await requireAdmin();
 
   const supabase = await getPrivilegedSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   const { data: submission, error: fetchError } = await supabase
     .from("question_submissions")
@@ -508,7 +483,7 @@ export async function approveQuestionSubmission(
     .from("question_submissions")
     .update({
       status: "approved",
-      reviewer_id: user?.id ?? null,
+      reviewer_id: reviewer.id,
       reviewer_notes: overrides.reviewer_notes?.trim() || null,
       reviewed_at: new Date().toISOString(),
       level: validated.data.level,
@@ -535,12 +510,10 @@ export async function rejectQuestionSubmission(
   submissionId: string,
   reviewerNotes?: string
 ): Promise<AdminActionResult> {
-  await requireAdmin();
+  // The service-role client has no signed-in user; the id comes from here.
+  const reviewer = await requireAdmin();
 
   const supabase = await getPrivilegedSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   const notes = reviewerNotes?.trim();
   if (!notes) {
@@ -554,7 +527,7 @@ export async function rejectQuestionSubmission(
     .from("question_submissions")
     .update({
       status: "rejected",
-      reviewer_id: user?.id ?? null,
+      reviewer_id: reviewer.id,
       reviewer_notes: notes,
       reviewed_at: new Date().toISOString(),
     } as never)
