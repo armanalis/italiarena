@@ -1,22 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
-import { Delete, Loader2 } from "lucide-react";
-import {
-  guessWordle,
-  loadWordle,
-  type WordleResult,
-  type WordleStatus,
-} from "@/app/dashboard/wordle/actions";
+import { useCallback, useEffect, useState } from "react";
+import { Delete } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PROFICIENCY_LEVELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import {
   keyboardMarks,
+  playWordle,
   WORDLE_LENGTH,
   WORDLE_MAX_GUESSES,
+  type WordleArchiveDay,
   type WordleMark,
+  type WordleStatus,
+  type WordleTurnResult,
+  type WordleView,
 } from "@/lib/wordle";
+import { createClient } from "@/utils/supabase/client";
 
 const KEY_ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -50,34 +50,63 @@ export function WordleGame({
   initial,
 }: {
   initialLevel: string;
-  initial: WordleResult;
+  initial: WordleTurnResult;
 }) {
+  const [supabase] = useState(createClient);
   const [level, setLevel] = useState(initialLevel);
-  const [result, setResult] = useState(initial);
+  const [today, setToday] = useState(initial.ok ? initial.today : null);
+  const [view, setView] = useState<WordleView | null>(initial.ok ? initial.view : null);
+  const [archive, setArchive] = useState<WordleArchiveDay[]>(initial.ok ? initial.archive ?? [] : []);
   const [input, setInput] = useState("");
   const [message, setMessage] = useState<string | null>(initial.ok ? null : initial.error);
-  const [isPending, startTransition] = useTransition();
+  // A guess or a level/day switch on its way to the database.
+  const [pending, setPending] = useState(false);
 
-  const view = result.ok ? result.view : null;
   const playing = view?.status === "playing";
 
-  function open(nextLevel: string, date: string | null) {
-    startTransition(async () => {
-      const next = await loadWordle(nextLevel, date);
-      setLevel(nextLevel);
-      setInput("");
-      if (next.ok) {
-        setResult(next);
-        setMessage(null);
-      } else {
-        setMessage(next.error);
-      }
-    });
+  async function open(nextLevel: string, date: string | null) {
+    const day = date ?? today;
+    if (!day || pending) {
+      return;
+    }
+    setPending(true);
+    const next = await playWordle(supabase, nextLevel, day, null);
+    setPending(false);
+    setLevel(nextLevel);
+    setInput("");
+    if (next.ok) {
+      setToday(next.today);
+      setView(next.view);
+      setArchive(next.archive ?? []);
+      setMessage(null);
+    } else {
+      setMessage(next.error);
+    }
   }
+
+  const submit = useCallback(async () => {
+    if (!view) {
+      return;
+    }
+    setPending(true);
+    const next = await playWordle(supabase, view.level, view.date, input);
+    setPending(false);
+    if (!next.ok) {
+      setMessage(next.error);
+      return;
+    }
+    setInput("");
+    setMessage(null);
+    setView(next.view);
+    // The archive only changes for this day, and only its status.
+    setArchive((days) =>
+      days.map((day) => (day.date === next.view.date ? { ...day, status: next.view.status } : day))
+    );
+  }, [input, supabase, view]);
 
   const press = useCallback(
     (key: string) => {
-      if (!view || !playing || isPending) {
+      if (!view || !playing || pending) {
         return;
       }
       if (key === "Enter") {
@@ -85,16 +114,7 @@ export function WordleGame({
           setMessage(`Type a ${WORDLE_LENGTH}-letter word.`);
           return;
         }
-        startTransition(async () => {
-          const next = await guessWordle(view.level, view.date, input);
-          if (next.ok) {
-            setResult(next);
-            setInput("");
-            setMessage(null);
-          } else {
-            setMessage(next.error);
-          }
-        });
+        void submit();
         return;
       }
       if (key === "Backspace") {
@@ -106,7 +126,7 @@ export function WordleGame({
         setMessage(null);
       }
     },
-    [input, isPending, playing, view]
+    [input, pending, playing, submit, view]
   );
 
   useEffect(() => {
@@ -130,12 +150,13 @@ export function WordleGame({
   const rows = Array.from({ length: WORDLE_MAX_GUESSES }, (_, index) => {
     const guess = view?.guesses[index];
     if (guess) {
-      return { letters: [...guess.word], marks: guess.marks as (WordleMark | null)[] };
+      return { letters: [...guess.word], marks: guess.marks as (WordleMark | null)[], checking: false };
     }
     const current = playing && index === (view?.guesses.length ?? 0);
     return {
       letters: Array.from({ length: WORDLE_LENGTH }, (_, letter) => (current ? input[letter] ?? "" : "")),
       marks: Array.from({ length: WORDLE_LENGTH }, () => null as WordleMark | null),
+      checking: current && pending,
     };
   });
 
@@ -154,8 +175,8 @@ export function WordleGame({
             key={option}
             type="button"
             aria-pressed={option === level}
-            disabled={isPending}
-            onClick={() => open(option, null)}
+            disabled={pending}
+            onClick={() => void open(option, null)}
             className={cn(
               "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
               option === level
@@ -174,7 +195,7 @@ export function WordleGame({
             #{view.number} · {view.level} · {view.isToday ? "Today" : formatDay(view.date)}
           </span>
           {!view.isToday && (
-            <Button type="button" size="sm" variant="ghost" disabled={isPending} onClick={() => open(level, null)}>
+            <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => void open(level, null)}>
               Back to today
             </Button>
           )}
@@ -203,7 +224,8 @@ export function WordleGame({
                   aria-hidden
                   className={cn(
                     "flex size-12 items-center justify-center rounded-lg border-2 text-xl font-bold uppercase sm:size-14",
-                    mark ? TILE[mark] : letter ? "border-foreground/50" : "border-border"
+                    mark ? TILE[mark] : letter ? "border-foreground/50" : "border-border",
+                    row.checking && "animate-pulse"
                   )}
                 >
                   {letter}
@@ -215,7 +237,7 @@ export function WordleGame({
       </div>
 
       <p role="status" aria-live="polite" className="min-h-5 text-center text-sm font-medium text-destructive">
-        {isPending ? <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" /> : message}
+        {message}
       </p>
 
       {view && view.status !== "playing" && (
@@ -286,16 +308,16 @@ export function WordleGame({
         </div>
       )}
 
-      {result.ok && result.archive.length > 0 && (
+      {archive.length > 0 && (
         <section className="space-y-2" aria-label="Archive">
           <h2 className="text-sm font-semibold">Archive · {level}</h2>
           <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {result.archive.map((day) => (
+            {archive.map((day) => (
               <li key={day.date}>
                 <button
                   type="button"
-                  disabled={isPending}
-                  onClick={() => open(level, day.date)}
+                  disabled={pending}
+                  onClick={() => void open(level, day.date)}
                   aria-current={view?.date === day.date ? "true" : undefined}
                   className={cn(
                     "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted",
