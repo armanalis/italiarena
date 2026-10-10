@@ -39,9 +39,7 @@ export type MatchWinner = "a" | "b" | "tie";
  */
 export function determineWinner(
   playerAScore: number,
-  playerBScore: number,
-  _playerAResponseTimes: number[] = [],
-  _playerBResponseTimes: number[] = []
+  playerBScore: number
 ): MatchWinner {
   if (playerAScore > playerBScore) {
     return "a";
