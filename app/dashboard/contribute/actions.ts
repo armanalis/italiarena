@@ -54,8 +54,9 @@ export async function submitQuestion(
     };
   }
 
-  const dayStart = new Date();
-  dayStart.setHours(0, 0, 0, 0);
+  // Rolling 24 hours: the server clock is UTC, so "since midnight" reset at
+  // 1-2 am in Italy.
+  const dayStart = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
   const { count: todayCount, error: todayError } = await supabase
     .from("question_submissions")
@@ -70,17 +71,21 @@ export async function submitQuestion(
   if ((todayCount ?? 0) >= MAX_SUBMISSIONS_PER_DAY) {
     return {
       success: false,
-      error: `Daily submission limit reached (${MAX_SUBMISSIONS_PER_DAY}). Try again tomorrow.`,
+      error: `You can submit up to ${MAX_SUBMISSIONS_PER_DAY} questions per 24 hours. Try again later.`,
     };
   }
+
+  // ilike reads % and _ as wildcards, and fill-in-the-blank text is full of
+  // "___"; escape them so only the same text counts as a duplicate.
+  const questionTextPattern = validated.data.question_text.replace(/[\\%_]/g, "\\$&");
 
   const { data: duplicateActive } = await supabase
     .from("questions_active")
     .select("id")
-    .ilike("question_text", validated.data.question_text)
-    .maybeSingle();
+    .ilike("question_text", questionTextPattern)
+    .limit(1);
 
-  if (duplicateActive) {
+  if (duplicateActive?.length) {
     return {
       success: false,
       error: "This question already exists in the live pool.",
@@ -92,10 +97,10 @@ export async function submitQuestion(
     .select("id")
     .eq("submitter_id", profile.id)
     .eq("status", "pending")
-    .ilike("question_text", validated.data.question_text)
-    .maybeSingle();
+    .ilike("question_text", questionTextPattern)
+    .limit(1);
 
-  if (duplicatePending) {
+  if (duplicatePending?.length) {
     return {
       success: false,
       error: "You already submitted this question and it is still pending review.",

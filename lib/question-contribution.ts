@@ -271,7 +271,3 @@ export function validateQuestionSubmission(
     },
   };
 }
-
-export function normalizeQuestionTextKey(value: string): string {
-  return normalizeKey(value);
-}
