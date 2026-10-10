@@ -25,6 +25,7 @@ import {
 } from "@/lib/scoring";
 import { MatchMistakesReview } from "@/components/match/match-mistakes-review";
 import { MatchReviewBoundary } from "@/components/match/match-review-boundary";
+import { RematchPanel } from "@/components/match/rematch-panel";
 import { ReportQuestionButton } from "@/components/match/report-question-button";
 import { SoundVolumeControl } from "@/components/sound-volume-control";
 import type { CorrectAnswer, PublicQuestion } from "@/types/database.types";
@@ -273,24 +274,32 @@ export function GameLoop({
             <MatchMistakesReview />
           </MatchReviewBoundary>
 
-          <div className="flex w-full max-w-xl flex-col items-center gap-3 border-t border-border/60 pt-6 sm:flex-row sm:justify-center">
-            <Button asChild variant="outline" className="min-h-11 w-full sm:w-auto">
-              <Link href="/dashboard" onClick={() => reset()}>
-                Back to dashboard
-              </Link>
-            </Button>
-            <Button asChild className="min-h-11 w-full sm:w-auto">
-              <Link
-                href="/dashboard/matchmaking"
-                onClick={() => {
-                  armMatchmakingAutosearch();
-                  reset();
-                }}
-              >
-                Play again
-              </Link>
-            </Button>
-          </div>
+          {isBotMatch ? (
+            <div className="flex w-full max-w-xl flex-col items-center gap-3 border-t border-border/60 pt-6 sm:flex-row sm:justify-center">
+              <Button asChild variant="outline" className="min-h-11 w-full sm:w-auto">
+                <Link href="/dashboard" onClick={() => reset()}>
+                  Back to dashboard
+                </Link>
+              </Button>
+              <Button asChild className="min-h-11 w-full sm:w-auto">
+                <Link
+                  href="/dashboard/matchmaking"
+                  onClick={() => {
+                    armMatchmakingAutosearch();
+                    reset();
+                  }}
+                >
+                  Play again
+                </Link>
+              </Button>
+            </div>
+          ) : (
+            <RematchPanel
+              sessionId={sessionId}
+              opponentName={localPlayerRole === "a" ? playerBName : playerAName}
+              onLeave={reset}
+            />
+          )}
         </div>
       </main>
     );

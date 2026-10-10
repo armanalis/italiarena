@@ -20,7 +20,7 @@ import {
   parseQuestionPlaylist,
 } from "@/lib/session-playlist";
 import { PUBLIC_QUESTION_COLUMNS } from "@/lib/resolve-match-questions";
-import type { PublicQuestion } from "@/types/database.types";
+import type { GameSession, PublicQuestion } from "@/types/database.types";
 import type { UserProfile } from "@/lib/types";
 
 type MatchmakingSuccess = {
@@ -573,6 +573,115 @@ export async function joinChallenge(sessionId: string): Promise<ChallengeResult>
 
   await markQuestionsSeen(auth.profile.id, extractQuestionIds(playlist));
   return { success: true, sessionId };
+}
+
+/** What rematch_poll returns (supabase/rematch-2026-10-10.sql). */
+export type RematchState = {
+  offered: boolean;
+  they_offered: boolean;
+  they_left: boolean;
+  both: boolean;
+  session_id: string | null;
+  player_a_id: string;
+  player_b_id: string;
+  language: string;
+  level: string;
+};
+
+/**
+ * Offers a rematch after a finished live match. Once both players have
+ * offered, the first call to see it starts the rematch: an active match with
+ * the same players, language and level. Returns its id, or null while the
+ * other player has not offered yet.
+ */
+export async function offerRematch(
+  previousSessionId: string
+): Promise<{ success: true; sessionId: string | null } | { success: false; error: string }> {
+  const auth = await getAuthenticatedProfile();
+  if ("error" in auth) {
+    return { success: false, error: auth.error };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("rematch_poll", {
+    p_session_id: previousSessionId,
+    p_offer: true,
+  });
+  if (error || !data) {
+    return { success: false, error: "A rematch is not available for this match." };
+  }
+
+  const state = data as RematchState;
+  if (state.session_id) {
+    // The other player started it: its questions count as seen for us too.
+    const { data: rematch } = await supabase
+      .from("game_sessions")
+      .select("question_playlist")
+      .eq("id", state.session_id)
+      .maybeSingle();
+    await markQuestionsSeen(auth.profile.id, extractQuestionIds(rematch?.question_playlist));
+    return { success: true, sessionId: state.session_id };
+  }
+  if (!state.both) {
+    return { success: true, sessionId: null };
+  }
+
+  let matchQuestions;
+  try {
+    matchQuestions = await generateMatchQuestions(auth.profile.id, state.language, state.level);
+  } catch (generateError) {
+    return {
+      success: false,
+      error:
+        generateError instanceof Error
+          ? generateError.message
+          : insufficientQuestionsMessage(state.level),
+    };
+  }
+
+  // Service role, as for every new session. Both players are in, so it starts
+  // active. We host: we arrive first, and the host must start round 1 within
+  // 5 s (claim_silent_opponent); the other screen follows within a check-in.
+  const admin = createAdminClient();
+  const { data: created, error: createError } = await admin
+    .from("game_sessions")
+    .insert({
+      player_a_id: auth.profile.id,
+      player_b_id:
+        auth.profile.id === state.player_a_id ? state.player_b_id : state.player_a_id,
+      status: "active",
+      language: state.language as GameSession["language"],
+      level: state.level as GameSession["level"],
+      question_playlist: buildQuestionPlaylistPayload(matchQuestions.sessionIds),
+      joined_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+
+  if (createError || !created) {
+    return { success: false, error: createError?.message ?? "Could not start the rematch." };
+  }
+
+  const { data: linked } = await admin
+    .from("game_sessions")
+    .update({ rematch_session_id: created.id })
+    .eq("id", previousSessionId)
+    .is("rematch_session_id", null)
+    .select("id")
+    .maybeSingle();
+
+  if (!linked) {
+    // Both screens saw "both" at once and the other one linked first: use theirs.
+    await admin.from("game_sessions").delete().eq("id", created.id);
+    const { data: previous } = await admin
+      .from("game_sessions")
+      .select("rematch_session_id")
+      .eq("id", previousSessionId)
+      .single();
+    return { success: true, sessionId: previous?.rematch_session_id ?? null };
+  }
+
+  return { success: true, sessionId: created.id };
 }
 
 /** Joins a challenge by the 6-digit code its host shared. */
