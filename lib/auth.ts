@@ -98,7 +98,7 @@ export const requireAuth = cache(async () => {
 export async function getPostAuthPathForUser(
   supabase: SupabaseClient,
   user: User
-): Promise<"/dashboard" | "/onboarding" | "/guest"> {
+): Promise<"/" | "/onboarding" | "/guest"> {
   const { data } = await supabase
     .from("users")
     .select("target_language, proficiency_level, is_guest, email")
@@ -106,7 +106,7 @@ export async function getPostAuthPathForUser(
     .maybeSingle();
 
   if (data?.target_language && data?.proficiency_level) {
-    return "/dashboard";
+    return "/";
   }
 
   if (
@@ -122,7 +122,7 @@ export async function getPostAuthPathForUser(
 
 /** Where to send someone right after they authenticate. */
 export async function getPostAuthPath(): Promise<
-  "/dashboard" | "/onboarding" | "/guest"
+  "/" | "/onboarding" | "/guest"
 > {
   const supabase = await createClient();
   const {
@@ -156,7 +156,7 @@ export async function requireAdmin() {
   const profile = await requireOnboardingComplete();
 
   if (profile.role !== "admin") {
-    redirect("/dashboard?error=admin_access_denied");
+    redirect("/?error=admin_access_denied");
   }
 
   return profile;

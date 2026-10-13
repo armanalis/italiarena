@@ -2,7 +2,7 @@
  * Controls whether the matchmaking lobby auto-starts searching on mount.
  *
  * After a match starts we disarm auto-search so a browser Back / swipe-back
- * onto `/dashboard/matchmaking` cannot yank players out of the post-match
+ * onto `/matchmaking` cannot yank players out of the post-match
  * review into a new "Searching for opponent..." flow. Intentional entries
  * (Find opponent, Play again, bot cards) re-arm before navigating.
  *

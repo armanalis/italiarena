@@ -149,8 +149,8 @@ export function GameLoop({
           )}
         </div>
         <Button asChild className="min-h-11">
-          <Link href="/dashboard" onClick={() => reset()}>
-            Back to dashboard
+          <Link href="/" onClick={() => reset()}>
+            Back to the Arena
           </Link>
         </Button>
       </div>
@@ -277,13 +277,13 @@ export function GameLoop({
           {isBotMatch ? (
             <div className="flex w-full max-w-xl flex-col items-center gap-3 border-t border-border/60 pt-6 sm:flex-row sm:justify-center">
               <Button asChild variant="outline" className="min-h-11 w-full sm:w-auto">
-                <Link href="/dashboard" onClick={() => reset()}>
-                  Back to dashboard
+                <Link href="/" onClick={() => reset()}>
+                  Back to the Arena
                 </Link>
               </Button>
               <Button asChild className="min-h-11 w-full sm:w-auto">
                 <Link
-                  href="/dashboard/matchmaking"
+                  href="/matchmaking"
                   onClick={() => {
                     armMatchmakingAutosearch();
                     reset();

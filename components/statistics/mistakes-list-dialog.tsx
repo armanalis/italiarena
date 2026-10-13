@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { UserMistakeWithQuestion } from "@/app/dashboard/statistics/actions";
+import type { UserMistakeWithQuestion } from "@/app/(app)/stats/actions";
 import { ReportQuestionButton } from "@/components/match/report-question-button";
 import { formatCategoryLabel, getOptionText } from "@/lib/scoring";
 import { cn } from "@/lib/utils";

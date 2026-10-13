@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bell, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { updateDailyReminderPreferences } from "@/app/dashboard/settings/actions";
+import { updateDailyReminderPreferences } from "@/app/(app)/settings/actions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {

@@ -1,4 +1,4 @@
-import { refreshDashboardAfterMatch } from "@/app/dashboard/settings/actions";
+import { refreshDashboardAfterMatch } from "@/app/(app)/settings/actions";
 import { navigateTo } from "@/lib/client-navigation";
 import { useGameStore } from "@/store/useGameStore";
 import { createClient } from "@/utils/supabase/client";
@@ -6,15 +6,15 @@ import { createClient } from "@/utils/supabase/client";
 /** Routes where an in-progress match should be abandoned on dashboard exit. */
 export function isImmersiveMatchRoute(pathname: string) {
   return (
-    pathname.startsWith("/dashboard/match/") ||
-    pathname === "/dashboard/matchmaking"
+    pathname.startsWith("/match/") ||
+    pathname === "/matchmaking"
   );
 }
 
 async function abandonSession(sessionId: string, pathname: string) {
-  const fromStatus = pathname.startsWith("/dashboard/match/")
+  const fromStatus = pathname.startsWith("/match/")
     ? "active"
-    : pathname === "/dashboard/matchmaking"
+    : pathname === "/matchmaking"
       ? "waiting"
       : null;
 
@@ -49,7 +49,7 @@ export function exitCountsAsLoss() {
   return (
     Boolean(state.gameSessionId) &&
     !state.isBotMatch &&
-    window.location.pathname.startsWith("/dashboard/match/") &&
+    window.location.pathname.startsWith("/match/") &&
     isMatchStillLive(state) &&
     state.roundReviews.length > 0
   );
@@ -71,13 +71,13 @@ export async function exitToDashboard() {
   try {
     if (sessionId && isMatchStillLive(state)) {
       await abandonSession(sessionId, pathname);
-      if (pathname.startsWith("/dashboard/match/")) {
+      if (pathname.startsWith("/match/")) {
         // A forfeit is recorded by the database; show it on the dashboard now.
         await refreshDashboardAfterMatch();
       }
     }
   } finally {
     useGameStore.getState().reset();
-    navigateTo("/dashboard");
+    navigateTo("/");
   }
 }

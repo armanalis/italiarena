@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import {
   submitMistakePracticeAnswer,
   type UserMistakeWithQuestion,
-} from "@/app/dashboard/statistics/actions";
+} from "@/app/(app)/stats/actions";
 import { AskAiButton } from "@/components/match/ask-ai-button";
 import { ReportQuestionButton } from "@/components/match/report-question-button";
 import { Badge } from "@/components/ui/badge";

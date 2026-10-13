@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { LeaderboardData } from "@/app/dashboard/leaderboard/actions";
+import type { LeaderboardData } from "@/app/(app)/leaderboard/actions";
 import { cn } from "@/lib/utils";
 
 type LeaderboardDashboardProps = {

@@ -18,7 +18,7 @@ export default async function OnboardingPage() {
   }
 
   if (isOnboardingComplete(profile)) {
-    redirect("/dashboard");
+    redirect("/");
   }
 
   const supabase = await createClient();

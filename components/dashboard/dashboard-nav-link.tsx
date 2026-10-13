@@ -15,14 +15,11 @@ type DashboardNavLinkProps = {
   variant: "sidebar" | "mobile";
 };
 
-function NavLinkInner({
-  label,
-  shortLabel,
-  icon: Icon,
-  variant,
-}: Omit<DashboardNavLinkProps, "href">) {
-  const { pending } = useLinkStatus();
+type NavItemContentProps = Omit<DashboardNavLinkProps, "href" | "isActive"> & {
+  pending: boolean;
+};
 
+function NavItemContent({ label, shortLabel, icon: Icon, variant, pending }: NavItemContentProps) {
   if (variant === "sidebar") {
     return (
       <>
@@ -51,16 +48,14 @@ function NavLinkInner({
   );
 }
 
-export function DashboardNavLink({
-  href,
-  label,
-  shortLabel,
-  icon,
-  isActive,
-  variant,
-}: DashboardNavLinkProps) {
-  const className =
-    variant === "sidebar"
+// useLinkStatus only works inside a Link.
+function NavLinkInner(props: Omit<NavItemContentProps, "pending">) {
+  const { pending } = useLinkStatus();
+  return <NavItemContent {...props} pending={pending} />;
+}
+
+function navItemClassName(variant: DashboardNavLinkProps["variant"], isActive: boolean) {
+  return variant === "sidebar"
       ? cn(
           "flex items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium transition-colors",
           isActive
@@ -73,16 +68,34 @@ export function DashboardNavLink({
             ? "bg-primary/15 text-primary"
             : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         );
+}
 
+export function DashboardNavLink({
+  href,
+  label,
+  shortLabel,
+  icon,
+  isActive,
+  variant,
+}: DashboardNavLinkProps) {
   return (
-    <Link href={href} prefetch className={className}>
-      <NavLinkInner
-        label={label}
-        shortLabel={shortLabel}
-        icon={icon}
-        isActive={isActive}
-        variant={variant}
-      />
+    <Link href={href} prefetch className={navItemClassName(variant, isActive)}>
+      <NavLinkInner label={label} shortLabel={shortLabel} icon={icon} variant={variant} />
     </Link>
+  );
+}
+
+/** Looks like a nav link but opens something on this page (e.g. the bot picker). */
+export function DashboardNavButton({
+  onClick,
+  label,
+  shortLabel,
+  icon,
+  variant,
+}: Omit<DashboardNavLinkProps, "href" | "isActive"> & { onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className={cn("w-full", navItemClassName(variant, false))}>
+      <NavItemContent label={label} shortLabel={shortLabel} icon={icon} variant={variant} pending={false} />
+    </button>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { saveMatchResult } from "@/app/dashboard/settings/actions";
+import { saveMatchResult } from "@/app/(app)/settings/actions";
 import { useGameStore } from "@/store/useGameStore";
 
 const SAVE_ATTEMPTS = 3;

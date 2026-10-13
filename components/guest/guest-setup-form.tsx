@@ -60,7 +60,7 @@ export function GuestSetupForm(_props?: GuestSetupFormProps) {
         return;
       }
 
-      router.push(result.redirectTo ?? "/dashboard");
+      router.push(result.redirectTo ?? "/");
       router.refresh();
     });
   }

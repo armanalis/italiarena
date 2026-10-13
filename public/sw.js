@@ -11,7 +11,7 @@ self.addEventListener("push", (event) => {
   let data = {
     title: "Italiarena",
     body: "Clash with someone while practicing your Italian.",
-    url: "/dashboard/matchmaking",
+    url: "/matchmaking",
     tag: "italiarena",
     icon: "/icon",
     badge: "/icon",
@@ -42,7 +42,7 @@ self.addEventListener("notificationclick", (event) => {
 
   const targetPath =
     (event.notification.data && event.notification.data.url) ||
-    "/dashboard/matchmaking";
+    "/matchmaking";
   const targetUrl = new URL(targetPath, self.location.origin).href;
 
   event.waitUntil(
@@ -56,7 +56,7 @@ self.addEventListener("notificationclick", (event) => {
         if ("focus" in client) {
           await client.focus();
           // Leaving a live match page would count as leaving the match.
-          const onMatch = new URL(client.url).pathname.startsWith("/dashboard/match/");
+          const onMatch = new URL(client.url).pathname.startsWith("/match/");
           if (!onMatch && "navigate" in client) {
             try {
               await client.navigate(targetUrl);

@@ -43,7 +43,7 @@ export default async function AdminPage() {
             </div>
           </div>
           <Button asChild variant="outline" className="min-h-11 w-full shrink-0 sm:w-auto">
-            <Link href="/dashboard">Back to dashboard</Link>
+            <Link href="/">Back to the Arena</Link>
           </Button>
         </div>
       </header>

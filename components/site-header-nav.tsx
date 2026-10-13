@@ -60,7 +60,7 @@ export function SiteHeaderNav({
     <header className="glass-header sticky top-0 z-50 w-full shrink-0 pt-[env(safe-area-inset-top,0px)]">
       <div className="flex h-[var(--app-header-height)] w-full items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
         <Link
-          href={showDashboard ? "/dashboard" : "/"}
+          href="/"
           onClick={showDashboard ? handleDashboardExit : undefined}
           className="flex min-w-0 shrink items-center"
         >
@@ -91,8 +91,8 @@ export function SiteHeaderNav({
               )}
               {showDashboard && (
                 <Button asChild variant="ghost" size="sm" className="min-h-10 px-2 sm:px-3">
-                  <Link href="/dashboard" onClick={handleDashboardExit}>
-                    <span className="hidden sm:inline">Dashboard</span>
+                  <Link href="/" onClick={handleDashboardExit}>
+                    <span className="hidden sm:inline">Arena</span>
                     <span className="sm:hidden">Home</span>
                   </Link>
                 </Button>

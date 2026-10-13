@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Swords, UserPlus, Users, X } from "lucide-react";
 import { Popover } from "radix-ui";
 import { toast } from "sonner";
-import { createChallenge } from "@/app/dashboard/matchmaking/actions";
+import { createChallenge } from "@/app/(app)/matchmaking/actions";
 import { ChallengeLinkButton } from "@/components/challenge/challenge-link-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,7 +99,7 @@ export function FriendsPanel() {
     startTransition(async () => {
       const result = await createChallenge(friendId);
       if (result.success) {
-        router.push(`/dashboard/challenge/${result.sessionId}`);
+        router.push(`/challenge/${result.sessionId}`);
       } else {
         toast.error(result.error);
       }
@@ -142,7 +142,7 @@ export function FriendsPanel() {
                     <span className="font-medium">{row.display_name}</span> challenged you
                   </span>
                   <Button asChild size="sm">
-                    <Link href={`/dashboard/challenge/${row.challenge_session_id}`}>Play</Link>
+                    <Link href={`/challenge/${row.challenge_session_id}`}>Play</Link>
                   </Button>
                 </div>
               ))}
