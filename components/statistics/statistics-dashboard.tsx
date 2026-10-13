@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { BookOpen, ClipboardList, Dumbbell, Target, TrendingUp } from "lucide-react";
-import type { UserMistakeWithQuestion } from "@/app/dashboard/statistics/actions";
+import type { UserMistakeWithQuestion } from "@/app/(app)/stats/actions";
 import { MistakePracticeSession } from "@/components/statistics/mistake-practice-session";
 import { MistakesListDialog } from "@/components/statistics/mistakes-list-dialog";
 import { ResetStatsButton } from "@/components/statistics/reset-stats-button";
@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { categoryResults, overallAccuracy, pct } from "@/lib/player-stats";
 import { formatCategoryLabel } from "@/lib/scoring";
 import { normalizeQuestionCategory } from "@/lib/match";
 import type { PlayerStats, QuestionCategory } from "@/types/database.types";
@@ -24,28 +25,6 @@ type StatisticsDashboardProps = {
   mistakes: UserMistakeWithQuestion[];
   reportedQuestionIds: string[];
 };
-
-function pct(correct: number, total: number) {
-  if (total === 0) {
-    return "—";
-  }
-  return `${Math.round((correct / total) * 100)}%`;
-}
-
-function overallAccuracy(stats: PlayerStats) {
-  const correct =
-    stats.grammar_correct +
-    stats.vocab_correct +
-    stats.fill_blank_correct +
-    stats.idioms_correct;
-  const total =
-    stats.grammar_total +
-    stats.vocab_total +
-    stats.fill_blank_total +
-    stats.idioms_total;
-
-  return pct(correct, total);
-}
 
 const CATEGORY_KEYS: QuestionCategory[] = [
   "grammar",
@@ -83,34 +62,7 @@ export function StatisticsDashboard({
     setMistakes(initialMistakes);
   }, [initialMistakes]);
 
-  const categories = stats
-    ? [
-        {
-          key: "grammar" as const,
-          label: formatCategoryLabel("grammar"),
-          correct: stats.grammar_correct,
-          total: stats.grammar_total,
-        },
-        {
-          key: "vocabulary" as const,
-          label: formatCategoryLabel("vocabulary"),
-          correct: stats.vocab_correct,
-          total: stats.vocab_total,
-        },
-        {
-          key: "fill-in-the-blank" as const,
-          label: formatCategoryLabel("fill-in-the-blank"),
-          correct: stats.fill_blank_correct,
-          total: stats.fill_blank_total,
-        },
-        {
-          key: "idioms" as const,
-          label: formatCategoryLabel("idioms"),
-          correct: stats.idioms_correct,
-          total: stats.idioms_total,
-        },
-      ]
-    : [];
+  const categories = stats ? categoryResults(stats) : [];
 
   const mistakesByCategory = CATEGORY_KEYS.map((category) => ({
     category,

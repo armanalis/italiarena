@@ -11,7 +11,7 @@ import {
   deleteAccount,
   updateGameplayPreferences,
   updateLearningProfile,
-} from "@/app/dashboard/settings/actions";
+} from "@/app/(app)/settings/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -324,7 +324,7 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
               size="sm"
               onClick={() => {
                 resetWelcomeTour();
-                router.push("/dashboard");
+                router.push("/");
               }}
             >
               Replay

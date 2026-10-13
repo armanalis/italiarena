@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
-import { submitQuestion } from "@/app/dashboard/contribute/actions";
+import { submitQuestion } from "@/app/(app)/contribute/actions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {

@@ -37,7 +37,7 @@ function SubmitButton() {
       disabled={pending}
       className="h-11 w-full "
     >
-      {pending ? "Saving..." : "Continue to Dashboard"}
+      {pending ? "Saving..." : "Continue to the Arena"}
     </Button>
   );
 }

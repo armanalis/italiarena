@@ -6,7 +6,7 @@ import type { CorrectAnswer } from "@/types/database.types";
 import type {
   RecentMatchQuestion,
   RecentMatchWithQuestions,
-} from "@/app/dashboard/recent-matches/actions";
+} from "@/app/(app)/recent/actions";
 import { AskAiButton } from "@/components/match/ask-ai-button";
 import { ReportQuestionButton } from "@/components/match/report-question-button";
 import { MAX_AI_ASKS_PER_MATCH } from "@/lib/ai-explanations";

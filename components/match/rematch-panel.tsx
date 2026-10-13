@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
-import { offerRematch, type RematchState } from "@/app/dashboard/matchmaking/actions";
+import { offerRematch, type RematchState } from "@/app/(app)/matchmaking/actions";
 import { Button } from "@/components/ui/button";
 import { armMatchmakingAutosearch } from "@/lib/matchmaking-intent";
 import { createClient } from "@/utils/supabase/client";
@@ -46,7 +46,7 @@ export function RematchPanel({
     if (result.success && result.sessionId) {
       // Stays busy: we are on our way into the rematch.
       onLeave();
-      router.push(`/dashboard/match/${result.sessionId}`);
+      router.push(`/match/${result.sessionId}`);
       return;
     }
     busy.current = false;
@@ -117,7 +117,7 @@ export function RematchPanel({
         </Button>
         <Button asChild variant="outline" className="min-h-11 w-full sm:w-auto">
           <Link
-            href="/dashboard/matchmaking"
+            href="/matchmaking"
             onClick={() => {
               armMatchmakingAutosearch();
               onLeave();
@@ -127,8 +127,8 @@ export function RematchPanel({
           </Link>
         </Button>
         <Button asChild variant="ghost" className="min-h-11 w-full sm:w-auto">
-          <Link href="/dashboard" onClick={onLeave}>
-            Back to dashboard
+          <Link href="/" onClick={onLeave}>
+            Back to the Arena
           </Link>
         </Button>
       </div>

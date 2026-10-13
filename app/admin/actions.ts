@@ -502,7 +502,7 @@ export async function approveQuestionSubmission(
   }
 
   revalidatePath("/admin");
-  revalidatePath("/dashboard/contribute");
+  revalidatePath("/contribute");
   return { success: true };
 }
 
@@ -539,7 +539,7 @@ export async function rejectQuestionSubmission(
   }
 
   revalidatePath("/admin");
-  revalidatePath("/dashboard/contribute");
+  revalidatePath("/contribute");
   return { success: true };
 }
 

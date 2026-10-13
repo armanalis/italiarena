@@ -1,6 +1,7 @@
 /**
  * Route protection for authenticated pages.
- * Keeps /dashboard and /onboarding behind login, and bounces signed-in users away from /login.
+ * Keeps the app pages, /onboarding and /admin behind login, sends signed-in players
+ * who have not finished onboarding there first, and bounces them away from /login.
  */
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/utils/supabase/middleware";
@@ -11,13 +12,35 @@ import {
 import { getPostAuthPathForUser } from "@/lib/auth";
 import { isEmailVerifiedUser } from "@/lib/guest-auth";
 
-const protectedRoutes = ["/dashboard", "/onboarding", "/admin"];
+/**
+ * Pages of the signed-in app. "/" is not here: it is the Arena for players
+ * and the landing page for visitors. KEEP IN SYNC with app/(app).
+ */
+const APP_ROUTES = [
+  "/wordle",
+  "/passaparola",
+  "/stats",
+  "/recent",
+  "/leaderboard",
+  "/settings",
+  "/contribute",
+  "/challenge",
+  "/match",
+  "/matchmaking",
+];
+const protectedRoutes = [...APP_ROUTES, "/onboarding", "/admin"];
 
-function isDashboardRoute(pathname: string) {
+function isUnder(pathname: string, route: string) {
+  return pathname === route || pathname.startsWith(`${route}/`);
+}
+
+/** App pages that need finished onboarding; a match in progress never bounces. */
+function isAppRoute(pathname: string) {
   return (
-    pathname === "/dashboard" ||
-    (pathname.startsWith("/dashboard/") &&
-      !pathname.startsWith("/dashboard/match"))
+    pathname === "/" ||
+    APP_ROUTES.some(
+      (route) => route !== "/match" && route !== "/matchmaking" && isUnder(pathname, route)
+    )
   );
 }
 
@@ -80,9 +103,7 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
-  const isProtectedRoute = protectedRoutes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
-  );
+  const isProtectedRoute = protectedRoutes.some((route) => isUnder(pathname, route));
 
   if (isProtectedRoute && !user) {
     const loginUrl = request.nextUrl.clone();
@@ -91,9 +112,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isDashboardRoute(pathname) && user && !isSoftNavigation(request)) {
+  if (isAppRoute(pathname) && user && !isSoftNavigation(request)) {
     const destination = await getPostAuthPathForUser(supabase, user);
-    if (destination !== "/dashboard") {
+    if (destination !== "/") {
       const nextUrl = request.nextUrl.clone();
       nextUrl.pathname = destination;
       return NextResponse.redirect(nextUrl);
@@ -102,9 +123,9 @@ export async function middleware(request: NextRequest) {
 
   if (pathname === "/onboarding" && user) {
     const destination = await getPostAuthPathForUser(supabase, user);
-    if (destination === "/dashboard") {
+    if (destination === "/") {
       const nextUrl = request.nextUrl.clone();
-      nextUrl.pathname = "/dashboard";
+      nextUrl.pathname = "/";
       return NextResponse.redirect(nextUrl);
     }
     if (destination === "/guest") {
@@ -132,7 +153,7 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // After a successful password reset we always show login (never bounce to dashboard).
+  // After a successful password reset we always show login (never bounce to the Arena).
   if (
     pathname === "/login" &&
     request.nextUrl.searchParams.get("success") === "password_reset"
@@ -173,7 +194,7 @@ export async function middleware(request: NextRequest) {
   if ((pathname === "/login" || pathname === "/guest") && user) {
     const destination = await getPostAuthPathForUser(supabase, user);
 
-    if (pathname === "/guest" && destination !== "/dashboard") {
+    if (pathname === "/guest" && destination !== "/") {
       return supabaseResponse;
     }
 

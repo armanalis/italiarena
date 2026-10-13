@@ -41,7 +41,7 @@ export function buildDailyReminderPayload(streakAtRisk = 0): PushPayload {
       streakAtRisk > 0
         ? `Keep your ${streakAtRisk}-day streak alive: one quick match is enough.`
         : pickDailyReminderMessage(),
-    url: "/dashboard/matchmaking",
+    url: "/matchmaking",
     tag: "daily-reminder",
   };
 }
@@ -130,7 +130,7 @@ export async function sendPushToSubscription(
   const body = JSON.stringify({
     title: payload.title,
     body: payload.body,
-    url: payload.url ?? "/dashboard",
+    url: payload.url ?? "/",
     tag: payload.tag ?? "italiarena",
     icon: payload.icon ?? "/icon",
     badge: payload.badge ?? "/icon",

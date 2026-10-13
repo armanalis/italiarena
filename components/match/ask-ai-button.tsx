@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { askQuestionExplanation } from "@/app/dashboard/match/ai-actions";
+import { askQuestionExplanation } from "@/app/(app)/match/ai-actions";
 import { MAX_AI_ASKS_PER_MATCH } from "@/lib/ai-explanations";
 import { formatCategoryLabel } from "@/lib/scoring";
 import { Button } from "@/components/ui/button";

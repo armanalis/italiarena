@@ -8,7 +8,7 @@ import {
   cancelMatchSearch,
   searchForMatch,
   startBotMatch,
-} from "@/app/dashboard/matchmaking/actions";
+} from "@/app/(app)/matchmaking/actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -127,7 +127,7 @@ export function MatchmakingLobby({
     await cancelMatchSearch(sessionId);
     reset();
 
-    router.replace("/dashboard");
+    router.replace("/");
   }, [clearTimers, reset, router]);
 
   const goToMatch = useCallback(
@@ -142,7 +142,7 @@ export function MatchmakingLobby({
       // return here and restart searching. Also disarm auto-search as a
       // belt-and-suspenders guard for any residual history entry.
       disarmMatchmakingAutosearch();
-      router.replace(`/dashboard/match/${sessionId}`);
+      router.replace(`/match/${sessionId}`);
     },
     [clearTimers, router]
   );
@@ -226,7 +226,7 @@ export function MatchmakingLobby({
     setIsExiting(true);
     clearTimers();
     reset();
-    router.replace("/dashboard");
+    router.replace("/");
   }, [clearTimers, reset, router]);
 
   const handleActiveMatch = useCallback(
@@ -546,7 +546,7 @@ export function MatchmakingLobby({
                   void exitLobby();
                 }}
               >
-                {isExiting ? "Leaving..." : "Back to dashboard"}
+                {isExiting ? "Leaving..." : "Back to the Arena"}
               </Button>
             </div>
           </div>
@@ -608,7 +608,7 @@ export function MatchmakingLobby({
                 </div>
                 <p className="text-xs text-muted-foreground">
                   If no real player joins within {MATCH_SEARCH_SECONDS} seconds,
-                  you can play vs bot or return to the dashboard.
+                  you can play vs bot or go back to the Arena.
                 </p>
               </>
             )}
@@ -649,7 +649,7 @@ export function MatchmakingLobby({
             <DialogTitle>No matches found</DialogTitle>
             <DialogDescription>
               We couldn&apos;t find another player at your Italian level.
-              Would you like to play vs bot or go back to the dashboard?
+              Would you like to play vs bot or go back to the Arena?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col gap-2 sm:flex-col">
@@ -672,7 +672,7 @@ export function MatchmakingLobby({
                 void handleReturnToDashboard();
               }}
             >
-              Go to dashboard
+              Back to the Arena
             </Button>
           </DialogFooter>
         </DialogContent>

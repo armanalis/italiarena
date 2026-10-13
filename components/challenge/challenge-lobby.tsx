@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import {
   cancelMatchSearch,
   joinChallenge,
-} from "@/app/dashboard/matchmaking/actions";
+} from "@/app/(app)/matchmaking/actions";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
 
@@ -45,7 +45,7 @@ export function ChallengeLobby({ sessionId, link, code, state, hostName, level }
         .maybeSingle();
       if (data?.status === "active") {
         window.clearInterval(interval);
-        router.replace(`/dashboard/match/${sessionId}`);
+        router.replace(`/match/${sessionId}`);
       }
     }, JOIN_POLL_MS);
 
@@ -79,7 +79,7 @@ export function ChallengeLobby({ sessionId, link, code, state, hostName, level }
   function cancel() {
     startTransition(async () => {
       await cancelMatchSearch(sessionId);
-      router.replace("/dashboard");
+      router.replace("/");
     });
   }
 
@@ -87,7 +87,7 @@ export function ChallengeLobby({ sessionId, link, code, state, hostName, level }
     startTransition(async () => {
       const result = await joinChallenge(sessionId);
       if (result.success) {
-        router.replace(`/dashboard/match/${result.sessionId}`);
+        router.replace(`/match/${result.sessionId}`);
       } else {
         toast.error(result.error);
         router.refresh();
@@ -174,7 +174,7 @@ export function ChallengeLobby({ sessionId, link, code, state, hostName, level }
               </p>
             </div>
             <Button asChild variant="outline" className="min-h-11 w-full">
-              <Link href="/dashboard">Back to dashboard</Link>
+              <Link href="/">Back to the Arena</Link>
             </Button>
           </>
         )}

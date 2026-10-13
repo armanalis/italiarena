@@ -78,10 +78,10 @@ export async function saveOnboarding(
   }
 
   revalidatePath("/");
-  revalidatePath("/dashboard");
+  revalidatePath("/");
   revalidatePath("/onboarding");
 
-  return { error: null, redirectTo: "/dashboard" };
+  return { error: null, redirectTo: "/" };
 }
 
 /** useFormState-compatible wrapper */

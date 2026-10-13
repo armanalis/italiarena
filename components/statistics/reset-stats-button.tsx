@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Loader2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
-import { resetPlayerStatistics } from "@/app/dashboard/statistics/actions";
+import { resetPlayerStatistics } from "@/app/(app)/stats/actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

@@ -114,7 +114,7 @@ export async function completeGuestProfile(
   }
 
   revalidatePath("/");
-  revalidatePath("/dashboard");
+  revalidatePath("/");
 
-  return { error: null, redirectTo: "/dashboard" };
+  return { error: null, redirectTo: "/" };
 }

@@ -54,7 +54,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
 
   function handleBackToDashboard() {
     useGameStore.getState().reset();
-    navigateTo("/dashboard");
+    navigateTo("/");
   }
 
   return (
@@ -91,7 +91,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 <AlertTitle>Something went wrong</AlertTitle>
                 <AlertDescription>
                   An unexpected error occurred. Your match review is still saved
-                  in this tab until you leave — use Back to dashboard when you are
+                  in this tab until you leave — use Back to the Arena when you are
                   ready to start fresh.
                 </AlertDescription>
               </Alert>
@@ -107,7 +107,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 className="min-h-11 flex-1"
                 onClick={handleBackToDashboard}
               >
-                Back to dashboard
+                Back to the Arena
               </Button>
             </div>
 

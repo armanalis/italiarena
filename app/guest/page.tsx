@@ -16,7 +16,7 @@ export default async function GuestPage() {
   if (user) {
     const profile = await getCurrentUserProfile();
     if (profile && isOnboardingComplete(profile)) {
-      redirect("/dashboard");
+      redirect("/");
     }
   }
 

@@ -15,7 +15,7 @@ import {
   shouldResumeRoundResult,
   type MatchScoreState,
 } from "@/lib/match-score-state";
-import { refreshDashboardAfterMatch } from "@/app/dashboard/settings/actions";
+import { refreshDashboardAfterMatch } from "@/app/(app)/settings/actions";
 import { createClient } from "@/utils/supabase/client";
 import {
   MATCH_SYNC_VERSION,
