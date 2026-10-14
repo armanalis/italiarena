@@ -104,6 +104,20 @@ export function toWordleView(level: string, date: string, turn: WordleTurn): Wor
   };
 }
 
+const SHARE_SQUARES: Record<WordleMark, string> = { correct: "🟩", present: "🟨", absent: "⬛" };
+
+/** The spoiler-free emoji result plus a link that opens the same puzzle for a friend. */
+export function wordleShareText(view: WordleView, origin: string): string {
+  const score = view.status === "won" ? view.guesses.length : "X";
+  return [
+    `Italiarena Wordle #${view.number} · ${view.level} · ${score}/${WORDLE_MAX_GUESSES}`,
+    "",
+    ...view.guesses.map((guess) => guess.marks.map((mark) => SHARE_SQUARES[mark]).join("")),
+    "",
+    `${origin}/wordle?level=${view.level}&day=${view.date}`,
+  ].join("\n");
+}
+
 /** The last WORDLE_ARCHIVE_DAYS days before today, newest first. */
 export function toWordleArchive(
   today: string,

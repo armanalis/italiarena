@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { Delete } from "lucide-react";
+import { Check, Delete, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PROFICIENCY_LEVELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ import {
   playWordle,
   WORDLE_LENGTH,
   WORDLE_MAX_GUESSES,
+  wordleShareText,
   type WordleArchiveDay,
   type WordleMark,
   type WordleStatus,
@@ -81,8 +82,28 @@ export function WordleGame({
   // The row being flipped and how many of its tiles show their color yet.
   const [revealing, setRevealing] = useState<{ row: number; shown: number } | null>(null);
   const currentRow = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
 
   const playing = view?.status === "playing";
+
+  async function share() {
+    if (!view) {
+      return;
+    }
+    // The link goes inside the text: some share targets drop `text` when a `url` is given.
+    const text = wordleShareText(view, window.location.origin);
+    if (navigator.share) {
+      try {
+        await navigator.share({ text });
+      } catch {
+        // Closing the share sheet is not an error.
+      }
+      return;
+    }
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2_000);
+  }
 
   async function open(nextLevel: string, date: string | null) {
     const day = date ?? today;
@@ -319,6 +340,10 @@ export function WordleGame({
               ? "A new puzzle comes tomorrow. Try another level above, or a past day below."
               : "Pick another day from the archive below."}
           </p>
+          <Button type="button" className="mt-3 min-h-11" onClick={() => void share()}>
+            {copied ? <Check className="size-4" /> : <Share2 className="size-4" />}
+            {copied ? "Copied" : "Share"}
+          </Button>
         </div>
       )}
 
