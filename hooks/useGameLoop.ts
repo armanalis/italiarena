@@ -32,6 +32,8 @@ import type { CorrectAnswer, PublicQuestion } from "@/types/database.types";
 import type { ProficiencyLevel } from "@/lib/constants";
 
 const ROUND_RESULT_TICK_MS = 100;
+/** ~3 s of reveal retries while the opponent's answer is still being saved. */
+const OPPONENT_SAVE_ATTEMPTS = 5;
 
 function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -666,27 +668,36 @@ export function useGameLoop({
 
         const result = await revealRoundAnswer(supabase, sessionId, questionIndex);
         if (result.success) {
-          return result.data;
-        }
+          // The opponent's "answered" broadcast is sent before their answer is
+          // saved, so it can beat the save here. Scoring now would count them
+          // as not answering: ask again for a moment.
+          const now = useGameStore.getState();
+          const opponent = now.localPlayerRole === "a" ? now.playerBAnswer : now.playerAAnswer;
+          const opponentStillSaving =
+            !isBotMatch && opponent?.responseTimeMs != null && result.data.opponentAnswer === null;
+          if (!opponentStillSaving || attempt >= OPPONENT_SAVE_ATTEMPTS) {
+            return result.data;
+          }
+        } else {
+          console.error(`[match] reveal failed (attempt ${attempt}): ${result.error}`);
 
-        console.error(`[match] reveal failed (attempt ${attempt}): ${result.error}`);
-
-        // Our write never landed (dropped request, or a refresh lost it):
-        // lock what this screen shows, then ask again.
-        if (result.error.includes("Answer this round first")) {
-          const local =
-            live.localPlayerRole === "a" ? live.playerAAnswer : live.playerBAnswer;
-          submitLocalAnswer(
-            questionIndex,
-            local?.answer ?? null,
-            local?.responseTimeMs ?? null
-          );
+          // Our write never landed (dropped request, or a refresh lost it):
+          // lock what this screen shows, then ask again.
+          if (result.error.includes("Answer this round first")) {
+            const local =
+              live.localPlayerRole === "a" ? live.playerAAnswer : live.playerBAnswer;
+            submitLocalAnswer(
+              questionIndex,
+              local?.answer ?? null,
+              local?.responseTimeMs ?? null
+            );
+          }
         }
 
         await wait(Math.min(2_000, 300 * attempt));
       }
     },
-    [sessionId, submitLocalAnswer, supabase]
+    [isBotMatch, sessionId, submitLocalAnswer, supabase]
   );
 
   const finalizeRound = useCallback(() => {
