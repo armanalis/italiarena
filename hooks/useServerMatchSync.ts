@@ -431,17 +431,25 @@ export function useServerMatchSync({
     }
 
     const live = useGameStore.getState();
+    const finished = live.roundPhase === "match_finished" || live.matchWinner !== null;
     if (
       !shouldApplyScoreState(
         score,
         localResolvedThroughIndex(live.roundReviews),
-        live.roundPhase === "match_finished" || live.matchWinner !== null
+        finished,
+        live
       )
     ) {
       return;
     }
 
-    useGameStore.setState(scoreStateToStorePatch(score));
+    useGameStore.setState({
+      ...scoreStateToStorePatch(score),
+      // A corrected last round can change who won.
+      ...(finished
+        ? { matchWinner: score.matchWinner ?? determineWinner(score.playerAScore, score.playerBScore) }
+        : {}),
+    });
   }, []);
 
   const applyRemoteAnswers = useCallback(

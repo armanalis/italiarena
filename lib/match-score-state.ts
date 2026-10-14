@@ -346,26 +346,32 @@ export function localResolvedThroughIndex(
 
 /**
  * True when `incoming` should replace the locally known score document
- * (strictly more rounds resolved, or same rounds but newly finished).
+ * (more rounds resolved, same rounds but different totals, or newly finished).
  */
 export function shouldApplyScoreState(
   incoming: MatchScoreState,
   localResolvedThrough: number,
-  localMatchFinished: boolean
+  localMatchFinished: boolean,
+  localScores: { playerAScore: number; playerBScore: number }
 ): boolean {
   if (incoming.resolvedThroughIndex > localResolvedThrough) {
     return true;
   }
 
+  if (incoming.resolvedThroughIndex !== localResolvedThrough) {
+    return false;
+  }
+
+  // Same rounds, other totals: this screen scored a round without a pick the
+  // server has (e.g. the opponent's save was still in flight). The server wins.
   if (
-    incoming.resolvedThroughIndex === localResolvedThrough &&
-    incoming.matchFinished &&
-    !localMatchFinished
+    incoming.playerAScore !== localScores.playerAScore ||
+    incoming.playerBScore !== localScores.playerBScore
   ) {
     return true;
   }
 
-  return false;
+  return incoming.matchFinished && !localMatchFinished;
 }
 
 /**

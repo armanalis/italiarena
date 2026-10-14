@@ -10,9 +10,11 @@ import {
   localResolvedThroughIndex,
   planBotMatchResume,
   scoreStateForRole,
+  shouldApplyScoreState,
   shouldCheckSilentOpponent,
   shouldResumeRoundResult,
   type MatchRoundReview,
+  type MatchScoreState,
 } from "../lib/match-score-state";
 
 function review(questionIndex: number): MatchRoundReview {
@@ -224,6 +226,18 @@ check("silent-opponent check: waiting screens only, after a 7 s stall, every 3 s
   assert.equal(shouldCheckSilentOpponent({ ...base, finished: true }), false);
   assert.equal(shouldCheckSilentOpponent({ ...base, stalledMs: 5_500 }), false);
   assert.equal(shouldCheckSilentOpponent({ ...base, sinceLastCheckMs: 2_000 }), false);
+});
+
+check("score doc: server totals replace a round this screen scored differently", () => {
+  const server = { resolvedThroughIndex: 3, playerAScore: 540, playerBScore: 540, matchFinished: false } as MatchScoreState;
+  const same = { playerAScore: 540, playerBScore: 540 };
+  // The screenshot bug: the opponent's pick raced its save, so B got 0 here.
+  assert.equal(shouldApplyScoreState(server, 3, false, { playerAScore: 540, playerBScore: 400 }), true);
+  assert.equal(shouldApplyScoreState(server, 3, false, same), false);
+  assert.equal(shouldApplyScoreState(server, 2, false, same), true);
+  assert.equal(shouldApplyScoreState(server, 4, false, { playerAScore: 0, playerBScore: 0 }), false);
+  assert.equal(shouldApplyScoreState({ ...server, matchFinished: true }, 3, false, same), true);
+  assert.equal(shouldApplyScoreState({ ...server, matchFinished: true }, 3, true, same), false);
 });
 
 console.log(`\n${passed} checks passed`);
