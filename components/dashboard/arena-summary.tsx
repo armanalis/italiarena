@@ -24,7 +24,7 @@ export function ArenaSummary({ stats }: { stats: PlayerStats | null }) {
         <CardAction>
           <Link
             href="/stats"
-            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+            className="-my-3 inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground"
           >
             All stats
             <ChevronRight className="size-4" aria-hidden />

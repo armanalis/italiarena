@@ -11,6 +11,7 @@ import {
   deleteAccount,
   updateGameplayPreferences,
   updateLearningProfile,
+  updateShowLastSeen,
 } from "@/app/(app)/settings/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +46,7 @@ import { cn } from "@/lib/utils";
 type SettingsPanelsProps = {
   profile: UserProfile;
   recentMatches: MatchHistoryEntry[];
+  showLastSeen: boolean;
 };
 
 function PreferenceToggle({
@@ -95,7 +97,11 @@ function resultLabel(result: MatchHistoryEntry["result"]) {
   return "Tie";
 }
 
-export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) {
+export function SettingsPanels({
+  profile,
+  recentMatches,
+  showLastSeen: initialShowLastSeen,
+}: SettingsPanelsProps) {
   const guest = profile.is_guest;
   const router = useRouter();
   const [proficiencyLevel, setProficiencyLevel] = useState(
@@ -104,6 +110,7 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
   const [displayName, setDisplayName] = useState(profile.display_name ?? "");
   const [soundEnabled, setSoundEnabled] = useState(profile.sound_enabled);
   const [hapticsEnabled, setHapticsEnabled] = useState(profile.haptics_enabled);
+  const [showLastSeen, setShowLastSeen] = useState(initialShowLastSeen);
   const [isPending, startTransition] = useTransition();
   const [deleteRedirectTo, setDeleteRedirectTo] = useState<string | null>(null);
   useActionRedirect(deleteRedirectTo);
@@ -147,6 +154,19 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
         toast.success("Gameplay preferences saved.");
         return;
       }
+      toast.error(result.error);
+    });
+  }
+
+  function saveShowLastSeen(value: boolean) {
+    setShowLastSeen(value);
+    startTransition(async () => {
+      const result = await updateShowLastSeen(value);
+      if (result.success) {
+        toast.success("Privacy setting saved.");
+        return;
+      }
+      setShowLastSeen(!value);
       toast.error(result.error);
     });
   }
@@ -281,6 +301,22 @@ export function SettingsPanels({ profile, recentMatches }: SettingsPanelsProps) 
           initialHour={profile.daily_reminder_hour}
         />
       )}
+
+      <Card className="border-border/60">
+        <CardHeader>
+          <CardTitle>Friends</CardTitle>
+          <CardDescription>Choose what your friends can see.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PreferenceToggle
+            label="Show last seen"
+            description="Friends see when you were last online."
+            checked={showLastSeen}
+            disabled={isPending}
+            onChange={saveShowLastSeen}
+          />
+        </CardContent>
+      </Card>
 
       <Card className="border-border/60">
         <CardHeader>

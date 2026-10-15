@@ -20,7 +20,20 @@ type FriendRow = {
   level: string | null;
   online: boolean;
   challenge_session_id: string | null;
+  /** Null when hidden by the friend (Settings) or not a friend yet. */
+  last_seen_at?: string | null;
 };
+
+const relativeTime = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+
+/** "5 minutes ago", "3 hours ago", "yesterday", "12 days ago". */
+function lastSeenLabel(iso: string) {
+  const minutes = Math.min(-1, Math.round((Date.parse(iso) - Date.now()) / 60_000));
+  if (minutes > -60) return relativeTime.format(minutes, "minute");
+  const hours = Math.round(minutes / 60);
+  if (hours > -24) return relativeTime.format(hours, "hour");
+  return relativeTime.format(Math.round(hours / 24), "day");
+}
 
 /** Same cadence as the online counts on the Play screen. */
 const FRIENDS_REFRESH_MS = 30_000;
@@ -215,9 +228,14 @@ export function FriendsPanel() {
                       className={cn("size-2 shrink-0 rounded-full", row.online ? "bg-emerald-500" : "border border-muted-foreground/70")}
                       aria-hidden
                     />
-                    <span className="min-w-0 flex-1 truncate">
-                      <span className="font-medium">{row.display_name}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">{row.display_name}</span>
                       <span className="sr-only">{row.online ? ", online" : ", offline"}</span>
+                      {!row.online && row.last_seen_at && (
+                        <span className="block truncate text-xs text-muted-foreground">
+                          Last seen {lastSeenLabel(row.last_seen_at)}
+                        </span>
+                      )}
                     </span>
                     {row.level && (
                       <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
@@ -228,6 +246,7 @@ export function FriendsPanel() {
                       type="button"
                       size="icon-sm"
                       variant="ghost"
+                      className="size-11 md:size-7"
                       aria-label={`Challenge ${row.display_name}`}
                       title="Challenge"
                       disabled={isPending}
@@ -239,6 +258,7 @@ export function FriendsPanel() {
                       type="button"
                       size="icon-sm"
                       variant="ghost"
+                      className="size-11 md:size-7"
                       aria-label={`Remove ${row.display_name}`}
                       title="Remove friend"
                       onClick={() => setConfirmRemove(row.friend_id)}

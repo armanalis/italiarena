@@ -50,7 +50,7 @@ type ReportQuestionButtonProps = {
   questionText: string;
   className?: string;
   showLabel?: boolean;
-  /** When false, opening the dialog does not pause the between-round timer. */
+  /** When false, opening the dialog does not pause the match timer. */
   pauseMatchTimer?: boolean;
   reported?: boolean;
   onReported?: () => void;
@@ -147,7 +147,7 @@ export function ReportQuestionButton({
         size="sm"
         disabled
         className={cn(
-          "shrink-0 gap-1.5 border-emerald-500/30 text-emerald-400/80",
+          "min-h-11 shrink-0 gap-1.5 border-emerald-500/30 text-emerald-400/80",
           className
         )}
       >
@@ -166,7 +166,7 @@ export function ReportQuestionButton({
           size={showLabel ? "sm" : "icon"}
           className={cn(
             showLabel
-              ? "shrink-0 gap-1.5 border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300"
+              ? "min-h-11 shrink-0 gap-1.5 border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300"
               : "size-11 shrink-0 text-muted-foreground hover:text-amber-400",
             className
           )}
