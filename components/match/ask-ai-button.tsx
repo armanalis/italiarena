@@ -90,7 +90,7 @@ export function AskAiButton({
         disabled={isPending}
         className={cn(
           showLabel
-            ? "shrink-0 gap-1.5 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+            ? "min-h-11 shrink-0 gap-1.5 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
             : "size-11 shrink-0 text-muted-foreground hover:text-primary",
           className
         )}

@@ -36,7 +36,7 @@ export default async function PrivacyPage({ searchParams }: PrivacyPageProps) {
       <main className="mx-auto w-full max-w-3xl px-4 py-8 pb-[max(3rem,env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-12">
         <Link
           href="/"
-          className="mb-8 inline-flex text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          className="mb-8 inline-flex min-h-11 items-center text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
           {backLabel}
         </Link>

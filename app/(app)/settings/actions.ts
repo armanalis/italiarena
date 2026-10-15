@@ -55,10 +55,18 @@ export async function getSettingsData() {
         .eq("user_id", profile.id)
         .order("played_at", { ascending: false })
         .limit(10);
+      // Separate query: until friends-last-seen-2026-10-15.sql runs, the column
+      // is missing and this falls back to the default instead of failing.
+      const { data: privacy } = await supabase
+        .from("users")
+        .select("show_last_seen")
+        .eq("id", profile.id)
+        .maybeSingle();
 
       return {
         profile,
         recentMatches: (recentMatches ?? []) as MatchHistoryEntry[],
+        showLastSeen: privacy?.show_last_seen ?? true,
       };
     }
   );
@@ -145,6 +153,32 @@ export async function updateGameplayPreferences(
       sound_enabled: soundEnabled,
       haptics_enabled: hapticsEnabled,
     })
+    .eq("id", user.id);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/settings");
+  revalidateUserDashboard(user.id);
+  return { success: true };
+}
+
+export async function updateShowLastSeen(
+  showLastSeen: boolean
+): Promise<SettingsActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: "Not authenticated." };
+  }
+
+  const { error } = await supabase
+    .from("users")
+    .update({ show_last_seen: showLastSeen })
     .eq("id", user.id);
 
   if (error) {
