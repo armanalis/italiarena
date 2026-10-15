@@ -8,6 +8,7 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/server";
 import type { UserProfile, UserRole } from "@/lib/types";
 import { isGuestAuthEmail, isGuestAuthUser } from "@/lib/guest-auth";
+import { DEFAULT_TIMEZONE } from "@/lib/constants";
 
 const fetchUserRow = cache(async (userId: string) => {
   const supabase = await createClient();
@@ -59,7 +60,7 @@ export const getCurrentUserProfile = cache(async (): Promise<UserProfile | null>
       haptics_enabled: profile.haptics_enabled ?? true,
       daily_reminder_enabled: profile.daily_reminder_enabled ?? false,
       daily_reminder_hour: profile.daily_reminder_hour ?? 18,
-      timezone: profile.timezone ?? "UTC",
+      timezone: profile.timezone ?? DEFAULT_TIMEZONE,
     };
   }
 
@@ -75,7 +76,7 @@ export const getCurrentUserProfile = cache(async (): Promise<UserProfile | null>
     haptics_enabled: true,
     daily_reminder_enabled: false,
     daily_reminder_hour: 18,
-    timezone: "UTC",
+    timezone: DEFAULT_TIMEZONE,
   };
 });
 

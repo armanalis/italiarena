@@ -2,6 +2,13 @@
 export const TARGET_LANGUAGE = "Italian" as const;
 export const TARGET_LANGUAGES = [TARGET_LANGUAGE] as const;
 
+/**
+ * For players who never saved their own: the players are in Italy, and the
+ * Wordle and Passaparola day starts at midnight here too.
+ * KEEP IN SYNC with the users.timezone default (supabase/audit-3-fixes-2026-10-15.sql).
+ */
+export const DEFAULT_TIMEZONE = "Europe/Rome";
+
 export const PROFICIENCY_LEVELS = [
   "A1",
   "A1-A2",

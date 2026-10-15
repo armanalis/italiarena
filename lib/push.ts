@@ -2,6 +2,7 @@
 
 import webpush from "web-push";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { DEFAULT_TIMEZONE } from "@/lib/constants";
 import { APP_NAME, SUPPORT_EMAIL } from "@/lib/legal";
 
 export type PushPayload = {
@@ -44,6 +45,54 @@ export function buildDailyReminderPayload(streakAtRisk = 0): PushPayload {
     url: "/matchmaking",
     tag: "daily-reminder",
   };
+}
+
+export type ReminderUser = {
+  daily_reminder_hour: number | null;
+  timezone: string | null;
+  last_reminder_sent_at: string | null;
+};
+
+const DEFAULT_REMINDER_HOUR = 18;
+
+/** Local date (YYYY-MM-DD) and hour (0-23); null for a zone this runtime does not know. */
+function localTime(timezone: string, at: Date): { date: string; hour: number } | null {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      // h23 keeps midnight as 00; hour12:false can yield 24 on some ICU builds.
+      hourCycle: "h23",
+    }).formatToParts(at);
+    const part = (type: string) => parts.find((item) => item.type === type)?.value;
+    const hour = Number(part("hour"));
+    return { date: `${part("year")}-${part("month")}-${part("day")}`, hour: hour === 24 ? 0 : hour };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Due once the player's clock has reached their chosen hour, if nothing was
+ * sent yet on their local day. "At or after", not "during", because the
+ * hourly trigger (GitHub Actions) really runs only every few hours.
+ */
+export function isReminderDue(user: ReminderUser, now: Date) {
+  const chosen = user.timezone?.trim() || DEFAULT_TIMEZONE;
+  const zone = localTime(chosen, now) ? chosen : DEFAULT_TIMEZONE;
+  const local = localTime(zone, now);
+  const hour = user.daily_reminder_hour;
+  const preferred = Number.isInteger(hour) ? Math.min(23, Math.max(0, hour!)) : DEFAULT_REMINDER_HOUR;
+  if (!local || local.hour < preferred) {
+    return false;
+  }
+  return (
+    !user.last_reminder_sent_at ||
+    localTime(zone, new Date(user.last_reminder_sent_at))?.date !== local.date
+  );
 }
 
 type PushSubscriptionRow = {

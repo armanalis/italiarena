@@ -217,7 +217,6 @@ function MatchQuestionCard({
           questionId={question.questionId}
           questionText={question.questionText}
           showLabel
-          pauseMatchTimer={false}
           reported={reported}
           onReported={onReported}
         />

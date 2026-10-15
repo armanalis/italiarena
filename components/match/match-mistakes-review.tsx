@@ -147,7 +147,6 @@ function RoundReviewCard({
           questionId={round.questionId}
           questionText={round.questionText}
           showLabel
-          pauseMatchTimer={false}
           reported={reported}
           onReported={onReported}
         />

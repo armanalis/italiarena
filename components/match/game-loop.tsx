@@ -431,11 +431,9 @@ export function GameLoop({
                   <Badge variant="secondary" className="uppercase tracking-wide">
                     {formatCategoryLabel(currentQuestion.category)}
                   </Badge>
-                  {/* The question clock keeps running while reporting. */}
                   <ReportQuestionButton
                     questionId={currentQuestion.id}
                     questionText={currentQuestion.question_text}
-                    pauseMatchTimer={false}
                   />
                 </div>
                 <h2 className="text-lg font-semibold leading-snug sm:text-2xl">

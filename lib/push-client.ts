@@ -1,5 +1,7 @@
 /** Browser helpers for PushManager subscription (Settings + future chat opt-in). */
 
+import { DEFAULT_TIMEZONE } from "@/lib/constants";
+
 const SW_TIMEOUT_MS = 15_000;
 const PERMISSION_TIMEOUT_MS = 45_000;
 const SUBSCRIBE_TIMEOUT_MS = 20_000;
@@ -196,8 +198,8 @@ export function serializePushSubscription(subscription: PushSubscription) {
 
 export function getBrowserTimezone() {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || DEFAULT_TIMEZONE;
   } catch {
-    return "UTC";
+    return DEFAULT_TIMEZONE;
   }
 }

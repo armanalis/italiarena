@@ -96,10 +96,11 @@ Open [http://localhost:3000](http://localhost:3000).
 ### Useful commands
 
 ```bash
-npm run build              # production build
+npm run build              # production build (runs test:unit first; a failing test stops the deploy)
 npm run lint               # ESLint
 npm run audit:questions    # sanity-check the question bank for data issues
-npm run test:match-resume  # exercise match-sync resume logic (refresh mid-round, etc.)
+npm test                   # every test: scripts/test-*.ts, then the SQL suite
+npm run test:sql           # SQL suite only (needs the private supabase/*.sql files)
 ```
 
 ---

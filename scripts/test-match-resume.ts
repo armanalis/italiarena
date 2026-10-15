@@ -117,8 +117,6 @@ check("PvP review shows only this player's own pick", () => {
       roundPhase: "round_result",
       matchWinner: null,
       roundStartedAt: null,
-      timerPauseOffsetMs: 0,
-      timerPauseStartedAt: null,
     }),
     categoryProgressByRole: {
       a: { grammar: { correct: 1, total: 1 } },
@@ -162,8 +160,6 @@ function botDoc(input: {
     matchWinner: input.finished ? "a" : null,
     roundStartedAt:
       input.startedAgoMs === undefined ? null : Date.now() - input.startedAgoMs,
-    timerPauseOffsetMs: 0,
-    timerPauseStartedAt: null,
   });
   return JSON.parse(JSON.stringify(doc));
 }
@@ -177,7 +173,7 @@ check("bot refresh on question 1 keeps its clock (20s left stays ~20s)", () => {
   if (plan.kind !== "resume") return;
   assert.equal(plan.questionIndex, 0);
   assert.ok(plan.clock);
-  assert.equal(getRoundTimeRemainingSec(plan.clock!.startedAt, plan.clock!.pauseOffsetMs), 20);
+  assert.equal(getRoundTimeRemainingSec(plan.clock!.startedAt), 20);
 });
 
 check("bot refresh mid-match keeps that question's clock", () => {
@@ -188,7 +184,7 @@ check("bot refresh mid-match keeps that question's clock", () => {
   assert.equal(plan.kind === "resume" && plan.questionIndex, 4);
   assert.equal(
     plan.kind === "resume" && plan.clock
-      ? getRoundTimeRemainingSec(plan.clock.startedAt, plan.clock.pauseOffsetMs)
+      ? getRoundTimeRemainingSec(plan.clock.startedAt)
       : null,
     15
   );

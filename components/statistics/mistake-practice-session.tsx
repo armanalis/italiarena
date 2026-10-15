@@ -221,7 +221,6 @@ export function MistakePracticeSession({
               questionId={question.id}
               questionText={question.question_text}
               showLabel
-              pauseMatchTimer={false}
               reported={reportedQuestionIds.has(question.id)}
               onReported={() =>
                 setReportedQuestionIds((ids) => new Set(ids).add(question.id))
