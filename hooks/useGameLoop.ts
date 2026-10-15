@@ -19,7 +19,6 @@ import { getBotResponseDelayMs, getBotResponseTimeMs } from "@/lib/bot";
 import { pulseCountdownHaptic } from "@/lib/haptics";
 import {
   FRESH_ROUND_TIMER_STATE,
-  getRoundPauseMs,
   getRoundTimeRemainingSec,
 } from "@/lib/match-timer";
 import { getRoundResultMs, TOPIC_REVEAL_MS } from "@/lib/match-timing";
@@ -44,10 +43,6 @@ type AnswerLockedPayload = {
   questionIndex: number;
   answer: CorrectAnswer | null;
   responseTimeMs: number | null;
-};
-
-type ReportPausePayload = {
-  paused: boolean;
 };
 
 type UseGameLoopOptions = {
@@ -79,11 +74,6 @@ export function useGameLoop({
   const playerBAnswer = useGameStore((state) => state.playerBAnswer);
   const timeRemaining = useGameStore((state) => state.timeRemaining);
   const roundStartedAt = useGameStore((state) => state.roundStartedAt);
-  const isReportDialogOpen = useGameStore((state) => state.isReportDialogOpen);
-  const timerPauseOffsetMs = useGameStore((state) => state.timerPauseOffsetMs);
-  const timerPauseStartedAt = useGameStore(
-    (state) => state.timerPauseStartedAt
-  );
 
   const initGameplay = useGameStore((state) => state.initGameplay);
   const beginRound = useGameStore((state) => state.beginRound);
@@ -111,7 +101,6 @@ export function useGameLoop({
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const channelReadyRef = useRef(false);
   const pendingBroadcastsRef = useRef<AnswerLockedPayload[]>([]);
-  const opponentReportPausedRef = useRef(false);
   const [roundResultSecondsLeft, setRoundResultSecondsLeft] = useState<
     number | null
   >(null);
@@ -278,8 +267,7 @@ export function useGameLoop({
       }
 
       const startedAt = state.roundStartedAt ?? Date.now();
-      const pauseMs = getRoundPauseMs(state);
-      const remaining = getRoundTimeRemainingSec(startedAt, pauseMs);
+      const remaining = getRoundTimeRemainingSec(startedAt);
 
       setTimeRemaining(remaining);
 
@@ -349,8 +337,7 @@ export function useGameLoop({
     }
 
     const botDifficulty = state.botDifficulty ?? "medium";
-    const pauseMs = getRoundPauseMs(state);
-    const delay = getBotResponseDelayMs(startedAt, botDifficulty, pauseMs);
+    const delay = getBotResponseDelayMs(startedAt, botDifficulty);
     const questionIndex = state.currentQuestionIndex;
 
     botTimerRef.current = window.setTimeout(() => {
@@ -427,7 +414,6 @@ export function useGameLoop({
     // flags so a stale result countdown can't block the next finalize.
     clearTimers();
     resolvingRef.current = false;
-    opponentReportPausedRef.current = false;
     setRoundResultSecondsLeft(null);
   }, [clearTimers]);
 
@@ -599,10 +585,6 @@ export function useGameLoop({
       if (latest.roundPhase !== "round_result") {
         clearResultTimer();
         setRoundResultSecondsLeft(null);
-        return;
-      }
-
-      if (latest.isReportDialogOpen || opponentReportPausedRef.current) {
         return;
       }
 
@@ -794,7 +776,7 @@ export function useGameLoop({
       // so this can come out non-integer — round once here since it feeds
       // local state, the opponent broadcast, and the DB write.
       const responseTimeMs = Math.round(
-        Date.now() - state.roundStartedAt - getRoundPauseMs(state)
+        Date.now() - state.roundStartedAt
       );
       lockLocalAnswer(answer, responseTimeMs);
 
@@ -856,10 +838,6 @@ export function useGameLoop({
     });
 
     channel
-      .on("broadcast", { event: "report_pause" }, ({ payload }) => {
-        const data = payload as ReportPausePayload;
-        opponentReportPausedRef.current = Boolean(data.paused);
-      })
       .on("broadcast", { event: "answer_locked" }, ({ payload }) => {
         const data = payload as AnswerLockedPayload;
         const state = useGameStore.getState();
@@ -883,13 +861,6 @@ export function useGameLoop({
           channelRef.current = channel;
           channelReadyRef.current = true;
           flushPendingBroadcasts();
-          if (useGameStore.getState().isReportDialogOpen) {
-            void channel.send({
-              type: "broadcast",
-              event: "report_pause",
-              payload: { paused: true } satisfies ReportPausePayload,
-            });
-          }
         }
       });
 
@@ -898,21 +869,8 @@ export function useGameLoop({
       channelRef.current = null;
       channelReadyRef.current = false;
       pendingBroadcastsRef.current = [];
-      opponentReportPausedRef.current = false;
     };
   }, [flushPendingBroadcasts, isBotMatch, sessionId, supabase]);
-
-  useEffect(() => {
-    if (isBotMatch || !channelReadyRef.current || !channelRef.current) {
-      return;
-    }
-
-    void channelRef.current.send({
-      type: "broadcast",
-      event: "report_pause",
-      payload: { paused: isReportDialogOpen } satisfies ReportPausePayload,
-    });
-  }, [isBotMatch, isReportDialogOpen]);
 
   useEffect(() => {
     if (!isBotMatch) {
@@ -969,9 +927,9 @@ export function useGameLoop({
     }
   }, [finalizeRound, playerAAnswer, playerBAnswer, roundPhase]);
 
-  // Runs when a question starts and when the report dialog pauses or resumes
-  // it: reschedule the bot answer, and save the question clock so a refresh
-  // resumes the countdown instead of granting a fresh 25 seconds.
+  // Runs when a question starts: schedule the bot answer, and save the
+  // question clock so a refresh resumes the countdown instead of granting a
+  // fresh 25 seconds.
   useEffect(() => {
     if (!isBotMatch || roundPhase !== "playing" || !roundStartedAt) {
       return;
@@ -983,13 +941,10 @@ export function useGameLoop({
   }, [
     clearBotTimer,
     isBotMatch,
-    isReportDialogOpen,
     persistScores,
     roundPhase,
     roundStartedAt,
     scheduleBotAnswer,
-    timerPauseOffsetMs,
-    timerPauseStartedAt,
   ]);
 
   // An opponent who goes silent (closed the tab, lost connection) must not
@@ -1016,12 +971,7 @@ export function useGameLoop({
         Boolean(live.playerBAnswer),
       ].join(":");
 
-      // A report dialog pauses the round on both screens; that is not silence.
-      if (
-        signature !== lastSignature ||
-        live.isReportDialogOpen ||
-        opponentReportPausedRef.current
-      ) {
+      if (signature !== lastSignature) {
         lastSignature = signature;
         lastProgressAt = now;
         return;

@@ -80,7 +80,6 @@ export function MistakesListDialog({
                     questionId={mistake.question_id}
                     questionText={mistake.question.question_text}
                     showLabel
-                    pauseMatchTimer={false}
                     reported={reportedQuestionIds.has(mistake.question_id)}
                     onReported={() => markReported(mistake.question_id)}
                   />

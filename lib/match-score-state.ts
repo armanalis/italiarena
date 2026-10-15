@@ -48,8 +48,6 @@ export type MatchRoundReview = {
 export type ActiveRoundClock = {
   questionIndex: number;
   startedAt: number;
-  pauseOffsetMs: number;
-  pauseStartedAt: number | null;
 };
 
 export type MatchScoreState = {
@@ -198,8 +196,6 @@ export type ScoreSnapshotInput = {
   roundPhase: string;
   matchWinner: MatchWinner | null;
   roundStartedAt: number | null;
-  timerPauseOffsetMs: number;
-  timerPauseStartedAt: number | null;
 };
 
 export function buildMatchScoreState(input: ScoreSnapshotInput): MatchScoreState {
@@ -234,8 +230,6 @@ export function buildMatchScoreState(input: ScoreSnapshotInput): MatchScoreState
         ? {
             questionIndex: input.currentQuestionIndex,
             startedAt: input.roundStartedAt,
-            pauseOffsetMs: input.timerPauseOffsetMs,
-            pauseStartedAt: input.timerPauseStartedAt,
           }
         : null,
   };
@@ -251,9 +245,7 @@ export function readActiveRoundClock(
     !clock ||
     typeof clock !== "object" ||
     clock.questionIndex !== questionIndex ||
-    typeof clock.startedAt !== "number" ||
-    typeof clock.pauseOffsetMs !== "number" ||
-    (clock.pauseStartedAt !== null && typeof clock.pauseStartedAt !== "number")
+    typeof clock.startedAt !== "number"
   ) {
     return null;
   }

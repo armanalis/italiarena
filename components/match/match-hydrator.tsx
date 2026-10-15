@@ -154,23 +154,13 @@ export function MatchHydrator({
       }
 
       // Refreshed mid-question (question 1 included): keep the original
-      // clock running. Time the report dialog was open before the refresh
-      // still counts as paused.
+      // clock running.
       const { clock, questionIndex: nextIndex } = plan;
-      const pauseOffsetMs = clock
-        ? clock.pauseOffsetMs +
-          (clock.pauseStartedAt ? Date.now() - clock.pauseStartedAt : 0)
-        : 0;
       const roundState = clock
         ? {
             roundPhase: "playing" as const,
             roundStartedAt: clock.startedAt,
-            timerPauseOffsetMs: pauseOffsetMs,
-            timerPauseStartedAt: null,
-            timeRemaining: getRoundTimeRemainingSec(
-              clock.startedAt,
-              pauseOffsetMs
-            ),
+            timeRemaining: getRoundTimeRemainingSec(clock.startedAt),
           }
         : {
             roundPhase: "topic_reveal" as const,

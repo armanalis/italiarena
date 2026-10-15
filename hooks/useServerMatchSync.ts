@@ -158,13 +158,11 @@ export function useServerMatchSync({
         return;
       }
 
-      const dialogOpen = useGameStore.getState().isReportDialogOpen;
       useGameStore.setState({
         roundPhase: "playing",
         // Anchor to "now" so a future-skewed sync stamp cannot show >25s.
         roundStartedAt: Math.min(localRoundStartedAt, Date.now()),
         ...FRESH_ROUND_TIMER_STATE,
-        timerPauseStartedAt: dialogOpen ? Date.now() : null,
       });
       onEnterPlayingRef.current();
     },
@@ -362,11 +360,7 @@ export function useServerMatchSync({
           roundPhase: playingDue ? "playing" : "topic_reveal",
           playerAAnswer: null,
           playerBAnswer: null,
-          // Clear report-pause carryover — leftover pause ms made the next
-          // question show 35–40s instead of 25s. Re-arm pause only if the
-          // report dialog is still open on this new round.
           ...FRESH_ROUND_TIMER_STATE,
-          timerPauseStartedAt: live.isReportDialogOpen ? Date.now() : null,
           roundStartedAt: playingDue
             ? Math.min(localRoundStartedAt, Date.now())
             : null,

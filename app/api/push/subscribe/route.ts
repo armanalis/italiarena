@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { isGuestAuthUser } from "@/lib/guest-auth";
 import { isPushServiceEndpoint, MAX_SUBSCRIPTIONS_PER_USER } from "@/lib/push";
+import { DEFAULT_TIMEZONE } from "@/lib/constants";
 
 type SubscribeBody = {
   endpoint?: string;
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
   const timezone =
     typeof body.timezone === "string" && isValidTimezone(body.timezone)
       ? body.timezone
-      : "UTC";
+      : DEFAULT_TIMEZONE;
 
   const hour =
     typeof body.dailyReminderHour === "number" &&

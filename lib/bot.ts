@@ -30,13 +30,9 @@ export function getBotResponseTimeMs(difficulty: BotDifficulty = "medium"): numb
 /** Delay until the bot locks an answer, relative to round start. */
 export function getBotResponseDelayMs(
   roundStartedAt: number,
-  difficulty: BotDifficulty = "medium",
-  pauseMs = 0
+  difficulty: BotDifficulty = "medium"
 ): number {
-  return Math.max(
-    0,
-    getBotResponseTimeMs(difficulty) - (Date.now() - roundStartedAt - pauseMs)
-  );
+  return Math.max(0, getBotResponseTimeMs(difficulty) - (Date.now() - roundStartedAt));
 }
 
 /** Resolve bot tier from the ghost opponent label stored on the session. */

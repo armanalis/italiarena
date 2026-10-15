@@ -4,11 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run test:unit",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
     "audit:questions": "tsx scripts/audit-questions.ts",
-    "test:match-resume": "tsx scripts/test-match-resume.ts",
+    "test": "npm run test:unit && npm run test:sql",
+    "test:unit": "for f in scripts/test-*.ts; do tsx \"$f\" || exit 1; done",
     "test:sql": "node supabase/match-sql.test.mjs"
   },
   "dependencies": {
@@ -20,8 +22,8 @@
     "next": "^16.4.0",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.4.3",
-    "react": "^18",
-    "react-dom": "^18",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "react-markdown": "^10.1.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
@@ -32,8 +34,8 @@
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
     "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@types/web-push": "^3.6.4",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.2.6",

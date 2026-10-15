@@ -7,7 +7,6 @@ import {
   submitQuestionReport,
   type ReportQuestionResult,
 } from "@/lib/report-question-client";
-import { useGameStore } from "@/store/useGameStore";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -50,8 +49,6 @@ type ReportQuestionButtonProps = {
   questionText: string;
   className?: string;
   showLabel?: boolean;
-  /** When false, opening the dialog does not pause the match timer. */
-  pauseMatchTimer?: boolean;
   reported?: boolean;
   onReported?: () => void;
 };
@@ -61,11 +58,9 @@ export function ReportQuestionButton({
   questionText,
   className,
   showLabel = false,
-  pauseMatchTimer = true,
   reported = false,
   onReported,
 }: ReportQuestionButtonProps) {
-  const setReportDialogOpen = useGameStore((state) => state.setReportDialogOpen);
   const [open, setOpen] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<ReportIssueType | null>(
     null
@@ -116,24 +111,15 @@ export function ReportQuestionButton({
   function closeDialog() {
     setOpen(false);
     setSelectedIssue(null);
-    if (pauseMatchTimer) {
-      setReportDialogOpen(false);
-    }
   }
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && isSubmitting) {
       // Let the user escape a slow submit without trapping the whole match.
       setIsSubmitting(false);
-      if (pauseMatchTimer) {
-        setReportDialogOpen(false);
-      }
     }
 
     setOpen(nextOpen);
-    if (pauseMatchTimer) {
-      setReportDialogOpen(nextOpen);
-    }
     if (!nextOpen) {
       setSelectedIssue(null);
     }

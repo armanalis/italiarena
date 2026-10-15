@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, ChevronRight, Clock, Loader2, SkipForward, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,7 +43,7 @@ function lettersOf(view: PassaparolaView) {
   return view.clues.map((clue) => clue.letter);
 }
 
-// Input does not forward refs (React 18), so the field is found through its form.
+// The answer field is found through its form, so no ref has to be passed around.
 function focusAnswer(form: HTMLFormElement | null) {
   (form?.elements.namedItem("answer") as HTMLInputElement | null)?.focus();
 }
@@ -77,6 +77,14 @@ export function PassaparolaGame({
   const [countdown, setCountdown] = useState<number | null>(null);
 
   const playing = Boolean(view?.started && !view.finished);
+  // Leaving during the 3-2-1 must not start today's only clock in the background.
+  const leftRef = useRef(false);
+  useEffect(() => {
+    leftRef.current = false;
+    return () => {
+      leftRef.current = true;
+    };
+  }, []);
 
   /** Sends one move; the next letter is the first one still to play after `after`. */
   async function send(nextLevel: string, move: Move, after: string | null) {
@@ -125,6 +133,9 @@ export function PassaparolaGame({
     for (const second of [3, 2, 1]) {
       setCountdown(second);
       await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    if (leftRef.current) {
+      return;
     }
     // The clock starts only now, so the countdown costs no playing time.
     await send(level, { start: true }, null);

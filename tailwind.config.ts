@@ -1,5 +1,15 @@
 import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
 import tailwindcssAnimate from "tailwindcss-animate";
+
+/**
+ * The theme colors are whole oklch() values in CSS variables, so Tailwind 3
+ * cannot add opacity to them by itself: without this, bg-primary/10 and
+ * border-border/60 produced no CSS at all. oklab, not oklch: Chrome drops the
+ * hue when mixing in oklch, and grey turns red.
+ */
+const themeColor = (name: string) =>
+  `color-mix(in oklab, var(--${name}) calc(<alpha-value> * 100%), transparent)`;
 
 const config: Config = {
   darkMode: ["class"],
@@ -16,55 +26,55 @@ const config: Config = {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
       },
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        background: themeColor("background"),
+        foreground: themeColor("foreground"),
         card: {
-          DEFAULT: "var(--card)",
-          foreground: "var(--card-foreground)",
+          DEFAULT: themeColor("card"),
+          foreground: themeColor("card-foreground"),
         },
         popover: {
-          DEFAULT: "var(--popover)",
-          foreground: "var(--popover-foreground)",
+          DEFAULT: themeColor("popover"),
+          foreground: themeColor("popover-foreground"),
         },
         primary: {
-          DEFAULT: "var(--primary)",
-          foreground: "var(--primary-foreground)",
+          DEFAULT: themeColor("primary"),
+          foreground: themeColor("primary-foreground"),
         },
         secondary: {
-          DEFAULT: "var(--secondary)",
-          foreground: "var(--secondary-foreground)",
+          DEFAULT: themeColor("secondary"),
+          foreground: themeColor("secondary-foreground"),
         },
         muted: {
-          DEFAULT: "var(--muted)",
-          foreground: "var(--muted-foreground)",
+          DEFAULT: themeColor("muted"),
+          foreground: themeColor("muted-foreground"),
         },
         accent: {
-          DEFAULT: "var(--accent)",
-          foreground: "var(--accent-foreground)",
+          DEFAULT: themeColor("accent"),
+          foreground: themeColor("accent-foreground"),
         },
         destructive: {
-          DEFAULT: "var(--destructive)",
-          foreground: "var(--destructive-foreground)",
+          DEFAULT: themeColor("destructive"),
+          foreground: themeColor("destructive-foreground"),
         },
-        border: "var(--border)",
-        input: "var(--input)",
-        ring: "var(--ring)",
+        border: themeColor("border"),
+        input: themeColor("input"),
+        ring: themeColor("ring"),
         chart: {
-          "1": "var(--chart-1)",
-          "2": "var(--chart-2)",
-          "3": "var(--chart-3)",
-          "4": "var(--chart-4)",
-          "5": "var(--chart-5)",
+          "1": themeColor("chart-1"),
+          "2": themeColor("chart-2"),
+          "3": themeColor("chart-3"),
+          "4": themeColor("chart-4"),
+          "5": themeColor("chart-5"),
         },
         sidebar: {
-          DEFAULT: "var(--sidebar)",
-          foreground: "var(--sidebar-foreground)",
-          primary: "var(--sidebar-primary)",
-          "primary-foreground": "var(--sidebar-primary-foreground)",
-          accent: "var(--sidebar-accent)",
-          "accent-foreground": "var(--sidebar-accent-foreground)",
-          border: "var(--sidebar-border)",
-          ring: "var(--sidebar-ring)",
+          DEFAULT: themeColor("sidebar"),
+          foreground: themeColor("sidebar-foreground"),
+          primary: themeColor("sidebar-primary"),
+          "primary-foreground": themeColor("sidebar-primary-foreground"),
+          accent: themeColor("sidebar-accent"),
+          "accent-foreground": themeColor("sidebar-accent-foreground"),
+          border: themeColor("sidebar-border"),
+          ring: themeColor("sidebar-ring"),
         },
       },
       borderRadius: {
@@ -72,9 +82,22 @@ const config: Config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      // Tailwind 4 names the shadcn components use.
+      ringWidth: { 3: "3px" },
+      boxShadow: { xs: "0 1px 2px 0 rgb(0 0 0 / 0.05)" },
+      backdropBlur: { xs: "4px" },
     },
   },
-  plugins: [tailwindcssAnimate],
+  plugins: [
+    tailwindcssAnimate,
+    plugin(({ addUtilities, addVariant }) => {
+      // Tailwind 4 variants; Radix marks open and closed with data-state.
+      addVariant("data-open", '&[data-state="open"]');
+      addVariant("data-closed", '&[data-state="closed"]');
+      addVariant("supports-backdrop-filter", "@supports (backdrop-filter: blur(0))");
+      addUtilities({ ".outline-hidden": { outline: "2px solid transparent", "outline-offset": "2px" } });
+    }),
+  ],
 };
 
 export default config;

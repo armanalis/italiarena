@@ -44,11 +44,18 @@ function isAppRoute(pathname: string) {
   );
 }
 
+/**
+ * The page a signed-out visitor asked for (a shared challenge or Wordle).
+ * Set on the way to /login, used once they first reach "/" signed in and
+ * onboarded: that covers email, Google, sign-up and guest flows alike.
+ */
+const AFTER_LOGIN_COOKIE = "after_login";
+
 function isSoftNavigation(request: NextRequest) {
   return request.headers.get("RSC") === "1";
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const host =
     request.headers.get("x-forwarded-host") ??
     request.headers.get("host") ??
@@ -108,8 +115,15 @@ export async function middleware(request: NextRequest) {
   if (isProtectedRoute && !user) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
-    loginUrl.searchParams.set("redirectTo", pathname);
-    return NextResponse.redirect(loginUrl);
+    loginUrl.search = "";
+    const response = NextResponse.redirect(loginUrl);
+    response.cookies.set(AFTER_LOGIN_COOKIE, `${pathname}${request.nextUrl.search}`, {
+      httpOnly: true,
+      maxAge: 60 * 60,
+      path: "/",
+      sameSite: "lax",
+    });
+    return response;
   }
 
   if (isAppRoute(pathname) && user && !isSoftNavigation(request)) {
@@ -132,6 +146,19 @@ export async function middleware(request: NextRequest) {
       const nextUrl = request.nextUrl.clone();
       nextUrl.pathname = "/guest";
       return NextResponse.redirect(nextUrl);
+    }
+  }
+
+  const afterLogin = request.cookies.get(AFTER_LOGIN_COOKIE)?.value;
+  if (afterLogin && user && pathname === "/") {
+    if ((await getPostAuthPathForUser(supabase, user)) === "/") {
+      const target = new URL(afterLogin, request.url);
+      // Same site only: a doctored cookie must not send players elsewhere.
+      const response = NextResponse.redirect(
+        target.origin === request.nextUrl.origin ? target : new URL("/", request.url)
+      );
+      response.cookies.delete(AFTER_LOGIN_COOKIE);
+      return response;
     }
   }
 
