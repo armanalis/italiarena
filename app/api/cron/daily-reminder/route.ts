@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { authorizeCron } from "@/lib/cron-auth";
 import {
-  buildDailyReminderPayload,
+  buildDailyReminderPayloads,
   isReminderDue,
   mapWithConcurrency,
   sendPushToUser,
@@ -92,17 +92,16 @@ async function runDailyReminderCron(options: { dryRun: boolean }) {
     }
 
     try {
-      const { data: streakRows } = await admin.rpc("match_streak", { p_user_id: user.id });
-      const streak = streakRows?.[0];
-      const streakAtRisk = streak && !streak.played_today ? streak.streak : 0;
-      const result = await sendPushToUser(user.id, buildDailyReminderPayload(streakAtRisk));
-      return {
-        sent: result.sent,
-        failed: result.failed,
-        pruned: result.pruned,
-        notified: result.sent > 0 ? 1 : 0,
-        skipped: 0,
-      };
+      const { data: streaks } = await admin.rpc("game_streaks", { p_user_id: user.id });
+      const totals = { ...empty };
+      // One after another: a dead device pruned by the first push is skipped by the rest.
+      for (const payload of buildDailyReminderPayloads(streaks ?? [])) {
+        const result = await sendPushToUser(user.id, payload);
+        totals.sent += result.sent;
+        totals.failed += result.failed;
+        totals.pruned += result.pruned;
+      }
+      return { ...totals, notified: totals.sent > 0 ? 1 : 0 };
     } catch {
       // One user's failure must not abandon the rest of the batch.
       return { ...empty, failed: 1 };

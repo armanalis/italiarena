@@ -21,6 +21,7 @@ import { MatchmakingStartLink } from "@/components/matchmaking/matchmaking-start
 import { getAdminQueueCounts } from "@/lib/admin-queue-counts";
 import { getCurrentUserProfile, isGuestUser } from "@/lib/auth";
 import { playPassaparola } from "@/lib/passaparola";
+import type { GameStreak } from "@/lib/push";
 import { italyToday, playWordle } from "@/lib/wordle";
 import { ArrowRight, ChevronRight, PenLine, ShieldAlert, Swords, UserRound } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
@@ -50,12 +51,14 @@ export async function PlayDashboardContent({
   const level = profile.proficiency_level;
   // Loads only: today's puzzles are not started or played from here.
   const [{ data: streakRows }, stats, wordle, passaparola] = await Promise.all([
-    supabase.rpc("get_my_streak"),
+    supabase.rpc("get_my_streaks"),
     getPlayerStatistics(),
     playWordle(supabase, level, italyToday(), null),
     playPassaparola(supabase, level),
   ]);
-  const streak = (streakRows as { streak: number; played_today: boolean }[] | null)?.[0];
+  const streaks = Object.fromEntries(
+    ((streakRows as GameStreak[] | null) ?? []).map((row) => [row.game, row])
+  );
 
   return (
     <main className="flex w-full min-w-0 flex-1 flex-col">
@@ -143,7 +146,7 @@ export async function PlayDashboardContent({
           <ArenaSummary stats={stats} />
         </section>
 
-        <TodayRow wordle={wordle} passaparola={passaparola} streak={streak} />
+        <TodayRow wordle={wordle} passaparola={passaparola} streaks={streaks} />
 
         {!guest && (
           <Link

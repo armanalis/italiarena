@@ -31,20 +31,56 @@ export function pickDailyReminderMessage() {
   return DAILY_REMINDER_MESSAGES[index] ?? DAILY_REMINDER_MESSAGES[0];
 }
 
-/**
- * A fresh reminder payload with randomly chosen copy. A streak that today's
- * match would extend gets its own line instead.
- */
-export function buildDailyReminderPayload(streakAtRisk = 0): PushPayload {
+/** A fresh reminder payload with randomly chosen copy. */
+export function buildDailyReminderPayload(): PushPayload {
   return {
     title: APP_NAME,
-    body:
-      streakAtRisk > 0
-        ? `Keep your ${streakAtRisk}-day streak alive: one quick match is enough.`
-        : pickDailyReminderMessage(),
+    body: pickDailyReminderMessage(),
     url: "/matchmaking",
     tag: "daily-reminder",
   };
+}
+
+/** One row of get_my_streaks / game_streaks. */
+export type GameStreak = {
+  game: "arena" | "wordle" | "passaparola";
+  streak: number;
+  played_today: boolean;
+};
+
+const STREAK_REMINDERS: Record<GameStreak["game"], { url: string; body: (days: number) => string }> = {
+  arena: {
+    url: "/matchmaking",
+    body: (days) => `Keep your ${days}-day Arena streak alive: one quick match is enough.`,
+  },
+  wordle: {
+    url: "/wordle",
+    body: (days) => `Keep your ${days}-day Wordle streak alive: today's word is waiting.`,
+  },
+  passaparola: {
+    url: "/passaparola",
+    body: (days) => `Keep your ${days}-day Passaparola streak alive: five minutes is enough.`,
+  },
+};
+
+/**
+ * One reminder per streak that today's play would extend, each opening its
+ * own game (separate tags, so they do not replace each other). The usual
+ * reminder when no streak is at risk.
+ */
+export function buildDailyReminderPayloads(streaks: readonly GameStreak[]): PushPayload[] {
+  const atRisk = streaks.filter(
+    ({ game, streak, played_today }) => streak > 0 && !played_today && game in STREAK_REMINDERS
+  );
+  if (atRisk.length === 0) {
+    return [buildDailyReminderPayload()];
+  }
+  return atRisk.map(({ game, streak }) => ({
+    title: APP_NAME,
+    body: STREAK_REMINDERS[game].body(streak),
+    url: STREAK_REMINDERS[game].url,
+    tag: `daily-reminder-${game}`,
+  }));
 }
 
 export type ReminderUser = {
