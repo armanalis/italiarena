@@ -1,10 +1,10 @@
 /**
  * Daily reminders: due once the player's clock reaches their hour, once per
- * local day, even when the hourly trigger skips hours.
+ * local day, even when the hourly trigger skips hours; one per streak at risk.
  * Run: npx tsx scripts/test-reminder-due.ts
  */
 import assert from "node:assert/strict";
-import { isReminderDue, type ReminderUser } from "../lib/push";
+import { buildDailyReminderPayloads, isReminderDue, type ReminderUser } from "../lib/push";
 
 const rome = (hour: number | null, lastSent: string | null = null): ReminderUser => ({
   daily_reminder_hour: hour,
@@ -34,3 +34,25 @@ assert.equal(
 );
 
 console.log("ok - reminder due: at or after the chosen hour, once per local day");
+
+const none = buildDailyReminderPayloads([
+  { game: "arena", streak: 0, played_today: false },
+  { game: "wordle", streak: 4, played_today: true },
+]);
+assert.deepEqual(none.map((p) => p.tag), ["daily-reminder"], "no streak at risk: the usual reminder");
+const atRisk = buildDailyReminderPayloads([
+  { game: "arena", streak: 3, played_today: false },
+  { game: "wordle", streak: 5, played_today: true },
+  { game: "passaparola", streak: 2, played_today: false },
+]);
+assert.deepEqual(
+  atRisk.map((p) => [p.tag, p.url, p.body]),
+  [
+    ["daily-reminder-arena", "/matchmaking", "Keep your 3-day Arena streak alive: one quick match is enough."],
+    ["daily-reminder-passaparola", "/passaparola", "Keep your 2-day Passaparola streak alive: five minutes is enough."],
+  ],
+  "one reminder per streak at risk, opening its game"
+);
+assert.deepEqual(buildDailyReminderPayloads([]).map((p) => p.tag), ["daily-reminder"], "streaks not loaded");
+
+console.log("ok - reminder payloads: one per streak at risk, the usual one otherwise");

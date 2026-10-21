@@ -1,7 +1,8 @@
-/** The Arena's "Today" row: today's Wordle, Passaparola and streak at a glance. */
+/** The Arena's "Today" row: today's Wordle, Passaparola and Arena streak at a glance. */
 import Link from "next/link";
 import { Check, ChevronRight, CircleDashed, Flame, Grid3x3, type LucideIcon } from "lucide-react";
 import type { PassaparolaTurnResult } from "@/lib/passaparola";
+import type { GameStreak } from "@/lib/push";
 import { cn } from "@/lib/utils";
 import { WORDLE_MAX_GUESSES, type WordleTurnResult } from "@/lib/wordle";
 
@@ -12,9 +13,13 @@ type Tile = {
   icon: LucideIcon;
   accent: string;
   href?: string;
+  /** Days in this game's streak, shown next to the title. */
+  streak?: number;
 };
 
-function wordleTile(result: WordleTurnResult): Tile {
+type Streaks = Partial<Record<GameStreak["game"], GameStreak>>;
+
+function wordleTile(result: WordleTurnResult, streak: GameStreak | undefined): Tile {
   const view = result.ok ? result.view : null;
   const guesses = view?.guesses.length ?? 0;
   return {
@@ -31,10 +36,11 @@ function wordleTile(result: WordleTurnResult): Tile {
     icon: Grid3x3,
     accent: "text-emerald-500",
     href: "/wordle",
+    streak: streak?.streak,
   };
 }
 
-function passaparolaTile(result: PassaparolaTurnResult): Tile {
+function passaparolaTile(result: PassaparolaTurnResult, streak: GameStreak | undefined): Tile {
   const view = result.ok ? result.view : null;
   const right = view ? Object.values(view.marks).filter((mark) => mark === "right").length : 0;
   return {
@@ -48,13 +54,14 @@ function passaparolaTile(result: PassaparolaTurnResult): Tile {
     icon: CircleDashed,
     accent: "text-sky-500",
     href: "/passaparola",
+    streak: streak?.streak,
   };
 }
 
-function streakTile(streak: { streak: number; played_today: boolean } | undefined): Tile {
+function arenaStreakTile(streak: GameStreak | undefined): Tile {
   const days = streak?.streak ?? 0;
   return {
-    title: days > 0 ? `${days}-day streak` : "Streak",
+    title: days > 0 ? `${days}-day Arena streak` : "Arena streak",
     status: streak?.played_today
       ? "Done for today"
       : days > 0
@@ -71,13 +78,17 @@ const TILE = "flex h-full items-center gap-3 rounded-2xl border border-border px
 export function TodayRow({
   wordle,
   passaparola,
-  streak,
+  streaks,
 }: {
   wordle: WordleTurnResult;
   passaparola: PassaparolaTurnResult;
-  streak: { streak: number; played_today: boolean } | undefined;
+  streaks: Streaks;
 }) {
-  const tiles = [wordleTile(wordle), passaparolaTile(passaparola), streakTile(streak)];
+  const tiles = [
+    wordleTile(wordle, streaks.wordle),
+    passaparolaTile(passaparola, streaks.passaparola),
+    arenaStreakTile(streaks.arena),
+  ];
 
   return (
     <section aria-labelledby="today-heading" className="mx-auto w-full max-w-3xl space-y-2">
@@ -85,14 +96,23 @@ export function TodayRow({
         Today
       </h2>
       <ul className="grid gap-3 sm:grid-cols-3">
-        {tiles.map(({ title, status, done, icon: Icon, accent, href }) => {
+        {tiles.map(({ title, status, done, icon: Icon, accent, href, streak }) => {
           const content = (
             <>
               <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted">
                 <Icon className={cn("size-4", accent)} aria-hidden />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium">{title}</span>
+                <span className="block text-sm font-medium">
+                  {title}
+                  {Boolean(streak) && (
+                    <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs text-orange-500">
+                      <Flame className="size-3" aria-hidden />
+                      {streak}
+                      <span className="sr-only">-day streak</span>
+                    </span>
+                  )}
+                </span>
                 <span className="block truncate text-xs text-muted-foreground">{status}</span>
               </span>
               {done ? (
