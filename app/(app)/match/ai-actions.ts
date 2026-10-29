@@ -29,6 +29,7 @@ export type AskAiExplanationResult =
 
 type ExplainableQuestion = {
   id: string;
+  language: string;
   category: string;
   question_text: string;
   option_a: string;
@@ -97,7 +98,7 @@ async function loadExplainableQuestion(
   questionId: string
 ): Promise<ExplainableQuestion | null> {
   const columns =
-    "id, category, question_text, option_a, option_b, option_c, option_d, correct_answer";
+    "id, language, category, question_text, option_a, option_b, option_c, option_d, correct_answer";
 
   for (const table of ["questions_active", "questions_flagged"]) {
     const { data } = await supabase
@@ -274,7 +275,7 @@ export async function askQuestionExplanation(
     selectedAnswer,
     selectedOptionText: selectedAnswer ? optionText(question, selectedAnswer) : null,
     wasCorrect: selectedAnswer === question.correct_answer,
-  });
+  }, question.language);
 
   if ("error" in generated) {
     return { success: false, error: generated.error, asksRemaining };

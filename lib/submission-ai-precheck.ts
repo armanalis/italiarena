@@ -47,8 +47,8 @@ function buildPrecheckPrompt(payload: QuestionSubmissionPayload): string {
   const categoryGuide = CATEGORY_GUIDANCE[payload.category];
 
   return [
-    "You are a strict Italian CEFR quiz reviewer for a language-learning app (ItaliaArena).",
-    "The app teaches ITALIAN only. Reject anything that is not a real Italian learning question.",
+    `You are a strict ${payload.language} CEFR quiz reviewer for a language-learning app (ItaliaArena).`,
+    `This question is for the ${payload.language.toUpperCase()} pool only. Reject anything that is not a real ${payload.language} learning question.`,
     "This is advisory only — a human admin makes the final decision.",
     "",
     "Return ONLY valid JSON with this exact shape:",
@@ -63,16 +63,16 @@ function buildPrecheckPrompt(payload: QuestionSubmissionPayload): string {
     "}",
     "",
     "HARD REJECT rules (recommendation MUST be likely_reject, language_ok MUST be no):",
-    "- Question/options are not Italian (Turkish, English, Spanish, etc.).",
-    "- Gibberish, joke text, spam, or nonsense with no real Italian learning value.",
-    "- Random names/phrases that do not form a coherent Italian quiz item.",
-    "- Content that cannot teach Italian grammar, vocabulary, fill-in-the-blank, or idioms.",
+    `- Question/options are not ${payload.language} (Turkish, English, Spanish, etc.).`,
+    `- Gibberish, joke text, spam, or nonsense with no real ${payload.language} learning value.`,
+    `- Random names/phrases that do not form a coherent ${payload.language} quiz item.`,
+    `- Content that cannot teach ${payload.language} grammar, vocabulary, fill-in-the-blank, or idioms.`,
     "",
     "Other rules:",
     "- likely_reject: wrong language/junk OR clear wrong level (e.g. basic A1 vocab labeled B2) OR wrong category.",
-    "- review_carefully: plausible Italian but ambiguous, weak distractors, or borderline level.",
-    "- approve: clearly Italian; level and category fit; one clear correct answer.",
-    "- If language_ok is no: do NOT say category fits. Flag 'Not Italian' / 'Wrong language' / 'Junk or spam'.",
+    `- review_carefully: plausible ${payload.language} but ambiguous, weak distractors, or borderline level.`,
+    `- approve: clearly ${payload.language}; level and category fit; one clear correct answer.`,
+    `- If language_ok is no: do NOT say category fits. Flag 'Not ${payload.language}' / 'Wrong language' / 'Junk or spam'.`,
     "- suggested_level: only when level_match is not match AND language_ok is yes.",
     "- When language fails, set level_match and category_match to unclear.",
     "",
@@ -156,8 +156,8 @@ function parsePrecheckJson(raw: string): SubmissionAiPrecheck | null {
       recommendation = "likely_reject";
       level_match = "unclear";
       category_match = "unclear";
-      if (!flags.some((flag) => /italian|language|junk|spam|gibberish/i.test(flag))) {
-        flags.unshift("Not Italian / wrong language or junk content");
+      if (!flags.some((flag) => /italian|german|language|junk|spam|gibberish/i.test(flag))) {
+        flags.unshift("Wrong language or junk content");
       }
     }
 
@@ -192,8 +192,7 @@ export async function generateSubmissionAiPrecheck(
 > {
   const result = await groqChat({
     label: "pre-check",
-    system:
-      "You review Italian quiz questions. First check the content is real Italian suitable for learning Italian; then check CEFR level and category. Reject non-Italian, gibberish, or spam. Output JSON only.",
+    system: `You review ${payload.language} quiz questions. First check the content is real ${payload.language} suitable for learning ${payload.language}; then check CEFR level and category. Reject non-${payload.language}, gibberish, or spam. Output JSON only.`,
     user: buildPrecheckPrompt(payload),
     temperature: 0.1,
     maxTokens: 1100,
@@ -228,9 +227,9 @@ export function formatAiRecommendationLabel(
 export function formatAiLanguageOkLabel(languageOk: SubmissionAiLanguageOk): string {
   switch (languageOk) {
     case "yes":
-      return "Language: Italian";
+      return "Language: OK";
     case "no":
-      return "Language: not Italian / junk";
+      return "Language: wrong language / junk";
     case "unclear":
       return "Language: unclear";
   }

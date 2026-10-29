@@ -146,7 +146,7 @@ function buildAuditPrompt(question: QuestionActive): string {
   const categoryGuide = CATEGORY_GUIDANCE[category];
 
   return [
-    "You are a strict Italian CEFR multiple-choice quiz auditor.",
+    `You are a strict ${question.language} CEFR multiple-choice quiz auditor.`,
     "Check whether this live quiz question is correct enough for public users.",
     "Be conservative: if the marked correct answer is wrong, or two options are both correct / identical, verdict must be fail.",
     "",
@@ -168,9 +168,9 @@ function buildAuditPrompt(question: QuestionActive): string {
     "}",
     "",
     "Rules:",
-    "- pass: one clear correct answer, Italian looks natural, level/category fit.",
+    `- pass: one clear correct answer, ${question.language} looks natural, level/category fit.`,
     "- review: minor typo/style issue, weak distractors, or borderline level.",
-    "- fail: wrong marked answer, duplicate/identical options, multiple valid answers, broken Italian, or clear level/category mismatch.",
+    `- fail: wrong marked answer, duplicate/identical options, multiple valid answers, broken ${question.language}, or clear level/category mismatch.`,
     "- suggested_fix: only include fields that should change. Prefer minimal edits.",
     "- suggested_correct_answer: set when the marked letter is wrong.",
     "",
@@ -283,8 +283,7 @@ export async function auditQuestionWithAi(
 > {
   const ai = await groqChat({
     label: "audit",
-    system:
-      "You audit Italian quiz questions for correctness before public release. Output JSON only.",
+    system: `You audit ${question.language} quiz questions for correctness before public release. Output JSON only.`,
     user: buildAuditPrompt(question),
     temperature: 0.1,
     maxTokens: 1400,

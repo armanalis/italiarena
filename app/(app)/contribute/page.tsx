@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PenLine } from "lucide-react";
 import { QuestionSubmissionForm } from "@/components/contribute/question-submission-form";
 import { Button } from "@/components/ui/button";
+import { DEFAULT_LANGUAGE } from "@/lib/constants";
 import { isGuestUser, requireOnboardingComplete } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
@@ -46,7 +47,7 @@ export default async function ContributePage() {
       </header>
 
       <div className="mx-auto w-full max-w-3xl p-4 sm:p-8">
-        <QuestionSubmissionForm pendingCount={pendingCount ?? 0} />
+        <QuestionSubmissionForm pendingCount={pendingCount ?? 0} language={profile.target_language ?? DEFAULT_LANGUAGE} />
       </div>
     </main>
   );

@@ -76,7 +76,7 @@ export const CATEGORY_GUIDANCE: Record<
   idioms: {
     title: "Idioms",
     must: [
-      "Focus on a common Italian idiom, expression, or fixed phrase.",
+      "Focus on a common idiom, expression, or fixed phrase.",
       "Wrong answers should misunderstand the idiom literally or confuse similar expressions.",
     ],
     avoid: [
@@ -88,59 +88,66 @@ export const CATEGORY_GUIDANCE: Record<
 
 export const LEVEL_GUIDANCE: Record<
   ProficiencyLevel,
-  { summary: string; suitable: string[]; too_hard: string[] }
+  { summary: string; suitable: Record<TargetLanguage, string[]>; too_hard: string[] }
 > = {
   A1: {
     summary: "Beginner — present tense, basic nouns, everyday survival phrases.",
-    suitable: [
-      "ciao, essere/avere, numbers, family, food, simple present tense",
-    ],
+    suitable: {
+      Italian: ["ciao, essere/avere, numbers, family, food, simple present tense"],
+      German: ["hallo, sein/haben, numbers, family, food, simple present tense"],
+    },
     too_hard: [
       "subjunctive, complex clauses, abstract topics, literary vocabulary",
     ],
   },
   "A1-A2": {
     summary: "High beginner — simple past introduction, slightly longer sentences.",
-    suitable: [
-      "routine actions, passato prossimo with common verbs, basic questions",
-    ],
+    suitable: {
+      Italian: ["routine actions, passato prossimo with common verbs, basic questions"],
+      German: ["routine actions, Perfekt with common verbs, W-questions"],
+    },
     too_hard: ["conditionals, passive voice, formal register, idioms"],
   },
   A2: {
     summary: "Elementary — past tenses, future plans, familiar topics.",
-    suitable: [
-      "passato prossimo vs imperfetto basics, shopping, travel, daily routine",
-    ],
+    suitable: {
+      Italian: ["passato prossimo vs imperfetto basics, shopping, travel, daily routine"],
+      German: ["Perfekt vs Präteritum of sein/haben, modal verbs, shopping, travel"],
+    },
     too_hard: ["nuanced subjunctive, advanced idioms, specialized jargon"],
   },
   "A2-B1": {
     summary: "Bridge to intermediate — longer sentences, opinion with simple support.",
-    suitable: [
-      "comparisons, common connectors (perché, quindi), B1-adjacent vocab in clear context",
-    ],
+    suitable: {
+      Italian: ["comparisons, common connectors (perché, quindi), B1-adjacent vocab in clear context"],
+      German: ["comparisons, common connectors (weil, deshalb), dative and accusative prepositions"],
+    },
     too_hard: ["C1 literary style, rare idioms, legal/medical terminology"],
   },
   B1: {
     summary: "Intermediate — opinions, experiences, less predictable grammar.",
-    suitable: [
-      "imperfect vs perfect contrast, ci/ne, pronouns, intermediate connectors",
-    ],
-    too_hard: ["dense subjunctive chains, highly formal or archaic Italian"],
+    suitable: {
+      Italian: ["imperfect vs perfect contrast, ci/ne, pronouns, intermediate connectors"],
+      German: ["subordinate clause word order (dass, wenn, als), reflexive verbs, adjective endings"],
+    },
+    too_hard: ["dense subjunctive chains, highly formal or archaic language"],
   },
   B2: {
     summary: "Upper intermediate — nuance, register, and complex structures.",
-    suitable: [
-      "subjunctive in common triggers, passive, relative clauses, less common idioms",
-    ],
+    suitable: {
+      Italian: ["subjunctive in common triggers, passive, relative clauses, less common idioms"],
+      German: ["Konjunktiv II, passive, relative clauses, less common idioms"],
+    },
     too_hard: [
       "A1-level greetings or single-word meaning unless testing a subtle B2 point",
     ],
   },
   C1: {
     summary: "Advanced — precision, register, idiomatic and abstract language.",
-    suitable: [
-      "subtle connotations, formal/informal register, advanced collocations",
-    ],
+    suitable: {
+      Italian: ["subtle connotations, formal/informal register, advanced collocations"],
+      German: ["subtle connotations, formal/informal register, advanced collocations"],
+    },
     too_hard: ["trivial A2 vocabulary with no advanced angle"],
   },
 };
