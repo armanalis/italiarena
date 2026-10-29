@@ -15,8 +15,9 @@ function formatAnswerLine(
   return `${letter}. ${text ?? ""}`.trim();
 }
 
-export function buildItalianExplanationPrompt(
-  payload: AskAiExplanationPayload
+export function buildExplanationPrompt(
+  payload: AskAiExplanationPayload,
+  language: string
 ): string {
   const studentLine = payload.wasCorrect
     ? `The student answered correctly: ${formatAnswerLine(
@@ -31,7 +32,7 @@ export function buildItalianExplanationPrompt(
       )}.`;
 
   return [
-    "You are an Italian teacher helping international university students in Italy.",
+    `You are a ${language} teacher helping international university students.`,
     "Explain in clear, simple English using at most 4 short paragraphs.",
     "Focus on the grammar or vocabulary rule. Be concise and practical.",
     "Do not change the correct answer. Do not add unrelated trivia.",
@@ -124,13 +125,13 @@ export async function groqChat(request: {
 }
 
 export async function generateGroqExplanation(
-  payload: AskAiExplanationPayload
+  payload: AskAiExplanationPayload,
+  language: string
 ): Promise<{ explanation: string } | { error: string }> {
   const result = await groqChat({
     label: "explanation",
-    system:
-      "You explain Italian quiz answers to English-speaking learners. Stay accurate and encouraging.",
-    user: buildItalianExplanationPrompt(payload),
+    system: `You explain ${language} quiz answers to English-speaking learners. Stay accurate and encouraging.`,
+    user: buildExplanationPrompt(payload, language),
     temperature: 0.35,
     maxTokens: 900,
   });

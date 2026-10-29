@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PROFICIENCY_LEVELS } from "@/lib/constants";
+import { PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
 import { scrollFieldIntoView } from "@/lib/scroll-field-into-view";
 import {
   CATEGORY_GUIDANCE,
@@ -30,9 +30,10 @@ const CORRECT_ANSWERS: CorrectAnswer[] = ["A", "B", "C", "D"];
 
 type QuestionSubmissionFormProps = {
   pendingCount: number;
+  language: TargetLanguage;
 };
 
-export function QuestionSubmissionForm({ pendingCount }: QuestionSubmissionFormProps) {
+export function QuestionSubmissionForm({ pendingCount, language }: QuestionSubmissionFormProps) {
   const [level, setLevel] = useState<(typeof PROFICIENCY_LEVELS)[number]>("B1");
   const [category, setCategory] =
     useState<QuestionCategory>("vocabulary");
@@ -144,7 +145,7 @@ export function QuestionSubmissionForm({ pendingCount }: QuestionSubmissionFormP
           <p className="mt-2 text-muted-foreground">{levelGuide.summary}</p>
           <p className="mt-3 font-medium text-foreground">Good fit</p>
           <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
-            {levelGuide.suitable.map((item) => (
+            {levelGuide.suitable[language].map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ul>

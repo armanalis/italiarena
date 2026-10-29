@@ -171,6 +171,7 @@ export function QuestionSubmissionsTable({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary">{submission.language}</Badge>
                   <Badge variant="secondary">{submission.level}</Badge>
                   <Badge variant="outline">
                     {formatCategoryLabel(submission.category)}
