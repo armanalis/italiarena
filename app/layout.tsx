@@ -24,7 +24,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(PRODUCTION_SITE_URL),
   title: APP_NAME,
-  description: "Learn Italian through quick, playful practice with others",
+  description: "Learn Italian or German through quick, playful practice with others",
   applicationName: APP_NAME,
   appleWebApp: {
     capable: true,

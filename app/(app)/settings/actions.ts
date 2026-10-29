@@ -11,6 +11,7 @@ import {
 } from "@/lib/dashboard-cache";
 import { createClient } from "@/utils/supabase/server";
 import {
+  DEFAULT_LANGUAGE,
   isTargetLanguage,
   PROFICIENCY_LEVELS,
   type ProficiencyLevel,
@@ -421,15 +422,18 @@ export async function deleteAccount(formData: FormData): Promise<SettingsActionR
   return { success: true, redirectTo: "/login" };
 }
 
+/** Stats for the language being played now; each language keeps its own. */
 export async function getPlayerStatistics(): Promise<PlayerStats | null> {
-  const userId = await getAuthUserId();
+  const profile = await getCurrentUserProfile();
 
-  if (!userId) {
+  if (!profile) {
     return null;
   }
 
+  const userId = profile.id;
+  const language = profile.target_language ?? DEFAULT_LANGUAGE;
   return cachedDashboardQuery(
-    ["player-stats", userId],
+    ["player-stats", userId, language],
     dashboardTag(userId, "statistics"),
     async () => {
       const supabase = await createClient();
@@ -437,6 +441,7 @@ export async function getPlayerStatistics(): Promise<PlayerStats | null> {
         .from("player_stats")
         .select("*")
         .eq("user_id", userId)
+        .eq("language", language)
         .maybeSingle();
 
       return data as PlayerStats | null;

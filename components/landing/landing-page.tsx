@@ -14,14 +14,14 @@ const features = [
     num: "01",
     title: "Just a few minutes a day",
     description:
-      "Short sessions that fit your schedule — learn Italian without blocking out hours of study time.",
+      "Short sessions that fit your schedule — learn Italian or German without blocking out hours of study time.",
   },
   {
     icon: Users,
     num: "02",
-    title: "Practice Italian with real people",
+    title: "Practice with real people",
     description:
-      "Practice Italian with others at your level through live quiz rounds at your pace.",
+      "Practice Italian or German with others at your level through live quiz rounds at your pace.",
   },
   {
     icon: Trophy,
@@ -38,12 +38,12 @@ export function LandingPage() {
       <main className="mx-auto w-full max-w-6xl px-4 pb-[max(3rem,env(safe-area-inset-bottom,0px))] pt-10 sm:px-6 sm:pt-14 lg:px-8 lg:pt-20">
         <section className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end lg:gap-14">
           <div className="space-y-8">
-            <p className="swiss-label">Italian · live quiz matches</p>
+            <p className="swiss-label">Italian · German · live quiz matches</p>
             <h1 className="hero-headline max-w-xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-[3.25rem]">
-              Learn Italian through quick, real practice
+              Learn Italian or German through quick, real practice
             </h1>
             <p className="max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Play timed rounds against real people or a bot. Pick up Italian
+              Play timed rounds against real people or a bot. Pick up new
               words and grammar naturally — without long lessons or heavy study
               blocks.
             </p>
