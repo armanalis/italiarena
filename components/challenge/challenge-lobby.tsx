@@ -19,13 +19,14 @@ type ChallengeLobbyProps = {
   code: string | null;
   state: "host" | "guest" | "not_for_you" | "closed";
   hostName: string | null;
+  language: string | null;
   level: string | null;
 };
 
 /** How often the host checks whether the friend has joined. */
 const JOIN_POLL_MS = 3_000;
 
-export function ChallengeLobby({ sessionId, link, code, state, hostName, level }: ChallengeLobbyProps) {
+export function ChallengeLobby({ sessionId, link, code, state, hostName, language, level }: ChallengeLobbyProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [copied, setCopied] = useState<"link" | "code" | null>(null);
@@ -67,8 +68,8 @@ export function ChallengeLobby({ sessionId, link, code, state, hostName, level }
       await navigator.share({
         title: "Italiarena challenge",
         text: code
-          ? `Play an Italian quiz match with me! Open the link, or enter code ${code} on the Play page:`
-          : "Play an Italian quiz match with me:",
+          ? `Play a ${language ?? "language"} quiz match with me! Open the link, or enter code ${code} on the Play page:`
+          : `Play a ${language ?? "language"} quiz match with me:`,
         url: link,
       });
     } catch {
@@ -151,7 +152,7 @@ export function ChallengeLobby({ sessionId, link, code, state, hostName, level }
                 {hostName ?? "A player"} challenged you
               </h1>
               <p className="text-sm text-muted-foreground">
-                A 10-question match{level ? ` at level ${level}` : ""}. Ready?
+                A 10-question {language ? `${language} ` : ""}match{level ? ` at level ${level}` : ""}. Ready?
               </p>
             </div>
             <Button type="button" className="min-h-11 w-full" onClick={join} disabled={isPending}>

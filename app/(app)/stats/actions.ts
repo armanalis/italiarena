@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getAuthUserId } from "@/lib/auth";
+import { getAuthUserId, getCurrentUserProfile } from "@/lib/auth";
+import { DEFAULT_LANGUAGE } from "@/lib/constants";
 import { cachedDashboardQuery, dashboardTag, revalidateUserDashboard } from "@/lib/dashboard-cache";
 import { resolveQuestionsWithAnswers } from "@/lib/questions-with-answers";
 import { isAnswerCorrect } from "@/lib/scoring";
@@ -52,17 +53,19 @@ async function resolveQuestionById(
   return questions.get(questionId) ?? null;
 }
 
+/** Mistakes in the language being played now (each question has its language). */
 export async function getUserMistakes(): Promise<UserMistakeWithQuestion[]> {
-  const userId = await getAuthUserId();
+  const profile = await getCurrentUserProfile();
 
-  if (!userId) {
+  if (!profile) {
     return [];
   }
 
+  const language = profile.target_language ?? DEFAULT_LANGUAGE;
   return cachedDashboardQuery(
-    ["user-mistakes", userId],
-    dashboardTag(userId, "statistics"),
-    () => fetchUserMistakes(userId)
+    ["user-mistakes", profile.id, language],
+    dashboardTag(profile.id, "statistics"),
+    () => fetchUserMistakes(profile.id, language)
   );
 }
 
@@ -86,7 +89,10 @@ export async function getReportedQuestionIds(): Promise<string[]> {
   ];
 }
 
-async function fetchUserMistakes(userId: string): Promise<UserMistakeWithQuestion[]> {
+async function fetchUserMistakes(
+  userId: string,
+  language: string
+): Promise<UserMistakeWithQuestion[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -107,7 +113,7 @@ async function fetchUserMistakes(userId: string): Promise<UserMistakeWithQuestio
 
   for (const row of data) {
     const question = questionsById.get(row.question_id);
-    if (!question) {
+    if (!question || question.language !== language) {
       continue;
     }
 

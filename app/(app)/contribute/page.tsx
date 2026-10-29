@@ -34,7 +34,7 @@ export default async function ContributePage() {
                 Contribute a question
               </h1>
               <p className="text-sm text-muted-foreground">
-                Help grow the Italian pool. Every submission is reviewed for level
+                Help grow the {profile.target_language} pool. Every submission is reviewed for level
                 and category accuracy before it goes live.
               </p>
             </div>

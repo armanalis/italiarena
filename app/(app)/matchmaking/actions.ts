@@ -114,7 +114,7 @@ async function markQuestionsSeen(userId: string, questionIds: string[]) {
   });
 }
 
-async function getQuestionRotationContext(userId: string) {
+async function getQuestionRotationContext(userId: string, language: string) {
   const supabase = await createClient();
 
   const [{ data: stats }, { data: lastSession }] = await Promise.all([
@@ -122,6 +122,7 @@ async function getQuestionRotationContext(userId: string) {
       .from("player_stats")
       .select("seen_questions")
       .eq("user_id", userId)
+      .eq("language", language)
       .maybeSingle(),
     supabase
       .from("game_sessions")
@@ -154,7 +155,7 @@ async function generateMatchQuestions(
         .select(PUBLIC_QUESTION_COLUMNS)
         .eq("language", language)
         .eq("level", level),
-      getQuestionRotationContext(userId),
+      getQuestionRotationContext(userId, language),
     ]);
 
   if (poolError) {
@@ -168,9 +169,7 @@ async function generateMatchQuestions(
   );
 
   if (regular.length < REGULAR_MATCH_QUESTIONS) {
-    throw new Error(
-      `Add at least ${REGULAR_MATCH_QUESTIONS} Italian questions for ${level} before playing.`
-    );
+    throw new Error(insufficientQuestionsMessage(language, level));
   }
 
   const sessionIds = regular.map((question) => question.id);
@@ -182,8 +181,8 @@ async function generateMatchQuestions(
   };
 }
 
-function insufficientQuestionsMessage(level: string) {
-  return `Add at least ${REGULAR_MATCH_QUESTIONS} Italian questions for ${level} before playing.`;
+function insufficientQuestionsMessage(language: string, level: string) {
+  return `Add at least ${REGULAR_MATCH_QUESTIONS} ${language} questions for ${level} before playing.`;
 }
 
 async function abandonOwnWaitingSession(
@@ -387,7 +386,7 @@ export async function searchForMatch(
       error:
         error instanceof Error
           ? error.message
-          : insufficientQuestionsMessage(level),
+          : insufficientQuestionsMessage(language, level),
     };
   }
 
@@ -447,7 +446,7 @@ export async function startBotMatch(
       error:
         error instanceof Error
           ? error.message
-          : insufficientQuestionsMessage(level),
+          : insufficientQuestionsMessage(language, level),
     };
   }
 
@@ -519,7 +518,7 @@ export async function createChallenge(
     return {
       success: false,
       error:
-        error instanceof Error ? error.message : insufficientQuestionsMessage(level),
+        error instanceof Error ? error.message : insufficientQuestionsMessage(language, level),
     };
   }
 
@@ -635,7 +634,7 @@ export async function offerRematch(
       error:
         generateError instanceof Error
           ? generateError.message
-          : insufficientQuestionsMessage(state.level),
+          : insufficientQuestionsMessage(state.language, state.level),
     };
   }
 

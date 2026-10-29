@@ -20,7 +20,7 @@ export default async function ChallengePage({ params }: ChallengePageProps) {
   // Service role: other players cannot read a private lobby; the link is the invitation.
   const { data: session } = await createAdminClient()
     .from("game_sessions")
-    .select("id, player_a_id, player_b_id, status, level, is_private, challenged_id")
+    .select("id, player_a_id, player_b_id, status, language, level, is_private, challenged_id")
     .eq("id", id)
     .maybeSingle();
 
@@ -52,6 +52,7 @@ export default async function ChallengePage({ params }: ChallengePageProps) {
       code={code}
       state={!open ? "closed" : isHost ? "host" : sentToSomeoneElse ? "not_for_you" : "guest"}
       hostName={open && !isHost ? await getPlayerDisplayName(session!.player_a_id) : null}
+      language={session?.language ?? null}
       level={session?.level ?? null}
     />
   );

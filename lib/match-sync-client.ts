@@ -114,7 +114,7 @@ export async function appendTiebreakerQuestion(
   if (!data) {
     return {
       success: false,
-      error: "No tiebreaker question available for your Italian level.",
+      error: "No tiebreaker question available for your level.",
     };
   }
 
