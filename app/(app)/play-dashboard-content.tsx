@@ -55,7 +55,7 @@ export async function PlayDashboardContent({
     supabase.rpc("get_my_streaks"),
     getPlayerStatistics(),
     playWordle(supabase, language, level, italyToday(), null),
-    playPassaparola(supabase, level),
+    playPassaparola(supabase, language, level),
   ]);
   const streaks = Object.fromEntries(
     ((streakRows as GameStreak[] | null) ?? []).map((row) => [row.game, row])
