@@ -11,7 +11,9 @@ import {
   puzzleNumber,
   toWordleArchive,
   toWordleView,
+  wordleShareText,
 } from "../lib/wordle";
+import { languageFromCode } from "../lib/constants";
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -21,7 +23,7 @@ function check(name: string, fn: () => void) {
 }
 
 check("the database's c/p/a marks become board colors", () => {
-  const view = toWordleView("A2", "2026-10-11", {
+  const view = toWordleView("Italian", "A2", "2026-10-11", {
     today: "2026-10-12",
     guesses: ["tappo"],
     marks: ["pcpaa"],
@@ -33,6 +35,23 @@ check("the database's c/p/a marks become board colors", () => {
   assert.deepEqual(view.guesses[0].marks, ["present", "correct", "present", "absent", "absent"]);
   assert.equal(view.number, 2);
   assert.equal(view.isToday, false);
+});
+
+check("a shared German result names the language and links to the German puzzle", () => {
+  const view = toWordleView("German", "B1", "2026-10-11", {
+    today: "2026-10-12",
+    guesses: ["räume"],
+    marks: ["ccccc"],
+    status: "won",
+    answer: "räume",
+    meaning: "rooms",
+    history: null,
+  });
+  const text = wordleShareText(view, "https://italiarena.com");
+  assert.match(text, /^Italiarena Wordle #2 · German · B1 · 1\/6/);
+  assert.match(text, /\/wordle\?lang=de&level=B1&day=2026-10-11$/);
+  assert.equal(languageFromCode("de"), "German");
+  assert.equal(languageFromCode("fr"), undefined);
 });
 
 check("keyboard keeps the best mark per letter", () => {
