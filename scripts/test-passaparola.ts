@@ -4,7 +4,7 @@
  * Run: npx tsx scripts/test-passaparola.ts
  */
 import assert from "node:assert/strict";
-import { nextLetter, PASSAPAROLA_LETTERS } from "../lib/passaparola";
+import { fitsLetter, nextLetter, PASSAPAROLA_LETTERS } from "../lib/passaparola";
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -37,6 +37,17 @@ check("a passed letter comes back only after every other letter is answered", ()
     letter = nextLetter(letters, marks, letter);
   }
   assert.deepEqual(order, [..."ABCDEB"]);
+});
+
+check("only words starting with the letter, or passo/basta, can be typed", () => {
+  assert.equal(fitsLetter("", "G"), true);
+  assert.equal(fitsLetter("Gatto", "G"), true);
+  assert.equal(fitsLetter("è", "E"), true);
+  assert.equal(fitsLetter("cane", "G"), false);
+  assert.equal(fitsLetter("pas", "G"), true);
+  assert.equal(fitsLetter("passo", "G"), true);
+  assert.equal(fitsLetter("basta", "G"), true);
+  assert.equal(fitsLetter("bar", "G"), false);
 });
 
 check("the wheel has the 21 letters of the Italian alphabet", () => {

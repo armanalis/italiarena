@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { PROFICIENCY_LEVELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import {
+  fitsLetter,
   nextLetter,
   PASSAPAROLA_FINISH_WORD,
   PASSAPAROLA_LETTERS,
@@ -324,7 +325,7 @@ export function PassaparolaGame({
           {view && !view.started && (
             <div className="glass-panel space-y-4 p-5 text-center">
               <ul className="space-y-1.5 text-left text-sm">
-                <li>Type the Italian word and press Enter.</li>
+                <li>Type the Italian word starting with the letter and press Enter.</li>
                 <li>
                   Type <Keyword word={PASSAPAROLA_PASS_WORD} className="text-amber-500" /> or press Passo
                   to skip a letter; it comes back once the others are done.
@@ -361,14 +362,24 @@ export function PassaparolaGame({
                   aria-label={`Italian word starting with ${current}`}
                   placeholder={`${current}… (type the answer)`}
                   value={input}
-                  // Read-only, not disabled, while checking: a disabled field loses focus.
-                  readOnly={pending}
-                  onChange={(event) => setInput(event.target.value)}
+                  // Typing is ignored while checking. Not readOnly or disabled: on phones both close the keyboard.
+                  onChange={(event) => {
+                    if (pending) {
+                      return;
+                    }
+                    if (!fitsLetter(event.target.value, current)) {
+                      setMessage({ text: `Type a word starting with ${current}.`, tone: "wrong" });
+                      return;
+                    }
+                    setInput(event.target.value);
+                  }}
                   className="h-11 flex-1 border-0 bg-transparent px-0 text-base shadow-none focus-visible:ring-0 md:h-11 md:text-base dark:bg-transparent"
                 />
                 <button
                   type="button"
                   disabled={pending}
+                  // Keeps focus in the answer field, so the phone keyboard stays open.
+                  onMouseDown={(event) => event.preventDefault()}
                   onClick={(event) => pass(event.currentTarget.form)}
                   className="flex h-11 shrink-0 items-center gap-1 rounded-xl bg-amber-400 px-4 text-sm font-bold uppercase tracking-wide text-black transition-colors hover:bg-amber-300 disabled:opacity-60"
                 >

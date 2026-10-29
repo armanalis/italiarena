@@ -125,7 +125,7 @@ export function FriendsPanel() {
         <Button
           type="button"
           variant="secondary"
-          className="fixed right-4 bottom-[calc(var(--app-mobile-nav-height)+env(safe-area-inset-bottom,0px)+0.75rem)] z-40 min-h-11 gap-2 rounded-full px-4 shadow-md md:bottom-6"
+          className="hide-while-typing fixed right-4 bottom-[calc(var(--app-mobile-nav-height)+env(safe-area-inset-bottom,0px)+0.75rem)] z-40 min-h-11 gap-2 rounded-full px-4 shadow-md md:bottom-6"
         >
           <Users className="size-4" />
           Friends

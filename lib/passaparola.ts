@@ -55,6 +55,19 @@ export function nextLetter(
   return null;
 }
 
+/**
+ * Whether what is typed can still become an answer for `letter` (every answer
+ * starts with its letter, accents aside) or one of the two command words.
+ */
+export function fitsLetter(typed: string, letter: string): boolean {
+  const word = typed.trimStart().toLowerCase();
+  return (
+    word.normalize("NFD").startsWith(letter.toLowerCase()) ||
+    PASSAPAROLA_PASS_WORD.startsWith(word) ||
+    PASSAPAROLA_FINISH_WORD.startsWith(word)
+  );
+}
+
 const ERRORS: Record<string, string> = {
   no_such_board: "This board does not exist.",
   no_questions: "No clues for this level yet.",

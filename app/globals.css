@@ -59,6 +59,14 @@
       var(--app-mobile-nav-height) + env(safe-area-inset-bottom, 0px)
     );
   }
+
+  /* Phones: the bottom nav and Friends button ride on top of the keyboard and
+     cover the field being typed in, so they step aside while it has focus. */
+  @media (max-width: 767px) {
+    .app-content:has(input:not([type="range"]):focus, textarea:focus) ~ .hide-while-typing {
+      display: none;
+    }
+  }
 }
 
 @layer components {
