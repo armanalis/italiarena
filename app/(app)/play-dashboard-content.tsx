@@ -49,11 +49,12 @@ export async function PlayDashboardContent({
       : { reported: 0, submissions: 0, total: 0 };
   const supabase = await createClient();
   const level = profile.proficiency_level;
+  const language = profile.target_language;
   // Loads only: today's puzzles are not started or played from here.
   const [{ data: streakRows }, stats, wordle, passaparola] = await Promise.all([
     supabase.rpc("get_my_streaks"),
     getPlayerStatistics(),
-    playWordle(supabase, level, italyToday(), null),
+    playWordle(supabase, language, level, italyToday(), null),
     playPassaparola(supabase, level),
   ]);
   const streaks = Object.fromEntries(

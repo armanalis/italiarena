@@ -1,5 +1,6 @@
-/** Daily Italian Wordle: puzzle dates and game state (shared by server and browser). */
+/** Daily Wordle in each language: puzzle dates and game state (shared by server and browser). */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { LANGUAGE_META, type TargetLanguage } from "@/lib/constants";
 
 export const WORDLE_LENGTH = 5;
 /** KEEP IN SYNC with wordle_play (supabase/wordle-2026-10-10.sql). */
@@ -58,6 +59,7 @@ export function keyboardMarks(
 export type WordleStatus = "playing" | "won" | "lost";
 
 export type WordleView = {
+  language: TargetLanguage;
   level: string;
   date: string;
   number: number;
@@ -88,8 +90,14 @@ type WordleTurn = {
 
 const MARK_CODES: Record<string, WordleMark> = { c: "correct", p: "present", a: "absent" };
 
-export function toWordleView(level: string, date: string, turn: WordleTurn): WordleView {
+export function toWordleView(
+  language: TargetLanguage,
+  level: string,
+  date: string,
+  turn: WordleTurn
+): WordleView {
   return {
+    language,
     level,
     date,
     number: puzzleNumber(date),
@@ -110,11 +118,11 @@ const SHARE_SQUARES: Record<WordleMark, string> = { correct: "🟩", present: "�
 export function wordleShareText(view: WordleView, origin: string): string {
   const score = view.status === "won" ? view.guesses.length : "X";
   return [
-    `Italiarena Wordle #${view.number} · ${view.level} · ${score}/${WORDLE_MAX_GUESSES}`,
+    `Italiarena Wordle #${view.number} · ${view.language} · ${view.level} · ${score}/${WORDLE_MAX_GUESSES}`,
     "",
     ...view.guesses.map((guess) => guess.marks.map((mark) => SHARE_SQUARES[mark]).join("")),
     "",
-    `${origin}/wordle?level=${view.level}&day=${view.date}`,
+    `${origin}/wordle?lang=${LANGUAGE_META[view.language].code}&level=${view.level}&day=${view.date}`,
   ].join("\n");
 }
 
@@ -154,6 +162,7 @@ export type WordleTurnResult =
 
 export async function playWordle(
   supabase: SupabaseClient,
+  language: TargetLanguage,
   level: string,
   date: string,
   guess: string | null
@@ -162,6 +171,7 @@ export async function playWordle(
     p_level: level,
     p_date: date,
     p_guess: guess,
+    p_language: language,
   });
   if (error || !data) {
     return { ok: false, error: wordleErrorMessage(error?.message) };
@@ -170,7 +180,7 @@ export async function playWordle(
   return {
     ok: true,
     today: turn.today,
-    view: toWordleView(level, date, turn),
+    view: toWordleView(language, level, date, turn),
     archive: turn.history ? toWordleArchive(turn.today, turn.history) : null,
   };
 }

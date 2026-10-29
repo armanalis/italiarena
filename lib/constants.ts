@@ -16,6 +16,11 @@ export function isTargetLanguage(value: unknown): value is TargetLanguage {
   return TARGET_LANGUAGES.includes(value as TargetLanguage);
 }
 
+/** The language with this `code`, as in ?lang=de links. */
+export function languageFromCode(code: string | undefined): TargetLanguage | undefined {
+  return TARGET_LANGUAGES.find((language) => LANGUAGE_META[language].code === code);
+}
+
 /**
  * For players who never saved their own: the players are in Italy, and the
  * Wordle and Passaparola day starts at midnight here too.

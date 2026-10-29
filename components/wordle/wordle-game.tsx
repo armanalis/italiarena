@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Check, Delete, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PROFICIENCY_LEVELS } from "@/lib/constants";
+import { PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import {
   keyboardMarks,
@@ -20,7 +20,15 @@ import {
 } from "@/lib/wordle";
 import { createClient } from "@/utils/supabase/client";
 
-const KEY_ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+/** On-screen keys, and the only letters a physical keyboard may type. German is QWERTZ with its umlauts. */
+const KEY_ROWS: Record<TargetLanguage, string[]> = {
+  Italian: ["qwertyuiop", "asdfghjkl", "zxcvbnm"],
+  German: ["qwertzuiopü", "asdfghjklöä", "yxcvbnm"],
+};
+
+function isLetter(language: TargetLanguage, key: string) {
+  return key.length === 1 && KEY_ROWS[language].some((row) => row.includes(key.toLowerCase()));
+}
 /** A tile turns edge-on in HALF_FLIP_MS, shows its color, turns back; the next starts FLIP_GAP_MS later. */
 const HALF_FLIP_MS = 250;
 const FLIP_GAP_MS = 300;
@@ -64,9 +72,11 @@ function statusLabel(status: WordleStatus | null) {
 }
 
 export function WordleGame({
+  language,
   initialLevel,
   initial,
 }: {
+  language: TargetLanguage;
   initialLevel: string;
   initial: WordleTurnResult;
 }) {
@@ -111,7 +121,7 @@ export function WordleGame({
       return;
     }
     setPending(true);
-    const next = await playWordle(supabase, nextLevel, day, null);
+    const next = await playWordle(supabase, language, nextLevel, day, null);
     setPending(false);
     setLevel(nextLevel);
     setInput("");
@@ -145,7 +155,7 @@ export function WordleGame({
         )
       : [];
 
-    const next = await playWordle(supabase, view.level, view.date, input);
+    const next = await playWordle(supabase, language, view.level, view.date, input);
     if (!next.ok) {
       turns.forEach((turn) => turn.cancel());
       shake(rowElement);
@@ -197,12 +207,12 @@ export function WordleGame({
         setInput((current) => current.slice(0, -1));
         return;
       }
-      if (/^[a-z]$/i.test(key) && input.length < WORDLE_LENGTH) {
+      if (isLetter(language, key) && input.length < WORDLE_LENGTH) {
         setInput((current) => current + key.toLowerCase());
         setMessage(null);
       }
     },
-    [input, pending, playing, submit, view]
+    [input, language, pending, playing, submit, view]
   );
 
   useEffect(() => {
@@ -213,14 +223,14 @@ export function WordleGame({
       if ((event.target as HTMLElement | null)?.closest("input, textarea, select, [contenteditable]")) {
         return;
       }
-      if (event.key === "Enter" || event.key === "Backspace" || /^[a-z]$/i.test(event.key)) {
+      if (event.key === "Enter" || event.key === "Backspace" || isLetter(language, event.key)) {
         event.preventDefault();
         press(event.key);
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [press]);
+  }, [language, press]);
 
   // The keyboard and the result wait until the last row has finished flipping.
   const keys = keyboardMarks(view?.guesses.slice(0, revealing?.row) ?? []);
@@ -349,7 +359,7 @@ export function WordleGame({
 
       {(playing || revealing) && (
         <div className="space-y-1.5" aria-label="Keyboard">
-          {KEY_ROWS.map((keyRow, rowIndex) => (
+          {KEY_ROWS[language].map((keyRow, rowIndex) => (
             <div key={keyRow} className="flex justify-center gap-1">
               {rowIndex === 2 && (
                 <button
