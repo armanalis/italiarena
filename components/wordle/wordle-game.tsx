@@ -187,7 +187,7 @@ export function WordleGame({
     await last?.finished;
     setRevealing(null);
     setPending(false);
-  }, [input, supabase, view]);
+  }, [input, language, supabase, view]);
 
   const press = useCallback(
     (key: string) => {
