@@ -7,6 +7,7 @@ import { LogOut } from "lucide-react";
 import { signOut } from "@/app/login/actions";
 import { AdminQueueBadge } from "@/components/admin/admin-queue-badge";
 import { BrandLogo } from "@/components/brand-logo";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import type { TargetLanguage } from "@/lib/constants";
 import {
   exitCountsAsLoss,
   exitToDashboard,
@@ -27,6 +29,7 @@ type SiteHeaderNavProps = {
   isAuthenticated: boolean;
   displayName: string | null;
   showDashboard: boolean;
+  language: TargetLanguage | null;
   isAdmin: boolean;
   adminQueueCount: number;
 };
@@ -35,6 +38,7 @@ export function SiteHeaderNav({
   isAuthenticated,
   displayName,
   showDashboard,
+  language,
   isAdmin,
   adminQueueCount,
 }: SiteHeaderNavProps) {
@@ -88,6 +92,10 @@ export function SiteHeaderNav({
                 <span className="hidden max-w-[10rem] truncate text-xs font-medium text-muted-foreground md:inline lg:max-w-[14rem] lg:text-sm xl:max-w-none">
                   {displayName}
                 </span>
+              )}
+              {/* Not mid-match: the match keeps the language it started with. */}
+              {showDashboard && language && !leavingActiveMatch && (
+                <LanguageSwitcher language={language} />
               )}
               {showDashboard && (
                 <Button asChild variant="ghost" size="sm" className="min-h-10 px-2 sm:px-3">

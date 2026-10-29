@@ -3,8 +3,8 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  isTargetLanguage,
   PROFICIENCY_LEVELS,
-  TARGET_LANGUAGE,
   type ProficiencyLevel,
 } from "@/lib/constants";
 import {
@@ -23,8 +23,13 @@ export type OnboardingFormState = {
 export async function saveOnboarding(
   formData: FormData
 ): Promise<OnboardingFormState> {
+  const targetLanguage = String(formData.get("target_language") ?? "").trim();
   const proficiencyLevel = String(formData.get("proficiency_level") ?? "").trim();
   const username = normalizeUsername(String(formData.get("username") ?? ""));
+
+  if (!isTargetLanguage(targetLanguage)) {
+    return { error: "Please select the language you are learning." };
+  }
 
   if (!PROFICIENCY_LEVELS.includes(proficiencyLevel as ProficiencyLevel)) {
     return { error: "Please select a valid proficiency level." };
@@ -51,7 +56,7 @@ export async function saveOnboarding(
   const profilePayload = {
     id: user.id,
     email: user.email ?? "",
-    target_language: TARGET_LANGUAGE,
+    target_language: targetLanguage,
     proficiency_level: proficiencyLevel,
     display_name: username,
   };
@@ -66,7 +71,7 @@ export async function saveOnboarding(
     ? await supabase
         .from("users")
         .update({
-          target_language: TARGET_LANGUAGE,
+          target_language: targetLanguage,
           proficiency_level: proficiencyLevel,
           display_name: username,
         })

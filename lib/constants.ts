@@ -1,6 +1,20 @@
-/** App currently supports Italian only. */
-export const TARGET_LANGUAGE = "Italian" as const;
-export const TARGET_LANGUAGES = [TARGET_LANGUAGE] as const;
+/**
+ * Languages the app teaches, stored by these names in users.target_language and
+ * every `language` column. KEEP IN SYNC with supabase/multi-language-*.sql.
+ */
+export const TARGET_LANGUAGES = ["Italian", "German"] as const;
+/** Rows and players from before German existed are Italian. */
+export const DEFAULT_LANGUAGE = "Italian" satisfies (typeof TARGET_LANGUAGES)[number];
+
+/** `code` is for lang attributes; `label` is the language's own name. */
+export const LANGUAGE_META = {
+  Italian: { code: "it", label: "Italiano" },
+  German: { code: "de", label: "Deutsch" },
+} as const satisfies Record<(typeof TARGET_LANGUAGES)[number], { code: string; label: string }>;
+
+export function isTargetLanguage(value: unknown): value is TargetLanguage {
+  return TARGET_LANGUAGES.includes(value as TargetLanguage);
+}
 
 /**
  * For players who never saved their own: the players are in Italy, and the

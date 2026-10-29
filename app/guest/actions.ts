@@ -3,9 +3,10 @@
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import {
+  isTargetLanguage,
   PROFICIENCY_LEVELS,
-  TARGET_LANGUAGE,
   type ProficiencyLevel,
+  type TargetLanguage,
 } from "@/lib/constants";
 import { generateGuestDisplayName } from "@/lib/guest";
 import { isUsernameTaken } from "@/lib/username";
@@ -20,12 +21,13 @@ async function saveGuestProfile(
   userId: string,
   email: string,
   displayName: string,
+  targetLanguage: TargetLanguage,
   proficiencyLevel: ProficiencyLevel
 ): Promise<string | null> {
   const supabase = await createClient();
   const profile = {
     display_name: displayName,
-    target_language: TARGET_LANGUAGE,
+    target_language: targetLanguage,
     proficiency_level: proficiencyLevel,
     is_guest: true,
   };
@@ -70,8 +72,13 @@ async function allocateGuestDisplayName(userId: string): Promise<string> {
 
 /** Called after the browser has already signed the user in (anonymous or sign-up). */
 export async function completeGuestProfile(
+  targetLanguage: string,
   proficiencyLevel: string
 ): Promise<GuestFormState> {
+  if (!isTargetLanguage(targetLanguage)) {
+    return { error: "Please select the language you are learning." };
+  }
+
   if (!PROFICIENCY_LEVELS.includes(proficiencyLevel as ProficiencyLevel)) {
     return { error: "Please select a valid proficiency level." };
   }
@@ -105,6 +112,7 @@ export async function completeGuestProfile(
     user.id,
     email,
     displayName,
+    targetLanguage,
     proficiencyLevel as ProficiencyLevel
   );
 

@@ -1,7 +1,7 @@
 import {
   PROFICIENCY_LEVELS,
-  TARGET_LANGUAGE,
   type ProficiencyLevel,
+  type TargetLanguage,
 } from "@/lib/constants";
 import type { CorrectAnswer, QuestionCategory } from "@/types/database.types";
 
@@ -33,7 +33,7 @@ export type QuestionSubmissionPayload = Omit<
   QuestionSubmissionInput,
   "level_confirmed" | "category_confirmed"
 > & {
-  language: typeof TARGET_LANGUAGE;
+  language: TargetLanguage;
 };
 
 export const CATEGORY_GUIDANCE: Record<
@@ -156,7 +156,8 @@ function normalizeKey(value: string): string {
 }
 
 export function validateQuestionSubmission(
-  input: QuestionSubmissionInput
+  input: QuestionSubmissionInput,
+  language: TargetLanguage
 ): { ok: true; data: QuestionSubmissionPayload } | { ok: false; error: string } {
   if (!input.level_confirmed) {
     return {
@@ -258,7 +259,7 @@ export function validateQuestionSubmission(
   return {
     ok: true,
     data: {
-      language: TARGET_LANGUAGE,
+      language,
       level: input.level,
       category: input.category,
       question_text,

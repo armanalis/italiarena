@@ -11,9 +11,10 @@ import {
 } from "@/lib/dashboard-cache";
 import { createClient } from "@/utils/supabase/server";
 import {
+  isTargetLanguage,
   PROFICIENCY_LEVELS,
-  TARGET_LANGUAGE,
   type ProficiencyLevel,
+  type TargetLanguage,
 } from "@/lib/constants";
 import type { MatchHistoryEntry } from "@/lib/types";
 import {
@@ -67,14 +68,20 @@ export async function getSettingsData() {
         profile,
         recentMatches: (recentMatches ?? []) as MatchHistoryEntry[],
         showLastSeen: privacy?.show_last_seen ?? true,
+        languageLevels: await readLanguageLevels(profile.id),
       };
     }
   );
 }
 
 export async function updateLearningProfile(formData: FormData): Promise<SettingsActionResult> {
+  const targetLanguage = String(formData.get("target_language") ?? "");
   const proficiencyLevel = String(formData.get("proficiency_level") ?? "");
   const displayName = normalizeUsername(String(formData.get("display_name") ?? ""));
+
+  if (!isTargetLanguage(targetLanguage)) {
+    return { success: false, error: "Choose a language." };
+  }
 
   if (!isProficiencyLevel(proficiencyLevel)) {
     return { success: false, error: "Choose a valid proficiency level." };
@@ -118,7 +125,7 @@ export async function updateLearningProfile(formData: FormData): Promise<Setting
   const { error } = await supabase
     .from("users")
     .update({
-      target_language: TARGET_LANGUAGE,
+      target_language: targetLanguage,
       proficiency_level: proficiencyLevel,
       display_name: displayName,
     })
@@ -131,6 +138,65 @@ export async function updateLearningProfile(formData: FormData): Promise<Setting
   revalidatePath("/settings");
   revalidatePath("/");
   revalidateUserDashboard(user.id);
+  return { success: true };
+}
+
+/**
+ * The level the player last used in each language (users.language_levels,
+ * kept by a trigger). Empty until multi-language-1-profile-2026-11.sql runs.
+ */
+async function readLanguageLevels(
+  userId: string
+): Promise<Partial<Record<TargetLanguage, ProficiencyLevel>>> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("users")
+    .select("language_levels")
+    .eq("id", userId)
+    .maybeSingle();
+  return (data?.language_levels as Partial<Record<TargetLanguage, ProficiencyLevel>> | null) ?? {};
+}
+
+export type SwitchLanguageResult = SettingsActionResult | { success: false; needsLevel: true };
+
+/**
+ * Makes `language` the one being played, at `level` or else the level last
+ * used in it. With neither, nothing changes and the caller asks for a level.
+ * Guests may switch too: it changes what they play, not their account.
+ */
+export async function switchLanguage(
+  language: string,
+  level?: string
+): Promise<SwitchLanguageResult> {
+  if (!isTargetLanguage(language)) {
+    return { success: false, error: "Choose a language." };
+  }
+  if (level !== undefined && !isProficiencyLevel(level)) {
+    return { success: false, error: "Choose a valid proficiency level." };
+  }
+
+  const userId = await getAuthUserId();
+  if (!userId) {
+    return { success: false, error: "Not authenticated." };
+  }
+
+  const proficiencyLevel = level ?? (await readLanguageLevels(userId))[language];
+  if (!proficiencyLevel) {
+    return { success: false, needsLevel: true };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("users")
+    .update({ target_language: language, proficiency_level: proficiencyLevel })
+    .eq("id", userId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/", "layout");
+  revalidateUserDashboard(userId);
   return { success: true };
 }
 

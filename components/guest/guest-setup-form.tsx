@@ -7,7 +7,7 @@ import { AlertTriangle, GraduationCap, UserRound } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { completeGuestProfile } from "@/app/guest/actions";
-import { PROFICIENCY_LEVELS } from "@/lib/constants";
+import { PROFICIENCY_LEVELS, TARGET_LANGUAGES } from "@/lib/constants";
 import { signInGuestOnClient } from "@/lib/guest-auth-client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -27,6 +27,7 @@ type GuestSetupFormProps = {
 
 export function GuestSetupForm(_props?: GuestSetupFormProps) {
   const router = useRouter();
+  const [targetLanguage, setTargetLanguage] = useState("");
   const [proficiencyLevel, setProficiencyLevel] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -35,8 +36,8 @@ export function GuestSetupForm(_props?: GuestSetupFormProps) {
     event.preventDefault();
     setError(null);
 
-    if (!proficiencyLevel) {
-      setError("Please select your proficiency level.");
+    if (!targetLanguage || !proficiencyLevel) {
+      setError("Please select a language and your proficiency level.");
       return;
     }
 
@@ -53,7 +54,7 @@ export function GuestSetupForm(_props?: GuestSetupFormProps) {
         return;
       }
 
-      const result = await completeGuestProfile(proficiencyLevel);
+      const result = await completeGuestProfile(targetLanguage, proficiencyLevel);
 
       if (result.error) {
         setError(result.error);
@@ -73,7 +74,7 @@ export function GuestSetupForm(_props?: GuestSetupFormProps) {
         </div>
         <h1 className="text-2xl font-bold tracking-tight">Play as a Guest</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Pick your level and start playing — no account or username needed.
+          Pick a language and your level and start playing — no account or username needed.
         </p>
       </div>
 
@@ -111,6 +112,29 @@ export function GuestSetupForm(_props?: GuestSetupFormProps) {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
+            <Label htmlFor="guest-target_language">Language to learn</Label>
+            <select
+              id="guest-target_language"
+              name="target_language"
+              required
+              disabled={isPending}
+              value={targetLanguage}
+              onChange={(event) => setTargetLanguage(event.target.value)}
+              className={fieldClassName}
+              onFocus={(event) => scrollFieldIntoView(event.currentTarget)}
+            >
+              <option value="" disabled>
+                Select a language
+              </option>
+              {TARGET_LANGUAGES.map((language) => (
+                <option key={language} value={language}>
+                  {language}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="guest-proficiency_level" className="flex items-center gap-2">
               <GraduationCap className="size-4 text-muted-foreground" />
               Proficiency level
@@ -147,7 +171,7 @@ export function GuestSetupForm(_props?: GuestSetupFormProps) {
 
           <Button
             type="submit"
-            disabled={isPending || !proficiencyLevel}
+            disabled={isPending || !targetLanguage || !proficiencyLevel}
             className="h-11 w-full "
           >
             {isPending ? "Starting..." : "Start playing"}
