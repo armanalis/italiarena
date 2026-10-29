@@ -50,8 +50,12 @@ check("only words starting with the letter, or passo/basta, can be typed", () =>
   assert.equal(fitsLetter("bar", "G"), false);
 });
 
-check("the wheel has the 21 letters of the Italian alphabet", () => {
-  assert.equal(PASSAPAROLA_LETTERS.join(""), "ABCDEFGHILMNOPQRSTUVZ");
+check("the wheel has the 21 letters of the Italian alphabet, 23 for German", () => {
+  assert.equal(PASSAPAROLA_LETTERS.Italian.join(""), "ABCDEFGHILMNOPQRSTUVZ");
+  assert.equal(PASSAPAROLA_LETTERS.German.join(""), "ABCDEFGHIJKLMNOPRSTUVWZ");
+  // A German word starting with an umlaut fits its plain letter.
+  assert.equal(fitsLetter("Übung", "U"), true);
+  assert.equal(fitsLetter("Äpfel", "A"), true);
 });
 
 console.log(`\n${passed} checks passed`);

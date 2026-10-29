@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, ChevronRight, Clock, Loader2, SkipForward, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PROFICIENCY_LEVELS } from "@/lib/constants";
+import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import {
   fitsLetter,
@@ -19,7 +19,7 @@ import {
 } from "@/lib/passaparola";
 import { createClient } from "@/utils/supabase/client";
 
-type Move = Parameters<typeof playPassaparola>[2];
+type Move = Parameters<typeof playPassaparola>[3];
 type Message = { text: string; tone: "right" | "wrong" };
 
 const MARK_COLOR: Record<PassaparolaMark, string> = {
@@ -54,9 +54,11 @@ function Keyword({ word, className }: { word: string; className: string }) {
 }
 
 export function PassaparolaGame({
+  language,
   initialLevel,
   initial,
 }: {
+  language: TargetLanguage;
   initialLevel: string;
   initial: PassaparolaTurnResult;
 }) {
@@ -90,7 +92,7 @@ export function PassaparolaGame({
   /** Sends one move; the next letter is the first one still to play after `after`. */
   async function send(nextLevel: string, move: Move, after: string | null) {
     setPending(true);
-    const result = await playPassaparola(supabase, nextLevel, move);
+    const result = await playPassaparola(supabase, language, nextLevel, move);
     setPending(false);
     if (!result.ok) {
       setMessage({ text: result.error, tone: "wrong" });
@@ -116,7 +118,7 @@ export function PassaparolaGame({
       setMsLeft(left);
       if (left === 0) {
         clearInterval(timer);
-        void playPassaparola(supabase, view.level, { date: view.date }).then((result) => {
+        void playPassaparola(supabase, language, view.level, { date: view.date }).then((result) => {
           if (result.ok) {
             setView(result.view);
             setMsLeft(result.view.msLeft);
@@ -127,7 +129,7 @@ export function PassaparolaGame({
       }
     }, 250);
     return () => clearInterval(timer);
-  }, [supabase, view]);
+  }, [language, supabase, view]);
 
   async function begin() {
     setPassed(new Set());
@@ -188,7 +190,7 @@ export function PassaparolaGame({
     focusAnswer(form);
   }
 
-  const letters = view?.started ? lettersOf(view) : PASSAPAROLA_LETTERS;
+  const letters = view?.started ? lettersOf(view) : PASSAPAROLA_LETTERS[language];
   const right = letters.filter((letter) => view?.marks[letter] === "right").length;
   const wrong = letters.filter((letter) => view?.marks[letter] === "wrong").length;
   // Once the game is over, every letter left unanswered counts as passed.
@@ -325,7 +327,7 @@ export function PassaparolaGame({
           {view && !view.started && (
             <div className="glass-panel space-y-4 p-5 text-center">
               <ul className="space-y-1.5 text-left text-sm">
-                <li>Type the Italian word starting with the letter and press Enter.</li>
+                <li>Type the {language} word starting with the letter and press Enter.</li>
                 <li>
                   Type <Keyword word={PASSAPAROLA_PASS_WORD} className="text-amber-500" /> or press Passo
                   to skip a letter; it comes back once the others are done.
@@ -358,8 +360,8 @@ export function PassaparolaGame({
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
-                  lang="it"
-                  aria-label={`Italian word starting with ${current}`}
+                  lang={LANGUAGE_META[language].code}
+                  aria-label={`${language} word starting with ${current}`}
                   placeholder={`${current}… (type the answer)`}
                   value={input}
                   // Typing is ignored while checking. Not readOnly or disabled: on phones both close the keyboard.

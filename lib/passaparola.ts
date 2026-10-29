@@ -1,12 +1,20 @@
-/** Daily Italian Passaparola: a clue for every letter, 5 minutes on the clock. */
+/** Daily Passaparola in each language: a clue for every letter, 5 minutes on the clock. */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { TargetLanguage } from "@/lib/constants";
 
-/** The Italian alphabet: J, K, W, X and Y only appear in foreign words. */
-export const PASSAPAROLA_LETTERS = [..."ABCDEFGHILMNOPQRSTUVZ"];
+/**
+ * The wheel's letters. Italian: J, K, W, X and Y only appear in foreign words.
+ * German: too few words start with Q, X or Y; Ä, Ö and Ü count as A, O and U.
+ * KEEP IN SYNC with the letter check in supabase/multi-language-4-passaparola-2026-11.sql.
+ */
+export const PASSAPAROLA_LETTERS: Record<TargetLanguage, string[]> = {
+  Italian: [..."ABCDEFGHILMNOPQRSTUVZ"],
+  German: [..."ABCDEFGHIJKLMNOPRSTUVWZ"],
+};
 
 /**
  * Typed instead of an answer: pass the letter, or end the game early.
- * KEEP IN SYNC with the check in supabase/passaparola-questions-2026-10-12.sql
+ * KEEP IN SYNC with the check in supabase/passaparola-questions-{it,de}-2026-11.sql
  * (no clue may have these as answers).
  */
 export const PASSAPAROLA_PASS_WORD = "passo";
@@ -87,6 +95,7 @@ function errorMessage(message: string | undefined): string {
  */
 export async function playPassaparola(
   supabase: SupabaseClient,
+  language: TargetLanguage,
   level: string,
   move: { date?: string; start?: boolean; letter?: string; answer?: string; finish?: boolean } = {}
 ): Promise<PassaparolaTurnResult> {
@@ -97,6 +106,7 @@ export async function playPassaparola(
     p_letter: move.letter ?? null,
     p_answer: move.answer ?? null,
     p_finish: move.finish ?? false,
+    p_language: language,
   });
   if (error || !data) {
     return { ok: false, error: errorMessage(error?.message) };
