@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentUserProfile, isGuestUser } from "@/lib/auth";
+import { DEFAULT_LANGUAGE } from "@/lib/constants";
 import { createClient } from "@/utils/supabase/server";
 import {
   MAX_PENDING_SUBMISSIONS,
@@ -18,14 +19,15 @@ export type SubmitQuestionResult =
 export async function submitQuestion(
   input: QuestionSubmissionInput
 ): Promise<SubmitQuestionResult> {
-  const validated = validateQuestionSubmission(input);
-  if (!validated.ok) {
-    return { success: false, error: validated.error };
-  }
-
   const profile = await getCurrentUserProfile();
   if (!profile) {
     return { success: false, error: "Not authenticated." };
+  }
+
+  // A question is for the language the player is learning now.
+  const validated = validateQuestionSubmission(input, profile.target_language ?? DEFAULT_LANGUAGE);
+  if (!validated.ok) {
+    return { success: false, error: validated.error };
   }
 
   if (isGuestUser(profile)) {

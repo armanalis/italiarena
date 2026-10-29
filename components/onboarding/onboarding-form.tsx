@@ -9,7 +9,7 @@ import {
   type OnboardingFormState,
 } from "@/app/onboarding/actions";
 import { signOut } from "@/app/login/actions";
-import { PROFICIENCY_LEVELS, TARGET_LANGUAGE } from "@/lib/constants";
+import { PROFICIENCY_LEVELS, TARGET_LANGUAGES } from "@/lib/constants";
 import { useActionRedirect } from "@/hooks/use-action-redirect";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -56,13 +56,11 @@ export function OnboardingForm({ defaultUsername = "" }: OnboardingFormProps) {
           Let&apos;s set up your profile
         </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Choose your Italian level so we can match you with the right opponents.
+          Choose a language and your level so we can match you with the right opponents.
         </p>
       </div>
 
       <form action={formAction} className="space-y-6 px-5 py-6 sm:px-8 sm:py-7">
-        <input type="hidden" name="target_language" value={TARGET_LANGUAGE} />
-
         <div className="space-y-2">
           <Label htmlFor="username" className="flex items-center gap-2">
             <UserRound className="size-4 text-muted-foreground" />
@@ -81,6 +79,27 @@ export function OnboardingForm({ defaultUsername = "" }: OnboardingFormProps) {
             className={fieldClassName}
             onFocus={(event) => scrollFieldIntoView(event.currentTarget)}
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="target_language">Language to learn</Label>
+          <select
+            id="target_language"
+            name="target_language"
+            required
+            defaultValue=""
+            className={fieldClassName}
+            onFocus={(event) => scrollFieldIntoView(event.currentTarget)}
+          >
+            <option value="" disabled>
+              Select a language
+            </option>
+            {TARGET_LANGUAGES.map((language) => (
+              <option key={language} value={language}>
+                {language}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="space-y-2">

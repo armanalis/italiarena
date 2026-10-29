@@ -5,7 +5,6 @@ import { requireAdmin } from "@/lib/auth";
 import { getPrivilegedSupabase } from "@/lib/supabase-admin";
 import { runSubmissionAiPrecheck } from "@/lib/run-submission-precheck";
 import { validateQuestionSubmission } from "@/lib/question-contribution";
-import { TARGET_LANGUAGE } from "@/lib/constants";
 import { createClient } from "@/utils/supabase/server";
 import type {
   CorrectAnswer,
@@ -457,7 +456,7 @@ export async function approveQuestionSubmission(
     rationale: row.rationale ?? "Approved by admin.",
     level_confirmed: true,
     category_confirmed: true,
-  });
+  }, row.language);
 
   if (!validated.ok) {
     return { success: false, error: validated.error };
@@ -579,7 +578,7 @@ export async function rerunSubmissionAiPrecheck(
 
   try {
     await runSubmissionAiPrecheck(submissionId, {
-      language: TARGET_LANGUAGE,
+      language: row.language,
       level: row.level,
       category: row.category,
       question_text: row.question_text,

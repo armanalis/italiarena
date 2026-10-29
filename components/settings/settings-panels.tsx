@@ -30,7 +30,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PROFICIENCY_LEVELS, TARGET_LANGUAGE } from "@/lib/constants";
+import {
+  DEFAULT_LANGUAGE,
+  isTargetLanguage,
+  PROFICIENCY_LEVELS,
+  TARGET_LANGUAGES,
+  type ProficiencyLevel,
+  type TargetLanguage,
+} from "@/lib/constants";
 import { APP_NAME, SUPPORT_EMAIL } from "@/lib/legal";
 import { getSoundVolume, writeGameplayPreferences } from "@/lib/preferences";
 import { resetWelcomeTour } from "@/lib/welcome-tour";
@@ -47,6 +54,7 @@ type SettingsPanelsProps = {
   profile: UserProfile;
   recentMatches: MatchHistoryEntry[];
   showLastSeen: boolean;
+  languageLevels: Partial<Record<TargetLanguage, ProficiencyLevel>>;
 };
 
 function PreferenceToggle({
@@ -101,10 +109,14 @@ export function SettingsPanels({
   profile,
   recentMatches,
   showLastSeen: initialShowLastSeen,
+  languageLevels,
 }: SettingsPanelsProps) {
   const guest = profile.is_guest;
   const router = useRouter();
-  const [proficiencyLevel, setProficiencyLevel] = useState(
+  const [targetLanguage, setTargetLanguage] = useState<TargetLanguage>(
+    profile.target_language ?? DEFAULT_LANGUAGE
+  );
+  const [proficiencyLevel, setProficiencyLevel] = useState<string>(
     profile.proficiency_level ?? ""
   );
   const [displayName, setDisplayName] = useState(profile.display_name ?? "");
@@ -126,7 +138,7 @@ export function SettingsPanels({
   function saveProfile() {
     startTransition(async () => {
       const formData = new FormData();
-      formData.set("target_language", TARGET_LANGUAGE);
+      formData.set("target_language", targetLanguage);
       formData.set("proficiency_level", proficiencyLevel);
       formData.set("display_name", displayName);
 
@@ -220,9 +232,9 @@ export function SettingsPanels({
       ) : (
         <Card className="border-border/60">
           <CardHeader>
-            <CardTitle>Italian profile</CardTitle>
+            <CardTitle>Learning profile</CardTitle>
             <CardDescription>
-              Update your Italian level and public display name.
+              Choose the language you are learning, your level and your public display name.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -245,12 +257,29 @@ export function SettingsPanels({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="settings-language">Language</Label>
-                <Input
-                  id="settings-language"
-                  value={TARGET_LANGUAGE}
-                  disabled
-                />
+                <Label>Language</Label>
+                <Select
+                  value={targetLanguage}
+                  disabled={isPending}
+                  onValueChange={(value) => {
+                    if (isTargetLanguage(value)) {
+                      setTargetLanguage(value);
+                      // Each language keeps its own level; a new one starts unpicked.
+                      setProficiencyLevel(languageLevels[value] ?? "");
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TARGET_LANGUAGES.map((language) => (
+                      <SelectItem key={language} value={language}>
+                        {language}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">

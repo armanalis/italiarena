@@ -20,6 +20,7 @@ export async function SiteHeader() {
       showDashboard={Boolean(
         profile?.target_language && profile?.proficiency_level
       )}
+      language={profile?.target_language ?? null}
       isAdmin={isAdmin}
       adminQueueCount={adminQueueCount}
     />
