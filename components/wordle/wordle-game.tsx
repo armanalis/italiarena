@@ -2,8 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { Check, Delete, Share2 } from "lucide-react";
+import { Check, Copy, Delete, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { PROFICIENCY_LEVELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import {
@@ -82,6 +90,8 @@ export function WordleGame({
   // The row being flipped and how many of its tiles show their color yet.
   const [revealing, setRevealing] = useState<{ row: number; shown: number } | null>(null);
   const currentRow = useRef<HTMLDivElement>(null);
+  // The result being shared in the popup (computers), or null when it is closed.
+  const [shareText, setShareText] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const playing = view?.status === "playing";
@@ -92,7 +102,9 @@ export function WordleGame({
     }
     // The link goes inside the text: some share targets drop `text` when a `url` is given.
     const text = wordleShareText(view, window.location.origin);
-    if (navigator.share) {
+    // Phones get their share sheet. Desktop Chrome has navigator.share too, but
+    // its macOS sheet can hang on a spinner, so computers get our own popup.
+    if (navigator.share && window.matchMedia("(pointer: coarse)").matches) {
       try {
         await navigator.share({ text });
       } catch {
@@ -100,7 +112,15 @@ export function WordleGame({
       }
       return;
     }
-    await navigator.clipboard.writeText(text);
+    setCopied(false);
+    setShareText(text);
+  }
+
+  async function copyShareText() {
+    if (!shareText) {
+      return;
+    }
+    await navigator.clipboard.writeText(shareText);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 2_000);
   }
@@ -341,8 +361,8 @@ export function WordleGame({
               : "Pick another day from the archive below."}
           </p>
           <Button type="button" className="mt-3 min-h-11" onClick={() => void share()}>
-            {copied ? <Check className="size-4" /> : <Share2 className="size-4" />}
-            {copied ? "Copied" : "Share"}
+            <Share2 className="size-4" />
+            Share
           </Button>
         </div>
       )}
@@ -445,6 +465,32 @@ export function WordleGame({
         </a>{" "}
         by Hermit Dave (CC BY-SA 4.0).
       </p>
+      <Dialog open={shareText !== null} onOpenChange={(open) => !open && setShareText(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Share your result</DialogTitle>
+            <DialogDescription>No spoilers: the link opens the same puzzle for your friends.</DialogDescription>
+          </DialogHeader>
+          <pre className="whitespace-pre-wrap break-all rounded-lg bg-muted p-3 font-sans text-sm leading-relaxed">
+            {shareText}
+          </pre>
+          <DialogFooter className="gap-2 sm:justify-start">
+            <Button type="button" className="min-h-11" onClick={() => void copyShareText()}>
+              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+              {copied ? "Copied" : "Copy"}
+            </Button>
+            <Button asChild variant="outline" className="min-h-11">
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(shareText ?? "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                WhatsApp
+              </a>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
