@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Check, Languages } from "lucide-react";
 import { Popover } from "radix-ui";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { switchLanguage } from "@/app/(app)/settings/actions";
 import { Button } from "@/components/ui/button";
 import {
   LANGUAGE_META,
+  languageFromCode,
   PROFICIENCY_LEVELS,
   TARGET_LANGUAGES,
   type TargetLanguage,
@@ -18,8 +19,12 @@ import { cn } from "@/lib/utils";
 /** Header button: which language every game uses. A new language asks for a level first. */
 export function LanguageSwitcher({ language }: { language: TargetLanguage }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [askLevelFor, setAskLevelFor] = useState<TargetLanguage | null>(null);
+  const pathname = usePathname();
+  // A /german link for a player with no German level yet lands on ?lang=de: ask for it.
+  const linked = languageFromCode(useSearchParams().get("lang") ?? undefined);
+  const askLinked = linked && linked !== language ? linked : null;
+  const [open, setOpen] = useState(askLinked !== null);
+  const [askLevelFor, setAskLevelFor] = useState<TargetLanguage | null>(askLinked);
   const [pending, startTransition] = useTransition();
 
   function choose(next: TargetLanguage, level?: string) {
@@ -39,6 +44,9 @@ export function LanguageSwitcher({ language }: { language: TargetLanguage }) {
       }
       setOpen(false);
       setAskLevelFor(null);
+      if (linked) {
+        router.replace(pathname);
+      }
       router.refresh();
     });
   }
