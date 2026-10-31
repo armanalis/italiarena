@@ -58,8 +58,8 @@ const STREAK_REMINDERS: Record<GameStreak["game"], { url: string; body: (days: n
     body: (days) => `Keep your ${days}-day Wordle streak alive: today's word is waiting.`,
   },
   passaparola: {
-    url: "/passaparola",
-    body: (days) => `Keep your ${days}-day Passaparola streak alive: five minutes is enough.`,
+    url: "/word-wheel",
+    body: (days) => `Keep your ${days}-day Word Wheel streak alive: five minutes is enough.`,
   },
 };
 

@@ -49,7 +49,7 @@ assert.deepEqual(
   atRisk.map((p) => [p.tag, p.url, p.body]),
   [
     ["daily-reminder-arena", "/matchmaking", "Keep your 3-day Arena streak alive: one quick match is enough."],
-    ["daily-reminder-passaparola", "/passaparola", "Keep your 2-day Passaparola streak alive: five minutes is enough."],
+    ["daily-reminder-passaparola", "/word-wheel", "Keep your 2-day Word Wheel streak alive: five minutes is enough."],
   ],
   "one reminder per streak at risk, opening its game"
 );

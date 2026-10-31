@@ -1,4 +1,4 @@
-/** Daily Passaparola in each language: a clue for every letter, 5 minutes on the clock. */
+/** Word Wheel (Passaparola in the code and database): a clue for every letter, 5 minutes on the clock. */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TargetLanguage } from "@/lib/constants";
 
@@ -17,8 +17,8 @@ export const PASSAPAROLA_LETTERS: Record<TargetLanguage, string[]> = {
  * KEEP IN SYNC with the check in supabase/passaparola-questions-{it,de}-2026-11.sql
  * (no clue may have these as answers).
  */
-export const PASSAPAROLA_PASS_WORD = "passo";
-export const PASSAPAROLA_FINISH_WORD = "basta";
+export const PASSAPAROLA_PASS_WORD = "skip";
+export const PASSAPAROLA_FINISH_WORD = "stop";
 
 export type PassaparolaMark = "right" | "wrong";
 

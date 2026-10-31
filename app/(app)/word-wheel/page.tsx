@@ -1,4 +1,4 @@
-/** Daily Passaparola: one board per language, level and day (21 clues in Italian, 23 in German). */
+/** Word Wheel (called Passaparola in the code): one board per language, level and day (21 clues in Italian, 23 in German). */
 import { PassaparolaGame } from "@/components/passaparola/passaparola-game";
 import { requireOnboardingComplete } from "@/lib/auth";
 import { DEFAULT_LANGUAGE } from "@/lib/constants";

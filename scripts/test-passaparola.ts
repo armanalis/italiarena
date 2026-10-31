@@ -39,15 +39,15 @@ check("a passed letter comes back only after every other letter is answered", ()
   assert.deepEqual(order, [..."ABCDEB"]);
 });
 
-check("only words starting with the letter, or passo/basta, can be typed", () => {
+check("only words starting with the letter, or skip/stop, can be typed", () => {
   assert.equal(fitsLetter("", "G"), true);
   assert.equal(fitsLetter("Gatto", "G"), true);
   assert.equal(fitsLetter("è", "E"), true);
   assert.equal(fitsLetter("cane", "G"), false);
-  assert.equal(fitsLetter("pas", "G"), true);
-  assert.equal(fitsLetter("passo", "G"), true);
-  assert.equal(fitsLetter("basta", "G"), true);
-  assert.equal(fitsLetter("bar", "G"), false);
+  assert.equal(fitsLetter("sk", "G"), true);
+  assert.equal(fitsLetter("skip", "G"), true);
+  assert.equal(fitsLetter("stop", "G"), true);
+  assert.equal(fitsLetter("sun", "G"), false);
 });
 
 check("the wheel has the 21 letters of the Italian alphabet, 23 for German", () => {
