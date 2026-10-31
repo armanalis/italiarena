@@ -28,7 +28,8 @@ export default async function WordlePage({
 
   return (
     <main className="w-full flex-1 p-4 sm:p-8 lg:px-10">
-      <WordleGame language={language} initialLevel={level} initial={initial} />
+      {/* key: a language switch from the header must start a fresh game, not keep the old board. */}
+      <WordleGame key={language} language={language} initialLevel={level} initial={initial} />
     </main>
   );
 }

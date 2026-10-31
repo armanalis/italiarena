@@ -13,7 +13,9 @@ export async function SettingsContent() {
         </p>
       </div>
 
+      {/* key: after a language switch the form must not save the old language back. */}
       <SettingsPanels
+        key={profile.target_language}
         profile={profile}
         recentMatches={recentMatches}
         showLastSeen={showLastSeen}

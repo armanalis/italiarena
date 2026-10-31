@@ -1,17 +1,20 @@
 /**
- * A2 sample questions for the landing-page demo match.
+ * A2 sample questions for the landing-page demo match, in Italian or German
+ * (German for visitors who came through italiarena.com/german).
  *
  * Picked on the server per request, so the pool never ships to the browser
  * and server and client render the same three questions (no hydration mismatch).
- * 52 questions → 22,100 possible sets of three.
+ * 52 Italian questions → 22,100 possible sets of three; 12 German → 220.
  */
+
+import { LANGUAGE_META, type TargetLanguage } from "@/lib/constants";
 
 export type DemoCategory = "Grammar" | "Fill in the blank" | "Vocabulary" | "Idioms";
 
 type PoolQuestion = {
   id: string;
   category: DemoCategory;
-  /** Italian. "___" marks the blank. */
+  /** In the language being learned. "___" marks the blank. */
   prompt: string;
   /** English help line shown under the prompt. */
   hint: string;
@@ -26,8 +29,10 @@ export type DemoQuestion = {
   category: DemoCategory;
   prompt: string;
   hint: string;
+  /** lang attribute of the prompt. */
+  lang: string;
   options: string[];
-  optionsLang: "it" | "en";
+  optionsLang: string;
   correct: number;
   trap: number;
 };
@@ -512,23 +517,131 @@ const POOL: PoolQuestion[] = [
   },
 ];
 
-/** Opponent names for the landing demo — five women, five men. */
-const OPPONENT_NAMES = [
-  "Giulia",
-  "Sofia",
-  "Chiara",
-  "Martina",
-  "Francesca",
-  "Marco",
-  "Luca",
-  "Matteo",
-  "Lorenzo",
-  "Davide",
-] as const;
+const GERMAN_POOL: PoolQuestion[] = [
+  // Grammar
+  {
+    id: "de-g01",
+    category: "Grammar",
+    prompt: "Gestern ___ wir ins Kino gegangen.",
+    hint: "Yesterday we went to the cinema.",
+    answer: "sind",
+    trap: "haben",
+    distractors: ["seid", "ist"],
+  },
+  {
+    id: "de-g02",
+    category: "Grammar",
+    prompt: "Ich warte ___ den Bus.",
+    hint: "I'm waiting for the bus.",
+    answer: "auf",
+    trap: "für",
+    distractors: ["an", "mit"],
+  },
+  {
+    id: "de-g03",
+    category: "Grammar",
+    prompt: "Das ist ___ Auto von meinem Bruder.",
+    hint: "That is my brother's car.",
+    answer: "das",
+    trap: "der",
+    distractors: ["die", "den"],
+  },
+  // Fill in the blank
+  {
+    id: "de-f01",
+    category: "Fill in the blank",
+    prompt: "Ich habe keine Lust, heute ___.",
+    hint: "I don't feel like cooking today.",
+    answer: "zu kochen",
+    trap: "kochen",
+    distractors: ["kocht", "gekocht"],
+  },
+  {
+    id: "de-f02",
+    category: "Fill in the blank",
+    prompt: "Wenn ich Zeit ___, komme ich mit.",
+    hint: "If I have time, I'll come along.",
+    answer: "habe",
+    trap: "hätte",
+    distractors: ["hat", "haben"],
+  },
+  {
+    id: "de-f03",
+    category: "Fill in the blank",
+    prompt: "Wir treffen uns ___ dem Bahnhof.",
+    hint: "We're meeting in front of the station.",
+    answer: "vor",
+    trap: "für",
+    distractors: ["durch", "ohne"],
+  },
+  // Vocabulary
+  {
+    id: "de-v01",
+    category: "Vocabulary",
+    prompt: "die Haltestelle",
+    hint: MEANING,
+    answer: "the stop",
+    trap: "the station hall",
+    distractors: ["the car park", "the crossroads"],
+  },
+  {
+    id: "de-v02",
+    category: "Vocabulary",
+    prompt: "bekommen",
+    hint: MEANING,
+    answer: "to receive, to get",
+    trap: "to become",
+    distractors: ["to come back", "to welcome"],
+  },
+  {
+    id: "de-v03",
+    category: "Vocabulary",
+    prompt: "der Schlüssel",
+    hint: MEANING,
+    answer: "the key",
+    trap: "the lock",
+    distractors: ["the door", "the window"],
+  },
+  // Idioms
+  {
+    id: "de-i01",
+    category: "Idioms",
+    prompt: "Ich drücke dir die Daumen!",
+    hint: "Literally “I'm pressing my thumbs for you.” What does it mean?",
+    answer: "Fingers crossed for you!",
+    trap: "Thumbs up, well done!",
+    distractors: ["I'll call you later!", "Hold on tight!"],
+  },
+  {
+    id: "de-i02",
+    category: "Idioms",
+    prompt: "Das ist mir Wurst.",
+    hint: "Literally “That is sausage to me.” What does it mean?",
+    answer: "I don't care.",
+    trap: "That tastes great.",
+    distractors: ["That's the worst.", "I'm hungry."],
+  },
+  {
+    id: "de-i03",
+    category: "Idioms",
+    prompt: "Ich verstehe nur Bahnhof.",
+    hint: "Literally “I only understand train station.” What does it mean?",
+    answer: "I don't understand a thing.",
+    trap: "I'm at the station.",
+    distractors: ["I need a train.", "I only speak a little."],
+  },
+];
+
+/** Opponent names for the landing demo — five women, five men per language. */
+const OPPONENT_NAMES: Record<TargetLanguage, readonly string[]> = {
+  Italian: ["Giulia", "Sofia", "Chiara", "Martina", "Francesca", "Marco", "Luca", "Matteo", "Lorenzo", "Davide"],
+  German: ["Anna", "Lena", "Mia", "Hannah", "Lea", "Lukas", "Jonas", "Felix", "Paul", "Leon"],
+};
 
 /** Random opponent, picked per request like the questions. */
-export function pickDemoOpponent(): string {
-  return OPPONENT_NAMES[Math.floor(Math.random() * OPPONENT_NAMES.length)];
+export function pickDemoOpponent(language: TargetLanguage = "Italian"): string {
+  const names = OPPONENT_NAMES[language];
+  return names[Math.floor(Math.random() * names.length)];
 }
 
 function shuffle<T>(items: readonly T[]): T[] {
@@ -541,18 +654,20 @@ function shuffle<T>(items: readonly T[]): T[] {
 }
 
 /** Random questions without repeats, each with its options shuffled. */
-export function pickDemoQuestions(count = 3): DemoQuestion[] {
-  return shuffle(POOL)
+export function pickDemoQuestions(count = 3, language: TargetLanguage = "Italian"): DemoQuestion[] {
+  const lang = LANGUAGE_META[language].code;
+  return shuffle(language === "German" ? GERMAN_POOL : POOL)
     .slice(0, count)
     .map(({ answer, trap, distractors, ...question }) => {
       const options = shuffle([answer, trap, ...distractors]);
       return {
         ...question,
+        lang,
         options,
         optionsLang:
           question.category === "Vocabulary" || question.category === "Idioms"
             ? "en"
-            : "it",
+            : lang,
         correct: options.indexOf(answer),
         trap: options.indexOf(trap),
       };

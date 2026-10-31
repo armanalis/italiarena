@@ -14,7 +14,8 @@ export default async function PassaparolaPage() {
   return (
     // Flex column so the answer bar can sit at the bottom like a chat box.
     <main className="flex w-full flex-1 flex-col p-4 sm:p-8 lg:px-10">
-      <PassaparolaGame language={language} initialLevel={level} initial={initial} />
+      {/* key: a language switch from the header must load that language's board, not keep the old one. */}
+      <PassaparolaGame key={language} language={language} initialLevel={level} initial={initial} />
     </main>
   );
 }
