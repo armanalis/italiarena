@@ -23,11 +23,13 @@ const fieldClassName = cn(
 type GuestSetupFormProps = {
   /** @deprecated Each submit starts a fresh guest session; kept for API compatibility. */
   isAuthenticated?: boolean;
+  /** From a /german or /italian link. */
+  defaultLanguage?: string | null;
 };
 
-export function GuestSetupForm(_props?: GuestSetupFormProps) {
+export function GuestSetupForm({ defaultLanguage }: GuestSetupFormProps = {}) {
   const router = useRouter();
-  const [targetLanguage, setTargetLanguage] = useState("");
+  const [targetLanguage, setTargetLanguage] = useState(defaultLanguage ?? "");
   const [proficiencyLevel, setProficiencyLevel] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();

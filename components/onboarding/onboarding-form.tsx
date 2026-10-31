@@ -24,6 +24,8 @@ const fieldClassName = cn(
 
 type OnboardingFormProps = {
   defaultUsername?: string | null;
+  /** From a /german or /italian link. */
+  defaultLanguage?: string | null;
 };
 
 const initialState: OnboardingFormState = { error: null };
@@ -42,7 +44,7 @@ function SubmitButton() {
   );
 }
 
-export function OnboardingForm({ defaultUsername = "" }: OnboardingFormProps) {
+export function OnboardingForm({ defaultUsername = "", defaultLanguage }: OnboardingFormProps) {
   const [state, formAction] = useActionState(completeOnboarding, initialState);
   useActionRedirect(state?.redirectTo);
 
@@ -87,7 +89,7 @@ export function OnboardingForm({ defaultUsername = "" }: OnboardingFormProps) {
             id="target_language"
             name="target_language"
             required
-            defaultValue=""
+            defaultValue={defaultLanguage ?? ""}
             className={fieldClassName}
             onFocus={(event) => scrollFieldIntoView(event.currentTarget)}
           >

@@ -8,6 +8,7 @@ import {
   isOnboardingComplete,
 } from "@/lib/auth";
 import { isGuestAuthUser } from "@/lib/guest-auth";
+import { linkedLanguage } from "@/lib/language-link";
 import { createClient } from "@/utils/supabase/server";
 
 export default async function OnboardingPage() {
@@ -39,6 +40,7 @@ export default async function OnboardingPage() {
     <AuroraCanvas>
       <main className="mx-auto w-full max-w-lg px-4 py-8 pb-[max(3rem,env(safe-area-inset-bottom,0px))] sm:px-6 sm:pb-12 sm:py-10">
         <OnboardingForm
+          defaultLanguage={await linkedLanguage()}
           defaultUsername={profile.display_name ?? pendingUsername ?? ""}
         />
       </main>

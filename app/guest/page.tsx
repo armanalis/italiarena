@@ -5,6 +5,7 @@ import { AuroraCanvas } from "@/components/aurora-canvas";
 import { GuestSetupForm } from "@/components/guest/guest-setup-form";
 import { LegalFooter } from "@/components/legal/privacy-policy";
 import { getCurrentUserProfile, isOnboardingComplete } from "@/lib/auth";
+import { linkedLanguage } from "@/lib/language-link";
 import { createClient } from "@/utils/supabase/server";
 
 export default async function GuestPage() {
@@ -30,7 +31,10 @@ export default async function GuestPage() {
           ← Back to home
         </Link>
 
-        <GuestSetupForm isAuthenticated={Boolean(user)} />
+        <GuestSetupForm
+          isAuthenticated={Boolean(user)}
+          defaultLanguage={await linkedLanguage()}
+        />
         <LegalFooter className="mt-8" />
       </main>
     </AuroraCanvas>
