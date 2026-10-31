@@ -279,7 +279,7 @@ export function WordleGame({
       <header className="space-y-1">
         <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Wordle</h1>
         <p className="text-sm text-muted-foreground">
-          Guess the 5-letter Italian word in {WORDLE_MAX_GUESSES} tries. One puzzle a day for each level.
+          Guess the 5-letter {language} word in {WORDLE_MAX_GUESSES} tries. One puzzle a day for each level.
         </p>
       </header>
 
@@ -464,17 +464,27 @@ export function WordleGame({
         </section>
       )}
 
-      <p className="text-xs text-muted-foreground">
-        Word checks use{" "}
-        <a className="underline underline-offset-2" href="https://github.com/napolux/paroleitaliane" target="_blank" rel="noreferrer">
-          paroleitaliane
-        </a>{" "}
-        by Francesco Napoletano (MIT) and{" "}
-        <a className="underline underline-offset-2" href="https://github.com/hermitdave/FrequencyWords" target="_blank" rel="noreferrer">
-          FrequencyWords
-        </a>{" "}
-        by Hermit Dave (CC BY-SA 4.0).
-      </p>
+      {language === "German" ? (
+        <p className="text-xs text-muted-foreground">
+          Word checks use{" "}
+          <a className="underline underline-offset-2" href="https://github.com/enz/german-wordlist" target="_blank" rel="noreferrer">
+            german-wordlist
+          </a>{" "}
+          by Thomas Enz (CC0).
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Word checks use{" "}
+          <a className="underline underline-offset-2" href="https://github.com/napolux/paroleitaliane" target="_blank" rel="noreferrer">
+            paroleitaliane
+          </a>{" "}
+          by Francesco Napoletano (MIT) and{" "}
+          <a className="underline underline-offset-2" href="https://github.com/hermitdave/FrequencyWords" target="_blank" rel="noreferrer">
+            FrequencyWords
+          </a>{" "}
+          by Hermit Dave (CC BY-SA 4.0).
+        </p>
+      )}
       <Dialog open={shareText !== null} onOpenChange={(open) => !open && setShareText(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>

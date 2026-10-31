@@ -25,6 +25,7 @@ import type { MatchRoundReview } from "@/store/useGameStore";
 import { cn } from "@/lib/utils";
 
 type RecentMatchesDashboardProps = {
+  language: string;
   matches: RecentMatchWithQuestions[];
   reportedQuestionIds: string[];
 };
@@ -319,6 +320,7 @@ function MatchCard({
 }
 
 export function RecentMatchesDashboard({
+  language,
   matches,
   reportedQuestionIds: initialReportedIds,
 }: RecentMatchesDashboardProps) {
@@ -342,7 +344,7 @@ export function RecentMatchesDashboard({
               Recent matches
             </h1>
             <p className="text-sm text-muted-foreground">
-              Your last 10 games with every question from each match. Ask AI for
+              Your last 10 {language} games with every question from each match. Ask AI for
               explanations or tap Report to flag an issue.
             </p>
           </div>

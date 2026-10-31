@@ -21,6 +21,7 @@ import { normalizeQuestionCategory } from "@/lib/match";
 import type { PlayerStats, QuestionCategory } from "@/types/database.types";
 
 type StatisticsDashboardProps = {
+  language: string;
   stats: PlayerStats | null;
   mistakes: UserMistakeWithQuestion[];
   reportedQuestionIds: string[];
@@ -41,6 +42,7 @@ function mistakeMatchesCategory(
 }
 
 export function StatisticsDashboard({
+  language,
   stats,
   mistakes: initialMistakes,
   reportedQuestionIds: initialReportedQuestionIds,
@@ -129,7 +131,7 @@ export function StatisticsDashboard({
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Statistics</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Track match performance and review questions you still need to learn.
+            Track your {language} match performance and review questions you still need to learn.
           </p>
         </div>
         <ResetStatsButton hasStats={hasStats} />

@@ -1,6 +1,7 @@
 "use server";
 
-import { getAuthUserId } from "@/lib/auth";
+import { getCurrentUserProfile } from "@/lib/auth";
+import { DEFAULT_LANGUAGE } from "@/lib/constants";
 import { cachedDashboardQuery, dashboardTag } from "@/lib/dashboard-cache";
 import {
   isMatchScoreState,
@@ -60,22 +61,25 @@ export type RecentMatchesData = {
   reportedQuestionIds: string[];
 };
 
+/** The last matches in the language being played now, like the statistics. */
 export async function getRecentMatchesWithQuestions(): Promise<RecentMatchesData> {
-  const userId = await getAuthUserId();
+  const profile = await getCurrentUserProfile();
 
-  if (!userId) {
+  if (!profile) {
     return { matches: [], reportedQuestionIds: [] };
   }
 
+  const language = profile.target_language ?? DEFAULT_LANGUAGE;
   return cachedDashboardQuery(
-    ["recent-matches", userId],
-    dashboardTag(userId, "recent-matches"),
-    () => fetchRecentMatchesWithQuestions(userId)
+    ["recent-matches", profile.id, language],
+    dashboardTag(profile.id, "recent-matches"),
+    () => fetchRecentMatchesWithQuestions(profile.id, language)
   );
 }
 
 async function fetchRecentMatchesWithQuestions(
-  userId: string
+  userId: string,
+  language: string
 ): Promise<RecentMatchesData> {
   const supabase = await createClient();
 
@@ -94,6 +98,7 @@ async function fetchRecentMatchesWithQuestions(
     .from("match_history")
     .select("*")
     .eq("user_id", userId)
+    .eq("language", language)
     .order("played_at", { ascending: false })
     .limit(10);
 

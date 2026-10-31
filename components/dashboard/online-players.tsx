@@ -27,8 +27,8 @@ export function OnlineHeartbeat() {
   return null;
 }
 
-/** "A2 · 5 online"; opens the online count of every level. */
-export function OnlineLevelBadge({ level }: { level: string }) {
+/** "A2 · 5 online" in the language being played; opens the online count of every level. */
+export function OnlineLevelBadge({ level, language }: { level: string; language: string }) {
   const [counts, setCounts] = useState<Record<string, number> | null>(null);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export function OnlineLevelBadge({ level }: { level: string }) {
     let cancelled = false;
 
     const load = async () => {
-      const { data } = await supabase.rpc("online_counts");
+      const { data } = await supabase.rpc("online_counts", { p_language: language });
       if (!cancelled && Array.isArray(data)) {
         const rows = data as { level: string; online: number }[];
         setCounts(Object.fromEntries(rows.map((row) => [row.level, row.online])));
@@ -49,7 +49,7 @@ export function OnlineLevelBadge({ level }: { level: string }) {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, []);
+  }, [language]);
 
   // This player is online too, even before their first heartbeat is counted.
   const onlineIn = (other: string) =>
