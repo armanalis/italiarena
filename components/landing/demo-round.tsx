@@ -254,7 +254,7 @@ export function DemoRound({ questions, opponent, className }: DemoRoundProps) {
               style={{ background: "var(--card)" }}
             >
               <p className="text-base font-semibold tracking-tight sm:text-lg">
-                Want to improve your Italian?
+                Want to improve your Italian or German?
               </p>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                 A real match is ten questions against a live opponent at your level.

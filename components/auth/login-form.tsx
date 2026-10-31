@@ -182,7 +182,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
               ? "Enter your email and we'll send you a reset link."
               : isResend
                 ? "Enter your email and we'll send a fresh verification link."
-                : "Practice Italian through quick, real-time sessions with others at your level."}
+                : "Practice Italian or German through quick, real-time sessions with others at your level."}
           </p>
         </div>
 
@@ -415,7 +415,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
             <>
               <p className="flex items-start gap-2 rounded-lg bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground dark:bg-white/5">
                 <Sparkles className="mt-0.5 size-3.5 shrink-0 text-primary" />
-                New accounts get matched by Italian level after a quick setup.
+                New accounts pick a language and get matched by level after a quick setup.
               </p>
               <p className="text-center text-xs text-muted-foreground">
                 By creating an account, you acknowledge our{" "}

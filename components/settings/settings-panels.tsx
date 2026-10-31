@@ -401,7 +401,7 @@ export function SettingsPanels({
       <Card className="border-border/60">
         <CardHeader>
           <CardTitle>Recent matches</CardTitle>
-          <CardDescription>Your last 10 completed games.</CardDescription>
+          <CardDescription>Your last 10 completed {profile.target_language ?? DEFAULT_LANGUAGE} games.</CardDescription>
         </CardHeader>
         <CardContent>
           {recentMatches.length === 0 ? (

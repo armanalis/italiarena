@@ -125,7 +125,7 @@ export async function PlayDashboardContent({
               </CardTitle>
               {/* Who is around, right next to the button that matches you with them. */}
               <CardAction>
-                <OnlineLevelBadge level={level} />
+                <OnlineLevelBadge level={level} language={language} />
               </CardAction>
               <CardDescription>Live 1v1 at your level.</CardDescription>
             </CardHeader>

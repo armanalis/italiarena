@@ -46,8 +46,9 @@ export async function getSettingsData() {
     redirect("/login");
   }
 
+  const language = profile.target_language ?? DEFAULT_LANGUAGE;
   return cachedDashboardQuery(
-    ["settings-data", profile.id],
+    ["settings-data", profile.id, language],
     dashboardTag(profile.id, "settings"),
     async () => {
       const supabase = await createClient();
@@ -55,6 +56,7 @@ export async function getSettingsData() {
         .from("match_history")
         .select("*")
         .eq("user_id", profile.id)
+        .eq("language", language)
         .order("played_at", { ascending: false })
         .limit(10);
       // Separate query: until friends-last-seen-2026-10-15.sql runs, the column
