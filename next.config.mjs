@@ -8,6 +8,8 @@ const nextConfig = {
       { source: "/dashboard/statistics", destination: "/stats", permanent: true },
       { source: "/dashboard/recent-matches", destination: "/recent", permanent: true },
       { source: "/dashboard/:path*", destination: "/:path*", permanent: true },
+      // Passaparola was renamed Word Wheel (2026-10-31).
+      { source: "/passaparola", destination: "/word-wheel", permanent: true },
     ];
   },
   experimental: {

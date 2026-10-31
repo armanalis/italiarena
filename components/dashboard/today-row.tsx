@@ -44,7 +44,7 @@ function passaparolaTile(result: PassaparolaTurnResult, streak: GameStreak | und
   const view = result.ok ? result.view : null;
   const right = view ? Object.values(view.marks).filter((mark) => mark === "right").length : 0;
   return {
-    title: "Passaparola",
+    title: "Word Wheel",
     status: view?.finished
       ? `${right}/${view.clues.length} right`
       : view?.started
@@ -53,7 +53,7 @@ function passaparolaTile(result: PassaparolaTurnResult, streak: GameStreak | und
     done: Boolean(view?.finished),
     icon: CircleDashed,
     accent: "text-sky-500",
-    href: "/passaparola",
+    href: "/word-wheel",
     streak: streak?.streak,
   };
 }

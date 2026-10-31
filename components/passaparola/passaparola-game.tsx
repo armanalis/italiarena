@@ -221,7 +221,7 @@ export function PassaparolaGame({
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6">
       {/* Same title and level chips as the Wordle page. */}
       <header className="space-y-1">
-        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Passaparola</h1>
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Word Wheel</h1>
         <p className="text-sm text-muted-foreground">
           A clue for every letter from A to Z in 5 minutes. One board a day for each level.
         </p>
@@ -329,7 +329,7 @@ export function PassaparolaGame({
               <ul className="space-y-1.5 text-left text-sm">
                 <li>Type the {language} word starting with the letter and press Enter.</li>
                 <li>
-                  Type <Keyword word={PASSAPAROLA_PASS_WORD} className="text-amber-500" /> or press Passo
+                  Type <Keyword word={PASSAPAROLA_PASS_WORD} className="text-amber-500" /> or press Skip
                   to skip a letter; it comes back once the others are done.
                 </li>
                 <li>
@@ -386,7 +386,7 @@ export function PassaparolaGame({
                   className="flex h-11 shrink-0 items-center gap-1 rounded-xl bg-amber-400 px-4 text-sm font-bold uppercase tracking-wide text-black transition-colors hover:bg-amber-300 disabled:opacity-60"
                 >
                   <ChevronRight className="size-4" aria-hidden />
-                  Passo
+                  Skip
                 </button>
               </form>
             </>
@@ -464,7 +464,7 @@ export function PassaparolaGame({
             <Loader2 className="mx-auto size-8 animate-spin text-muted-foreground" aria-hidden />
             <ul className="space-y-1 text-left text-sm">
               <li>
-                Stuck? Type <Keyword word={PASSAPAROLA_PASS_WORD} className="text-amber-500" /> to pass.
+                Stuck? Type <Keyword word={PASSAPAROLA_PASS_WORD} className="text-amber-500" /> to skip a letter.
               </li>
               <li>
                 Done? Type <Keyword word={PASSAPAROLA_FINISH_WORD} className="text-red-500" /> to finish early.

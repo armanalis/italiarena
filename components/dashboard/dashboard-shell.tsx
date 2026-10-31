@@ -40,9 +40,9 @@ const navItems = [
     exact: false,
   },
   {
-    href: "/passaparola",
-    label: "Passaparola",
-    shortLabel: "Passa",
+    href: "/word-wheel",
+    label: "Word Wheel",
+    shortLabel: "Wheel",
     icon: CircleDashed,
     exact: false,
   },
