@@ -6,6 +6,7 @@ import { GlassPanel } from "@/components/glass-panel";
 import { DemoRound } from "@/components/landing/demo-round";
 import { Button } from "@/components/ui/button";
 import { LegalFooter } from "@/components/legal/privacy-policy";
+import type { TargetLanguage } from "@/lib/constants";
 import { pickDemoOpponent, pickDemoQuestions } from "@/lib/landing-demo-questions";
 
 const features = [
@@ -32,7 +33,8 @@ const features = [
   },
 ];
 
-export function LandingPage() {
+/** `language`: the demo round's language (German after a /german link). */
+export function LandingPage({ language }: { language: TargetLanguage }) {
   return (
     <AuroraCanvas>
       <main className="mx-auto w-full max-w-6xl px-4 pb-[max(3rem,env(safe-area-inset-bottom,0px))] pt-10 sm:px-6 sm:pt-14 lg:px-8 lg:pt-20">
@@ -72,7 +74,7 @@ export function LandingPage() {
             </p>
           </div>
 
-          <DemoRound questions={pickDemoQuestions()} opponent={pickDemoOpponent()} />
+          <DemoRound questions={pickDemoQuestions(3, language)} opponent={pickDemoOpponent(language)} />
         </section>
 
         <section className="mt-16 sm:mt-20">

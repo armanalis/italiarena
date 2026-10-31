@@ -189,7 +189,7 @@ export function DemoRound({ questions, opponent, className }: DemoRoundProps) {
               <Badge variant="secondary" className="uppercase tracking-wide">
                 {question.category}
               </Badge>
-              <h3 className="text-lg font-semibold leading-snug sm:text-xl" lang="it">
+              <h3 className="text-lg font-semibold leading-snug sm:text-xl" lang={question.lang}>
                 {question.prompt}
               </h3>
               <p className="text-sm text-muted-foreground">{question.hint}</p>
