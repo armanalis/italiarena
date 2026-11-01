@@ -16,9 +16,9 @@ export const SUPPORT_EMAIL = "support@italiarena.com";
 /** Privacy and data-protection requests (same inbox as general support). */
 export const PRIVACY_CONTACT_EMAIL = SUPPORT_EMAIL;
 
-export const PRIVACY_POLICY_LAST_UPDATED_ISO = "2026-09-15";
-export const PRIVACY_POLICY_LAST_UPDATED_IT = "15 settembre 2026";
-export const PRIVACY_POLICY_LAST_UPDATED_EN = "15 September 2026";
+export const PRIVACY_POLICY_LAST_UPDATED_ISO = "2026-11-02";
+export const PRIVACY_POLICY_LAST_UPDATED_IT = "2 novembre 2026";
+export const PRIVACY_POLICY_LAST_UPDATED_EN = "2 November 2026";
 
 export const PRIVACY_HREF_IT = "/privacy";
 export const PRIVACY_HREF_EN = "/privacy?lang=en";
@@ -149,10 +149,11 @@ function buildItalianCopy(): PrivacyCopy {
           "Dati di identificazione e contatto: indirizzo e-mail, password in forma non in chiaro (gestita dal fornitore di autenticazione), nome visualizzato (username), ruolo interno (utente o amministratore), stato di verifica dell’e-mail.",
           "Accesso con Google (solo se scelto dall’utente): identificativo dell’account Google, nome e indirizzo e-mail comunicati da Google al momento dell’autenticazione.",
           "Modalità ospite: nome generato automaticamente e, se usata l’autenticazione ospite, un indirizzo e-mail tecnico non reale (formato guest-…@guest.local). Gli ospiti non compaiono in classifica e non possono inviare domande alla community.",
-          "Profilo di apprendimento: livello di italiano (QECR), lingua oggetto di studio (italiano), preferenze di suono e feedback aptico.",
-          "Dati di gioco: statistiche, domande già viste, storico partite, punteggi, esito (vittoria/sconfitta/pareggio), tipo di avversario, errori e progresso della pratica sugli errori, risposte e punteggi della sessione di gioco in corso.",
+          "Profilo di apprendimento: lingua oggetto di studio (italiano o tedesco), livello (QECR) per ciascuna lingua, preferenze di suono e feedback aptico.",
+          "Dati di gioco: statistiche, domande già viste, storico partite, punteggi, esito (vittoria/sconfitta/pareggio), tipo di avversario, risultati giornalieri di Wordle, Word Wheel e dello Sprint sugli articoli, errori con le date del loro ripasso, risposte e punteggi della sessione di gioco in corso.",
           "Partite «ghost»: le risposte di una partita già giocata possono essere riutilizzate per un avversario automatico. L’interfaccia mostra un nome generico («Ghost Opponent»), non il username dell’utente originario.",
           "Classifica: per gli account registrati, nome visualizzato e risultati PvP (partite, vittorie, percentuale, punti) visibili agli altri utenti autenticati.",
+          "Amici: gli amici che hai accettato vedono se sei online, quando sei stato visto l’ultima volta e i punteggi di oggi (Wordle, Word Wheel, Sprint), mai le tue risposte. Puoi nascondere l’ultimo accesso e i punteggi in Impostazioni → Amici.",
           "Segnalazioni e contributi: tipo di problema segnalato su una domanda; testo delle domande proposte alla community, opzioni, risposta corretta, eventuale motivazione e, per i revisori, note di revisione.",
           "Intelligenza artificiale (solo su richiesta): testo della domanda, testo della risposta corretta, testo della risposta selezionata e spiegazione generata per «Ask AI»; registro del numero di richieste per partita; per i contributi alla community, un pre-controllo automatico della domanda (parere non vincolante per un revisore umano).",
           "Notifiche push (solo se attivate): endpoint di sottoscrizione, chiavi tecniche (p256dh e auth), user-agent del browser, fuso orario IANA, ora preferita del promemoria giornaliero e data dell’ultimo invio.",
@@ -443,10 +444,11 @@ function buildEnglishCopy(): PrivacyCopy {
           "Identification and contact data: email address, hashed password (handled by our authentication provider), display name (username), internal role (user or admin), and email-verification status.",
           "Google sign-in (only if you choose it): Google account identifier, name, and email that Google sends at authentication.",
           "Guest mode: an auto-generated display name and, if guest authentication is used, a technical non-real email (guest-…@guest.local). Guests do not appear on the leaderboard and cannot submit community questions.",
-          "Learning profile: Italian proficiency level (CEFR), target language (Italian), sound and haptic preferences.",
-          "Gameplay data: statistics, seen questions, match history, scores, result (win/loss/tie), opponent type, mistakes and mistake-practice progress, and in-progress session answers and scores.",
+          "Learning profile: target language (Italian or German), proficiency level (CEFR) for each language, sound and haptic preferences.",
+          "Gameplay data: statistics, seen questions, match history, scores, result (win/loss/tie), opponent type, daily Wordle, Word Wheel and article Sprint results, mistakes with their review dates, and in-progress session answers and scores.",
           "Ghost matches: answers from a completed match may be reused for an automatic opponent. The interface shows a generic name («Ghost Opponent»), not the original user’s username.",
           "Leaderboard: for registered accounts, display name and PvP results (matches, wins, win rate, points) visible to other authenticated users.",
+          "Friends: friends you have accepted see whether you are online, when you were last seen, and today's scores (Wordle, Word Wheel, Sprint), never your answers. You can hide last seen and your scores in Settings → Friends.",
           "Reports and contributions: the type of issue reported on a question; submitted question text, options, correct answer, optional rationale, and reviewer notes.",
           "Artificial intelligence (only on request): question text, the correct option text, the selected option text, and the generated «Ask AI» explanation; a per-match count of AI requests; and, for community submissions, an automatic pre-check (advisory only for a human reviewer).",
           "Push notifications (only if enabled): subscription endpoint, technical keys (p256dh and auth), browser user-agent, IANA timezone, preferred daily reminder hour, and last-sent timestamp.",

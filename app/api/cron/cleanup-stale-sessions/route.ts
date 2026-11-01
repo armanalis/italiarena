@@ -8,6 +8,8 @@ export const dynamic = "force-dynamic";
 const STALE_AFTER_HOURS = 1;
 
 /**
+ * Also deletes practice article Sprints left unfinished for a day.
+ *
  * Matchmaking only abandons a user's OWN zombie "waiting" lobby the next
  * time they search — there is no sweep for sessions nobody ever comes back
  * to (closed tab, crashed match, phone died mid-match). Left unbounded,
@@ -34,7 +36,20 @@ async function runStaleSessionCleanup() {
     throw new Error(error.message);
   }
 
-  return { abandoned: data?.length ?? 0 };
+  // Practice Sprints left halfway (each row keeps 120 card ids) are never read
+  // again: nothing was scored and they carry no answers.
+  const { count: practiceRunsDeleted, error: runsError } = await admin
+    .from("article_runs")
+    .delete({ count: "exact" })
+    .eq("scored", false)
+    .is("finished_at", null)
+    .lt("started_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+  if (runsError) {
+    throw new Error(runsError.message);
+  }
+
+  return { abandoned: data?.length ?? 0, practiceRunsDeleted: practiceRunsDeleted ?? 0 };
 }
 
 export async function GET(request: Request) {
