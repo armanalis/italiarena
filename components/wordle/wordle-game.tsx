@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Check, Copy, Delete, Share2 } from "lucide-react";
+import { SpeakButton } from "@/components/speak-button";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -361,9 +362,10 @@ export function WordleGame({
               ? `Bravo! Solved in ${view.guesses.length}/${WORDLE_MAX_GUESSES}.`
               : "Not this time."}
           </p>
-          <p className="text-sm">
+          <p className="flex flex-wrap items-center justify-center gap-x-1.5 text-sm">
             <span className="font-bold uppercase tracking-wider">{view.answer}</span>
-            {view.meaning && <span className="text-muted-foreground"> · {view.meaning}</span>}
+            {view.answer && <SpeakButton className="-my-2" text={view.answer} language={language} />}
+            {view.meaning && <span className="text-muted-foreground">· {view.meaning}</span>}
           </p>
           <p className="text-xs text-muted-foreground">
             {view.isToday

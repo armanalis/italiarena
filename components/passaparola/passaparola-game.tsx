@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronRight, Clock, Loader2, SkipForward, X } from "lucide-react";
+import { SpeakButton } from "@/components/speak-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
@@ -439,6 +440,13 @@ export function PassaparolaGame({
                         <span className="block text-xs text-muted-foreground">Not answered</span>
                       )}
                     </span>
+                    {view.answers?.[item.letter] && (
+                      <SpeakButton
+                        className="-my-1.5 ml-auto"
+                        text={view.answers[item.letter].join(", ")}
+                        language={language}
+                      />
+                    )}
                   </li>
                 );
               })}
