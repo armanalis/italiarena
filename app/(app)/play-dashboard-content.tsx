@@ -20,6 +20,7 @@ import { WelcomeTour } from "@/components/dashboard/welcome-tour";
 import { MatchmakingStartLink } from "@/components/matchmaking/matchmaking-start-link";
 import { getAdminQueueCounts } from "@/lib/admin-queue-counts";
 import { getCurrentUserProfile, isGuestUser } from "@/lib/auth";
+import { loadArticleStats } from "@/lib/articles";
 import { playPassaparola } from "@/lib/passaparola";
 import type { GameStreak } from "@/lib/push";
 import { italyToday, playWordle } from "@/lib/wordle";
@@ -51,11 +52,12 @@ export async function PlayDashboardContent({
   const level = profile.proficiency_level;
   const language = profile.target_language;
   // Loads only: today's puzzles are not started or played from here.
-  const [{ data: streakRows }, stats, wordle, passaparola] = await Promise.all([
+  const [{ data: streakRows }, stats, wordle, passaparola, articles] = await Promise.all([
     supabase.rpc("get_my_streaks"),
     getPlayerStatistics(),
     playWordle(supabase, language, level, italyToday(), null),
     playPassaparola(supabase, language, level),
+    loadArticleStats(supabase, language),
   ]);
   const streaks = Object.fromEntries(
     ((streakRows as GameStreak[] | null) ?? []).map((row) => [row.game, row])
@@ -147,7 +149,14 @@ export async function PlayDashboardContent({
           <ArenaSummary stats={stats} />
         </section>
 
-        <TodayRow wordle={wordle} passaparola={passaparola} streaks={streaks} />
+        <TodayRow
+          wordle={wordle}
+          passaparola={passaparola}
+          articles={articles}
+          language={language}
+          level={level}
+          streaks={streaks}
+        />
 
         {!guest && (
           <Link

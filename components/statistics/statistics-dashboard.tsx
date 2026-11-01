@@ -15,13 +15,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import Link from "next/link";
+import { ALL_ARTICLES, ARTICLE_GAME_NAME, type ArticleStats } from "@/lib/articles";
+import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
 import { categoryResults, overallAccuracy, pct } from "@/lib/player-stats";
 import { formatCategoryLabel } from "@/lib/scoring";
 import { normalizeQuestionCategory } from "@/lib/match";
 import type { PlayerStats, QuestionCategory } from "@/types/database.types";
 
 type StatisticsDashboardProps = {
-  language: string;
+  language: TargetLanguage;
+  articleStats: ArticleStats | null;
   stats: PlayerStats | null;
   mistakes: UserMistakeWithQuestion[];
   reportedQuestionIds: string[];
@@ -43,6 +47,7 @@ function mistakeMatchesCategory(
 
 export function StatisticsDashboard({
   language,
+  articleStats,
   stats,
   mistakes: initialMistakes,
   reportedQuestionIds: initialReportedQuestionIds,
@@ -244,6 +249,55 @@ export function StatisticsDashboard({
               </div>
             );
           })}
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/60">
+        <CardHeader>
+          <CardTitle lang={LANGUAGE_META[language].code}>{ARTICLE_GAME_NAME[language]}</CardTitle>
+          <CardDescription>
+            Your best Sprint for each level, and how often you pick each article right. Missed nouns join
+            your mistakes below.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {articleStats && Object.keys(articleStats.best).length > 0 ? (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {PROFICIENCY_LEVELS.filter((level) => articleStats.best[level] !== undefined).map((level) => (
+                  <Badge key={level} variant="secondary" className="tabular-nums">
+                    {level} · best {articleStats.best[level]}
+                  </Badge>
+                ))}
+              </div>
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 xl:grid-cols-7">
+                {ALL_ARTICLES[language]
+                  .filter((article) => articleStats.accuracy[article])
+                  .map((article) => {
+                    const { answered, right } = articleStats.accuracy[article];
+                    return (
+                      <div key={article} className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+                        <p lang={LANGUAGE_META[language].code} className="text-sm font-medium">
+                          {article}
+                        </p>
+                        <p className="text-xl font-bold tabular-nums">{pct(right, answered)}</p>
+                        <p className="text-xs text-muted-foreground tabular-nums">
+                          {right} of {answered}
+                        </p>
+                      </div>
+                    );
+                  })}
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No Sprints yet.{" "}
+              <Link href="/articles" className="font-medium text-primary underline-offset-2 hover:underline">
+                Play your first one
+              </Link>
+              .
+            </p>
+          )}
         </CardContent>
       </Card>
 

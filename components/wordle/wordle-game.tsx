@@ -2,17 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { Check, Copy, Delete, Share2 } from "lucide-react";
+import { Delete } from "lucide-react";
 import { SpeakButton } from "@/components/speak-button";
+import { ShareButton } from "@/components/share-button";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import {
@@ -101,40 +94,8 @@ export function WordleGame({
   // The row being flipped and how many of its tiles show their color yet.
   const [revealing, setRevealing] = useState<{ row: number; shown: number } | null>(null);
   const currentRow = useRef<HTMLDivElement>(null);
-  // The result being shared in the popup (computers), or null when it is closed.
-  const [shareText, setShareText] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const playing = view?.status === "playing";
-
-  async function share() {
-    if (!view) {
-      return;
-    }
-    // The link goes inside the text: some share targets drop `text` when a `url` is given.
-    const text = wordleShareText(view, window.location.origin);
-    // Phones get their share sheet. Desktop Chrome has navigator.share too, but
-    // its macOS sheet can hang on a spinner, so computers get our own popup.
-    if (navigator.share && window.matchMedia("(pointer: coarse)").matches) {
-      try {
-        await navigator.share({ text });
-      } catch {
-        // Closing the share sheet is not an error.
-      }
-      return;
-    }
-    setCopied(false);
-    setShareText(text);
-  }
-
-  async function copyShareText() {
-    if (!shareText) {
-      return;
-    }
-    await navigator.clipboard.writeText(shareText);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 2_000);
-  }
 
   async function open(nextLevel: string, date: string | null) {
     const day = date ?? today;
@@ -372,10 +333,11 @@ export function WordleGame({
               ? "A new puzzle comes tomorrow. Try another level above, or a past day below."
               : "Pick another day from the archive below."}
           </p>
-          <Button type="button" className="mt-3 min-h-11" onClick={() => void share()}>
-            <Share2 className="size-4" />
-            Share
-          </Button>
+          <ShareButton
+            className="mt-3 min-h-11"
+            description="No spoilers: the link opens the same puzzle for your friends."
+            text={() => wordleShareText(view, window.location.origin)}
+          />
         </div>
       )}
 
@@ -487,32 +449,6 @@ export function WordleGame({
           by Hermit Dave (CC BY-SA 4.0).
         </p>
       )}
-      <Dialog open={shareText !== null} onOpenChange={(open) => !open && setShareText(null)}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Share your result</DialogTitle>
-            <DialogDescription>No spoilers: the link opens the same puzzle for your friends.</DialogDescription>
-          </DialogHeader>
-          <pre className="whitespace-pre-wrap break-all rounded-lg bg-muted p-3 font-sans text-sm leading-relaxed">
-            {shareText}
-          </pre>
-          <DialogFooter className="gap-2 sm:justify-start">
-            <Button type="button" className="min-h-11" onClick={() => void copyShareText()}>
-              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-              {copied ? "Copied" : "Copy"}
-            </Button>
-            <Button asChild variant="outline" className="min-h-11">
-              <a
-                href={`https://wa.me/?text=${encodeURIComponent(shareText ?? "")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                WhatsApp
-              </a>
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

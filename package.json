@@ -11,7 +11,7 @@
     "audit:questions": "tsx scripts/audit-questions.ts",
     "test": "npm run test:unit && npm run test:sql",
     "test:unit": "for f in scripts/test-*.ts; do tsx \"$f\" || exit 1; done",
-    "test:sql": "node supabase/match-sql.test.mjs"
+    "test:sql": "node supabase/match-sql.test.mjs && node supabase/articles-sql.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",

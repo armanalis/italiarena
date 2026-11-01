@@ -44,12 +44,14 @@ const atRisk = buildDailyReminderPayloads([
   { game: "arena", streak: 3, played_today: false },
   { game: "wordle", streak: 5, played_today: true },
   { game: "passaparola", streak: 2, played_today: false },
+  { game: "articles", streak: 6, played_today: false },
 ]);
 assert.deepEqual(
   atRisk.map((p) => [p.tag, p.url, p.body]),
   [
     ["daily-reminder-arena", "/matchmaking", "Keep your 3-day Arena streak alive: one quick match is enough."],
     ["daily-reminder-passaparola", "/word-wheel", "Keep your 2-day Word Wheel streak alive: five minutes is enough."],
+    ["daily-reminder-articles", "/articles", "Keep your 6-day articles streak alive: one 60-second Sprint is enough."],
   ],
   "one reminder per streak at risk, opening its game"
 );

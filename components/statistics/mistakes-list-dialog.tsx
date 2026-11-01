@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import type { UserMistakeWithQuestion } from "@/app/(app)/stats/actions";
 import { ReportQuestionButton } from "@/components/match/report-question-button";
+import { NOUN_QUESTION_PREFIX } from "@/lib/articles";
 import { formatCategoryLabel, getOptionText } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
 
@@ -76,13 +77,16 @@ export function MistakesListDialog({
                       Practice {mistake.practice_streak}/3
                     </Badge>
                   </div>
-                  <ReportQuestionButton
-                    questionId={mistake.question_id}
-                    questionText={mistake.question.question_text}
-                    showLabel
-                    reported={reportedQuestionIds.has(mistake.question_id)}
-                    onReported={() => markReported(mistake.question_id)}
-                  />
+                  {/* Missed article-game nouns are checked against Wiktionary, not reported. */}
+                  {!mistake.question_id.startsWith(NOUN_QUESTION_PREFIX) && (
+                    <ReportQuestionButton
+                      questionId={mistake.question_id}
+                      questionText={mistake.question.question_text}
+                      showLabel
+                      reported={reportedQuestionIds.has(mistake.question_id)}
+                      onReported={() => markReported(mistake.question_id)}
+                    />
+                  )}
                 </div>
 
                 <p className="text-sm font-medium leading-snug sm:text-base">
