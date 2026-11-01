@@ -13,6 +13,7 @@ import {
 import type { UserMistakeWithQuestion } from "@/app/(app)/stats/actions";
 import { ReportQuestionButton } from "@/components/match/report-question-button";
 import { NOUN_QUESTION_PREFIX } from "@/lib/articles";
+import { REVIEWS_TO_LEARN, whenDue } from "@/lib/review";
 import { formatCategoryLabel, getOptionText } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,8 @@ type MistakesListDialogProps = {
   onOpenChange: (open: boolean) => void;
   mistakes: UserMistakeWithQuestion[];
   reportedQuestionIds: string[];
+  /** Italy's date from the server. */
+  today: string;
 };
 
 export function MistakesListDialog({
@@ -28,6 +31,7 @@ export function MistakesListDialog({
   onOpenChange,
   mistakes,
   reportedQuestionIds: initialReportedQuestionIds,
+  today,
 }: MistakesListDialogProps) {
   const [reportedQuestionIds, setReportedQuestionIds] = useState(
     () => new Set(initialReportedQuestionIds)
@@ -47,9 +51,9 @@ export function MistakesListDialog({
         <DialogHeader>
           <DialogTitle>Your mistakes</DialogTitle>
           <DialogDescription>
-            Questions you got wrong in recent matches. Practice each one 3 times
-            correctly in a row to remove it from this list. Report any question
-            with a typo or wrong answer so admins can fix it.
+            Questions and nouns you got wrong. Each comes back for review on
+            its day; right on 4 different days and it leaves this list. Report
+            any question with a typo or wrong answer so admins can fix it.
           </DialogDescription>
         </DialogHeader>
 
@@ -74,7 +78,10 @@ export function MistakesListDialog({
                       {formatCategoryLabel(mistake.question.category)}
                     </Badge>
                     <Badge variant="outline" className="tabular-nums">
-                      Practice {mistake.practice_streak}/3
+                      {mistake.next_review_on <= today
+                        ? "Due today"
+                        : `Next ${whenDue(mistake.next_review_on, today)}`}{" "}
+                      · {mistake.practice_streak}/{REVIEWS_TO_LEARN}
                     </Badge>
                   </div>
                   {/* Missed article-game nouns are checked against Wiktionary, not reported. */}

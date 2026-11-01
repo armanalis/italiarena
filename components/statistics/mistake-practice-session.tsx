@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { ArrowLeft, CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MAX_AI_ASKS_PER_MATCH } from "@/lib/ai-explanations";
 import { NOUN_QUESTION_PREFIX } from "@/lib/articles";
+import { REVIEWS_TO_LEARN, whenDue } from "@/lib/review";
 import { formatCategoryLabel, getOptionText } from "@/lib/scoring";
 import type { MatchRoundReview } from "@/store/useGameStore";
 import type { CorrectAnswer } from "@/types/database.types";
@@ -23,36 +24,40 @@ const OPTIONS: CorrectAnswer[] = ["A", "B", "C", "D"];
 type MistakePracticeSessionProps = {
   initialMistakes: UserMistakeWithQuestion[];
   practiceSessionId: string;
+  /** Italy's date, from the server, so due dates read the same on every device. */
+  today: string;
   onClose: () => void;
-  onMistakesChange?: (mistakes: UserMistakeWithQuestion[]) => void;
+  /** After each answer: the mistake with its new schedule, or null once learned. */
+  onAnswered?: (mistakeId: string, next: UserMistakeWithQuestion | null) => void;
 };
 
 type FeedbackState = {
   selected: CorrectAnswer;
   correct: boolean;
-  practiceStreak: number;
-  mastered: boolean;
+  learned: boolean;
+  nextReviewOn: string | null;
+  /** Answered before its review day: right answers then do not move the schedule. */
+  early: boolean;
 };
 
-function shuffleMistakes(mistakes: UserMistakeWithQuestion[]) {
-  const copy = [...mistakes];
-  for (let index = copy.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
-  }
-  return copy;
+// Ordered by id: uuids look random, and the order is the same when the server
+// renders a review opened from a link (/stats?review=1) and in the browser.
+function mixMistakes(mistakes: UserMistakeWithQuestion[]) {
+  return [...mistakes].sort((a, b) => a.id.localeCompare(b.id));
 }
 
+/** Each mistake is answered once per session; its next review day comes from lib/review.ts. */
 export function MistakePracticeSession({
   initialMistakes,
   practiceSessionId,
+  today,
   onClose,
-  onMistakesChange,
+  onAnswered,
 }: MistakePracticeSessionProps) {
-  const [queue, setQueue] = useState(() => shuffleMistakes(initialMistakes));
+  const [queue] = useState(() => mixMistakes(initialMistakes));
   const [index, setIndex] = useState(0);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
-  const [masteredCount, setMasteredCount] = useState(0);
+  const [learnedCount, setLearnedCount] = useState(0);
   const [asksRemaining, setAsksRemaining] = useState(MAX_AI_ASKS_PER_MATCH);
   const [reportedQuestionIds, setReportedQuestionIds] = useState<Set<string>>(
     () => new Set()
@@ -60,50 +65,7 @@ export function MistakePracticeSession({
   const [isPending, startTransition] = useTransition();
 
   const current = queue[index] ?? null;
-
-  const remainingLabel = useMemo(() => {
-    if (queue.length === 0) {
-      return "All done";
-    }
-    return `${queue.length} question${queue.length === 1 ? "" : "s"} left`;
-  }, [queue.length]);
-
-  function syncMistakes(nextQueue: UserMistakeWithQuestion[]) {
-    onMistakesChange?.(nextQueue);
-  }
-
-  function advanceQueue(
-    mastered: boolean,
-    practiceStreak: number
-  ) {
-    if (!current) {
-      return;
-    }
-
-    setFeedback(null);
-
-    if (mastered) {
-      setMasteredCount((count) => count + 1);
-      setQueue((items) => {
-        const nextQueue = items.filter((item) => item.id !== current.id);
-        syncMistakes(nextQueue);
-        return nextQueue;
-      });
-      setIndex(0);
-      return;
-    }
-
-    setQueue((items) => {
-      const nextQueue = items.map((item) =>
-        item.id === current.id
-          ? { ...item, practice_streak: practiceStreak }
-          : item
-      );
-      syncMistakes(nextQueue);
-      return nextQueue;
-    });
-    setIndex((value) => (value + 1) % queue.length);
-  }
+  const left = queue.length - index;
 
   function handleSelect(answer: CorrectAnswer) {
     if (!current || feedback || isPending) {
@@ -124,39 +86,33 @@ export function MistakePracticeSession({
       setFeedback({
         selected: answer,
         correct: result.correct,
-        practiceStreak: result.practiceStreak,
-        mastered: result.mastered,
+        learned: result.learned,
+        nextReviewOn: result.nextReviewOn,
+        early: current.next_review_on > today,
       });
-
-      if (!result.mastered) {
-        setQueue((items) => {
-          const nextQueue = items.map((item) =>
-            item.id === current.id
-              ? { ...item, practice_streak: result.practiceStreak }
-              : item
-          );
-          syncMistakes(nextQueue);
-          return nextQueue;
-        });
+      if (result.learned) {
+        setLearnedCount((count) => count + 1);
       }
-
-      if (result.mastered) {
-        toast.success("Mastered — removed from your mistake list.");
-      } else if (result.correct) {
-        toast.success(`Correct · ${result.practiceStreak}/3 in a row`);
-      }
+      onAnswered?.(
+        current.id,
+        result.nextReviewOn
+          ? { ...current, practice_streak: result.practiceStreak, next_review_on: result.nextReviewOn }
+          : null
+      );
     });
   }
 
-  if (queue.length === 0) {
+  if (!current) {
     return (
       <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-8 text-center">
         <CheckCircle2 className="mx-auto size-10 text-emerald-400" />
-        <h2 className="mt-4 text-xl font-semibold">Practice complete</h2>
+        <h2 className="mt-4 text-xl font-semibold">Review done</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          {masteredCount > 0
-            ? `You mastered ${masteredCount} question${masteredCount === 1 ? "" : "s"}.`
-            : "No mistakes left to practice."}
+          {learnedCount > 0
+            ? `You learned ${learnedCount} for good. The rest come back on their next review day.`
+            : queue.length > 0
+              ? "Each one comes back on its next review day."
+              : "Nothing to review right now."}
         </p>
         <Button type="button" className="mt-6 min-h-11" onClick={onClose}>
           Back to statistics
@@ -203,11 +159,11 @@ export function MistakePracticeSession({
         </Button>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="tabular-nums">
-            {remainingLabel}
+            {left} left
           </Badge>
-          {masteredCount > 0 && (
+          {learnedCount > 0 && (
             <Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-300">
-              {masteredCount} mastered
+              {learnedCount} learned
             </Badge>
           )}
         </div>
@@ -235,7 +191,8 @@ export function MistakePracticeSession({
             {question.question_text}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Practice streak for this question: {current.practice_streak}/3
+            Right reviews: {current.practice_streak} of {REVIEWS_TO_LEARN}
+            {current.next_review_on > today && ` · due ${whenDue(current.next_review_on, today)}`}
           </p>
         </div>
 
@@ -338,11 +295,13 @@ export function MistakePracticeSession({
                     feedback.correct ? "text-emerald-400" : "text-destructive"
                   )}
                 >
-                  {feedback.mastered
-                    ? "Mastered — this question leaves your mistake list."
-                    : feedback.correct
-                      ? `Correct · ${feedback.practiceStreak}/3 in a row`
-                      : "Wrong answer — streak reset to 0."}
+                  {feedback.learned
+                    ? "Learned! It leaves your mistakes."
+                    : !feedback.correct
+                      ? "Wrong · it comes back tomorrow."
+                      : feedback.early
+                        ? `Right · it still comes back ${whenDue(feedback.nextReviewOn!, today)}: reviews count on different days.`
+                        : `Right · next review ${whenDue(feedback.nextReviewOn!, today)}.`}
                 </p>
                 {!feedback.correct && (
                   <p className="text-muted-foreground">
@@ -376,11 +335,12 @@ export function MistakePracticeSession({
             <Button
               type="button"
               className="min-h-11"
-              onClick={() =>
-                advanceQueue(feedback.mastered, feedback.practiceStreak)
-              }
+              onClick={() => {
+                setFeedback(null);
+                setIndex((value) => value + 1);
+              }}
             >
-              {feedback.mastered ? "Next question" : "Continue"}
+              {left > 1 ? "Next" : "Finish"}
             </Button>
           </div>
         )}

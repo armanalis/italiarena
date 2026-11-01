@@ -501,10 +501,14 @@ export interface Database {
       game_streaks: {
         Args: { p_user_id: string };
         Returns: Array<{
-          game: "arena" | "wordle" | "passaparola";
+          game: "arena" | "wordle" | "passaparola" | "articles";
           streak: number;
           played_today: boolean;
         }>;
+      };
+      review_due_count: {
+        Args: { p_user_id: string; p_language: string };
+        Returns: number;
       };
     };
     Enums: Record<string, never>;

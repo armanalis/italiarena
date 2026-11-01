@@ -56,5 +56,15 @@ assert.deepEqual(
   "one reminder per streak at risk, opening its game"
 );
 assert.deepEqual(buildDailyReminderPayloads([]).map((p) => p.tag), ["daily-reminder"], "streaks not loaded");
+assert.deepEqual(
+  buildDailyReminderPayloads([{ game: "wordle", streak: 4, played_today: true }], 5).map((p) => [p.url, p.body]),
+  [["/stats?review=1", "5 mistakes are waiting for review: about 2 min."]],
+  "no streak at risk: the mistakes due for review"
+);
+assert.equal(
+  buildDailyReminderPayloads([{ game: "arena", streak: 3, played_today: false }], 5)[0].tag,
+  "daily-reminder-arena",
+  "a streak at risk comes first"
+);
 
 console.log("ok - reminder payloads: one per streak at risk, the usual one otherwise");

@@ -52,8 +52,9 @@ export async function PlayDashboardContent({
   const level = profile.proficiency_level;
   const language = profile.target_language;
   // Loads only: today's puzzles are not started or played from here.
-  const [{ data: streakRows }, stats, wordle, passaparola, articles] = await Promise.all([
+  const [{ data: streakRows }, { data: reviewDue }, stats, wordle, passaparola, articles] = await Promise.all([
     supabase.rpc("get_my_streaks"),
+    supabase.rpc("get_my_review_due_count", { p_language: language }),
     getPlayerStatistics(),
     playWordle(supabase, language, level, italyToday(), null),
     playPassaparola(supabase, language, level),
@@ -153,6 +154,7 @@ export async function PlayDashboardContent({
           wordle={wordle}
           passaparola={passaparola}
           articles={articles}
+          reviewDue={(reviewDue as number | null) ?? 0}
           language={language}
           level={level}
           streaks={streaks}
