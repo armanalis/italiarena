@@ -48,7 +48,8 @@ export async function getSettingsData() {
 
   const language = profile.target_language ?? DEFAULT_LANGUAGE;
   return cachedDashboardQuery(
-    ["settings-data", profile.id, language],
+    // v2: adds showDailyResults; never serve a copy cached before it existed.
+    ["settings-data-v2", profile.id, language],
     dashboardTag(profile.id, "settings"),
     async () => {
       const supabase = await createClient();
@@ -63,7 +64,7 @@ export async function getSettingsData() {
       // is missing and this falls back to the default instead of failing.
       const { data: privacy } = await supabase
         .from("users")
-        .select("show_last_seen")
+        .select("show_last_seen, show_daily_results")
         .eq("id", profile.id)
         .maybeSingle();
 
@@ -71,6 +72,7 @@ export async function getSettingsData() {
         profile,
         recentMatches: (recentMatches ?? []) as MatchHistoryEntry[],
         showLastSeen: privacy?.show_last_seen ?? true,
+        showDailyResults: privacy?.show_daily_results ?? true,
         languageLevels: await readLanguageLevels(profile.id),
       };
     }
@@ -233,9 +235,15 @@ export async function updateGameplayPreferences(
   return { success: true };
 }
 
-export async function updateShowLastSeen(
-  showLastSeen: boolean
+/** What friends may see: last seen, and today's game results (get_friends_today). */
+export async function updateFriendPrivacy(
+  setting: "show_last_seen" | "show_daily_results",
+  value: boolean
 ): Promise<SettingsActionResult> {
+  // A server action is a public endpoint: only these two switches, only true/false.
+  if ((setting !== "show_last_seen" && setting !== "show_daily_results") || typeof value !== "boolean") {
+    return { success: false, error: "Unknown setting." };
+  }
   const supabase = await createClient();
   const {
     data: { user },
@@ -247,7 +255,7 @@ export async function updateShowLastSeen(
 
   const { error } = await supabase
     .from("users")
-    .update({ show_last_seen: showLastSeen })
+    .update({ [setting]: value })
     .eq("id", user.id);
 
   if (error) {

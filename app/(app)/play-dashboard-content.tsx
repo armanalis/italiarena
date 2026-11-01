@@ -14,6 +14,7 @@ import { AdminQueueBadge } from "@/components/admin/admin-queue-badge";
 import { ChallengeLinkButton } from "@/components/challenge/challenge-link-button";
 import { JoinCodeForm } from "@/components/challenge/join-code-form";
 import { ArenaSummary } from "@/components/dashboard/arena-summary";
+import { FriendsTodayList } from "@/components/dashboard/friends-today";
 import { TodayRow } from "@/components/dashboard/today-row";
 import { OnlineLevelBadge } from "@/components/dashboard/online-players";
 import { WelcomeTour } from "@/components/dashboard/welcome-tour";
@@ -21,6 +22,7 @@ import { MatchmakingStartLink } from "@/components/matchmaking/matchmaking-start
 import { getAdminQueueCounts } from "@/lib/admin-queue-counts";
 import { getCurrentUserProfile, isGuestUser } from "@/lib/auth";
 import { loadArticleStats } from "@/lib/articles";
+import { loadFriendsToday } from "@/lib/friends-today";
 import { playPassaparola } from "@/lib/passaparola";
 import type { GameStreak } from "@/lib/push";
 import { italyToday, playWordle } from "@/lib/wordle";
@@ -52,13 +54,14 @@ export async function PlayDashboardContent({
   const level = profile.proficiency_level;
   const language = profile.target_language;
   // Loads only: today's puzzles are not started or played from here.
-  const [{ data: streakRows }, { data: reviewDue }, stats, wordle, passaparola, articles] = await Promise.all([
+  const [{ data: streakRows }, { data: reviewDue }, stats, wordle, passaparola, articles, friendsToday] = await Promise.all([
     supabase.rpc("get_my_streaks"),
     supabase.rpc("get_my_review_due_count", { p_language: language }),
     getPlayerStatistics(),
     playWordle(supabase, language, level, italyToday(), null),
     playPassaparola(supabase, language, level),
     loadArticleStats(supabase, language),
+    loadFriendsToday(supabase, language),
   ]);
   const streaks = Object.fromEntries(
     ((streakRows as GameStreak[] | null) ?? []).map((row) => [row.game, row])
@@ -159,6 +162,15 @@ export async function PlayDashboardContent({
           level={level}
           streaks={streaks}
         />
+
+        {friendsToday.some((row) => !row.is_me) && (
+          <section aria-labelledby="friends-today-heading" className="mx-auto w-full max-w-3xl space-y-2">
+            <h2 id="friends-today-heading" className="text-sm font-semibold text-muted-foreground">
+              Today with friends
+            </h2>
+            <FriendsTodayList rows={friendsToday} language={language} />
+          </section>
+        )}
 
         {!guest && (
           <Link
