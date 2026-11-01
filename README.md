@@ -1,6 +1,6 @@
 # Italiarena
 
-Italiarena is a live 1v1 Italian trivia game.
+Italiarena is a language-learning game: live 1v1 quiz matches plus daily word games, in Italian and German.
 
 I moved to Turin as an international student and Italian was the hardest part — every app I tried felt like homework, so I stopped using them. Italiarena is the practice I actually wanted: quick, competitive matches instead of flashcards. It's for anyone landing in Italy and needing to pick up the language fast.
 
@@ -23,15 +23,17 @@ The **hosted backend and question database are not part of this repository**. Th
 | Idea | How it shows up in the app |
 | --- | --- |
 | **Short, focused matches** | Ten timed questions per round — grammar, vocabulary, fill-in-the-blank, and idioms |
-| **Real opponents** | Matchmaking pairs players by Italian level (CEFR A1–C1) |
+| **Real opponents** | Matchmaking pairs players by language and level (CEFR A1–C1) |
 | **No dead waiting** | Play vs bot for an instant ghost match, or search for a human opponent |
 | **Speed matters** | Faster correct answers score more; a tie after 10 questions goes to one sudden-death round |
-| **Learn from mistakes** | Post-match review, targeted mistake practice, and optional AI-generated explanations (Groq) |
+| **Daily games** | Wordle, Word Wheel (a clue for every letter) and a 60-second article Sprint (der·die·das / il·lo·la), one scored round a day per level |
+| **Learn from mistakes** | Post-match review, mistakes that come back on spaced review days until they stick, 🔊 pronunciation, and optional AI-generated explanations (Groq) |
+| **Friends** | Friend requests, challenges, and today's scores side by side (scores only, never answers) |
 | **Community quality control** | Players can report bad questions; admins review a flagged/submission queue |
-| **Push reminders** | Opt-in web push nudges players back for a daily match (Vercel Cron + service worker) |
+| **Push reminders** | Opt-in web push at the player's chosen hour: a streak at risk, reviews due, or a daily match (cron + service worker) |
 | **Works like an app on your phone** | Add to home screen on iOS and Android for a full-screen experience |
 
-Supported language: **Italian**.
+Supported languages: **Italian** and **German** (switch from the header; one level per language).
 
 ---
 

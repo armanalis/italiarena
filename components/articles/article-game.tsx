@@ -15,6 +15,7 @@ import {
   articleShareText,
   bonusAfter,
   finishSprint,
+  loadArticleStats,
   startSprint,
   withArticle,
   type ArticleCard,
@@ -83,9 +84,11 @@ export function ArticleGame({
       }));
     } else {
       setError(sent.error);
+      // The answers may have arrived even though the reply did not: show what the server kept.
+      void loadArticleStats(supabase, language).then((fresh) => fresh && setStats(fresh));
     }
     setPhase("done");
-  }, [level, sprint, supabase]);
+  }, [language, level, sprint, supabase]);
 
   async function start() {
     setPhase("starting");
@@ -147,7 +150,18 @@ export function ArticleGame({
         setMsLeft(left);
       }
     }, 100);
-    return () => window.clearInterval(tick);
+    // A phone call or app switch pauses the page, and answers sent after the
+    // clock count as 0 on the server: send what is answered as soon as it hides.
+    function onHide() {
+      if (document.visibilityState === "hidden") {
+        void finish(answers);
+      }
+    }
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.clearInterval(tick);
+      document.removeEventListener("visibilitychange", onHide);
+    };
   }, [answers, finish, phase]);
 
   // Keys 1–4 on computers.
@@ -344,10 +358,25 @@ export function ArticleGame({
                     : `right out of ${answers.length}${result.best !== null ? ` · best ${result.best}` : ""}`}
                 </p>
               </>
+            ) : sprint.scored && today !== undefined ? (
+              // A retry after a lost reply: the server had the answers all along.
+              <p className="text-4xl font-bold tabular-nums">{today}</p>
             ) : (
-              <p role="alert" className="text-sm font-medium text-destructive">
-                {error}
-              </p>
+              <>
+                <p role="alert" className="text-sm font-medium text-destructive">
+                  {error}
+                </p>
+                <Button
+                  type="button"
+                  className="min-h-11"
+                  onClick={() => {
+                    ended.current = false;
+                    void finish(answers);
+                  }}
+                >
+                  Try again
+                </Button>
+              </>
             )}
             <div className="flex flex-wrap justify-center gap-2 pt-2">
               {sprint.scored && result && !result.rejected && (
