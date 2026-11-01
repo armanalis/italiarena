@@ -19,8 +19,11 @@ import {
   LogOut,
   Settings,
   Swords,
+  Timer,
   Trophy,
 } from "lucide-react";
+import { ARTICLE_GAME_NAME } from "@/lib/articles";
+import type { TargetLanguage } from "@/lib/constants";
 
 const navItems = [
   { href: "/", label: "Arena", shortLabel: "Arena", icon: Swords, exact: true },
@@ -44,6 +47,14 @@ const navItems = [
     label: "Word Wheel",
     shortLabel: "Wheel",
     icon: CircleDashed,
+    exact: false,
+  },
+  {
+    // Named after its buttons in the language being played: der·die·das, il·lo·la.
+    href: "/articles",
+    label: "Articles",
+    shortLabel: "Articles",
+    icon: Timer,
     exact: false,
   },
   {
@@ -78,6 +89,7 @@ const navItems = [
 
 type DashboardShellProps = {
   children: React.ReactNode;
+  language: TargetLanguage;
 };
 
 function isImmersiveRoute(pathname: string) {
@@ -87,8 +99,11 @@ function isImmersiveRoute(pathname: string) {
   );
 }
 
-export function DashboardShell({ children }: DashboardShellProps) {
+export function DashboardShell({ children, language }: DashboardShellProps) {
   const pathname = usePathname();
+  const items = navItems.map((item) =>
+    item.href === "/articles" ? { ...item, label: ARTICLE_GAME_NAME[language] } : item
+  );
   const [botsOpen, setBotsOpen] = useState(false);
   const immersive = isImmersiveRoute(pathname);
 
@@ -104,7 +119,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
     <>
       <aside className="glass-sidebar dashboard-sidebar sticky top-below-header z-40 hidden h-app shrink-0 self-start flex-col overflow-y-auto md:flex">
         <nav className="flex-1 space-y-1 px-3 py-5">
-          {navItems.map(({ href, label, icon, exact }) => {
+          {items.map(({ href, label, icon, exact }) => {
             if (!href) {
               return (
                 <DashboardNavButton
@@ -161,8 +176,8 @@ export function DashboardShell({ children }: DashboardShellProps) {
         aria-label="Main"
         className="glass-header hide-while-typing fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom,0px)] md:hidden"
       >
-        <div className="mx-auto grid max-w-lg grid-cols-8 gap-0.5 px-1 py-2 sm:gap-1 sm:px-2">
-          {navItems.map(({ href, label, shortLabel, icon, exact }) => {
+        <div className="mx-auto grid max-w-lg grid-cols-9 gap-0.5 px-1 py-2 sm:gap-1 sm:px-2">
+          {items.map(({ href, label, shortLabel, icon, exact }) => {
             if (!href) {
               return (
                 <DashboardNavButton

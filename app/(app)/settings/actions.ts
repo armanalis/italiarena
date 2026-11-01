@@ -451,7 +451,7 @@ export async function getPlayerStatistics(): Promise<PlayerStats | null> {
   );
 }
 
-/** A forfeit is recorded by the database, so nothing else clears these caches. */
+/** A forfeit or an article Sprint is recorded by the database, so nothing else clears these caches. */
 export async function refreshDashboardAfterMatch(): Promise<void> {
   const userId = await getAuthUserId();
   if (userId) {

@@ -12,6 +12,7 @@ import { ReportQuestionButton } from "@/components/match/report-question-button"
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MAX_AI_ASKS_PER_MATCH } from "@/lib/ai-explanations";
+import { NOUN_QUESTION_PREFIX } from "@/lib/articles";
 import { formatCategoryLabel, getOptionText } from "@/lib/scoring";
 import type { MatchRoundReview } from "@/store/useGameStore";
 import type { CorrectAnswer } from "@/types/database.types";
@@ -169,6 +170,7 @@ export function MistakePracticeSession({
   }
 
   const question = current.question;
+  const isNoun = question.id.startsWith(NOUN_QUESTION_PREFIX);
 
   const aiRound: MatchRoundReview | null = feedback
     ? {
@@ -217,15 +219,17 @@ export function MistakePracticeSession({
             <Badge variant="secondary" className="uppercase tracking-wide">
               {formatCategoryLabel(question.category)}
             </Badge>
-            <ReportQuestionButton
-              questionId={question.id}
-              questionText={question.question_text}
-              showLabel
-              reported={reportedQuestionIds.has(question.id)}
-              onReported={() =>
-                setReportedQuestionIds((ids) => new Set(ids).add(question.id))
-              }
-            />
+            {!isNoun && (
+              <ReportQuestionButton
+                questionId={question.id}
+                questionText={question.question_text}
+                showLabel
+                reported={reportedQuestionIds.has(question.id)}
+                onReported={() =>
+                  setReportedQuestionIds((ids) => new Set(ids).add(question.id))
+                }
+              />
+            )}
           </div>
           <h2 className="text-lg font-semibold leading-snug sm:text-2xl">
             {question.question_text}
@@ -238,6 +242,10 @@ export function MistakePracticeSession({
         <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
           {OPTIONS.map((key) => {
             const text = question[`option_${key.toLowerCase()}` as keyof typeof question] as string;
+            // Articles have 3 buttons (der·die·das, i·gli·le): no option D.
+            if (!text) {
+              return null;
+            }
             const isSelected = feedback?.selected === key;
             const showCorrect =
               feedback &&
@@ -352,14 +360,19 @@ export function MistakePracticeSession({
 
         {feedback && aiRound && (
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <AskAiButton
-              round={aiRound}
-              sessionId={practiceSessionId}
-              asksRemaining={asksRemaining}
-              onAsksRemainingChange={setAsksRemaining}
-              showLabel
-              scopeLabel="practice session"
-            />
+            {/* Ask AI explains quiz questions; a noun's article needs no essay. */}
+            {isNoun ? (
+              <span />
+            ) : (
+              <AskAiButton
+                round={aiRound}
+                sessionId={practiceSessionId}
+                asksRemaining={asksRemaining}
+                onAsksRemainingChange={setAsksRemaining}
+                showLabel
+                scopeLabel="practice session"
+              />
+            )}
             <Button
               type="button"
               className="min-h-11"

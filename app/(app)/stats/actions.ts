@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { getAuthUserId, getCurrentUserProfile } from "@/lib/auth";
 import { DEFAULT_LANGUAGE } from "@/lib/constants";
 import { cachedDashboardQuery, dashboardTag, revalidateUserDashboard } from "@/lib/dashboard-cache";
-import { resolveQuestionsWithAnswers } from "@/lib/questions-with-answers";
+import { NOUN_QUESTION_PREFIX } from "@/lib/articles";
+import { resolveNounQuestions, resolveQuestionsWithAnswers } from "@/lib/questions-with-answers";
 import { isAnswerCorrect } from "@/lib/scoring";
 import { createClient } from "@/utils/supabase/server";
 import type {
@@ -97,7 +98,7 @@ async function fetchUserMistakes(
 
   const { data, error } = await supabase
     .from("user_mistakes")
-    .select("id, question_id, selected_answer, practice_streak, last_mistaken_at")
+    .select("id, question_id, noun_id, selected_answer, practice_streak, last_mistaken_at")
     .eq("user_id", userId)
     .order("last_mistaken_at", { ascending: false });
 
@@ -105,21 +106,23 @@ async function fetchUserMistakes(
     return [];
   }
 
-  const questionsById = await resolveQuestionsWithAnswers(
-    data.map((row) => row.question_id)
-  );
+  // A mistake is a quiz question or a missed article-game noun.
+  const [questionsById, nounsById] = await Promise.all([
+    resolveQuestionsWithAnswers(data.flatMap((row) => (row.question_id ? [row.question_id] : []))),
+    resolveNounQuestions(data.flatMap((row) => (row.noun_id ? [row.noun_id] : []))),
+  ]);
 
   const results: UserMistakeWithQuestion[] = [];
 
   for (const row of data) {
-    const question = questionsById.get(row.question_id);
+    const question = row.noun_id ? nounsById.get(row.noun_id) : questionsById.get(row.question_id);
     if (!question || question.language !== language) {
       continue;
     }
 
     results.push({
       id: row.id,
-      question_id: row.question_id,
+      question_id: question.id,
       selected_answer: row.selected_answer as CorrectAnswer | null,
       practice_streak: row.practice_streak,
       last_mistaken_at: row.last_mistaken_at,
@@ -176,18 +179,22 @@ export async function submitMistakePracticeAnswer(
     return { success: false, error: "Not authenticated." };
   }
 
-  const { data: mistake, error: mistakeError } = await supabase
-    .from("user_mistakes")
-    .select("id, practice_streak, question_id")
-    .eq("user_id", user.id)
-    .eq("question_id", questionId)
-    .maybeSingle();
+  const nounId = questionId.startsWith(NOUN_QUESTION_PREFIX)
+    ? Number(questionId.slice(NOUN_QUESTION_PREFIX.length))
+    : null;
+  const mistakes = supabase.from("user_mistakes").select("id, practice_streak").eq("user_id", user.id);
+  const { data: mistake, error: mistakeError } = await (nounId
+    ? mistakes.eq("noun_id", nounId)
+    : mistakes.eq("question_id", questionId)
+  ).maybeSingle();
 
   if (mistakeError || !mistake) {
     return { success: false, error: "Mistake not found." };
   }
 
-  const question = await resolveQuestionById(questionId);
+  const question = nounId
+    ? (await resolveNounQuestions([nounId])).get(nounId) ?? null
+    : await resolveQuestionById(questionId);
 
   if (!question) {
     return { success: false, error: "Question not found." };

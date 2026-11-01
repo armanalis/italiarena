@@ -1,3 +1,4 @@
+import { nounQuestion, type ArticleNoun } from "@/lib/articles";
 import { createAdminClientOrNull } from "@/utils/supabase/admin";
 import type { QuestionActive } from "@/types/database.types";
 
@@ -32,5 +33,22 @@ export async function resolveQuestionsWithAnswers(
     }
   }
 
+  return byId;
+}
+
+/** Server-only: missed article-game nouns as Mistakes questions (players cannot read the noun bank). */
+export async function resolveNounQuestions(ids: number[]): Promise<Map<number, QuestionActive>> {
+  const byId = new Map<number, QuestionActive>();
+  const admin = createAdminClientOrNull();
+  if (!admin || ids.length === 0) {
+    return byId;
+  }
+  const { data } = await admin
+    .from("article_nouns")
+    .select("id, language, level, noun, article, meaning")
+    .in("id", [...new Set(ids)]);
+  for (const noun of (data ?? []) as ArticleNoun[]) {
+    byId.set(noun.id, nounQuestion(noun));
+  }
   return byId;
 }

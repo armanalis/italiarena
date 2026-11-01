@@ -19,6 +19,7 @@ import { isEmailVerifiedUser } from "@/lib/guest-auth";
 const APP_ROUTES = [
   "/wordle",
   "/word-wheel",
+  "/articles",
   "/stats",
   "/recent",
   "/leaderboard",

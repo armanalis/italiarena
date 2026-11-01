@@ -1,6 +1,8 @@
-/** The Arena's "Today" row: today's Wordle, Passaparola and Arena streak at a glance. */
+/** The Arena's "Today" row: today's Wordle, Word Wheel, article Sprint and Arena streak at a glance. */
 import Link from "next/link";
-import { Check, ChevronRight, CircleDashed, Flame, Grid3x3, type LucideIcon } from "lucide-react";
+import { Check, ChevronRight, CircleDashed, Flame, Grid3x3, Timer, type LucideIcon } from "lucide-react";
+import { ARTICLE_GAME_NAME, type ArticleStats } from "@/lib/articles";
+import type { TargetLanguage } from "@/lib/constants";
 import type { PassaparolaTurnResult } from "@/lib/passaparola";
 import type { GameStreak } from "@/lib/push";
 import { cn } from "@/lib/utils";
@@ -58,6 +60,28 @@ function passaparolaTile(result: PassaparolaTurnResult, streak: GameStreak | und
   };
 }
 
+function articlesTile(
+  language: TargetLanguage,
+  level: string,
+  stats: ArticleStats | null,
+  streak: GameStreak | undefined
+): Tile {
+  const today = stats?.today[level];
+  const best = stats?.best[level];
+  return {
+    title: ARTICLE_GAME_NAME[language],
+    status:
+      today !== undefined
+        ? `Sprint ${today}${best ? ` · best ${best}` : ""}`
+        : `Not played yet · ${best ? `best ${best}` : "60 s"}`,
+    done: today !== undefined,
+    icon: Timer,
+    accent: "text-violet-500",
+    href: "/articles",
+    streak: streak?.streak,
+  };
+}
+
 function arenaStreakTile(streak: GameStreak | undefined): Tile {
   const days = streak?.streak ?? 0;
   return {
@@ -78,15 +102,22 @@ const TILE = "flex h-full items-center gap-3 rounded-2xl border border-border px
 export function TodayRow({
   wordle,
   passaparola,
+  articles,
+  language,
+  level,
   streaks,
 }: {
   wordle: WordleTurnResult;
   passaparola: PassaparolaTurnResult;
+  articles: ArticleStats | null;
+  language: TargetLanguage;
+  level: string;
   streaks: Streaks;
 }) {
   const tiles = [
     wordleTile(wordle, streaks.wordle),
     passaparolaTile(passaparola, streaks.passaparola),
+    articlesTile(language, level, articles, streaks.articles),
     arenaStreakTile(streaks.arena),
   ];
 
@@ -95,7 +126,7 @@ export function TodayRow({
       <h2 id="today-heading" className="text-sm font-semibold text-muted-foreground">
         Today
       </h2>
-      <ul className="grid gap-3 sm:grid-cols-3">
+      <ul className="grid gap-3 sm:grid-cols-2">
         {tiles.map(({ title, status, done, icon: Icon, accent, href, streak }) => {
           const content = (
             <>

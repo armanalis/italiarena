@@ -43,7 +43,7 @@ export function buildDailyReminderPayload(): PushPayload {
 
 /** One row of get_my_streaks / game_streaks. */
 export type GameStreak = {
-  game: "arena" | "wordle" | "passaparola";
+  game: "arena" | "wordle" | "passaparola" | "articles";
   streak: number;
   played_today: boolean;
 };
@@ -60,6 +60,10 @@ const STREAK_REMINDERS: Record<GameStreak["game"], { url: string; body: (days: n
   passaparola: {
     url: "/word-wheel",
     body: (days) => `Keep your ${days}-day Word Wheel streak alive: five minutes is enough.`,
+  },
+  articles: {
+    url: "/articles",
+    body: (days) => `Keep your ${days}-day articles streak alive: one 60-second Sprint is enough.`,
   },
 };
 

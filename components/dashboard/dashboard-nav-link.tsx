@@ -63,7 +63,7 @@ function navItemClassName(variant: DashboardNavLinkProps["variant"], isActive: b
             : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         )
       : cn(
-          "touch-target flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-1.5 text-[10px] font-medium leading-tight transition-colors sm:px-2 sm:text-[11px]",
+          "touch-target flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-2xl px-0 py-1.5 text-[10px] font-medium leading-tight tracking-tight transition-colors sm:px-2 sm:text-[11px]",
           isActive
             ? "bg-primary/15 text-primary"
             : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
