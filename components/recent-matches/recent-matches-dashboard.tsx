@@ -9,6 +9,9 @@ import type {
 } from "@/app/(app)/recent/actions";
 import { AskAiButton } from "@/components/match/ask-ai-button";
 import { ReportQuestionButton } from "@/components/match/report-question-button";
+import { SpeakButton } from "@/components/speak-button";
+import { isTargetLanguage, type TargetLanguage } from "@/lib/constants";
+import { speakableQuestion } from "@/lib/speech";
 import { MAX_AI_ASKS_PER_MATCH } from "@/lib/ai-explanations";
 import { normalizeQuestionCategory } from "@/lib/resolve-match-questions";
 import { Badge } from "@/components/ui/badge";
@@ -100,6 +103,7 @@ function toMatchRoundReview(question: RecentMatchQuestion): MatchRoundReview {
 
 function MatchQuestionCard({
   question,
+  language,
   sessionId,
   asksRemaining,
   onAsksRemainingChange,
@@ -107,6 +111,7 @@ function MatchQuestionCard({
   onReported,
 }: {
   question: RecentMatchQuestion;
+  language: TargetLanguage | null;
   sessionId: string | null;
   asksRemaining: number;
   onAsksRemainingChange: (remaining: number) => void;
@@ -114,6 +119,7 @@ function MatchQuestionCard({
   onReported: () => void;
 }) {
   const aiRound = toMatchRoundReview(question);
+  const spoken = language && speakableQuestion(question.questionText, aiRound.correctOptionText);
   return (
     <li
       className={cn(
@@ -139,9 +145,13 @@ function MatchQuestionCard({
         )}
       </div>
 
-      <p className="text-sm font-medium leading-snug sm:text-base">
-        {question.questionText}
-      </p>
+      <div className="flex items-start gap-2">
+        <p className="min-w-0 flex-1 text-sm font-medium leading-snug sm:text-base">
+          {question.questionText}
+        </p>
+        {/* Reads the sentence with the right answer filled in, so the review is heard as well as seen. */}
+        {spoken && <SpeakButton className="-mt-2.5 -mr-2" text={spoken} language={language} />}
+      </div>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {question.options.map(({ key, text }) => {
@@ -305,6 +315,7 @@ function MatchCard({
               <MatchQuestionCard
                 key={`${match.id}-${question.questionId}`}
                 question={question}
+                language={isTargetLanguage(match.language) ? match.language : null}
                 sessionId={match.sessionId}
                 asksRemaining={asksRemaining}
                 onAsksRemainingChange={setAsksRemaining}
