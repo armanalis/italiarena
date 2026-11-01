@@ -11,7 +11,7 @@ import {
   deleteAccount,
   updateGameplayPreferences,
   updateLearningProfile,
-  updateShowLastSeen,
+  updateFriendPrivacy,
 } from "@/app/(app)/settings/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +54,7 @@ type SettingsPanelsProps = {
   profile: UserProfile;
   recentMatches: MatchHistoryEntry[];
   showLastSeen: boolean;
+  showDailyResults: boolean;
   languageLevels: Partial<Record<TargetLanguage, ProficiencyLevel>>;
 };
 
@@ -109,6 +110,7 @@ export function SettingsPanels({
   profile,
   recentMatches,
   showLastSeen: initialShowLastSeen,
+  showDailyResults: initialShowDailyResults,
   languageLevels,
 }: SettingsPanelsProps) {
   const guest = profile.is_guest;
@@ -123,6 +125,7 @@ export function SettingsPanels({
   const [soundEnabled, setSoundEnabled] = useState(profile.sound_enabled);
   const [hapticsEnabled, setHapticsEnabled] = useState(profile.haptics_enabled);
   const [showLastSeen, setShowLastSeen] = useState(initialShowLastSeen);
+  const [showDailyResults, setShowDailyResults] = useState(initialShowDailyResults);
   const [isPending, startTransition] = useTransition();
   const [deleteRedirectTo, setDeleteRedirectTo] = useState<string | null>(null);
   useActionRedirect(deleteRedirectTo);
@@ -170,15 +173,19 @@ export function SettingsPanels({
     });
   }
 
-  function saveShowLastSeen(value: boolean) {
-    setShowLastSeen(value);
+  function saveFriendPrivacy(
+    setting: "show_last_seen" | "show_daily_results",
+    value: boolean,
+    show: (value: boolean) => void
+  ) {
+    show(value);
     startTransition(async () => {
-      const result = await updateShowLastSeen(value);
+      const result = await updateFriendPrivacy(setting, value);
       if (result.success) {
         toast.success("Privacy setting saved.");
         return;
       }
-      setShowLastSeen(!value);
+      show(!value);
       toast.error(result.error);
     });
   }
@@ -342,7 +349,14 @@ export function SettingsPanels({
             description="Friends see when you were last online."
             checked={showLastSeen}
             disabled={isPending}
-            onChange={saveShowLastSeen}
+            onChange={(value) => saveFriendPrivacy("show_last_seen", value, setShowLastSeen)}
+          />
+          <PreferenceToggle
+            label="Show my daily results to friends"
+            description="Friends see your Wordle, Word Wheel and Sprint scores for today, never your answers."
+            checked={showDailyResults}
+            disabled={isPending}
+            onChange={(value) => saveFriendPrivacy("show_daily_results", value, setShowDailyResults)}
           />
         </CardContent>
       </Card>

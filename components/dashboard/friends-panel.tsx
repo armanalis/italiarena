@@ -8,8 +8,12 @@ import { Popover } from "radix-ui";
 import { toast } from "sonner";
 import { createChallenge } from "@/app/(app)/matchmaking/actions";
 import { ChallengeLinkButton } from "@/components/challenge/challenge-link-button";
+import { FriendsTodayList } from "@/components/dashboard/friends-today";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { TargetLanguage } from "@/lib/constants";
+import { loadFriendsToday, type FriendToday } from "@/lib/friends-today";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
 
@@ -49,9 +53,13 @@ const REQUEST_MESSAGES: Record<string, string> = {
 };
 
 /** Bottom-right friends button and panel (hidden during matches by the shell). */
-export function FriendsPanel() {
+export function FriendsPanel({ language }: { language: TargetLanguage }) {
   const router = useRouter();
   const [rows, setRows] = useState<FriendRow[]>([]);
+  const [tab, setTab] = useState("friends");
+  // Today's scores load when their tab opens, not every minute with the list.
+  const [today, setToday] = useState<FriendToday[] | null>(null);
+  const loadToday = () => void loadFriendsToday(createClient(), language).then(setToday);
   const [username, setUsername] = useState("");
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -120,7 +128,14 @@ export function FriendsPanel() {
   }
 
   return (
-    <Popover.Root onOpenChange={(open) => open && void load()}>
+    <Popover.Root
+      onOpenChange={(open) => {
+        if (open) {
+          void load();
+          if (tab === "today") loadToday();
+        }
+      }}
+    >
       <Popover.Trigger asChild>
         <Button
           type="button"
@@ -145,170 +160,190 @@ export function FriendsPanel() {
           collisionPadding={16}
           className="z-50 max-h-[min(70dvh,32rem)] w-[min(22rem,calc(100vw-2rem))] space-y-4 overflow-y-auto rounded-xl border border-border bg-popover p-4 text-sm text-popover-foreground shadow-md outline-none"
         >
-          <h2 className="font-semibold">Friends</h2>
+          <h2 className="sr-only">Friends</h2>
+          <Tabs
+            value={tab}
+            onValueChange={(value) => {
+              setTab(value);
+              if (value === "today") loadToday();
+            }}
+          >
+            <TabsList className="w-full">
+              <TabsTrigger value="friends">Friends</TabsTrigger>
+              <TabsTrigger value="today">Today</TabsTrigger>
+            </TabsList>
+            <TabsContent value="today" className="pt-2">
+              {today ? (
+                <FriendsTodayList rows={today} language={language} />
+              ) : (
+                <p className="text-sm text-muted-foreground">Loading…</p>
+              )}
+            </TabsContent>
+            <TabsContent value="friends" className="space-y-4 pt-2">
+              {challenges.length > 0 && (
+                <section className="space-y-2" aria-label="Challenges">
+                  {challenges.map((row) => (
+                    <div key={row.friend_id} className="flex items-center justify-between gap-2 rounded-lg bg-primary/10 px-3 py-2">
+                      <span className="min-w-0 truncate">
+                        <span className="font-medium">{row.display_name}</span> challenged you
+                      </span>
+                      <Button asChild size="sm">
+                        <Link href={`/challenge/${row.challenge_session_id}`}>Play</Link>
+                      </Button>
+                    </div>
+                  ))}
+                </section>
+              )}
 
-          {challenges.length > 0 && (
-            <section className="space-y-2" aria-label="Challenges">
-              {challenges.map((row) => (
-                <div key={row.friend_id} className="flex items-center justify-between gap-2 rounded-lg bg-primary/10 px-3 py-2">
-                  <span className="min-w-0 truncate">
-                    <span className="font-medium">{row.display_name}</span> challenged you
-                  </span>
-                  <Button asChild size="sm">
-                    <Link href={`/challenge/${row.challenge_session_id}`}>Play</Link>
-                  </Button>
-                </div>
-              ))}
-            </section>
-          )}
+              {incoming.length > 0 && (
+                <section className="space-y-2" aria-label="Friend requests">
+                  <h3 className="text-xs font-medium text-muted-foreground">Requests</h3>
+                  {incoming.map((row) => (
+                    <div key={row.friend_id} className="flex items-center justify-between gap-2">
+                      <span className="min-w-0 truncate font-medium">{row.display_name}</span>
+                      <div className="flex shrink-0 gap-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={isPending}
+                          onClick={() => run(() => createClient().rpc("respond_friend_request", { p_requester: row.friend_id, p_accept: true }))}
+                        >
+                          Accept
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={isPending}
+                          onClick={() => run(() => createClient().rpc("respond_friend_request", { p_requester: row.friend_id, p_accept: false }))}
+                        >
+                          Decline
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </section>
+              )}
 
-          {incoming.length > 0 && (
-            <section className="space-y-2" aria-label="Friend requests">
-              <h3 className="text-xs font-medium text-muted-foreground">Requests</h3>
-              {incoming.map((row) => (
-                <div key={row.friend_id} className="flex items-center justify-between gap-2">
-                  <span className="min-w-0 truncate font-medium">{row.display_name}</span>
-                  <div className="flex shrink-0 gap-1">
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={isPending}
-                      onClick={() => run(() => createClient().rpc("respond_friend_request", { p_requester: row.friend_id, p_accept: true }))}
-                    >
-                      Accept
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      disabled={isPending}
-                      onClick={() => run(() => createClient().rpc("respond_friend_request", { p_requester: row.friend_id, p_accept: false }))}
-                    >
-                      Decline
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </section>
-          )}
+              <section className="space-y-1" aria-label="Your friends">
+                {friends.length === 0 ? (
+                  <p className="text-muted-foreground">
+                    No friends yet. Add one by username, or share a challenge link.
+                  </p>
+                ) : (
+                  friends.map((row) =>
+                    confirmRemove === row.friend_id ? (
+                      <div key={row.friend_id} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5">
+                        <span className="min-w-0 truncate">Remove {row.display_name}?</span>
+                        <div className="flex shrink-0 gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            disabled={isPending}
+                            onClick={() =>
+                              run(async () => {
+                                await createClient().rpc("remove_friend", { p_other: row.friend_id });
+                                setConfirmRemove(null);
+                              })
+                            }
+                          >
+                            Remove
+                          </Button>
+                          <Button type="button" size="sm" variant="ghost" onClick={() => setConfirmRemove(null)}>
+                            Keep
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div key={row.friend_id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/50">
+                        <span
+                          className={cn("size-2 shrink-0 rounded-full", row.online ? "bg-emerald-500" : "border border-muted-foreground/70")}
+                          aria-hidden
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">{row.display_name}</span>
+                          <span className="sr-only">{row.online ? ", online" : ", offline"}</span>
+                          {!row.online && row.last_seen_at && (
+                            <span className="block truncate text-xs text-muted-foreground">
+                              Last seen {lastSeenLabel(row.last_seen_at)}
+                            </span>
+                          )}
+                        </span>
+                        {row.level && (
+                          <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
+                            {row.level}
+                          </span>
+                        )}
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          variant="ghost"
+                          className="size-11 md:size-7"
+                          aria-label={`Challenge ${row.display_name}`}
+                          title="Challenge"
+                          disabled={isPending}
+                          onClick={() => challenge(row.friend_id)}
+                        >
+                          <Swords className="size-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          variant="ghost"
+                          className="size-11 md:size-7"
+                          aria-label={`Remove ${row.display_name}`}
+                          title="Remove friend"
+                          onClick={() => setConfirmRemove(row.friend_id)}
+                        >
+                          <X className="size-4" />
+                        </Button>
+                      </div>
+                    )
+                  )
+                )}
+              </section>
 
-          <section className="space-y-1" aria-label="Your friends">
-            {friends.length === 0 ? (
-              <p className="text-muted-foreground">
-                No friends yet. Add one by username, or share a challenge link.
-              </p>
-            ) : (
-              friends.map((row) =>
-                confirmRemove === row.friend_id ? (
-                  <div key={row.friend_id} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5">
-                    <span className="min-w-0 truncate">Remove {row.display_name}?</span>
-                    <div className="flex shrink-0 gap-1">
+              {outgoing.length > 0 && (
+                <section className="space-y-1" aria-label="Sent requests">
+                  <h3 className="text-xs font-medium text-muted-foreground">Sent</h3>
+                  {outgoing.map((row) => (
+                    <div key={row.friend_id} className="flex items-center justify-between gap-2 px-2">
+                      <span className="min-w-0 truncate text-muted-foreground">Waiting for {row.display_name}</span>
                       <Button
                         type="button"
                         size="sm"
-                        variant="destructive"
+                        variant="ghost"
                         disabled={isPending}
-                        onClick={() =>
-                          run(async () => {
-                            await createClient().rpc("remove_friend", { p_other: row.friend_id });
-                            setConfirmRemove(null);
-                          })
-                        }
+                        onClick={() => run(() => createClient().rpc("remove_friend", { p_other: row.friend_id }))}
                       >
-                        Remove
-                      </Button>
-                      <Button type="button" size="sm" variant="ghost" onClick={() => setConfirmRemove(null)}>
-                        Keep
+                        Cancel
                       </Button>
                     </div>
-                  </div>
-                ) : (
-                  <div key={row.friend_id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/50">
-                    <span
-                      className={cn("size-2 shrink-0 rounded-full", row.online ? "bg-emerald-500" : "border border-muted-foreground/70")}
-                      aria-hidden
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium">{row.display_name}</span>
-                      <span className="sr-only">{row.online ? ", online" : ", offline"}</span>
-                      {!row.online && row.last_seen_at && (
-                        <span className="block truncate text-xs text-muted-foreground">
-                          Last seen {lastSeenLabel(row.last_seen_at)}
-                        </span>
-                      )}
-                    </span>
-                    {row.level && (
-                      <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
-                        {row.level}
-                      </span>
-                    )}
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="ghost"
-                      className="size-11 md:size-7"
-                      aria-label={`Challenge ${row.display_name}`}
-                      title="Challenge"
-                      disabled={isPending}
-                      onClick={() => challenge(row.friend_id)}
-                    >
-                      <Swords className="size-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="ghost"
-                      className="size-11 md:size-7"
-                      aria-label={`Remove ${row.display_name}`}
-                      title="Remove friend"
-                      onClick={() => setConfirmRemove(row.friend_id)}
-                    >
-                      <X className="size-4" />
-                    </Button>
-                  </div>
-                )
-              )
-            )}
-          </section>
+                  ))}
+                </section>
+              )}
 
-          {outgoing.length > 0 && (
-            <section className="space-y-1" aria-label="Sent requests">
-              <h3 className="text-xs font-medium text-muted-foreground">Sent</h3>
-              {outgoing.map((row) => (
-                <div key={row.friend_id} className="flex items-center justify-between gap-2 px-2">
-                  <span className="min-w-0 truncate text-muted-foreground">Waiting for {row.display_name}</span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    disabled={isPending}
-                    onClick={() => run(() => createClient().rpc("remove_friend", { p_other: row.friend_id }))}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              ))}
-            </section>
-          )}
+              <form onSubmit={sendRequest} className="flex gap-2 border-t border-border/60 pt-4">
+                <label htmlFor="friend-username" className="sr-only">
+                  Friend&apos;s username
+                </label>
+                <Input
+                  id="friend-username"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  placeholder="Add by username"
+                  autoComplete="off"
+                  maxLength={24}
+                />
+                <Button type="submit" disabled={isPending || !username.trim()} aria-label="Send friend request">
+                  <UserPlus className="size-4" />
+                </Button>
+              </form>
 
-          <form onSubmit={sendRequest} className="flex gap-2 border-t border-border/60 pt-4">
-            <label htmlFor="friend-username" className="sr-only">
-              Friend&apos;s username
-            </label>
-            <Input
-              id="friend-username"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              placeholder="Add by username"
-              autoComplete="off"
-              maxLength={24}
-            />
-            <Button type="submit" disabled={isPending || !username.trim()} aria-label="Send friend request">
-              <UserPlus className="size-4" />
-            </Button>
-          </form>
-
-          <ChallengeLinkButton />
+              <ChallengeLinkButton />
+            </TabsContent>
+          </Tabs>
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

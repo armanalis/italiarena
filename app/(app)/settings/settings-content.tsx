@@ -2,7 +2,7 @@ import { getSettingsData } from "@/app/(app)/settings/actions";
 import { SettingsPanels } from "@/components/settings/settings-panels";
 
 export async function SettingsContent() {
-  const { profile, recentMatches, showLastSeen, languageLevels } = await getSettingsData();
+  const { profile, recentMatches, showLastSeen, showDailyResults, languageLevels } = await getSettingsData();
 
   return (
     <main className="flex flex-1 flex-col gap-6 p-4 sm:p-8">
@@ -19,6 +19,7 @@ export async function SettingsContent() {
         profile={profile}
         recentMatches={recentMatches}
         showLastSeen={showLastSeen}
+        showDailyResults={showDailyResults}
         languageLevels={languageLevels}
       />
     </main>
