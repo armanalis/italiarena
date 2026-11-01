@@ -7,9 +7,10 @@ import { StatisticsDashboard } from "@/components/statistics/statistics-dashboar
 import { getCurrentUserProfile } from "@/lib/auth";
 import { loadArticleStats } from "@/lib/articles";
 import { DEFAULT_LANGUAGE } from "@/lib/constants";
+import { italyToday } from "@/lib/wordle";
 import { createClient } from "@/utils/supabase/server";
 
-export async function StatisticsContent() {
+export async function StatisticsContent({ startReview }: { startReview: boolean }) {
   const [stats, mistakes, reportedQuestionIds, profile] = await Promise.all([
     getPlayerStatistics(),
     getUserMistakes(),
@@ -26,6 +27,8 @@ export async function StatisticsContent() {
       stats={stats}
       mistakes={mistakes}
       reportedQuestionIds={reportedQuestionIds}
+      today={italyToday()}
+      startReview={startReview}
     />
   );
 }

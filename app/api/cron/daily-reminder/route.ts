@@ -7,12 +7,13 @@ import {
   sendPushToUser,
   type ReminderUser,
 } from "@/lib/push";
+import { DEFAULT_LANGUAGE, type TargetLanguage } from "@/lib/constants";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type CronUser = ReminderUser & { id: string };
+type CronUser = ReminderUser & { id: string; target_language: TargetLanguage | null };
 
 /**
  * Users processed in parallel. Each one is an independent claim-then-send, so
@@ -37,7 +38,7 @@ async function runDailyReminderCron(options: { dryRun: boolean }) {
   for (let from = 0; ; from += USER_PAGE_SIZE) {
     const { data, error } = await admin
       .from("users")
-      .select("id, daily_reminder_hour, timezone, last_reminder_sent_at")
+      .select("id, daily_reminder_hour, timezone, last_reminder_sent_at, target_language")
       .eq("daily_reminder_enabled", true)
       .eq("is_guest", false)
       .order("id")
@@ -92,10 +93,16 @@ async function runDailyReminderCron(options: { dryRun: boolean }) {
     }
 
     try {
-      const { data: streaks } = await admin.rpc("game_streaks", { p_user_id: user.id });
+      const [{ data: streaks }, { data: reviewDue }] = await Promise.all([
+        admin.rpc("game_streaks", { p_user_id: user.id }),
+        admin.rpc("review_due_count", {
+          p_user_id: user.id,
+          p_language: user.target_language ?? DEFAULT_LANGUAGE,
+        }),
+      ]);
       const totals = { ...empty };
       // One after another: a dead device pruned by the first push is skipped by the rest.
-      for (const payload of buildDailyReminderPayloads(streaks ?? [])) {
+      for (const payload of buildDailyReminderPayloads(streaks ?? [], (reviewDue as number | null) ?? 0)) {
         const result = await sendPushToUser(user.id, payload);
         totals.sent += result.sent;
         totals.failed += result.failed;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { BookOpen, ClipboardList, Dumbbell, Target, TrendingUp } from "lucide-react";
 import type { UserMistakeWithQuestion } from "@/app/(app)/stats/actions";
 import { MistakePracticeSession } from "@/components/statistics/mistake-practice-session";
@@ -19,6 +19,7 @@ import Link from "next/link";
 import { ALL_ARTICLES, ARTICLE_GAME_NAME, type ArticleStats } from "@/lib/articles";
 import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
 import { categoryResults, overallAccuracy, pct } from "@/lib/player-stats";
+import { REVIEW_STEPS_DAYS, reviewMinutes, whenDue } from "@/lib/review";
 import { formatCategoryLabel } from "@/lib/scoring";
 import { normalizeQuestionCategory } from "@/lib/match";
 import type { PlayerStats, QuestionCategory } from "@/types/database.types";
@@ -29,6 +30,10 @@ type StatisticsDashboardProps = {
   stats: PlayerStats | null;
   mistakes: UserMistakeWithQuestion[];
   reportedQuestionIds: string[];
+  /** Italy's date from the server: what is due today. */
+  today: string;
+  /** Opened from the home card or the reminder (/stats?review=1): start today's review. */
+  startReview: boolean;
 };
 
 const CATEGORY_KEYS: QuestionCategory[] = [
@@ -51,19 +56,22 @@ export function StatisticsDashboard({
   stats,
   mistakes: initialMistakes,
   reportedQuestionIds: initialReportedQuestionIds,
+  today,
+  startReview,
 }: StatisticsDashboardProps) {
   const [mistakes, setMistakes] = useState(initialMistakes);
   const [showMistakes, setShowMistakes] = useState(false);
+  const dueMistakes = mistakes.filter((mistake) => mistake.next_review_on <= today);
   const [activePractice, setActivePractice] = useState<{
     mistakes: UserMistakeWithQuestion[];
     label: string;
     sessionId: string;
-  } | null>(null);
-
-  const activePracticeIds = useMemo(
-    () => new Set(activePractice?.mistakes.map((mistake) => mistake.id) ?? []),
-    [activePractice]
+  } | null>(() =>
+    startReview && dueMistakes.length > 0
+      ? { mistakes: dueMistakes, label: "Today's review", sessionId: crypto.randomUUID() }
+      : null
   );
+  const nextDue = mistakes.map((mistake) => mistake.next_review_on).sort()[0];
 
   useEffect(() => {
     setMistakes(initialMistakes);
@@ -93,17 +101,11 @@ export function StatisticsDashboard({
     });
   }
 
-  function handlePracticeMistakesChange(remaining: UserMistakeWithQuestion[]) {
-    const remainingById = new Map(remaining.map((mistake) => [mistake.id, mistake]));
-    const remainingIds = new Set(remaining.map((mistake) => mistake.id));
-
+  function handleAnswered(mistakeId: string, next: UserMistakeWithQuestion | null) {
     setMistakes((all) =>
-      all
-        .filter(
-          (mistake) =>
-            !activePracticeIds.has(mistake.id) || remainingIds.has(mistake.id)
-        )
-        .map((mistake) => remainingById.get(mistake.id) ?? mistake)
+      next
+        ? all.map((mistake) => (mistake.id === mistakeId ? next : mistake))
+        : all.filter((mistake) => mistake.id !== mistakeId)
     );
   }
 
@@ -115,13 +117,15 @@ export function StatisticsDashboard({
             {activePractice.label}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Answer each question correctly 3 times in a row to master it.
+            A mistake comes back tomorrow, then in 3 days, a week and 2 weeks.
+            Right {REVIEW_STEPS_DAYS.length} times on different days and it is learned.
           </p>
         </div>
         <MistakePracticeSession
           initialMistakes={activePractice.mistakes}
           practiceSessionId={activePractice.sessionId}
-          onMistakesChange={handlePracticeMistakesChange}
+          today={today}
+          onAnswered={handleAnswered}
           onClose={() => {
             setActivePractice(null);
           }}
@@ -310,9 +314,9 @@ export function StatisticsDashboard({
                 Learn from your mistakes
               </CardTitle>
               <CardDescription className="mt-1.5">
-                Review what you got wrong and practice until each question is
-                answered correctly 3 times in a row. Mastered questions leave
-                this list, but your match percentages stay the same.
+                Each mistake comes back tomorrow, then in 3 days, a week and 2
+                weeks, so it sticks. Right on 4 different days and it is learned
+                and leaves this list; your match percentages stay the same.
               </CardDescription>
             </div>
             {hasMistakes && (
@@ -349,12 +353,14 @@ export function StatisticsDashboard({
             <Button
               type="button"
               className="min-h-11"
-              disabled={!hasMistakes}
-              onClick={() =>
-                startPractice(mistakes, "Practice all mistakes")
-              }
+              disabled={dueMistakes.length === 0}
+              onClick={() => startPractice(dueMistakes, "Today's review")}
             >
-              Practice mistakes from recent matches
+              {dueMistakes.length > 0
+                ? `Review today: ${dueMistakes.length} · about ${reviewMinutes(dueMistakes.length)} min`
+                : nextDue
+                  ? `Nothing due · next ${whenDue(nextDue, today)}`
+                  : "Nothing to review"}
             </Button>
           </div>
         </CardContent>
@@ -365,6 +371,7 @@ export function StatisticsDashboard({
         onOpenChange={setShowMistakes}
         mistakes={mistakes}
         reportedQuestionIds={initialReportedQuestionIds}
+        today={today}
       />
     </main>
   );

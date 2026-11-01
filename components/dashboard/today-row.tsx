@@ -1,8 +1,9 @@
 /** The Arena's "Today" row: today's Wordle, Word Wheel, article Sprint and Arena streak at a glance. */
 import Link from "next/link";
-import { Check, ChevronRight, CircleDashed, Flame, Grid3x3, Timer, type LucideIcon } from "lucide-react";
+import { BookOpen, Check, ChevronRight, CircleDashed, Flame, Grid3x3, Timer, type LucideIcon } from "lucide-react";
 import { ARTICLE_GAME_NAME, type ArticleStats } from "@/lib/articles";
 import type { TargetLanguage } from "@/lib/constants";
+import { reviewMinutes } from "@/lib/review";
 import type { PassaparolaTurnResult } from "@/lib/passaparola";
 import type { GameStreak } from "@/lib/push";
 import { cn } from "@/lib/utils";
@@ -103,6 +104,7 @@ export function TodayRow({
   wordle,
   passaparola,
   articles,
+  reviewDue,
   language,
   level,
   streaks,
@@ -110,6 +112,8 @@ export function TodayRow({
   wordle: WordleTurnResult;
   passaparola: PassaparolaTurnResult;
   articles: ArticleStats | null;
+  /** Mistakes due for review today, in this language. */
+  reviewDue: number;
   language: TargetLanguage;
   level: string;
   streaks: Streaks;
@@ -166,6 +170,22 @@ export function TodayRow({
           );
         })}
       </ul>
+      {reviewDue > 0 && (
+        <Link href="/stats?review=1" className={cn(TILE, "transition-colors hover:bg-muted")}>
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted">
+            <BookOpen className="size-4 text-primary" aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium">
+              {reviewDue} to review today
+            </span>
+            <span className="block truncate text-xs text-muted-foreground">
+              About {reviewMinutes(reviewDue)} min · mistakes come back until they stick
+            </span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+        </Link>
+      )}
     </section>
   );
 }

@@ -5,6 +5,8 @@ import { getAuthUserId, getCurrentUserProfile } from "@/lib/auth";
 import { DEFAULT_LANGUAGE } from "@/lib/constants";
 import { cachedDashboardQuery, dashboardTag, revalidateUserDashboard } from "@/lib/dashboard-cache";
 import { NOUN_QUESTION_PREFIX } from "@/lib/articles";
+import { nextReview, REVIEWS_TO_LEARN } from "@/lib/review";
+import { italyToday } from "@/lib/wordle";
 import { resolveNounQuestions, resolveQuestionsWithAnswers } from "@/lib/questions-with-answers";
 import { isAnswerCorrect } from "@/lib/scoring";
 import { createClient } from "@/utils/supabase/server";
@@ -25,8 +27,11 @@ export type PracticeAnswerResult =
   | {
       success: true;
       correct: boolean;
+      /** Right reviews so far (REVIEWS_TO_LEARN once learned). */
       practiceStreak: number;
-      mastered: boolean;
+      learned: boolean;
+      /** null once learned: the mistake is gone. */
+      nextReviewOn: string | null;
     }
   | { success: false; error: string };
 
@@ -34,7 +39,9 @@ export type UserMistakeWithQuestion = {
   id: string;
   question_id: string;
   selected_answer: CorrectAnswer | null;
+  /** Right reviews so far: lib/review.ts. */
   practice_streak: number;
+  next_review_on: string;
   last_mistaken_at: string;
   question: QuestionActive;
 };
@@ -43,8 +50,6 @@ type MatchMistakeInput = {
   questionId: string;
   selectedAnswer: CorrectAnswer | null;
 };
-
-const PRACTICE_MASTER_STREAK = 3;
 
 /** Only for questions already in the player's own mistakes list. */
 async function resolveQuestionById(
@@ -64,7 +69,8 @@ export async function getUserMistakes(): Promise<UserMistakeWithQuestion[]> {
 
   const language = profile.target_language ?? DEFAULT_LANGUAGE;
   return cachedDashboardQuery(
-    ["user-mistakes", profile.id, language],
+    // v2: rows carry next_review_on; never serve a copy cached before it existed.
+    ["user-mistakes-v2", profile.id, language],
     dashboardTag(profile.id, "statistics"),
     () => fetchUserMistakes(profile.id, language)
   );
@@ -98,7 +104,7 @@ async function fetchUserMistakes(
 
   const { data, error } = await supabase
     .from("user_mistakes")
-    .select("id, question_id, noun_id, selected_answer, practice_streak, last_mistaken_at")
+    .select("id, question_id, noun_id, selected_answer, practice_streak, next_review_on, last_mistaken_at")
     .eq("user_id", userId)
     .order("last_mistaken_at", { ascending: false });
 
@@ -125,6 +131,7 @@ async function fetchUserMistakes(
       question_id: question.id,
       selected_answer: row.selected_answer as CorrectAnswer | null,
       practice_streak: row.practice_streak,
+      next_review_on: row.next_review_on,
       last_mistaken_at: row.last_mistaken_at,
       question,
     });
@@ -182,7 +189,10 @@ export async function submitMistakePracticeAnswer(
   const nounId = questionId.startsWith(NOUN_QUESTION_PREFIX)
     ? Number(questionId.slice(NOUN_QUESTION_PREFIX.length))
     : null;
-  const mistakes = supabase.from("user_mistakes").select("id, practice_streak").eq("user_id", user.id);
+  const mistakes = supabase
+    .from("user_mistakes")
+    .select("id, practice_streak, next_review_on")
+    .eq("user_id", user.id);
   const { data: mistake, error: mistakeError } = await (nounId
     ? mistakes.eq("noun_id", nounId)
     : mistakes.eq("question_id", questionId)
@@ -201,53 +211,17 @@ export async function submitMistakePracticeAnswer(
   }
 
   const correct = isAnswerCorrect(answer, question.correct_answer);
-
-  if (!correct) {
-    const { error } = await supabase
-      .from("user_mistakes")
-      .update({ practice_streak: 0 })
-      .eq("id", mistake.id);
-
-    if (error) {
-      return { success: false, error: error.message };
-    }
-
-    revalidatePath("/stats");
-    revalidateUserDashboard(user.id);
-    return {
-      success: true,
-      correct: false,
-      practiceStreak: 0,
-      mastered: false,
-    };
-  }
-
-  const nextStreak = mistake.practice_streak + 1;
-
-  if (nextStreak >= PRACTICE_MASTER_STREAK) {
-    const { error } = await supabase
-      .from("user_mistakes")
-      .delete()
-      .eq("id", mistake.id);
-
-    if (error) {
-      return { success: false, error: error.message };
-    }
-
-    revalidatePath("/stats");
-    revalidateUserDashboard(user.id);
-    return {
-      success: true,
-      correct: true,
-      practiceStreak: PRACTICE_MASTER_STREAK,
-      mastered: true,
-    };
-  }
-
-  const { error } = await supabase
-    .from("user_mistakes")
-    .update({ practice_streak: nextStreak })
-    .eq("id", mistake.id);
+  const next = nextReview(
+    { streak: mistake.practice_streak, dueOn: mistake.next_review_on },
+    correct,
+    italyToday()
+  );
+  const { error } = next.learned
+    ? await supabase.from("user_mistakes").delete().eq("id", mistake.id)
+    : await supabase
+        .from("user_mistakes")
+        .update({ practice_streak: next.streak, next_review_on: next.dueOn })
+        .eq("id", mistake.id);
 
   if (error) {
     return { success: false, error: error.message };
@@ -255,12 +229,9 @@ export async function submitMistakePracticeAnswer(
 
   revalidatePath("/stats");
   revalidateUserDashboard(user.id);
-  return {
-    success: true,
-    correct: true,
-    practiceStreak: nextStreak,
-    mastered: false,
-  };
+  return next.learned
+    ? { success: true, correct, learned: true, practiceStreak: REVIEWS_TO_LEARN, nextReviewOn: null }
+    : { success: true, correct, learned: false, practiceStreak: next.streak, nextReviewOn: next.dueOn };
 }
 
 export async function resetPlayerStatistics(): Promise<ResetStatsResult> {

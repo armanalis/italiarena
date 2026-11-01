@@ -4,6 +4,7 @@ import webpush from "web-push";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { DEFAULT_TIMEZONE } from "@/lib/constants";
 import { APP_NAME, SUPPORT_EMAIL } from "@/lib/legal";
+import { reviewMinutes } from "@/lib/review";
 
 export type PushPayload = {
   title: string;
@@ -69,15 +70,27 @@ const STREAK_REMINDERS: Record<GameStreak["game"], { url: string; body: (days: n
 
 /**
  * One reminder per streak that today's play would extend, each opening its
- * own game (separate tags, so they do not replace each other). The usual
- * reminder when no streak is at risk.
+ * own game (separate tags, so they do not replace each other). When no streak
+ * is at risk: the mistakes due for review, or else the usual reminder.
  */
-export function buildDailyReminderPayloads(streaks: readonly GameStreak[]): PushPayload[] {
+export function buildDailyReminderPayloads(
+  streaks: readonly GameStreak[],
+  reviewDue = 0
+): PushPayload[] {
   const atRisk = streaks.filter(
     ({ game, streak, played_today }) => streak > 0 && !played_today && game in STREAK_REMINDERS
   );
   if (atRisk.length === 0) {
-    return [buildDailyReminderPayload()];
+    return [
+      reviewDue > 0
+        ? {
+            title: APP_NAME,
+            body: `${reviewDue} ${reviewDue === 1 ? "mistake is" : "mistakes are"} waiting for review: about ${reviewMinutes(reviewDue)} min.`,
+            url: "/stats?review=1",
+            tag: "daily-reminder",
+          }
+        : buildDailyReminderPayload(),
+    ];
   }
   return atRisk.map(({ game, streak }) => ({
     title: APP_NAME,
