@@ -170,8 +170,9 @@ export function TodayRow({
           );
         })}
       </ul>
+      {/* h-auto: outside the grid, TILE's h-full would stretch it over the sections below. */}
       {reviewDue > 0 && (
-        <Link href="/stats?review=1" className={cn(TILE, "transition-colors hover:bg-muted")}>
+        <Link href="/stats?review=1" className={cn(TILE, "h-auto transition-colors hover:bg-muted")}>
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted">
             <BookOpen className="size-4 text-primary" aria-hidden />
           </span>
