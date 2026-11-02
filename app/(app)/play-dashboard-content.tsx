@@ -153,6 +153,22 @@ export async function PlayDashboardContent({
           <ArenaSummary stats={stats} />
         </section>
 
+        <Link
+          href="/picture-duel"
+          className="mx-auto flex w-full max-w-3xl items-center gap-3 rounded-2xl border border-border px-4 py-3 text-sm transition-colors hover:bg-muted"
+        >
+          <span className="text-2xl leading-none" aria-hidden>
+            🏥
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="font-medium">Picture Duel</span>{" "}
+            <span className="text-muted-foreground">
+              60 seconds each: name the pictures before your friend&apos;s clock runs out.
+            </span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+        </Link>
+
         <TodayRow
           wordle={wordle}
           passaparola={passaparola}

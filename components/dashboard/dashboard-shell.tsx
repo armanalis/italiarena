@@ -16,6 +16,7 @@ import {
   CircleDashed,
   Grid3x3,
   History,
+  Images,
   LogOut,
   Settings,
   Swords,
@@ -56,6 +57,15 @@ const navItems = [
     shortLabel: "Articles",
     icon: Timer,
     exact: false,
+  },
+  {
+    // The phone bar has no room for a tenth item: phones open it from the Arena page.
+    href: "/picture-duel",
+    label: "Picture Duel",
+    shortLabel: "Duel",
+    icon: Images,
+    exact: false,
+    desktopOnly: true,
   },
   {
     href: "/stats",
@@ -177,7 +187,7 @@ export function DashboardShell({ children, language }: DashboardShellProps) {
         className="glass-header hide-while-typing fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom,0px)] md:hidden"
       >
         <div className="mx-auto grid max-w-lg grid-cols-9 gap-0.5 px-1 py-2 sm:gap-1 sm:px-2">
-          {items.map(({ href, label, shortLabel, icon, exact }) => {
+          {items.filter((item) => !item.desktopOnly).map(({ href, label, shortLabel, icon, exact }) => {
             if (!href) {
               return (
                 <DashboardNavButton
