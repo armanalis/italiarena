@@ -102,6 +102,13 @@ type DashboardShellProps = {
   language: TargetLanguage;
 };
 
+/** Game screens: on phones the Friends button would sit on the game, so it shows everywhere else. */
+const GAME_ROUTES = ["/wordle", "/word-wheel", "/articles", "/picture-duel"];
+
+function isGameRoute(pathname: string) {
+  return GAME_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+}
+
 function isImmersiveRoute(pathname: string) {
   return (
     pathname.startsWith("/match/") ||
@@ -116,6 +123,7 @@ export function DashboardShell({ children, language }: DashboardShellProps) {
   );
   const [botsOpen, setBotsOpen] = useState(false);
   const immersive = isImmersiveRoute(pathname);
+  const showFriends = !isGameRoute(pathname);
 
   if (immersive) {
     return (
@@ -175,11 +183,15 @@ export function DashboardShell({ children, language }: DashboardShellProps) {
       </aside>
       <SidebarResizeHandle />
 
-      <div className="app-content flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto touch-scroll pb-mobile-nav md:pb-0">
+      <div
+        className={`app-content flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto touch-scroll md:pb-0 ${
+          showFriends ? "pb-mobile-nav-friends" : "pb-mobile-nav"
+        }`}
+      >
         {children}
       </div>
 
-      <FriendsPanel language={language} />
+      {showFriends && <FriendsPanel language={language} />}
       <BotPickerDialog open={botsOpen} onOpenChange={setBotsOpen} />
 
       <nav

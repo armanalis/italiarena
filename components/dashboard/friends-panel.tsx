@@ -52,7 +52,7 @@ const REQUEST_MESSAGES: Record<string, string> = {
   too_many_pending: "You have 20 requests waiting. Cancel some first.",
 };
 
-/** Bottom-right friends button and panel (hidden during matches by the shell). */
+/** Bottom-right friends button and panel (the shell leaves it out of matches and game screens). */
 export function FriendsPanel({ language }: { language: TargetLanguage }) {
   const router = useRouter();
   const [rows, setRows] = useState<FriendRow[]>([]);
