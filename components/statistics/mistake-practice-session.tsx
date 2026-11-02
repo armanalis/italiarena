@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { ArrowLeft, CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -20,6 +20,9 @@ import type { CorrectAnswer } from "@/types/database.types";
 import { cn } from "@/lib/utils";
 
 const OPTIONS: CorrectAnswer[] = ["A", "B", "C", "D"];
+
+/** Like the Arena: the answer stays up, then the next mistake comes by itself. */
+const AUTO_NEXT_MS = { right: 2_000, wrong: 3_000 } as const;
 
 type MistakePracticeSessionProps = {
   initialMistakes: UserMistakeWithQuestion[];
@@ -62,10 +65,34 @@ export function MistakePracticeSession({
   const [reportedQuestionIds, setReportedQuestionIds] = useState<Set<string>>(
     () => new Set()
   );
+  // Ask AI or Report stops the timer; the player then moves on with Next.
+  const [paused, setPaused] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const current = queue[index] ?? null;
   const left = queue.length - index;
+
+  function goNext() {
+    setFeedback(null);
+    setPaused(false);
+    setIndex((value) => value + 1);
+  }
+
+  useEffect(() => {
+    if (!feedback || paused) {
+      return;
+    }
+    const timer = window.setTimeout(
+      () => {
+        setFeedback(null);
+        setIndex((value) => value + 1);
+      },
+      feedback.correct ? AUTO_NEXT_MS.right : AUTO_NEXT_MS.wrong
+    );
+    return () => window.clearTimeout(timer);
+  }, [feedback, paused]);
+
+  const pause = () => setPaused(true);
 
   function handleSelect(answer: CorrectAnswer) {
     if (!current || feedback || isPending) {
@@ -121,10 +148,6 @@ export function MistakePracticeSession({
     );
   }
 
-  if (!current) {
-    return null;
-  }
-
   const question = current.question;
   const isNoun = question.id.startsWith(NOUN_QUESTION_PREFIX);
 
@@ -176,15 +199,17 @@ export function MistakePracticeSession({
               {formatCategoryLabel(question.category)}
             </Badge>
             {!isNoun && (
-              <ReportQuestionButton
-                questionId={question.id}
-                questionText={question.question_text}
-                showLabel
-                reported={reportedQuestionIds.has(question.id)}
-                onReported={() =>
-                  setReportedQuestionIds((ids) => new Set(ids).add(question.id))
-                }
-              />
+              <span onClickCapture={pause} className="contents">
+                <ReportQuestionButton
+                  questionId={question.id}
+                  questionText={question.question_text}
+                  showLabel
+                  reported={reportedQuestionIds.has(question.id)}
+                  onReported={() =>
+                    setReportedQuestionIds((ids) => new Set(ids).add(question.id))
+                  }
+                />
+              </span>
             )}
           </div>
           <h2 className="text-lg font-semibold leading-snug sm:text-2xl">
@@ -323,22 +348,21 @@ export function MistakePracticeSession({
             {isNoun ? (
               <span />
             ) : (
-              <AskAiButton
-                round={aiRound}
-                sessionId={practiceSessionId}
-                asksRemaining={asksRemaining}
-                onAsksRemainingChange={setAsksRemaining}
-                showLabel
-                scopeLabel="practice session"
-              />
+              <span onClickCapture={pause} className="contents">
+                <AskAiButton
+                  round={aiRound}
+                  sessionId={practiceSessionId}
+                  asksRemaining={asksRemaining}
+                  onAsksRemainingChange={setAsksRemaining}
+                  showLabel
+                  scopeLabel="practice session"
+                />
+              </span>
             )}
             <Button
               type="button"
               className="min-h-11"
-              onClick={() => {
-                setFeedback(null);
-                setIndex((value) => value + 1);
-              }}
+              onClick={goNext}
             >
               {left > 1 ? "Next" : "Finish"}
             </Button>
