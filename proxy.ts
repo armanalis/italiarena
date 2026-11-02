@@ -20,6 +20,7 @@ const APP_ROUTES = [
   "/wordle",
   "/word-wheel",
   "/articles",
+  "/picture-duel",
   "/stats",
   "/recent",
   "/leaderboard",
