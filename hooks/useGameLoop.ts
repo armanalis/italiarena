@@ -178,7 +178,7 @@ export function useGameLoop({
    * Goes through the submit_match_answer RPC (not a raw table update): the
    * RPC looks up which column (answer_a/answer_b) the caller actually owns
    * server-side, so a tampered client can no longer write the opponent's
-   * answer column. See supabase/match-answer-integrity-migration.sql.
+   * answer column.
    */
   const persistAnswer = useCallback(
     async (payload: {

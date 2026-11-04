@@ -245,7 +245,7 @@ export async function resetPlayerStatistics(): Promise<ResetStatsResult> {
   }
 
   // player_stats/match_history are no longer directly writable by clients
-  // (see supabase/match-result-integrity-migration.sql) — this RPC does the
+  // (database grants) — this RPC does the
   // zero-out + history delete server-side instead.
   const { error: resetError } = await supabase.rpc("reset_player_stats");
 

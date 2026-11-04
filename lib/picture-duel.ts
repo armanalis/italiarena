@@ -6,6 +6,7 @@
  * (supabase/migrations/*_picture_duel.sql); the browser calls it directly.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { knownError, type Result } from "@/lib/errors";
 
 /** KEEP IN SYNC with supabase/migrations/*_picture_duel.sql. */
 export const DUEL_CLOCK_MS = 60_000;
@@ -64,16 +65,11 @@ const ERRORS: Record<string, string> = {
   no_such_duel: "This duel is not yours.",
 };
 
-function errorMessage(message: string | undefined): string {
-  const known = Object.keys(ERRORS).find((code) => message?.includes(code));
-  return known ? ERRORS[known] : "Could not reach the game. Try again.";
-}
-
-type Result<T> = { ok: true; value: T } | { ok: false; error: string };
-
 async function rpc<T>(supabase: SupabaseClient, name: string, args: object): Promise<Result<T>> {
   const { data, error } = await supabase.rpc(name, args);
-  return error ? { ok: false, error: errorMessage(error.message) } : { ok: true, value: data as T };
+  return error
+    ? { ok: false, error: knownError(ERRORS, error.message, "Could not reach the game. Try again.") }
+    : { ok: true, value: data as T };
 }
 
 export const createDuel = (supabase: SupabaseClient, language: string, level: string, topic: string) =>

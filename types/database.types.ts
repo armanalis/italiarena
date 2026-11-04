@@ -219,7 +219,7 @@ export type GameSession = {
   challenged_id: string | null;
   /** When the second player joined (a rematch starts with both). */
   joined_at: string | null;
-  /** The rematch both players agreed to after this match (supabase/rematch-2026-10-10.sql). */
+  /** The rematch both players agreed to after this match (rematch_poll in the database). */
   rematch_session_id: string | null;
   created_at: string;
 };
@@ -449,15 +449,17 @@ export interface Database {
         Args: Record<string, never>;
         Returns: void;
       };
-      record_ai_explanation_for_user: {
+      /** Takes one Ask AI slot (id of the match_ai_asks row) or raises AI_ASK_LIMIT_REACHED / AI_DAILY_LIMIT_REACHED. */
+      reserve_ai_ask: {
         Args: {
           p_user_id: string;
           p_session_id: string;
           p_question_id: string;
           p_selected_answer: string | null;
-          p_explanation: string;
+          p_max_per_session: number;
+          p_max_per_day: number;
         };
-        Returns: void;
+        Returns: string;
       };
       resolve_login_email: {
         Args: { p_identifier: string };
@@ -509,6 +511,11 @@ export interface Database {
       review_due_count: {
         Args: { p_user_id: string; p_language: string };
         Returns: number;
+      };
+      /** Ends an active Picture Duel whose running clock is out; true when it did. */
+      picture_duel_settle: {
+        Args: { p_id: string };
+        Returns: boolean;
       };
     };
     Enums: Record<string, never>;

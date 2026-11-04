@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { recordMatchMistakes } from "@/app/(app)/stats/actions";
-import { getCurrentUserProfile, getAuthUserId } from "@/lib/auth";
+import { getAuthUserId, getCurrentUserProfile, isGuestUser } from "@/lib/auth";
 import {
   cachedDashboardQuery,
   dashboardTag,
@@ -12,8 +12,8 @@ import {
 import { createClient } from "@/utils/supabase/server";
 import {
   DEFAULT_LANGUAGE,
+  isProficiencyLevel,
   isTargetLanguage,
-  PROFICIENCY_LEVELS,
   type ProficiencyLevel,
   type TargetLanguage,
 } from "@/lib/constants";
@@ -34,10 +34,6 @@ import type { CorrectAnswer, PlayerStats } from "@/types/database.types";
 export type SettingsActionResult =
   | { success: true; redirectTo?: string }
   | { success: false; error: string };
-
-function isProficiencyLevel(value: string): value is ProficiencyLevel {
-  return PROFICIENCY_LEVELS.includes(value as ProficiencyLevel);
-}
 
 export async function getSettingsData() {
   const profile = await getCurrentUserProfile();
@@ -101,32 +97,24 @@ export async function updateLearningProfile(formData: FormData): Promise<Setting
     return { success: false, error: usernameError };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const profile = await getCurrentUserProfile();
 
-  if (!user) {
+  if (!profile) {
     return { success: false, error: "Not authenticated." };
   }
 
-  const { data: existingProfile } = await supabase
-    .from("users")
-    .select("is_guest")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (existingProfile?.is_guest) {
+  if (isGuestUser(profile)) {
     return {
       success: false,
       error: "Guest accounts cannot change their profile. Sign up for a full account.",
     };
   }
 
-  if (await isUsernameTaken(displayName, user.id)) {
+  if (await isUsernameTaken(displayName, profile.id)) {
     return { success: false, error: USERNAME_TAKEN_MESSAGE };
   }
 
+  const supabase = await createClient();
   const { error } = await supabase
     .from("users")
     .update({
@@ -134,7 +122,7 @@ export async function updateLearningProfile(formData: FormData): Promise<Setting
       proficiency_level: proficiencyLevel,
       display_name: displayName,
     })
-    .eq("id", user.id);
+    .eq("id", profile.id);
 
   if (error) {
     return { success: false, error: mapUsernameSaveError(error) };
@@ -142,7 +130,7 @@ export async function updateLearningProfile(formData: FormData): Promise<Setting
 
   revalidatePath("/settings");
   revalidatePath("/");
-  revalidateUserDashboard(user.id);
+  revalidateUserDashboard(profile.id);
   return { success: true };
 }
 
@@ -272,22 +260,13 @@ export async function updateDailyReminderPreferences(options: {
   hour?: number;
   timezone?: string;
 }): Promise<SettingsActionResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const profile = await getCurrentUserProfile();
 
-  if (!user) {
+  if (!profile) {
     return { success: false, error: "Not authenticated." };
   }
 
-  const { data: existingProfile } = await supabase
-    .from("users")
-    .select("is_guest")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (existingProfile?.is_guest) {
+  if (isGuestUser(profile)) {
     return {
       success: false,
       error: "Guest accounts cannot enable notifications. Sign up for a full account.",
@@ -328,17 +307,18 @@ export async function updateDailyReminderPreferences(options: {
     return { success: false, error: "Nothing to update." };
   }
 
+  const supabase = await createClient();
   const { error } = await supabase
     .from("users")
     .update(updates)
-    .eq("id", user.id);
+    .eq("id", profile.id);
 
   if (error) {
     return { success: false, error: error.message };
   }
 
   revalidatePath("/settings");
-  revalidateUserDashboard(user.id);
+  revalidateUserDashboard(profile.id);
   return { success: true };
 }
 
@@ -372,13 +352,8 @@ export async function changePassword(formData: FormData): Promise<SettingsAction
     return { success: false, error: "Not authenticated." };
   }
 
-  const { data: existingProfile } = await supabase
-    .from("users")
-    .select("is_guest")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (existingProfile?.is_guest) {
+  const profile = await getCurrentUserProfile();
+  if (!profile || isGuestUser(profile)) {
     return {
       success: false,
       error: "Guest accounts cannot change their password. Sign up for a full account.",

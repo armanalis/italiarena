@@ -1,6 +1,7 @@
 "use server";
 
 import { getAuthUserId } from "@/lib/auth";
+import { isProficiencyLevel, isTargetLanguage } from "@/lib/constants";
 import { cachedDashboardQuery, LEADERBOARD_TAG } from "@/lib/dashboard-cache";
 import { createClient } from "@/utils/supabase/server";
 
@@ -27,7 +28,8 @@ export async function getLeaderboard(
 ): Promise<LeaderboardData> {
   const userId = await getAuthUserId();
 
-  if (!userId) {
+  // A server action takes any strings; only real boards become cache entries.
+  if (!userId || !isTargetLanguage(language) || !isProficiencyLevel(level)) {
     return {
       language,
       level,

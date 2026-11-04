@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BookOpen, ClipboardList, Dumbbell, Target, TrendingUp } from "lucide-react";
 import type { UserMistakeWithQuestion } from "@/app/(app)/stats/actions";
 import { MistakePracticeSession } from "@/components/statistics/mistake-practice-session";
@@ -73,9 +73,12 @@ export function StatisticsDashboard({
   );
   const nextDue = mistakes.map((mistake) => mistake.next_review_on).sort()[0];
 
-  useEffect(() => {
+  // A fresh list from the server replaces the local copy (adjusted while rendering, not in an effect).
+  const [shownMistakes, setShownMistakes] = useState(initialMistakes);
+  if (shownMistakes !== initialMistakes) {
+    setShownMistakes(initialMistakes);
     setMistakes(initialMistakes);
-  }, [initialMistakes]);
+  }
 
   const categories = stats ? categoryResults(stats) : [];
 

@@ -73,22 +73,6 @@ async function countMatchAiAsks(
   return count ?? 0;
 }
 
-async function countAiAsksLastDay(userId: string): Promise<number> {
-  const supabase = await createClient();
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count, error } = await supabase
-    .from("match_ai_asks")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .gte("created_at", since);
-
-  if (error) {
-    return MAX_NEW_AI_ASKS_PER_DAY;
-  }
-
-  return count ?? 0;
-}
-
 /**
  * Reads the question from the database with the service-role client;
  * quarantined questions live in questions_flagged.
@@ -238,22 +222,6 @@ export async function askQuestionExplanation(
     };
   }
 
-  if (asksUsed >= MAX_AI_ASKS_PER_MATCH) {
-    return {
-      success: false,
-      error: `You have used all ${MAX_AI_ASKS_PER_MATCH} AI explanations for this session.`,
-      asksRemaining: 0,
-    };
-  }
-
-  if ((await countAiAsksLastDay(user.id)) >= MAX_NEW_AI_ASKS_PER_DAY) {
-    return {
-      success: false,
-      error: `You have reached today's limit of ${MAX_NEW_AI_ASKS_PER_DAY} new AI explanations. Try again tomorrow.`,
-      asksRemaining,
-    };
-  }
-
   // Service role: players will lose read access to correct_answer (and never
   // see questions_flagged), but the explanation still needs both.
   const question = await loadExplainableQuestion(admin, payload.questionId);
@@ -263,6 +231,35 @@ export async function askQuestionExplanation(
       error: "This question is no longer available.",
       asksRemaining,
     };
+  }
+
+  // The slot is taken before the paid call, under a lock per player, so many
+  // requests at once cannot all pass the limits (supabase reserve_ai_ask).
+  const { data: askId, error: reserveError } = await admin.rpc("reserve_ai_ask", {
+    p_user_id: user.id,
+    p_session_id: payload.sessionId,
+    p_question_id: question.id,
+    p_selected_answer: selectedAnswer,
+    p_max_per_session: MAX_AI_ASKS_PER_MATCH,
+    p_max_per_day: MAX_NEW_AI_ASKS_PER_DAY,
+  });
+
+  if (reserveError) {
+    if (reserveError.message.includes("AI_ASK_LIMIT_REACHED")) {
+      return {
+        success: false,
+        error: `You have used all ${MAX_AI_ASKS_PER_MATCH} AI explanations for this session.`,
+        asksRemaining: 0,
+      };
+    }
+    if (reserveError.message.includes("AI_DAILY_LIMIT_REACHED")) {
+      return {
+        success: false,
+        error: `You have reached today's limit of ${MAX_NEW_AI_ASKS_PER_DAY} new AI explanations. Try again tomorrow.`,
+        asksRemaining,
+      };
+    }
+    return { success: false, error: reserveError.message, asksRemaining };
   }
 
   const generated = await generateGroqExplanation({
@@ -278,29 +275,26 @@ export async function askQuestionExplanation(
   }, question.language);
 
   if ("error" in generated) {
+    // A failed generation gives the slot back, as before.
+    await admin.from("match_ai_asks").delete().eq("id", askId);
     return { success: false, error: generated.error, asksRemaining };
   }
 
-  // Service-role only RPC: re-checks the per-session limit, derives the cache
-  // key itself, and never overwrites an existing explanation — see
-  // supabase/security-hardening-2026-10.sql.
-  const { error: recordError } = await admin.rpc("record_ai_explanation_for_user", {
-    p_user_id: user.id,
-    p_session_id: payload.sessionId,
-    p_question_id: question.id,
-    p_selected_answer: selectedAnswer,
-    p_explanation: generated.explanation,
-  });
-
-  if (recordError) {
-    if (recordError.message.includes("AI_ASK_LIMIT_REACHED")) {
-      return {
-        success: false,
-        error: `You have used all ${MAX_AI_ASKS_PER_MATCH} AI explanations for this session.`,
-        asksRemaining: 0,
-      };
-    }
-    return { success: false, error: recordError.message, asksRemaining };
+  // Shared cache, keyed from the database's own question id; the first
+  // explanation of a key stays (players never write here). `question_ai_explanations`
+  // is not in the generated Database type.
+  const { error: saveError } = await admin.from("question_ai_explanations").upsert(
+    {
+      cache_key: buildAiExplanationCacheKey(question.id, selectedAnswer),
+      question_id: question.id,
+      selected_answer: selectedAnswer,
+      explanation: generated.explanation,
+    } as never,
+    { onConflict: "cache_key", ignoreDuplicates: true }
+  );
+  if (saveError) {
+    // The player still gets the answer they spent a slot on; only the cache misses it.
+    console.error(`[ai] could not cache an explanation: ${saveError.message}`);
   }
 
   return {

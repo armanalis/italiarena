@@ -1,7 +1,7 @@
 /** Daily Wordle: one puzzle per language, level and day, plus the archive. */
 import { WordleGame } from "@/components/wordle/wordle-game";
 import { requireOnboardingComplete } from "@/lib/auth";
-import { DEFAULT_LANGUAGE, languageFromCode, PROFICIENCY_LEVELS } from "@/lib/constants";
+import { DEFAULT_LANGUAGE, isProficiencyLevel, languageFromCode } from "@/lib/constants";
 import { italyToday, playWordle } from "@/lib/wordle";
 import { createClient } from "@/utils/supabase/server";
 
@@ -18,7 +18,7 @@ export default async function WordlePage({
   const sharedLanguage = lang ? languageFromCode(lang) : DEFAULT_LANGUAGE;
 
   const shared =
-    sharedLanguage && sharedLevel && sharedDay && (PROFICIENCY_LEVELS as readonly string[]).includes(sharedLevel)
+    sharedLanguage && sharedLevel && sharedDay && isProficiencyLevel(sharedLevel)
       ? await playWordle(supabase, sharedLanguage, sharedLevel, sharedDay, null)
       : null;
   // A bad or future day in the link falls back to the player's own puzzle of the day.

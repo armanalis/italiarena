@@ -1,11 +1,12 @@
 /** Word Wheel (Passaparola in the code and database): a clue for every letter, 5 minutes on the clock. */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TargetLanguage } from "@/lib/constants";
+import { knownError } from "@/lib/errors";
 
 /**
  * The wheel's letters. Italian: J, K, W, X and Y only appear in foreign words.
  * German: too few words start with Q, X or Y; Ä, Ö and Ü count as A, O and U.
- * KEEP IN SYNC with the letter check in supabase/multi-language-4-passaparola-2026-11.sql.
+ * KEEP IN SYNC with the letter check in the passaparola database functions.
  */
 export const PASSAPAROLA_LETTERS: Record<TargetLanguage, string[]> = {
   Italian: [..."ABCDEFGHILMNOPQRSTUVZ"],
@@ -14,7 +15,7 @@ export const PASSAPAROLA_LETTERS: Record<TargetLanguage, string[]> = {
 
 /**
  * Typed instead of an answer: pass the letter, or end the game early.
- * KEEP IN SYNC with the check in supabase/passaparola-questions-{it,de}-2026-11.sql
+ * KEEP IN SYNC with the check in the clue loaders (tmp/passaparola/build.py)
  * (no clue may have these as answers).
  */
 export const PASSAPAROLA_PASS_WORD = "skip";
@@ -83,11 +84,6 @@ const ERRORS: Record<string, string> = {
   no_such_letter: "That letter is not on this board.",
 };
 
-function errorMessage(message: string | undefined): string {
-  const known = Object.keys(ERRORS).find((code) => message?.includes(code));
-  return known ? ERRORS[known] : "Could not reach the board. Try again.";
-}
-
 /**
  * Loads today's board (no move), starts its clock, answers one letter, or ends the game,
  * straight against the database: one round trip. Works with the browser and
@@ -109,7 +105,7 @@ export async function playPassaparola(
     p_language: language,
   });
   if (error || !data) {
-    return { ok: false, error: errorMessage(error?.message) };
+    return { ok: false, error: knownError(ERRORS, error?.message, "Could not reach the board. Try again.") };
   }
   const view = data as Omit<PassaparolaView, "level" | "given"> & Partial<Pick<PassaparolaView, "given">>;
   // `given` is missing until the SQL that adds it has run.

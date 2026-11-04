@@ -11,6 +11,7 @@ import {
 import { getClientAuthCallbackUrl } from "@/lib/site-url";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
+import { useHydrated } from "@/hooks/use-browser-value";
 
 function GoogleIcon() {
   return (
@@ -39,16 +40,16 @@ export function GoogleSignInButton() {
   const clientId = getGoogleWebClientId();
   const buttonHostRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useHydrated();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gsiReady, setGsiReady] = useState(false);
   const [gisButtonReady, setGisButtonReady] = useState(false);
   const [gisUnavailable, setGisUnavailable] = useState(false);
 
-  useEffect(() => setMounted(true), []);
-
   const finishWithSession = useCallback(() => {
+    // A full page load on purpose: the server layout and proxy must see the new session.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.assign("/onboarding");
   }, []);
 

@@ -1,7 +1,7 @@
 /** First-visit walkthrough on the Play dashboard: four short steps, shown once per browser. */
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   BarChart3,
   Sparkles,
@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useBrowserValue } from "@/hooks/use-browser-value";
 import { useCookieConsent } from "@/hooks/use-cookie-consent";
 import { APP_NAME } from "@/lib/legal";
 import { hasSeenWelcomeTour, markWelcomeTourSeen } from "@/lib/welcome-tour";
@@ -54,19 +55,15 @@ const STEPS: TourStep[] = [
 
 export function WelcomeTour() {
   const consent = useCookieConsent();
-  const [open, setOpen] = useState(false);
+  const seen = useBrowserValue(hasSeenWelcomeTour, true);
+  const [closed, setClosed] = useState(false);
   const [step, setStep] = useState(0);
-
-  useEffect(() => {
-    // Wait for the cookie banner to be answered so the two don't stack.
-    if (consent !== null && !hasSeenWelcomeTour()) {
-      setOpen(true);
-    }
-  }, [consent]);
+  // Wait for the cookie banner to be answered so the two don't stack.
+  const open = consent !== null && !seen && !closed;
 
   function close() {
     markWelcomeTourSeen();
-    setOpen(false);
+    setClosed(true);
   }
 
   const isLast = step === STEPS.length - 1;

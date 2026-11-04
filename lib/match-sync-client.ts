@@ -180,7 +180,7 @@ export async function revealRoundAnswer(
  * Persist cumulative scores for a BOT match only. A bot never writes
  * answer_b, so resolve_match_round (server-computed PvP scoring) cannot
  * apply here, and there is no second real player for a forged score_state
- * to defraud — see supabase/match-score-integrity-migration.sql. Routes
+ * to defraud. Routes
  * through commit_bot_match_score, which the database only accepts for
  * sessions where the caller is the sole real participant against the ghost
  * opponent; it enforces the same monotonic guard server-side.
@@ -206,8 +206,8 @@ export async function persistBotMatchScoreState(
  * Resolve one PvP round server-side: points, correctness, and response time
  * are all derived from data the database already owns (locked answers,
  * questions_active, the round's server-stamped start time) instead of a
- * client-built document. Idempotent and strictly sequential — see
- * resolve_match_round in supabase/match-score-integrity-migration.sql.
+ * client-built document. Idempotent and strictly sequential (the
+ * resolve_match_round database function).
  */
 export async function resolveMatchRoundServer(
   supabase: SupabaseClient,

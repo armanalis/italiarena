@@ -102,7 +102,7 @@ npm run build              # production build (runs test:unit first; a failing t
 npm run lint               # ESLint
 npm run audit:questions    # sanity-check the question bank for data issues
 npm test                   # every test: scripts/test-*.ts, then the SQL suite
-npm run test:sql           # SQL suite only (needs the private supabase/*.sql files)
+npm run test:sql           # SQL suite only (needs the private supabase/migrations and test files)
 ```
 
 ---

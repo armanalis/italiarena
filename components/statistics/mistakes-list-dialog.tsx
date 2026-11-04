@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -36,10 +36,12 @@ export function MistakesListDialog({
   const [reportedQuestionIds, setReportedQuestionIds] = useState(
     () => new Set(initialReportedQuestionIds)
   );
-
-  useEffect(() => {
+  // Fresh ids from the server replace the local copy (adjusted while rendering, not in an effect).
+  const [shownIds, setShownIds] = useState(initialReportedQuestionIds);
+  if (shownIds !== initialReportedQuestionIds) {
+    setShownIds(initialReportedQuestionIds);
     setReportedQuestionIds(new Set(initialReportedQuestionIds));
-  }, [initialReportedQuestionIds]);
+  }
 
   function markReported(questionId: string) {
     setReportedQuestionIds((ids) => new Set(ids).add(questionId));

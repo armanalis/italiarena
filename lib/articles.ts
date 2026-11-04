@@ -5,6 +5,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { LANGUAGE_META, type TargetLanguage } from "@/lib/constants";
+import { knownError, type Result } from "@/lib/errors";
 import type { CorrectAnswer, QuestionActive, QuestionLevel } from "@/types/database.types";
 
 /** KEEP IN SYNC with article_sprint_start / article_sprint_finish (supabase/migrations/*_article_game.sql). */
@@ -165,12 +166,7 @@ const ERRORS: Record<string, string> = {
   no_such_level: "This level does not exist.",
 };
 
-function errorMessage(message: string | undefined): string {
-  const known = Object.keys(ERRORS).find((code) => message?.includes(code));
-  return known ? ERRORS[known] : "Could not reach the game. Try again.";
-}
-
-type Result<T> = { ok: true; value: T } | { ok: false; error: string };
+const errorMessage = (message?: string) => knownError(ERRORS, message, "Could not reach the game. Try again.");
 
 export async function startSprint(
   supabase: SupabaseClient,

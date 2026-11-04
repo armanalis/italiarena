@@ -8,7 +8,7 @@ import { PROFICIENCY_LEVELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
 
-/** KEEP IN SYNC with the 2-minute window in online_counts (supabase/online-players-2026-10-10.sql). */
+/** KEEP IN SYNC with the 2-minute window in the online_counts database function. */
 const ONLINE_HEARTBEAT_MS = 60_000;
 const ONLINE_REFRESH_MS = 30_000;
 

@@ -8,7 +8,8 @@ export const dynamic = "force-dynamic";
 const STALE_AFTER_HOURS = 1;
 
 /**
- * Also deletes practice article Sprints left unfinished for a day.
+ * Also deletes practice article Sprints left unfinished for a day and ends
+ * Picture Duels both players left.
  *
  * Matchmaking only abandons a user's OWN zombie "waiting" lobby the next
  * time they search — there is no sweep for sessions nobody ever comes back
@@ -49,7 +50,31 @@ async function runStaleSessionCleanup() {
     throw new Error(runsError.message);
   }
 
-  return { abandoned: data?.length ?? 0, practiceRunsDeleted: practiceRunsDeleted ?? 0 };
+  // Picture Duels both players left: no screen asks the server to end them,
+  // so end them by the game's own rule (picture_duel_settle: the player whose
+  // clock ran out loses). A clock holds at most 60 s, so 2 minutes is safe.
+  const { data: staleDuels, error: duelsError } = await admin
+    .from("picture_duels")
+    .select("id")
+    .eq("status", "active")
+    .lt("turn_started_at", new Date(Date.now() - 2 * 60 * 1000).toISOString())
+    .returns<{ id: string }[]>();
+
+  if (duelsError) {
+    throw new Error(duelsError.message);
+  }
+
+  let duelsEnded = 0;
+  for (const duel of staleDuels ?? []) {
+    const { data: ended } = await admin.rpc("picture_duel_settle", { p_id: duel.id });
+    if (ended) duelsEnded += 1;
+  }
+
+  return {
+    abandoned: data?.length ?? 0,
+    practiceRunsDeleted: practiceRunsDeleted ?? 0,
+    duelsEnded,
+  };
 }
 
 export async function GET(request: Request) {

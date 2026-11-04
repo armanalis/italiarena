@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import {
   isTargetLanguage,
-  PROFICIENCY_LEVELS,
+  isProficiencyLevel,
   type ProficiencyLevel,
   type TargetLanguage,
 } from "@/lib/constants";
@@ -79,7 +79,7 @@ export async function completeGuestProfile(
     return { error: "Please select the language you are learning." };
   }
 
-  if (!PROFICIENCY_LEVELS.includes(proficiencyLevel as ProficiencyLevel)) {
+  if (!isProficiencyLevel(proficiencyLevel)) {
     return { error: "Please select a valid proficiency level." };
   }
 
@@ -113,7 +113,7 @@ export async function completeGuestProfile(
     email,
     displayName,
     targetLanguage,
-    proficiencyLevel as ProficiencyLevel
+    proficiencyLevel
   );
 
   if (profileError) {

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useBrowserValue } from "@/hooks/use-browser-value";
 import {
   DEFAULT_SOUND_VOLUME,
   getSoundVolume,
@@ -167,18 +168,13 @@ export function SoundVolumeControl({
   showSlider = false,
   collapsible = false,
 }: SoundVolumeControlProps) {
-  const [volume, setVolume] = useState(DEFAULT_SOUND_VOLUME);
+  // The saved volume lives in localStorage: the server renders the default.
+  const storedVolume = useBrowserValue(getSoundVolume, DEFAULT_SOUND_VOLUME);
+  const [chosenVolume, setChosenVolume] = useState<number | null>(null);
+  const volume = chosenVolume ?? storedVolume;
   const [open, setOpen] = useState(false);
   const lastVolumeRef = useRef(DEFAULT_SOUND_VOLUME);
   const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const storedVolume = getSoundVolume();
-    setVolume(storedVolume);
-    if (storedVolume > 0) {
-      lastVolumeRef.current = storedVolume;
-    }
-  }, []);
 
   useEffect(() => {
     if (!collapsible || !open) {
@@ -196,10 +192,11 @@ export function SoundVolumeControl({
   }, [collapsible, open]);
 
   function persistVolume(nextVolume: number) {
-    setVolume(nextVolume);
-    if (nextVolume > 0) {
-      lastVolumeRef.current = nextVolume;
+    // Unmute goes back to the volume being left, saved or chosen here.
+    if (volume > 0) {
+      lastVolumeRef.current = volume;
     }
+    setChosenVolume(nextVolume);
     writeGameplayPreferences({
       ...readGameplayPreferences(),
       soundVolume: nextVolume,

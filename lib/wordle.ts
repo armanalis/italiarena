@@ -1,9 +1,10 @@
 /** Daily Wordle in each language: puzzle dates and game state (shared by server and browser). */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { LANGUAGE_META, type TargetLanguage } from "@/lib/constants";
+import { knownError } from "@/lib/errors";
 
 export const WORDLE_LENGTH = 5;
-/** KEEP IN SYNC with wordle_play (supabase/wordle-2026-10-10.sql). */
+/** KEEP IN SYNC with the wordle_play database function. */
 export const WORDLE_MAX_GUESSES = 6;
 /** Puzzle #1. */
 export const WORDLE_FIRST_DAY = "2026-10-10";
@@ -77,7 +78,7 @@ export type WordleArchiveDay = {
   status: WordleStatus | null;
 };
 
-/** What wordle_turn returns (supabase/wordle-fast-2026-10-10.sql). */
+/** What the wordle_turn database function returns. */
 type WordleTurn = {
   today: string;
   guesses: string[];
@@ -146,11 +147,6 @@ const ERRORS: Record<string, string> = {
   no_words_for_level: "No words for this level yet.",
 };
 
-export function wordleErrorMessage(message: string | undefined): string {
-  const known = Object.keys(ERRORS).find((code) => message?.includes(code));
-  return known ? ERRORS[known] : "Could not reach the puzzle. Try again.";
-}
-
 /**
  * Loads a puzzle (guess null, with the archive) or plays one guess, straight
  * against the database: one round trip. Works with the browser and the
@@ -174,7 +170,7 @@ export async function playWordle(
     p_language: language,
   });
   if (error || !data) {
-    return { ok: false, error: wordleErrorMessage(error?.message) };
+    return { ok: false, error: knownError(ERRORS, error?.message, "Could not reach the puzzle. Try again.") };
   }
   const turn = data as WordleTurn;
   return {

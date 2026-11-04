@@ -63,7 +63,7 @@ export async function submitQuestionReport(
       return {
         success: false,
         error:
-          "Could not quarantine this question due to a database category mismatch. Ask an admin to run supabase/reports-category-fix.sql.",
+          "Could not quarantine this question right now. Your report was not saved: try again later.",
       };
     }
 
