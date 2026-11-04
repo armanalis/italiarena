@@ -42,7 +42,7 @@ function isMatchStillLive(state: ReturnType<typeof useGameStore.getState>) {
 /**
  * Leaving now is a forfeit: a live PvP match with a scored round. The
  * server then records a loss for the leaver and a win for the opponent
- * (supabase/pvp-forfeit-2026-10-09.sql).
+ * (the database's forfeit functions).
  */
 export function exitCountsAsLoss() {
   const state = useGameStore.getState();

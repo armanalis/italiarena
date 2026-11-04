@@ -43,7 +43,7 @@ type MatchmakingResult =
  * 10 s (MATCH_SEARCH_SECONDS) and then cancels its lobby, so anything older is
  * a zombie left behind by a closed tab — joining one strands the joiner in a
  * session whose host (the sync leader) will never show up.
- * KEEP IN SYNC with claim_silent_opponent (supabase/audit-2-fixes-2026-10-10.sql).
+ * KEEP IN SYNC with the claim_silent_opponent database function.
  */
 const JOINABLE_SESSION_MAX_AGE_MS = 15_000;
 
@@ -471,7 +471,7 @@ export async function startBotMatch(
       success: false,
       error:
         createError?.message ??
-        "Could not start ghost match. Run supabase/matchmaking-migration.sql if you have not already.",
+        "Could not start the bot match. Try again.",
     };
   }
 
@@ -574,7 +574,7 @@ export async function joinChallenge(sessionId: string): Promise<ChallengeResult>
   return { success: true, sessionId };
 }
 
-/** What rematch_poll returns (supabase/rematch-2026-10-10.sql). */
+/** What the rematch_poll database function returns. */
 export type RematchState = {
   offered: boolean;
   they_offered: boolean;

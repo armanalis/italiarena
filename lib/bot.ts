@@ -47,8 +47,8 @@ export function botDifficultyFromDisplayName(
   return "medium";
 }
 
-// The bot's pick is decided on the server (reveal_round_answer in
-// supabase/answer-secrecy-1-functions-2026-10.sql): the browser never holds a
+// The bot's pick is decided on the server (the reveal_round_answer database
+// function): the browser never holds a
 // question's answer before the player has answered. Accuracy there: hard is
 // always right; easy/medium use a per-level base (A1 0.62 … C1 0.74) with a
 // −0.12 / +0.08 tier bonus, clamped to [0.45, 0.95].

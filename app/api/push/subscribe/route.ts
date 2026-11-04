@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { isGuestAuthUser } from "@/lib/guest-auth";
 import { isPushServiceEndpoint, MAX_SUBSCRIPTIONS_PER_USER } from "@/lib/push";
 import { DEFAULT_TIMEZONE } from "@/lib/constants";
@@ -78,7 +79,10 @@ export async function POST(request: Request) {
 
   const userAgent = request.headers.get("user-agent");
 
-  const { error: upsertError } = await supabase.from("push_subscriptions").upsert(
+  // Service role: on a shared device the endpoint may still belong to the
+  // account that used it before (sign-out keeps it), and RLS would refuse to
+  // move it. Only the browser holding the subscription knows endpoint + keys.
+  const { error: upsertError } = await createAdminClient().from("push_subscriptions").upsert(
     {
       user_id: user.id,
       endpoint,

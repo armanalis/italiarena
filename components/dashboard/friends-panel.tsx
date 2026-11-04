@@ -64,12 +64,17 @@ export function FriendsPanel({ language }: { language: TargetLanguage }) {
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const load = useCallback(async () => {
-    const { data } = await createClient().rpc("get_friends");
-    if (Array.isArray(data)) {
-      setRows(data as FriendRow[]);
-    }
-  }, []);
+  const load = useCallback(
+    () =>
+      createClient()
+        .rpc("get_friends")
+        .then(({ data }) => {
+          if (Array.isArray(data)) {
+            setRows(data as FriendRow[]);
+          }
+        }),
+    []
+  );
 
   useEffect(() => {
     void load();

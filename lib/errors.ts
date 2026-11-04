@@ -28,6 +28,15 @@ const CHUNK_RELOAD_KEY = "language-quiz-chunk-reload";
 export const CONNECTION_ERROR_MESSAGE =
   "Can't reach the server. Check your internet connection and try again.";
 
+/** A game call that worked, or the sentence to show the player. */
+export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
+
+/** The sentence for a code the database raised (raise exception 'no_such_run'), else `fallback`. */
+export function knownError(known: Record<string, string>, message: string | undefined, fallback: string): string {
+  const code = Object.keys(known).find((key) => message?.includes(key));
+  return code ? known[code] : fallback;
+}
+
 export function isConnectionError(error: Error): boolean {
   const message = `${error.name} ${error.message}`.toLowerCase();
   return CONNECTION_PATTERNS.some((pattern) => message.includes(pattern));

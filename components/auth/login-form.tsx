@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState, type FormEvent } from "react";
+import { useActionState, useState, type FormEvent } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useActionRedirect } from "@/hooks/use-action-redirect";
@@ -86,22 +86,32 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
   const isEmailOnly = isForgot || isResend;
   const usesClientAuth = isSignUp || isResend;
 
-  useEffect(() => {
-    setMode(initialMode);
-  }, [initialMode]);
-
-  useEffect(() => {
-    if (forgotState.success) {
+  // Adjusted while rendering, not in effects, when one of these changes: a
+  // new ?mode= link, a sent reset link (back to sign-in, with its message),
+  // and a sign-in reply (the old message goes).
+  const now = {
+    initialMode,
+    resetSent: forgotState.success,
+    error: signInState.error,
+    redirectTo: signInState.redirectTo,
+  };
+  const [seen, setSeen] = useState(now);
+  const modeChanged = now.initialMode !== seen.initialMode;
+  const resetChanged = now.resetSent !== seen.resetSent;
+  const signInChanged = now.error !== seen.error || now.redirectTo !== seen.redirectTo;
+  if (modeChanged || resetChanged || signInChanged) {
+    setSeen(now);
+    if (modeChanged) {
+      setMode(initialMode);
+    }
+    if (resetChanged && forgotState.success) {
       setSignInSuccess(forgotState.success);
       setMode("signin");
     }
-  }, [forgotState.success]);
-
-  useEffect(() => {
-    if (signInState.error || signInState.redirectTo) {
+    if (signInChanged && (signInState.error || signInState.redirectTo)) {
       setSignInSuccess(null);
     }
-  }, [signInState.error, signInState.redirectTo]);
+  }
 
   async function handleClientAuthSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

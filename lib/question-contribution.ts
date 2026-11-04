@@ -1,5 +1,5 @@
 import {
-  PROFICIENCY_LEVELS,
+  isProficiencyLevel,
   type ProficiencyLevel,
   type TargetLanguage,
 } from "@/lib/constants";
@@ -180,7 +180,7 @@ export function validateQuestionSubmission(
     };
   }
 
-  if (!PROFICIENCY_LEVELS.includes(input.level)) {
+  if (!isProficiencyLevel(input.level)) {
     return { ok: false, error: "Select a valid CEFR level." };
   }
 

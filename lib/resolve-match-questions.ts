@@ -7,7 +7,7 @@ import type {
 
 /**
  * Columns players may read from questions_active / questions_flagged. Every
- * column except correct_answer — see supabase/answer-secrecy-2-lockdown-2026-10.sql.
+ * column except correct_answer (the database grants nothing else).
  */
 export const PUBLIC_QUESTION_COLUMNS =
   "id, language, level, category, question_text, option_a, option_b, option_c, option_d, random_float";

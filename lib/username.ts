@@ -25,7 +25,7 @@ export function validateUsername(value: string): string | null {
 
 /**
  * resolve_login_email turns a public username into a private email, so only the
- * service role may call it (see supabase/security-hardening-2026-10.sql).
+ * service role may call it.
  */
 async function lookupEmailViaRpc(identifier: string): Promise<string | null> {
   const admin = createAdminClientOrNull();

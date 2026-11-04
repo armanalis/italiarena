@@ -44,6 +44,7 @@ next-env.d.ts
 # Database schema and migrations (private — kept locally, not published on GitHub)
 supabase/*.sql
 supabase/*.test.mjs
+supabase/real-schema.mjs
 supabase/migrations/
 supabase/archive/
 

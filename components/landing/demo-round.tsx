@@ -88,11 +88,14 @@ export function DemoRound({ questions, opponent, className }: DemoRoundProps) {
     if (phase !== "playing") {
       return;
     }
-    if (secondsLeft <= 0) {
-      reveal(null);
-      return;
-    }
-    const tick = window.setTimeout(() => setSecondsLeft(secondsLeft - 1), 1000);
+    const tick = window.setTimeout(() => {
+      if (secondsLeft > 1) {
+        setSecondsLeft(secondsLeft - 1);
+      } else {
+        setSecondsLeft(0);
+        reveal(null);
+      }
+    }, 1000);
     return () => window.clearTimeout(tick);
   }, [phase, secondsLeft, reveal]);
 

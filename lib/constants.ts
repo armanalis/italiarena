@@ -1,6 +1,6 @@
 /**
  * Languages the app teaches, stored by these names in users.target_language and
- * every `language` column. KEEP IN SYNC with supabase/multi-language-*.sql.
+ * every `language` column. KEEP IN SYNC with the language checks in the database.
  */
 export const TARGET_LANGUAGES = ["Italian", "German"] as const;
 /** Rows and players from before German existed are Italian. */
@@ -24,7 +24,7 @@ export function languageFromCode(code: string | undefined): TargetLanguage | und
 /**
  * For players who never saved their own: the players are in Italy, and the
  * Wordle and Passaparola day starts at midnight here too.
- * KEEP IN SYNC with the users.timezone default (supabase/audit-3-fixes-2026-10-15.sql).
+ * KEEP IN SYNC with the database default of users.timezone.
  */
 export const DEFAULT_TIMEZONE = "Europe/Rome";
 
@@ -40,5 +40,9 @@ export const PROFICIENCY_LEVELS = [
 
 export type TargetLanguage = (typeof TARGET_LANGUAGES)[number];
 export type ProficiencyLevel = (typeof PROFICIENCY_LEVELS)[number];
+
+export function isProficiencyLevel(value: unknown): value is ProficiencyLevel {
+  return PROFICIENCY_LEVELS.includes(value as ProficiencyLevel);
+}
 
 export const BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/armanalis";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { CheckCircle2, Smartphone } from "lucide-react";
 import {
   Card,
@@ -12,18 +12,24 @@ import {
 import { APP_NAME } from "@/lib/legal";
 import { cn } from "@/lib/utils";
 
+const STANDALONE_QUERY = "(display-mode: standalone)";
+
+function subscribeToDisplayMode(onChange: () => void) {
+  const query = window.matchMedia(STANDALONE_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function isInstalledApp() {
+  return (
+    window.matchMedia(STANDALONE_QUERY).matches ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
+/** Opened from the Home Screen; false on the server. */
 function useIsInstalledApp() {
-  const [installed, setInstalled] = useState(false);
-
-  useEffect(() => {
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as Navigator & { standalone?: boolean }).standalone ===
-        true;
-    setInstalled(standalone);
-  }, []);
-
-  return installed;
+  return useSyncExternalStore(subscribeToDisplayMode, isInstalledApp, () => false);
 }
 
 function StepList({

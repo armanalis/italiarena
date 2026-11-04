@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { armMatchmakingAutosearch } from "@/lib/matchmaking-intent";
 import { createClient } from "@/utils/supabase/client";
 
-/** KEEP IN SYNC with the 6-second window in supabase/rematch-2026-10-10.sql. */
+/** KEEP IN SYNC with the 6-second window in the rematch_poll database function. */
 const CHECK_IN_MS = 2_000;
 
 /**

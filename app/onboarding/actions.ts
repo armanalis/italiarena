@@ -4,8 +4,7 @@
 import { revalidatePath } from "next/cache";
 import {
   isTargetLanguage,
-  PROFICIENCY_LEVELS,
-  type ProficiencyLevel,
+  isProficiencyLevel,
 } from "@/lib/constants";
 import {
   isUsernameTaken,
@@ -31,7 +30,7 @@ export async function saveOnboarding(
     return { error: "Please select the language you are learning." };
   }
 
-  if (!PROFICIENCY_LEVELS.includes(proficiencyLevel as ProficiencyLevel)) {
+  if (!isProficiencyLevel(proficiencyLevel)) {
     return { error: "Please select a valid proficiency level." };
   }
 
