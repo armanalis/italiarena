@@ -18,7 +18,13 @@ async function joinByCode(code: string) {
     : { error: "No open duel has this code. Check it, or ask for a new one." };
 }
 
-/** Level chips and one card per topic: tapping a topic opens its lobby with the link to share. */
+const chip = (active: boolean) =>
+  cn(
+    "min-h-11 shrink-0 rounded-full border px-4 text-sm font-medium transition-colors",
+    active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-transparent text-foreground hover:bg-muted"
+  );
+
+/** Level and mode chips, then one card per topic: tapping a topic opens its lobby with the link to share. */
 export function PictureDuelSetup({
   language,
   initialLevel,
@@ -30,12 +36,14 @@ export function PictureDuelSetup({
 }) {
   const router = useRouter();
   const [level, setLevel] = useState(initialLevel);
+  const [hard, setHard] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
   const shown = topics.filter((topic) => topic.level === level);
+  const [withArticle, bare] = language === "German" ? ["das Brot", "Brot"] : ["il pane", "pane"];
 
   async function open(topic: string) {
     setOpening(topic);
-    const created = await createDuel(createClient(), language, level, topic);
+    const created = await createDuel(createClient(), language, level, topic, hard);
     if (created.ok) {
       router.push(`/picture-duel/${created.value}`);
     } else {
@@ -68,16 +76,33 @@ export function PictureDuelSetup({
             aria-pressed={option === level}
             disabled={opening !== null}
             onClick={() => setLevel(option)}
-            className={cn(
-              "min-h-11 shrink-0 rounded-full border px-4 text-sm font-medium transition-colors",
-              option === level
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-transparent text-foreground hover:bg-muted"
-            )}
+            className={chip(option === level)}
           >
             {option}
           </button>
         ))}
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex gap-2" role="group" aria-label="Mode">
+          {[false, true].map((option) => (
+            <button
+              key={String(option)}
+              type="button"
+              aria-pressed={option === hard}
+              disabled={opening !== null}
+              onClick={() => setHard(option)}
+              className={chip(option === hard)}
+            >
+              {option ? "Hard" : "Normal"}
+            </button>
+          ))}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {hard
+            ? `Hard: type the article too. ${withArticle} is right, ${bare} is not.`
+            : `Normal: the article is optional, ${bare} or ${withArticle}.`}
+        </p>
       </div>
 
       <section aria-labelledby="topics-heading" className="space-y-2">
