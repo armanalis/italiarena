@@ -9,8 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-/** Joins a friend's challenge by the 6-digit code shown on their challenge page. */
-export function JoinCodeForm({ className }: { className?: string }) {
+type Join = (code: string) => Promise<{ href: string } | { error: string }>;
+
+async function joinArena(code: string) {
+  const result = await joinChallengeByCode(code);
+  return result.success ? { href: `/match/${result.sessionId}` } : { error: result.error };
+}
+
+/** Joins a friend's game by the 6-digit code shown on their lobby: an Arena challenge unless `join` says otherwise. */
+export function JoinCodeForm({ className, join = joinArena }: { className?: string; join?: Join }) {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -21,9 +28,9 @@ export function JoinCodeForm({ className }: { className?: string }) {
       onSubmit={(event) => {
         event.preventDefault();
         startTransition(async () => {
-          const result = await joinChallengeByCode(code);
-          if (result.success) {
-            router.push(`/match/${result.sessionId}`);
+          const result = await join(code);
+          if ("href" in result) {
+            router.push(result.href);
           } else {
             toast.error(result.error);
           }

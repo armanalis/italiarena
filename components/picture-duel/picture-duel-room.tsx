@@ -54,7 +54,7 @@ export function PictureDuelRoom({
   const [typed, setTyped] = useState({ at: -1, text: "" });
   // The last answer the server called wrong: the field is red until it changes.
   const [wrongText, setWrongText] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"link" | "code" | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const lastTimeout = useRef(0);
 
@@ -153,7 +153,9 @@ export function PictureDuelRoom({
   }
 
   async function shareLink() {
-    const shareText = `Picture Duel: name the pictures in ${duel?.language ?? "Italian"} before your clock runs out!`;
+    const shareText = `Picture Duel: name the pictures in ${duel?.language ?? "Italian"} before your clock runs out!${
+      duel?.code ? ` Open the link, or enter code ${duel.code} on the Picture Duel page:` : ""
+    }`;
     if (navigator.share) {
       try {
         await navigator.share({ title: "Picture Duel", text: shareText, url: link });
@@ -163,13 +165,13 @@ export function PictureDuelRoom({
         return;
       }
     }
-    await copyLink();
+    await copy("link");
   }
 
-  async function copyLink() {
-    await navigator.clipboard.writeText(link);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 2_000);
+  async function copy(what: "link" | "code") {
+    await navigator.clipboard.writeText(what === "code" && duel?.code ? duel.code : link);
+    setCopied(what);
+    window.setTimeout(() => setCopied(null), 2_000);
   }
 
   // ---- Not a player: the invitation, or nothing to join. ----
@@ -216,15 +218,28 @@ export function PictureDuelRoom({
       <Panel>
         <Title sub={heading}>Send this link to a friend</Title>
         <p className="text-sm text-muted-foreground">
-          The duel starts as soon as they open it and press Play. The link works for 1 hour.
+          {duel.code && "Or tell them the code to enter on their Picture Duel page. "}
+          The duel starts as soon as they press Play. It works for 1 hour.
         </p>
         <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 p-2 text-left">
           <span className="min-w-0 flex-1 truncate px-2 text-sm">{link}</span>
-          <Button type="button" size="sm" variant="secondary" onClick={() => void copyLink()}>
-            {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-            {copied ? "Copied" : "Copy"}
+          <Button type="button" size="sm" variant="secondary" onClick={() => void copy("link")}>
+            {copied === "link" ? <Check className="size-4" /> : <Copy className="size-4" />}
+            {copied === "link" ? "Copied" : "Copy"}
           </Button>
         </div>
+        {duel.code && (
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 p-2 text-left">
+            <span className="flex-1 px-2">
+              <span className="block text-xs text-muted-foreground">Code</span>
+              <span className="font-mono text-2xl font-bold tracking-[0.25em]">{duel.code}</span>
+            </span>
+            <Button type="button" size="sm" variant="secondary" onClick={() => void copy("code")}>
+              {copied === "code" ? <Check className="size-4" /> : <Copy className="size-4" />}
+              {copied === "code" ? "Copied" : "Copy"}
+            </Button>
+          </div>
+        )}
         <Button type="button" className="min-h-11 w-full" onClick={() => void shareLink()}>
           <Share2 className="size-4" />
           Share link
