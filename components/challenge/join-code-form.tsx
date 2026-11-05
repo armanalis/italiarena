@@ -30,6 +30,8 @@ export function JoinCodeForm({ className, join = joinArena }: { className?: stri
         startTransition(async () => {
           const result = await join(code);
           if ("href" in result) {
+            // A "wrong code" toast from an earlier try must not cover the game it opens.
+            toast.dismiss();
             router.push(result.href);
           } else {
             toast.error(result.error);
