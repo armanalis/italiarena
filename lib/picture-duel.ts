@@ -12,6 +12,8 @@ import { knownError, type Result } from "@/lib/errors";
 export const DUEL_CLOCK_MS = 60_000;
 /** A lobby nobody joined closes after an hour. */
 export const LOBBY_MS = 60 * 60 * 1000;
+/** The topic that mixes every topic of the level. KEEP IN SYNC with *_picture_duel_all_topics.sql. */
+export const ALL_TOPICS = "All topics";
 /** Pictures are concrete things, so the duel stops at A2. */
 export const PICTURE_LEVELS = ["A1", "A1-A2", "A2"] as const;
 

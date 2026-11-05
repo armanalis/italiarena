@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { JoinCodeForm } from "@/components/challenge/join-code-form";
-import { createDuel, findDuelByCode, PICTURE_LEVELS, type PictureTopic } from "@/lib/picture-duel";
+import { ALL_TOPICS, createDuel, findDuelByCode, PICTURE_LEVELS, type PictureTopic } from "@/lib/picture-duel";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
 
@@ -104,6 +104,35 @@ export function PictureDuelSetup({
             : `Normal: the article is optional, ${bare} or ${withArticle}.`}
         </p>
       </div>
+
+      {shown.length > 0 && (
+        <section aria-labelledby="mix-heading" className="space-y-2">
+          <h2 id="mix-heading" className="text-sm font-semibold">
+            Random mix
+          </h2>
+          <button
+            type="button"
+            disabled={opening !== null}
+            onClick={() => void open(ALL_TOPICS)}
+            className="glass-panel flex min-h-20 w-full items-center gap-3 p-3 text-left transition-colors hover:bg-muted disabled:opacity-60"
+          >
+            {opening === ALL_TOPICS ? (
+              <Loader2 className="size-8 shrink-0 animate-spin text-muted-foreground" aria-hidden />
+            ) : (
+              <span className="text-4xl leading-none" aria-hidden>
+                🎲
+              </span>
+            )}
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">{ALL_TOPICS}</span>
+              <span className="block text-xs text-muted-foreground">
+                Random pictures from every {level} topic ·{" "}
+                {shown.reduce((sum, topic) => sum + topic.count, 0)} pictures
+              </span>
+            </span>
+          </button>
+        </section>
+      )}
 
       <section aria-labelledby="topics-heading" className="space-y-2">
         <h2 id="topics-heading" className="text-sm font-semibold">
