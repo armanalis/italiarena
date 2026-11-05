@@ -4,9 +4,19 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { createDuel, PICTURE_LEVELS, type PictureTopic } from "@/lib/picture-duel";
+import { JoinCodeForm } from "@/components/challenge/join-code-form";
+import { createDuel, findDuelByCode, PICTURE_LEVELS, type PictureTopic } from "@/lib/picture-duel";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
+
+/** A friend's code opens their invitation, where Play joins (the countdown must not start mid-navigation). */
+async function joinByCode(code: string) {
+  const found = await findDuelByCode(createClient(), code);
+  if (!found.ok) return { error: found.error };
+  return found.value
+    ? { href: `/picture-duel/${found.value}` }
+    : { error: "No open duel has this code. Check it, or ask for a new one." };
+}
 
 /** Level chips and one card per topic: tapping a topic opens its lobby with the link to share. */
 export function PictureDuelSetup({
@@ -44,6 +54,11 @@ export function PictureDuelSetup({
           first loses.
         </p>
       </header>
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <p className="text-sm font-semibold">Got a code from a friend?</p>
+        <JoinCodeForm join={joinByCode} className="flex-[1_1_11rem]" />
+      </div>
 
       <div className="flex gap-2" role="group" aria-label="Level">
         {PICTURE_LEVELS.map((option) => (

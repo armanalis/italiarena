@@ -28,6 +28,8 @@ export type PictureDuel = {
   topic: string;
   status: "waiting" | "active" | "finished" | "cancelled";
   created_at: string;
+  /** 6 digits the host can read out instead of sending the link; null on duels from before codes. */
+  code: string | null;
   position: number;
   emoji: string | null;
   turn: string | null;
@@ -63,6 +65,7 @@ const ERRORS: Record<string, string> = {
   not_open: "This duel has already started, was cancelled, or expired.",
   own_duel: "This is your own duel: send the link to a friend.",
   no_such_duel: "This duel is not yours.",
+  too_many_tries: "Too many wrong codes. Try again in 15 minutes.",
 };
 
 async function rpc<T>(supabase: SupabaseClient, name: string, args: object): Promise<Result<T>> {
@@ -84,6 +87,9 @@ export const timeoutDuel = (supabase: SupabaseClient, id: string) =>
   rpc<PictureDuel>(supabase, "picture_duel_timeout", { p_id: id });
 export const cancelDuel = (supabase: SupabaseClient, id: string) =>
   rpc<null>(supabase, "picture_duel_cancel", { p_id: id });
+/** The open lobby with this code, or null. */
+export const findDuelByCode = (supabase: SupabaseClient, code: string) =>
+  rpc<string | null>(supabase, "picture_duel_by_code", { p_code: code });
 
 /** The participant's own copy of the duel (RLS: host or guest only). */
 export async function loadDuel(supabase: SupabaseClient, id: string): Promise<PictureDuel | null> {
