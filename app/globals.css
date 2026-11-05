@@ -68,10 +68,15 @@
   }
 
   /* Phones: the bottom nav and Friends button ride on top of the keyboard and
-     cover the field being typed in, so they step aside while it has focus. */
+     cover the field being typed in, so they step aside while it has focus, or
+     while an on-screen keyboard (Wordle) takes their place. */
   @media (max-width: 767px) {
-    .app-content:has(input:not([type="range"]):focus, textarea:focus) ~ .hide-while-typing {
+    .app-content:has(input:not([type="range"]):focus, textarea:focus, [data-onscreen-keyboard]) ~ .hide-while-typing {
       display: none;
+    }
+    /* No bottom nav to clear, and the sticky keyboard would stop above this padding. */
+    .app-content:has([data-onscreen-keyboard]) {
+      padding-bottom: 0;
     }
   }
 }

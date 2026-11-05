@@ -85,6 +85,8 @@ export function PassaparolaGame({
   // wheel shrinks and the title and levels step aside; wheel, clue and answer stay in view.
   const [typing, setTyping] = useState(false);
   const compact = typing && playing;
+  // Today's clock is running: the level can't change, so only the one being played shows.
+  const locked = playing || countdown !== null;
   // Leaving during the 3-2-1 must not start today's only clock in the background.
   const leftRef = useRef(false);
   useEffect(() => {
@@ -236,18 +238,19 @@ export function PassaparolaGame({
         role="group"
         aria-label="Level"
       >
-          {PROFICIENCY_LEVELS.map((option) => (
+          {PROFICIENCY_LEVELS.filter((option) => !locked || option === level).map((option) => (
             <button
               key={option}
               type="button"
               aria-pressed={option === level}
-              disabled={pending || playing || countdown !== null}
+              disabled={pending || locked}
               onClick={() => {
                 setPassed(new Set());
                 void send(option, {}, null);
               }}
               className={cn(
-                "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors disabled:opacity-60",
+                "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
+                !locked && "disabled:opacity-60",
                 option === level
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-transparent text-foreground hover:bg-muted"
@@ -479,7 +482,8 @@ export function PassaparolaGame({
           <p
             role="status"
             aria-live="polite"
-            className={cn("min-h-5 text-center text-sm font-medium", message && TONE[message.tone])}
+            // While typing on a phone the keyboard covers what is below the answer, so this moves above the clue.
+            className={cn("min-h-5 text-center text-sm font-medium", message && TONE[message.tone], compact && "max-md:order-first")}
           >
             {message?.text}
           </p>

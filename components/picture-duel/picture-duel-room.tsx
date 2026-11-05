@@ -383,6 +383,20 @@ export function PictureDuelRoom({
         )}
       </div>
 
+      {/* Above the answer box: on phones the keyboard covers whatever is below it. */}
+      <p className="min-h-5 text-center text-sm text-muted-foreground" role="status">
+        {isWrong ? (
+          <span className="font-medium text-red-600 dark:text-red-400">
+            {wrong?.article ? "Right word, but the article is missing or wrong" : "Not quite: try again or pass"}
+          </span>
+        ) : last && !revealing && (
+          <>
+            {last.emoji} <span lang={code} className="font-medium text-foreground">{last.answer}</span> ·{" "}
+            {nameOf(last.by)} {last.result === "right" ? "named it" : "passed"}
+          </>
+        )}
+      </p>
+
       <form
         className="flex gap-2"
         onSubmit={(event) => {
@@ -411,18 +425,6 @@ export function PictureDuelRoom({
         </Button>
       </form>
 
-      <p className="min-h-5 text-center text-sm text-muted-foreground" role="status">
-        {isWrong ? (
-          <span className="font-medium text-red-600 dark:text-red-400">
-            {wrong?.article ? "Right word, but the article is missing or wrong" : "Not quite: try again or pass"}
-          </span>
-        ) : last && !revealing && (
-          <>
-            {last.emoji} <span lang={code} className="font-medium text-foreground">{last.answer}</span> ·{" "}
-            {nameOf(last.by)} {last.result === "right" ? "named it" : "passed"}
-          </>
-        )}
-      </p>
     </div>
   );
 }
