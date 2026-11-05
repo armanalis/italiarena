@@ -3,8 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut } from "lucide-react";
-import { signOut } from "@/app/login/actions";
 import { AdminQueueBadge } from "@/components/admin/admin-queue-badge";
 import { BrandLogo } from "@/components/brand-logo";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -121,12 +119,6 @@ export function SiteHeaderNav({
                   </Link>
                 </Button>
               )}
-              <form action={signOut}>
-                <Button type="submit" variant="outline" size="sm" className="min-h-10 gap-1.5 px-2 sm:px-3">
-                  <LogOut className="size-3.5" />
-                  <span className="hidden sm:inline">Sign Out</span>
-                </Button>
-              </form>
             </>
           )}
         </div>

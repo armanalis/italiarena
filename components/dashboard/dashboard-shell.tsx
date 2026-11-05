@@ -7,8 +7,8 @@ import { BotPickerDialog } from "@/components/dashboard/bot-picker-dialog";
 import { DashboardNavButton, DashboardNavLink } from "@/components/dashboard/dashboard-nav-link";
 import { FriendsPanel } from "@/components/dashboard/friends-panel";
 import { SidebarResizeHandle } from "@/components/dashboard/sidebar-resize-handle";
-import { signOut } from "@/app/login/actions";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
@@ -18,7 +18,7 @@ import {
   History,
   House,
   Images,
-  LogOut,
+  PenLine,
   Settings,
   Swords,
   Timer,
@@ -52,6 +52,8 @@ const mobileItems = [{ href: "/", label: "Home", icon: House }, ...pageItems];
 type DashboardShellProps = {
   children: React.ReactNode;
   language: TargetLanguage;
+  /** Guests can't add questions to the pool. */
+  guest: boolean;
 };
 
 /** Game screens: on phones the Friends button would sit on the game, so it shows everywhere else. */
@@ -68,7 +70,7 @@ function isImmersiveRoute(pathname: string) {
   );
 }
 
-export function DashboardShell({ children, language }: DashboardShellProps) {
+export function DashboardShell({ children, language, guest }: DashboardShellProps) {
   const pathname = usePathname();
   const items = [
     ...gameItems.map((item) =>
@@ -124,16 +126,15 @@ export function DashboardShell({ children, language }: DashboardShellProps) {
         <div className="space-y-1 border-t border-border/60 p-4">
           <CoffeeLink showLabel className="w-full justify-start px-3" />
           <GitHubLink showLabel className="w-full justify-start px-3" />
-          <form action={signOut}>
-            <Button
-              type="submit"
-              variant="ghost"
-              className="w-full justify-start gap-2 text-muted-foreground"
-            >
-              <LogOut className="size-4" />
-              Sign Out
+          {/* Sign out lives in Settings only, behind a confirm, so it is hard to hit by accident. */}
+          {!guest && (
+            <Button asChild variant="ghost" size="sm" className="min-h-10 w-full justify-start gap-2 px-3 text-muted-foreground">
+              <Link href="/contribute">
+                <PenLine className="size-4" />
+                Add a question
+              </Link>
             </Button>
-          </form>
+          )}
         </div>
       </aside>
       <SidebarResizeHandle />
