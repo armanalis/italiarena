@@ -39,7 +39,7 @@ const STEPS: TourStep[] = [
   {
     icon: Swords,
     title: "Pick your opponent",
-    body: "Enter an Arena Duel against a live player at your level, or open Play with bots to start instantly. Choose Easy, Medium, or Hard.",
+    body: "Enter an Arena Duel against a live player at your level, or play a bot to start instantly. Choose Easy, Medium, or Hard.",
   },
   {
     icon: Timer,

@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 type DashboardNavLinkProps = {
   href: string;
   label: string;
-  shortLabel?: string;
   icon: LucideIcon;
   isActive: boolean;
   variant: "sidebar" | "mobile";
@@ -19,7 +18,7 @@ type NavItemContentProps = Omit<DashboardNavLinkProps, "href" | "isActive"> & {
   pending: boolean;
 };
 
-function NavItemContent({ label, shortLabel, icon: Icon, variant, pending }: NavItemContentProps) {
+function NavItemContent({ label, icon: Icon, variant, pending }: NavItemContentProps) {
   if (variant === "sidebar") {
     return (
       <>
@@ -40,10 +39,7 @@ function NavItemContent({ label, shortLabel, icon: Icon, variant, pending }: Nav
       ) : (
         <Icon className="size-5 shrink-0" aria-hidden />
       )}
-      <span className="max-w-full truncate">
-        <span className="sm:hidden">{shortLabel ?? label}</span>
-        <span className="hidden sm:inline">{label}</span>
-      </span>
+      <span className="max-w-full truncate">{label}</span>
     </>
   );
 }
@@ -73,14 +69,13 @@ function navItemClassName(variant: DashboardNavLinkProps["variant"], isActive: b
 export function DashboardNavLink({
   href,
   label,
-  shortLabel,
   icon,
   isActive,
   variant,
 }: DashboardNavLinkProps) {
   return (
     <Link href={href} prefetch className={navItemClassName(variant, isActive)}>
-      <NavLinkInner label={label} shortLabel={shortLabel} icon={icon} variant={variant} />
+      <NavLinkInner label={label} icon={icon} variant={variant} />
     </Link>
   );
 }
@@ -89,13 +84,12 @@ export function DashboardNavLink({
 export function DashboardNavButton({
   onClick,
   label,
-  shortLabel,
   icon,
   variant,
 }: Omit<DashboardNavLinkProps, "href" | "isActive"> & { onClick: () => void }) {
   return (
     <button type="button" onClick={onClick} className={cn("w-full", navItemClassName(variant, false))}>
-      <NavItemContent label={label} shortLabel={shortLabel} icon={icon} variant={variant} pending={false} />
+      <NavItemContent label={label} icon={icon} variant={variant} pending={false} />
     </button>
   );
 }
