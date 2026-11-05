@@ -27,7 +27,7 @@ import { loadFriendsToday } from "@/lib/friends-today";
 import { playPassaparola } from "@/lib/passaparola";
 import type { GameStreak } from "@/lib/push";
 import { italyToday, playWordle } from "@/lib/wordle";
-import { ArrowRight, ChevronRight, PenLine, ShieldAlert, Swords, UserRound } from "lucide-react";
+import { ArrowRight, ShieldAlert, Swords, UserRound } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 
 type PlayDashboardContentProps = {
@@ -173,20 +173,6 @@ export async function PlayDashboardContent({
             </h2>
             <FriendsTodayList rows={friendsToday} language={language} />
           </section>
-        )}
-
-        {!guest && (
-          <Link
-            href="/contribute"
-            className="mx-auto flex w-full max-w-3xl items-center gap-3 rounded-2xl border border-border px-4 py-3 text-sm transition-colors hover:bg-muted"
-          >
-            <PenLine className="size-4 shrink-0 text-primary" aria-hidden />
-            <span className="min-w-0 flex-1">
-              <span className="font-medium">Know a good question?</span>{" "}
-              <span className="text-muted-foreground">Add it to the pool for everyone to play.</span>
-            </span>
-            <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-          </Link>
         )}
       </div>
     </main>

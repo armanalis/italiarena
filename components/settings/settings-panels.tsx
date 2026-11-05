@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionRedirect } from "@/hooks/use-action-redirect";
-import { Loader2, LogOut, Mail, Trash2 } from "lucide-react";
+import { Loader2, LogOut, Mail, PenLine, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { signOut } from "@/app/login/actions";
 import {
@@ -14,6 +15,16 @@ import {
   updateFriendPrivacy,
 } from "@/app/(app)/settings/actions";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -526,12 +537,38 @@ export function SettingsPanels({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form action={signOut}>
-            <Button type="submit" variant="outline" className="min-h-11 w-full gap-2 sm:w-auto">
-              <LogOut className="size-4" />
-              {guest ? "End guest session" : "Sign out"}
-            </Button>
-          </form>
+          {/* The only sign-out in the app, so it asks first. */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button type="button" variant="outline" className="min-h-11 w-full gap-2 sm:w-auto">
+                <LogOut className="size-4" />
+                {guest ? "End guest session" : "Sign out"}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-sm">
+              <DialogHeader>
+                <DialogTitle>{guest ? "End guest session?" : `Sign out of ${APP_NAME}?`}</DialogTitle>
+                <DialogDescription>
+                  {guest
+                    ? "A guest account can't be opened again, so its progress is lost."
+                    : "Your progress is saved. Sign back in any time."}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button type="button" variant="outline" className="min-h-11">
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <form action={signOut}>
+                  <Button type="submit" variant="destructive" className="min-h-11 w-full gap-2">
+                    <LogOut className="size-4" />
+                    {guest ? "End session" : "Sign out"}
+                  </Button>
+                </form>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           <Button asChild variant="secondary" className="min-h-11 w-full gap-2 sm:w-auto">
             <a
@@ -541,6 +578,16 @@ export function SettingsPanels({
               Send feedback
             </a>
           </Button>
+
+          {/* Phones have no sidebar, where computers find this. */}
+          {!guest && (
+            <Button asChild variant="secondary" className="min-h-11 w-full gap-2 sm:w-auto md:hidden">
+              <Link href="/contribute">
+                <PenLine className="size-4" />
+                Add a question
+              </Link>
+            </Button>
+          )}
         </CardContent>
       </Card>
 

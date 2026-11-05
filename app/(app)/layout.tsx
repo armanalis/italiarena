@@ -2,7 +2,7 @@
 import { AuroraCanvas } from "@/components/aurora-canvas";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { OnlineHeartbeat } from "@/components/dashboard/online-players";
-import { getAuthUserId, getCurrentUserProfile } from "@/lib/auth";
+import { getAuthUserId, getCurrentUserProfile, isGuestUser } from "@/lib/auth";
 import { DEFAULT_LANGUAGE } from "@/lib/constants";
 
 export default async function AppLayout({
@@ -22,7 +22,12 @@ export default async function AppLayout({
   return (
     <AuroraCanvas subtle className="flex h-app min-h-0 w-full flex-col overflow-hidden md:flex-row">
       <OnlineHeartbeat />
-      <DashboardShell language={profile?.target_language ?? DEFAULT_LANGUAGE}>{children}</DashboardShell>
+      <DashboardShell
+        language={profile?.target_language ?? DEFAULT_LANGUAGE}
+        guest={profile ? isGuestUser(profile) : false}
+      >
+        {children}
+      </DashboardShell>
     </AuroraCanvas>
   );
 }
