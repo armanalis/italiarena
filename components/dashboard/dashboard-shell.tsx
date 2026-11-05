@@ -16,6 +16,7 @@ import {
   CircleDashed,
   Grid3x3,
   History,
+  House,
   Images,
   LogOut,
   Settings,
@@ -26,76 +27,27 @@ import {
 import { ARTICLE_GAME_NAME } from "@/lib/articles";
 import type { TargetLanguage } from "@/lib/constants";
 
-const navItems = [
-  { href: "/", label: "Arena", shortLabel: "Arena", icon: Swords, exact: true },
+/** Desktop sidebar only: phones play every game from Home. */
+const gameItems = [
+  { href: "/", label: "Arena", icon: Swords, exact: true },
   // No page: opens the bot picker.
-  {
-    href: null,
-    label: "Play with bots",
-    shortLabel: "Bots",
-    icon: Bot,
-    exact: false,
-  },
-  {
-    href: "/wordle",
-    label: "Wordle",
-    shortLabel: "Wordle",
-    icon: Grid3x3,
-    exact: false,
-  },
-  {
-    href: "/word-wheel",
-    label: "Word Wheel",
-    shortLabel: "Wheel",
-    icon: CircleDashed,
-    exact: false,
-  },
-  {
-    // Named after its buttons in the language being played: der·die·das, il·lo·la.
-    href: "/articles",
-    label: "Articles",
-    shortLabel: "Articles",
-    icon: Timer,
-    exact: false,
-  },
-  {
-    // The phone bar has no room for a tenth item: phones open it from the Arena page.
-    href: "/picture-duel",
-    label: "Picture Duel",
-    shortLabel: "Duel",
-    icon: Images,
-    exact: false,
-    desktopOnly: true,
-  },
-  {
-    href: "/stats",
-    label: "Stats",
-    shortLabel: "Stats",
-    icon: BarChart3,
-    exact: false,
-  },
-  {
-    href: "/recent",
-    label: "Recent",
-    shortLabel: "Recent",
-    icon: History,
-    exact: false,
-  },
-  {
-    href: "/leaderboard",
-    label: "Leaderboard",
-    shortLabel: "Board",
-    icon: Trophy,
-    exact: false,
-  },
-  {
-    href: "/settings",
-    label: "Settings",
-    shortLabel: "Settings",
-    icon: Settings,
-    exact: false,
-  },
+  { href: null, label: "Play with bots", icon: Bot, exact: false },
+  { href: "/wordle", label: "Wordle", icon: Grid3x3, exact: false },
+  { href: "/word-wheel", label: "Word Wheel", icon: CircleDashed, exact: false },
+  // Named after its buttons in the language being played: der·die·das, il·lo·la.
+  { href: "/articles", label: "Articles", icon: Timer, exact: false },
+  { href: "/picture-duel", label: "Picture Duel", icon: Images, exact: false },
 ];
+
+const pageItems = [
+  { href: "/stats", label: "Stats", icon: BarChart3, exact: false },
+  { href: "/recent", label: "Recent", icon: History, exact: false },
+  { href: "/leaderboard", label: "Leaderboard", icon: Trophy, exact: false },
+  { href: "/settings", label: "Settings", icon: Settings, exact: false },
+];
+
+/** Phones: Home holds every game, the bar keeps only the pages. */
+const mobileItems = [{ href: "/", label: "Home", icon: House }, ...pageItems];
 
 type DashboardShellProps = {
   children: React.ReactNode;
@@ -118,9 +70,12 @@ function isImmersiveRoute(pathname: string) {
 
 export function DashboardShell({ children, language }: DashboardShellProps) {
   const pathname = usePathname();
-  const items = navItems.map((item) =>
-    item.href === "/articles" ? { ...item, label: ARTICLE_GAME_NAME[language] } : item
-  );
+  const items = [
+    ...gameItems.map((item) =>
+      item.href === "/articles" ? { ...item, label: ARTICLE_GAME_NAME[language] } : item
+    ),
+    ...pageItems,
+  ];
   const [botsOpen, setBotsOpen] = useState(false);
   const immersive = isImmersiveRoute(pathname);
   const showFriends = !isGameRoute(pathname);
@@ -198,36 +153,18 @@ export function DashboardShell({ children, language }: DashboardShellProps) {
         aria-label="Main"
         className="glass-header hide-while-typing fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom,0px)] md:hidden"
       >
-        <div className="mx-auto grid max-w-lg grid-cols-9 gap-0.5 px-1 py-2 sm:gap-1 sm:px-2">
-          {items.filter((item) => !item.desktopOnly).map(({ href, label, shortLabel, icon, exact }) => {
-            if (!href) {
-              return (
-                <DashboardNavButton
-                  key={label}
-                  label={label}
-                  shortLabel={shortLabel}
-                  icon={icon}
-                  variant="mobile"
-                  onClick={() => setBotsOpen(true)}
-                />
-              );
-            }
-            const isActive = exact
-              ? pathname === href
-              : pathname.startsWith(href);
-
-            return (
-              <DashboardNavLink
-                key={href}
-                href={href}
-                label={label}
-                shortLabel={shortLabel}
-                icon={icon}
-                isActive={isActive}
-                variant="mobile"
-              />
-            );
-          })}
+        <div className="mx-auto grid max-w-lg grid-cols-5 gap-1 px-2 py-2">
+          {mobileItems.map(({ href, label, icon }) => (
+            <DashboardNavLink
+              key={href}
+              href={href}
+              label={label}
+              icon={icon}
+              // Games open from Home, so Home stays lit while one is being played.
+              isActive={href === "/" ? pathname === "/" || isGameRoute(pathname) : pathname.startsWith(href)}
+              variant="mobile"
+            />
+          ))}
         </div>
       </nav>
     </>

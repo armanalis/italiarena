@@ -1,4 +1,4 @@
-/** Arena: live matches against real players. Bot matches start from the sidebar (bot picker). */
+/** Arena (Home on phones): live matches, and a tile for every game since phones have no sidebar. */
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +14,7 @@ import { AdminQueueBadge } from "@/components/admin/admin-queue-badge";
 import { ChallengeLinkButton } from "@/components/challenge/challenge-link-button";
 import { JoinCodeForm } from "@/components/challenge/join-code-form";
 import { ArenaSummary } from "@/components/dashboard/arena-summary";
+import { BotPickerButton } from "@/components/dashboard/bot-picker-dialog";
 import { FriendsTodayList } from "@/components/dashboard/friends-today";
 import { TodayRow } from "@/components/dashboard/today-row";
 import { OnlineLevelBadge } from "@/components/dashboard/online-players";
@@ -147,27 +148,13 @@ export async function PlayDashboardContent({
                 <ChallengeLinkButton label="Invite a friend" className="h-11 w-auto flex-auto md:h-9" />
                 <JoinCodeForm className="flex-[1_1_11rem]" />
               </div>
+              {/* Desktop has "Play with bots" in the sidebar. */}
+              <BotPickerButton className="h-11 w-full md:hidden" />
             </CardContent>
           </Card>
 
           <ArenaSummary stats={stats} />
         </section>
-
-        <Link
-          href="/picture-duel"
-          className="mx-auto flex w-full max-w-3xl items-center gap-3 rounded-2xl border border-border px-4 py-3 text-sm transition-colors hover:bg-muted"
-        >
-          <span className="text-2xl leading-none" aria-hidden>
-            🏥
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="font-medium">Picture Duel</span>{" "}
-            <span className="text-muted-foreground">
-              60 seconds each: name the pictures before your friend&apos;s clock runs out.
-            </span>
-          </span>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-        </Link>
 
         <TodayRow
           wordle={wordle}

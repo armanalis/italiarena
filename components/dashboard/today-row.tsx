@@ -1,6 +1,6 @@
-/** The Arena's "Today" row: today's Wordle, Word Wheel, article Sprint and Arena streak at a glance. */
+/** The Arena's "Games" grid: every game with today's progress. On phones it is the only way into them. */
 import Link from "next/link";
-import { BookOpen, Check, ChevronRight, CircleDashed, Flame, Grid3x3, Timer, type LucideIcon } from "lucide-react";
+import { BookOpen, Check, ChevronRight, CircleDashed, Flame, Grid3x3, Images, Timer, type LucideIcon } from "lucide-react";
 import { ARTICLE_GAME_NAME, type ArticleStats } from "@/lib/articles";
 import type { TargetLanguage } from "@/lib/constants";
 import { reviewMinutes } from "@/lib/review";
@@ -83,6 +83,15 @@ function articlesTile(
   };
 }
 
+const pictureDuelTile: Tile = {
+  title: "Picture Duel",
+  status: "With a friend · 60 s each",
+  done: false,
+  icon: Images,
+  accent: "text-rose-500",
+  href: "/picture-duel",
+};
+
 function arenaStreakTile(streak: GameStreak | undefined): Tile {
   const days = streak?.streak ?? 0;
   return {
@@ -122,16 +131,17 @@ export function TodayRow({
     wordleTile(wordle, streaks.wordle),
     passaparolaTile(passaparola, streaks.passaparola),
     articlesTile(language, level, articles, streaks.articles),
+    pictureDuelTile,
     arenaStreakTile(streaks.arena),
   ];
 
   return (
-    <section aria-labelledby="today-heading" className="mx-auto w-full max-w-3xl space-y-2">
-      <h2 id="today-heading" className="text-sm font-semibold text-muted-foreground">
-        Today
+    <section aria-labelledby="games-heading" className="mx-auto w-full max-w-3xl space-y-2">
+      <h2 id="games-heading" className="text-sm font-semibold text-muted-foreground">
+        Games
       </h2>
       <ul className="grid gap-3 sm:grid-cols-2">
-        {tiles.map(({ title, status, done, icon: Icon, accent, href, streak }) => {
+        {tiles.map(({ title, status, done, icon: Icon, accent, href, streak }, index) => {
           const content = (
             <>
               <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted">
@@ -158,7 +168,8 @@ export function TodayRow({
             </>
           );
           return (
-            <li key={title}>
+            // Odd count: the last tile takes the full row on two columns.
+            <li key={title} className={tiles.length % 2 && index === tiles.length - 1 ? "sm:col-span-2" : undefined}>
               {href ? (
                 <Link href={href} className={cn(TILE, "transition-colors hover:bg-muted")}>
                   {content}
