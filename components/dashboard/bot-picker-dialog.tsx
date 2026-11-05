@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { Bot, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +20,7 @@ const BOT_DIFFICULTIES: { level: BotDifficulty; label: string }[] = [
   { level: "hard", label: "Hard" },
 ];
 
-/** Opened from "Play with bots" in the sidebar: picking a difficulty starts the match. */
+/** Opened from "Play with bots" in the sidebar, or the Arena card on phones: picking a difficulty starts the match. */
 export function BotPickerDialog({
   open,
   onOpenChange,
@@ -56,5 +58,19 @@ export function BotPickerDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Phones have no sidebar, so the Arena card opens the bot picker itself. */
+export function BotPickerButton({ className }: { className?: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button type="button" variant="outline" className={className} onClick={() => setOpen(true)}>
+        <Bot className="size-4" aria-hidden />
+        Play with a bot
+      </Button>
+      <BotPickerDialog open={open} onOpenChange={setOpen} />
+    </>
   );
 }
