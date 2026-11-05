@@ -81,6 +81,10 @@ export function PassaparolaGame({
   const [countdown, setCountdown] = useState<number | null>(null);
 
   const playing = Boolean(view?.started && !view.finished);
+  // Phones: the keyboard covers half the screen, so while the answer has focus the
+  // wheel shrinks and the title and levels step aside; wheel, clue and answer stay in view.
+  const [typing, setTyping] = useState(false);
+  const compact = typing && playing;
   // Leaving during the 3-2-1 must not start today's only clock in the background.
   const leftRef = useRef(false);
   useEffect(() => {
@@ -221,13 +225,17 @@ export function PassaparolaGame({
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6">
       {/* Same title and level chips as the Wordle page. */}
-      <header className="space-y-1">
+      <header className={cn("space-y-1", compact && "max-md:hidden")}>
         <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Word Wheel</h1>
         <p className="text-sm text-muted-foreground">
           A clue for every letter from A to Z in 5 minutes. One board a day for each level.
         </p>
       </header>
-      <div className="-mx-1 -mt-3 flex gap-2 overflow-x-auto px-1 pb-1 touch-scroll" role="group" aria-label="Level">
+      <div
+        className={cn("-mx-1 -mt-3 flex gap-2 overflow-x-auto px-1 pb-1 touch-scroll", compact && "max-md:hidden")}
+        role="group"
+        aria-label="Level"
+      >
           {PROFICIENCY_LEVELS.map((option) => (
             <button
               key={option}
@@ -258,10 +266,16 @@ export function PassaparolaGame({
       <div
         className={cn(
           "flex flex-col gap-6 md:flex-1 md:flex-row md:gap-10",
-          view?.finished ? "md:items-start" : "md:items-center"
+          view?.finished ? "md:items-start" : "md:items-center",
+          compact && "max-md:gap-3"
         )}
       >
-        <div className="mx-auto flex w-full max-w-[20rem] shrink-0 flex-col gap-4 md:mx-0 md:w-[min(50%,calc(100dvh_-_12rem))] md:max-w-md">
+        <div
+          className={cn(
+            "mx-auto flex w-full max-w-[20rem] shrink-0 flex-col gap-4 md:mx-0 md:w-[min(50%,calc(100dvh_-_12rem))] md:max-w-md",
+            compact && "max-md:max-w-[11rem]"
+          )}
+        >
           {view?.finished && (
             <div className="glass-panel space-y-2 p-4 text-center">
               <p className="text-lg font-semibold">
@@ -291,6 +305,7 @@ export function PassaparolaGame({
                   }}
                   className={cn(
                     "absolute flex size-[11%] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-sm font-bold text-white shadow-sm transition-transform md:text-base",
+                    compact && "max-md:text-[11px]",
                     mark
                       ? MARK_COLOR[mark]
                       : view?.finished
@@ -309,14 +324,15 @@ export function PassaparolaGame({
               <span
                 className={cn(
                   "flex items-center gap-2 text-3xl font-bold tabular-nums md:text-4xl",
+                  compact && "max-md:gap-1 max-md:text-xl",
                   playing && msLeft <= 30_000 && "text-red-600"
                 )}
               >
-                <Clock className="size-6 text-muted-foreground" aria-hidden />
+                <Clock className={cn("size-6 text-muted-foreground", compact && "max-md:size-4")} aria-hidden />
                 <span role="timer">{clock(msLeft)}</span>
               </span>
               {playing && current && (
-                <span className="text-sm font-medium text-muted-foreground">
+                <span className={cn("text-sm font-medium text-muted-foreground", compact && "max-md:text-xs")}>
                   Starts with {current}
                 </span>
               )}
@@ -346,7 +362,12 @@ export function PassaparolaGame({
 
           {playing && current && (
             <>
-              <p className="flex min-h-24 items-center justify-center text-balance text-center text-2xl font-extrabold uppercase leading-tight tracking-tight md:text-3xl">
+              <p
+                className={cn(
+                  "flex min-h-24 items-center justify-center text-balance text-center text-2xl font-extrabold uppercase leading-tight tracking-tight md:text-3xl",
+                  compact && "max-md:min-h-0 max-md:text-xl"
+                )}
+              >
                 {clue}
               </p>
 
@@ -357,6 +378,8 @@ export function PassaparolaGame({
                 <Input
                   name="answer"
                   autoFocus
+                  onFocus={() => setTyping(true)}
+                  onBlur={() => setTyping(false)}
                   autoComplete="off"
                   autoCapitalize="none"
                   autoCorrect="off"
