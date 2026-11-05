@@ -30,6 +30,8 @@ export type PictureDuel = {
   created_at: string;
   /** 6 digits the host can read out instead of sending the link; null on duels from before codes. */
   code: string | null;
+  /** Hard mode: an answer needs its article ("il latte", not "latte"). */
+  hard: boolean;
   position: number;
   emoji: string | null;
   turn: string | null;
@@ -44,7 +46,8 @@ export type PictureDuel = {
   finished_at: string | null;
   rev: number;
 };
-export type AnswerResult = "right" | "wrong" | "pass" | "not_your_turn" | "not_yet" | "over";
+/** article: hard mode, the word is right but its article is missing or wrong. */
+export type AnswerResult = "right" | "wrong" | "article" | "pass" | "not_your_turn" | "not_yet" | "over";
 
 /** A player's clock at `now` (server time, ms): only the running one moves, never below 0. */
 export function clockMs(duel: PictureDuel, player: string, now: number): number {
@@ -75,8 +78,8 @@ async function rpc<T>(supabase: SupabaseClient, name: string, args: object): Pro
     : { ok: true, value: data as T };
 }
 
-export const createDuel = (supabase: SupabaseClient, language: string, level: string, topic: string) =>
-  rpc<string>(supabase, "picture_duel_create", { p_language: language, p_level: level, p_topic: topic });
+export const createDuel = (supabase: SupabaseClient, language: string, level: string, topic: string, hard: boolean) =>
+  rpc<string>(supabase, "picture_duel_create", { p_language: language, p_level: level, p_topic: topic, p_hard: hard });
 export const joinDuel = (supabase: SupabaseClient, id: string) =>
   rpc<PictureDuel>(supabase, "picture_duel_join", { p_id: id });
 export const answerDuel = (supabase: SupabaseClient, id: string, answer: string) =>

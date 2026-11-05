@@ -25,7 +25,15 @@ import {
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
 
-type Invite = { id: string; hostName: string; language: string; level: string; topic: string; createdAt: string };
+type Invite = {
+  id: string;
+  hostName: string;
+  language: string;
+  level: string;
+  topic: string;
+  hard: boolean;
+  createdAt: string;
+};
 
 /** A fallback for missed realtime updates; realtime is the fast path. */
 const POLL_MS = 1_500;
@@ -53,7 +61,8 @@ export function PictureDuelRoom({
   // What is typed belongs to one picture: a new picture starts with an empty field.
   const [typed, setTyped] = useState({ at: -1, text: "" });
   // The last answer the server called wrong: the field is red until it changes.
-  const [wrongText, setWrongText] = useState<string | null>(null);
+  // article: hard mode, the word was right but its article missing or wrong.
+  const [wrong, setWrong] = useState<{ text: string; article: boolean } | null>(null);
   const [copied, setCopied] = useState<"link" | "code" | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const lastTimeout = useRef(0);
@@ -132,8 +141,8 @@ export function PictureDuelRoom({
       return;
     }
     apply(result.value.duel);
-    if (result.value.result === "wrong") {
-      setWrongText(text);
+    if (result.value.result === "wrong" || result.value.result === "article") {
+      setWrong({ text, article: result.value.result === "article" });
       input.current?.select();
     }
     input.current?.focus();
@@ -180,7 +189,9 @@ export function PictureDuelRoom({
       <Panel>
         {invite && serverNow - Date.parse(invite.createdAt) < LOBBY_MS ? (
           <>
-            <Title sub={`${invite.language} · ${invite.level} · ${invite.topic} · 60 seconds each`}>
+            <Title
+              sub={`${invite.language} · ${invite.level} · ${invite.topic} · 60 seconds each${invite.hard ? " · Hard mode: answers need their article" : ""}`}
+            >
               {invite.hostName} challenged you to a Picture Duel
             </Title>
             <p className="text-sm text-muted-foreground">
@@ -203,7 +214,8 @@ export function PictureDuelRoom({
   const meIsHost = duel.host_id === me;
   const other = { id: meIsHost ? duel.guest_id : duel.host_id, name: (meIsHost ? duel.guest_name : duel.host_name) ?? "Friend" };
   const nameOf = (player: string) => (player === me ? "You" : other.name);
-  const heading = `${duel.language} · ${duel.level} · ${duel.topic}`;
+  const heading = `${duel.language} · ${duel.level} · ${duel.topic}${duel.hard ? " · Hard mode" : ""}`;
+  const isWrong = text !== "" && text === wrong?.text;
 
   // ---- The host waits for the friend. ----
   if (status === "waiting") {
@@ -382,7 +394,7 @@ export function PictureDuelRoom({
           ref={input}
           value={text}
           onChange={(event) => setTyped({ at: position, text: event.target.value })}
-          aria-invalid={text !== "" && text === wrongText}
+          aria-invalid={isWrong}
           lang={code}
           maxLength={60}
           autoComplete="off"
@@ -391,7 +403,7 @@ export function PictureDuelRoom({
           spellCheck={false}
           enterKeyHint="send"
           aria-label="Your answer"
-          placeholder={myTurn ? `Type it in ${duel.language}…` : "Wait for your turn"}
+          placeholder={myTurn ? `Type it in ${duel.language}${duel.hard ? ", with its article" : ""}…` : "Wait for your turn"}
           className="h-12 flex-1 text-base md:h-12 md:text-base"
         />
         <Button type="button" variant="outline" className="h-12" disabled={!canPlay} onClick={() => void send("pass")}>
@@ -400,8 +412,10 @@ export function PictureDuelRoom({
       </form>
 
       <p className="min-h-5 text-center text-sm text-muted-foreground" role="status">
-        {text !== "" && text === wrongText ? (
-          <span className="font-medium text-red-600 dark:text-red-400">Not quite: try again or pass</span>
+        {isWrong ? (
+          <span className="font-medium text-red-600 dark:text-red-400">
+            {wrong?.article ? "Right word, but the article is missing or wrong" : "Not quite: try again or pass"}
+          </span>
         ) : last && !revealing && (
           <>
             {last.emoji} <span lang={code} className="font-medium text-foreground">{last.answer}</span> ·{" "}

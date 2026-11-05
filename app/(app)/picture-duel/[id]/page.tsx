@@ -28,6 +28,7 @@ export default async function PictureDuelRoomPage({ params }: { params: Promise<
                 language: duel.language,
                 level: duel.level,
                 topic: duel.topic,
+                hard: duel.hard,
                 createdAt: duel.created_at,
               }
             : null
