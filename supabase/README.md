@@ -19,11 +19,11 @@ Maintainers keep migration files locally for development and production updates.
 
 ## Adding a migration (maintainers)
 
-1. Write `migrations/<UTC yyyymmddhhmmss>_<name>.sql`. Start it with a comment that says what changes, why, and which test covers it. Prefer SQL that is safe to run twice (`create or replace`, `if not exists`).
+1. Write `migrations/<UTC yyyymmddhhmmss>_<name>.sql`. Start it with a comment that says what changes, why, and which test covers it. Prefer SQL that is safe to run twice (`create or replace`, `if not exists`). The file holds every query that runs, nothing on the side: wrap it in `begin;` … `commit;`, and end it with its own Migrations record (step 4) and a `select` that checks the result.
 2. Run `npm run test:sql`. The tests build the database from the baseline and every migration, so they test exactly what production runs.
-3. Run the file on production (SQL Editor or psql), in timestamp order:
+3. Run the whole file on production (paste it into the SQL Editor and Run, or psql), in timestamp order:
    - If the new app code needs it, run it **before** deploying.
    - If it removes something the live app still uses, run it **after** deploying, and say so in the file's first line.
-4. Record it under Database → Migrations: insert a row into `supabase_migrations.schema_migrations` with `version` (the timestamp), `name`, and `statements` (the whole file as one array item).
+4. The file records itself under Database → Migrations: its last insert adds `version` (the timestamp) and `name` to `supabase_migrations.schema_migrations` (`on conflict do nothing`, so a second run is harmless). The file in `migrations/` is the full text. Check the last result row the file returns. Migrations before `20261105102442` were recorded by hand, with `statements`.
 
 Never change an old migration after it has run: write a new one. Production is whatever ran last, so a file that ran out of order can undo a fix (this happened before the 2026-11-04 `drift_fixes` migration).
