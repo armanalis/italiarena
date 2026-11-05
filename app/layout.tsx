@@ -59,7 +59,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: SIDEBAR_WIDTH_BOOT_SCRIPT }} />
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
