@@ -236,9 +236,14 @@ export function WordleGame({
     };
   });
 
+  // Stays up while the last row still flips after the game has ended.
+  const keyboard = playing || revealing !== null;
+
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-5">
-      <header className="space-y-1">
+    // Phones while the keyboard shows: the title steps aside and the tiles size to the screen,
+    // so the board and the keyboard (which takes the bottom bar's place) both fit.
+    <div className={cn("mx-auto flex w-full max-w-lg flex-col gap-5", keyboard && "max-md:gap-3")}>
+      <header className={cn("space-y-1", keyboard && "max-md:hidden")}>
         <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Wordle</h1>
         <p className="text-sm text-muted-foreground">
           Guess the 5-letter {language} word in {WORDLE_MAX_GUESSES} tries. One puzzle a day for each level.
@@ -301,6 +306,7 @@ export function WordleGame({
                   aria-hidden
                   className={cn(
                     "flex size-12 items-center justify-center rounded-lg border-2 text-xl font-bold uppercase sm:size-14",
+                    keyboard && "max-sm:size-[clamp(2rem,calc((100dvh_-_26rem)_/_6),3rem)]",
                     mark ? TILE[mark] : letter ? "border-foreground/50" : "border-border"
                   )}
                 >
@@ -341,8 +347,13 @@ export function WordleGame({
         </div>
       )}
 
-      {(playing || revealing) && (
-        <div className="space-y-1.5" aria-label="Keyboard">
+      {keyboard && (
+        // data-onscreen-keyboard: hides the phone bottom bar (app/globals.css); sticky keeps it in reach on small phones.
+        <div
+          data-onscreen-keyboard
+          className="space-y-1.5 max-md:sticky max-md:bottom-0 max-md:bg-background max-md:pb-[max(0.5rem,env(safe-area-inset-bottom))] max-md:pt-2"
+          aria-label="Keyboard"
+        >
           {KEY_ROWS[language].map((keyRow, rowIndex) => (
             <div key={keyRow} className="flex justify-center gap-1">
               {rowIndex === 2 && (
