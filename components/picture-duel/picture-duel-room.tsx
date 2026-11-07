@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Copy, Loader2, Share2, Trophy, X } from "lucide-react";
+import { Check, Copy, Loader2, RotateCcw, Share2, Trophy, X } from "lucide-react";
 import { toast } from "sonner";
 import { SpeakButton } from "@/components/speak-button";
 import { Button } from "@/components/ui/button";
@@ -19,10 +19,12 @@ import {
   loadDuel,
   LOBBY_MS,
   passDuel,
+  rematchDuel,
   timeoutDuel,
   type PictureDuel,
 } from "@/lib/picture-duel";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/ui-language-provider";
 import { createClient } from "@/utils/supabase/client";
 
 type Invite = {
@@ -39,6 +41,12 @@ type Invite = {
 const POLL_MS = 1_500;
 /** How often a screen showing a clock at 0 asks the server to end the duel. */
 const TIMEOUT_RETRY_MS = 700;
+/** A rematch offer counts while renewed this recently. KEEP IN SYNC with the 8 seconds in picture_duel_rematch. */
+const REMATCH_FRESH_MS = 8_000;
+/** The offering screen renews its offer this often, so it lapses soon after the player leaves. */
+const REMATCH_RENEW_MS = 3_000;
+/** After the end, how long a screen keeps polling and an unanswered offer keeps renewing. */
+const REMATCH_WINDOW_MS = 120_000;
 
 export function PictureDuelRoom({
   me,
@@ -52,6 +60,7 @@ export function PictureDuelRoom({
   link: string;
 }) {
   const router = useRouter();
+  const t = useT();
   const [supabase] = useState(() => createClient());
   const [duel, setDuel] = useState(initial);
   // localClock + offset ≈ the database's clock, which runs the chess clock.
@@ -66,6 +75,11 @@ export function PictureDuelRoom({
   const [copied, setCopied] = useState<"link" | "code" | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const lastTimeout = useRef(0);
+  // This screen offered or accepted a rematch, so it follows the duel into it.
+  const [offered, setOffered] = useState(false);
+  // Our offer ran out of the window without an answer.
+  const [unanswered, setUnanswered] = useState(false);
+  const leaving = useRef(false);
 
   // Realtime updates and polls race: keep the newest copy.
   const apply = useCallback((next: PictureDuel | null) => {
@@ -78,12 +92,16 @@ export function PictureDuelRoom({
     void estimateClockOffsetMs(supabase).then(setOffset);
   }, [supabase]);
 
+  // A lobby, a duel, or a finished duel whose rematch can still start; not an invitation (not ours to read).
+  const listening = status === "waiting" || status === "active" || (status === "finished" && !duel?.rematch_id);
   useEffect(() => {
-    if (!id || (status !== "waiting" && status !== "active")) {
+    if (!id || !listening) {
       return;
     }
     const refresh = () => void loadDuel(supabase, id).then(apply);
     const poll = window.setInterval(refresh, POLL_MS);
+    // After the end only realtime keeps listening once the rematch window is over.
+    const stopPolling = status === "finished" ? window.setTimeout(() => window.clearInterval(poll), REMATCH_WINDOW_MS) : 0;
     const channel = supabase
       .channel(`picture-duel-${id}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "picture_duels", filter: `id=eq.${id}` }, (payload) => {
@@ -94,17 +112,20 @@ export function PictureDuelRoom({
       .subscribe();
     return () => {
       window.clearInterval(poll);
+      window.clearTimeout(stopPolling);
       void supabase.removeChannel(channel);
     };
-  }, [apply, id, status, supabase]);
+  }, [apply, id, listening, status, supabase]);
 
+  // The chess clock, or (slower) how fresh a rematch offer still is.
+  const offerOpen = status === "finished" && Boolean(duel?.rematch_by) && !duel?.rematch_id;
   useEffect(() => {
-    if (status !== "active") {
+    if (status !== "active" && !offerOpen) {
       return;
     }
-    const tick = window.setInterval(() => setNow(Date.now()), 100);
+    const tick = window.setInterval(() => setNow(Date.now()), status === "active" ? 100 : 1_000);
     return () => window.clearInterval(tick);
-  }, [status]);
+  }, [offerOpen, status]);
 
   const serverNow = now + offset;
   const started = Boolean(duel?.turn_started_at && serverNow >= Date.parse(duel.turn_started_at));
@@ -137,7 +158,7 @@ export function PictureDuelRoom({
     const result = kind === "answer" ? await answerDuel(supabase, duel.id, text) : await passDuel(supabase, duel.id);
     setBusy(false);
     if (!result.ok) {
-      toast.error(result.error);
+      toast.error(t(result.error));
       return;
     }
     apply(result.value.duel);
@@ -148,6 +169,50 @@ export function PictureDuelRoom({
     input.current?.focus();
   }
 
+  const goTo = useCallback(
+    (next: string) => {
+      if (leaving.current) return;
+      leaving.current = true;
+      router.push(`/picture-duel/${next}`);
+    },
+    [router]
+  );
+
+  /** Offers a rematch, renews our offer, or says yes to theirs. */
+  const rematch = useCallback(async () => {
+    if (!id) return;
+    const result = await rematchDuel(supabase, id);
+    if (!result.ok) {
+      setOffered(false);
+      toast.error(t(result.error));
+    } else if (result.value.id) {
+      goTo(result.value.id);
+    } else {
+      setOffered(true);
+    }
+  }, [goTo, id, supabase, t]);
+
+  // Our offer stays alive while this screen is open, for the rematch window at most.
+  useEffect(() => {
+    if (!offered) return;
+    const since = Date.now();
+    const renew = window.setInterval(() => {
+      if (Date.now() - since > REMATCH_WINDOW_MS) {
+        setOffered(false);
+        setUnanswered(true);
+      } else {
+        void rematch();
+      }
+    }, REMATCH_RENEW_MS);
+    return () => window.clearInterval(renew);
+  }, [offered, rematch]);
+
+  // The other player said yes: their screen started the rematch, ours follows.
+  const rematchId = duel?.rematch_id;
+  useEffect(() => {
+    if (offered && rematchId) goTo(rematchId);
+  }, [goTo, offered, rematchId]);
+
   async function join() {
     if (!invite) return;
     setBusy(true);
@@ -156,18 +221,18 @@ export function PictureDuelRoom({
     if (result.ok) {
       apply(result.value);
     } else {
-      toast.error(result.error);
+      toast.error(t(result.error));
       router.refresh();
     }
   }
 
   async function shareLink() {
-    const shareText = `Picture Duel: name the pictures in ${duel?.language ?? "Italian"} before your clock runs out!${
-      duel?.code ? ` Open the link, or enter code ${duel.code} on the Picture Duel page:` : ""
-    }`;
+    const shareText = `${t("Picture Duel: name the pictures in {language} before your clock runs out!", {
+      language: t(duel?.language ?? "Italian"),
+    })}${duel?.code ? ` ${t("Open the link, or enter code {code} on the Picture Duel page:", { code: duel.code })}` : ""}`;
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Picture Duel", text: shareText, url: link });
+        await navigator.share({ title: t("Picture Duel"), text: shareText, url: link });
         return;
       } catch {
         // Closing the share sheet is not an error.
@@ -190,17 +255,16 @@ export function PictureDuelRoom({
         {invite && serverNow - Date.parse(invite.createdAt) < LOBBY_MS ? (
           <>
             <Title
-              sub={`${invite.language} · ${invite.level} · ${invite.topic} · 60 seconds each${invite.hard ? " · Hard mode: answers need their article" : ""}`}
+              sub={`${t(invite.language)} · ${invite.level} · ${t(invite.topic)} · ${t("60 seconds each")}${invite.hard ? ` · ${t("Hard mode: answers need their article")}` : ""}`}
             >
-              {invite.hostName} challenged you to a Picture Duel
+              {t("{name} challenged you to a Picture Duel", { name: invite.hostName })}
             </Title>
             <p className="text-sm text-muted-foreground">
-              Name each picture to stop your clock and start theirs. Pass shows the answer, but your clock keeps
-              running.
+              {t("Name each picture to stop your clock and start theirs. Pass shows the answer, but your clock keeps running.")}
             </p>
             <Button type="button" className="min-h-11 w-full" onClick={() => void join()} disabled={busy}>
               {busy && <Loader2 className="size-4 animate-spin" />}
-              Play
+              {t("Play")}
             </Button>
           </>
         ) : (
@@ -212,9 +276,9 @@ export function PictureDuelRoom({
 
   const code = isTargetLanguage(duel.language) ? LANGUAGE_META[duel.language].code : undefined;
   const meIsHost = duel.host_id === me;
-  const other = { id: meIsHost ? duel.guest_id : duel.host_id, name: (meIsHost ? duel.guest_name : duel.host_name) ?? "Friend" };
-  const nameOf = (player: string) => (player === me ? "You" : other.name);
-  const heading = `${duel.language} · ${duel.level} · ${duel.topic}${duel.hard ? " · Hard mode" : ""}`;
+  const other = { id: meIsHost ? duel.guest_id : duel.host_id, name: (meIsHost ? duel.guest_name : duel.host_name) ?? t("Friend") };
+  const nameOf = (player: string) => (player === me ? t("You") : other.name);
+  const heading = `${t(duel.language)} · ${duel.level} · ${t(duel.topic)}${duel.hard ? ` · ${t("Hard mode")}` : ""}`;
   const isWrong = text !== "" && text === wrong?.text;
 
   // ---- The host waits for the friend. ----
@@ -228,44 +292,44 @@ export function PictureDuelRoom({
     }
     return (
       <Panel>
-        <Title sub={heading}>Send this link to a friend</Title>
+        <Title sub={heading}>{t("Send this link to a friend")}</Title>
         <p className="text-sm text-muted-foreground">
-          {duel.code && "Or tell them the code to enter on their Picture Duel page. "}
-          The duel starts as soon as they press Play. It works for 1 hour.
+          {duel.code && `${t("Or tell them the code to enter on their Picture Duel page.")} `}
+          {t("The duel starts as soon as they press Play. It works for 1 hour.")}
         </p>
         <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 p-2 text-left">
           <span className="min-w-0 flex-1 truncate px-2 text-sm">{link}</span>
           <Button type="button" size="sm" variant="secondary" onClick={() => void copy("link")}>
             {copied === "link" ? <Check className="size-4" /> : <Copy className="size-4" />}
-            {copied === "link" ? "Copied" : "Copy"}
+            {copied === "link" ? t("Copied") : t("Copy")}
           </Button>
         </div>
         {duel.code && (
           <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 p-2 text-left">
             <span className="flex-1 px-2">
-              <span className="block text-xs text-muted-foreground">Code</span>
+              <span className="block text-xs text-muted-foreground">{t("Code")}</span>
               <span className="font-mono text-2xl font-bold tracking-[0.25em]">{duel.code}</span>
             </span>
             <Button type="button" size="sm" variant="secondary" onClick={() => void copy("code")}>
               {copied === "code" ? <Check className="size-4" /> : <Copy className="size-4" />}
-              {copied === "code" ? "Copied" : "Copy"}
+              {copied === "code" ? t("Copied") : t("Copy")}
             </Button>
           </div>
         )}
         <Button type="button" className="min-h-11 w-full" onClick={() => void shareLink()}>
           <Share2 className="size-4" />
-          Share link
+          {t("Share link")}
         </Button>
         <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground" role="status">
           <Loader2 className="size-4 animate-spin" />
-          Waiting for your friend to join…
+          {t("Waiting for your friend to join…")}
         </p>
         <Button
           type="button"
           variant="ghost"
           onClick={() => void cancelDuel(supabase, duel.id).then(() => router.replace("/picture-duel"))}
         >
-          Cancel duel
+          {t("Cancel duel")}
         </Button>
       </Panel>
     );
@@ -274,25 +338,57 @@ export function PictureDuelRoom({
   // ---- The results. ----
   if (status === "finished") {
     const won = duel.winner_id === me;
+    const theyOffered =
+      !offered &&
+      duel.rematch_by === other.id &&
+      Boolean(duel.rematch_at && serverNow - Date.parse(duel.rematch_at) < REMATCH_FRESH_MS);
     return (
       <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
         <Panel>
           <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
             {won ? <Trophy className="size-7" /> : <X className="size-7" />}
           </div>
-          <Title sub={heading}>{won ? "You won!" : `${other.name} won`}</Title>
+          <Title sub={heading}>{won ? t("You won!") : t("{name} won", { name: other.name })}</Title>
           <p className="text-sm text-muted-foreground">
-            You named {meIsHost ? duel.host_score : duel.guest_score} · {other.name} named{" "}
-            {meIsHost ? duel.guest_score : duel.host_score}
+            {t("You named {mine} · {name} named {theirs}", {
+              mine: meIsHost ? duel.host_score : duel.guest_score,
+              name: other.name,
+              theirs: meIsHost ? duel.guest_score : duel.host_score,
+            })}
           </p>
-          <Button asChild className="min-h-11 w-full">
-            <Link href="/picture-duel">New duel</Link>
-          </Button>
+          <p role="status" aria-live="polite" className="min-h-5 text-sm font-medium">
+            {offered
+              ? t("Rematch offered. Waiting for {name}…", { name: other.name })
+              : theyOffered
+                ? t("{name} wants a rematch!", { name: other.name })
+                : unanswered
+                  ? t("{name} did not answer. Offer again, or start a new duel.", { name: other.name })
+                  : null}
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button
+              type="button"
+              className="min-h-11"
+              disabled={offered || busy}
+              onClick={async () => {
+                setUnanswered(false);
+                setBusy(true);
+                await rematch();
+                setBusy(false);
+              }}
+            >
+              {offered || busy ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
+              {theyOffered ? t("Accept rematch") : t("Rematch")}
+            </Button>
+            <Button asChild variant="outline" className="min-h-11">
+              <Link href="/picture-duel">{t("New duel")}</Link>
+            </Button>
+          </div>
         </Panel>
         {duel.log.length > 0 && (
           <section aria-labelledby="pictures-heading" className="space-y-2">
             <h2 id="pictures-heading" className="text-sm font-semibold">
-              The pictures
+              {t("The pictures")}
             </h2>
             <ul className="space-y-1.5">
               {duel.log.map((entry, i) => (
@@ -305,7 +401,9 @@ export function PictureDuelRoom({
                       {entry.answer}
                     </span>
                     <span className="block text-xs text-muted-foreground">
-                      {nameOf(entry.by)} · {entry.result === "right" ? "named it" : "passed"}
+                      {entry.result === "right"
+                        ? t("{name} · named it", { name: nameOf(entry.by) })
+                        : t("{name} · passed", { name: nameOf(entry.by) })}
                     </span>
                   </span>
                   {isTargetLanguage(duel.language) && (
@@ -345,7 +443,7 @@ export function PictureDuelRoom({
                   "text-3xl font-bold tabular-nums",
                   left < 10_000 && "text-red-600 dark:text-red-400"
                 )}
-                aria-label={`${nameOf(player)}: ${Math.ceil(left / 1000)} seconds`}
+                aria-label={t("{name}: {n} seconds", { name: nameOf(player), n: Math.ceil(left / 1000) })}
               >
                 {Math.ceil(left / 1000)}
               </p>
@@ -360,7 +458,7 @@ export function PictureDuelRoom({
       <div className="glass-panel flex min-h-48 flex-col items-center justify-center gap-2 p-6 text-center" aria-live="polite">
         {!started ? (
           <>
-            <p className="text-sm text-muted-foreground">{myTurn ? "You start" : `${other.name} starts`}</p>
+            <p className="text-sm text-muted-foreground">{myTurn ? t("You start") : t("{name} starts", { name: other.name })}</p>
             <p className="text-6xl font-bold tabular-nums">{Math.max(1, countdown)}</p>
           </>
         ) : revealing && last ? (
@@ -371,14 +469,14 @@ export function PictureDuelRoom({
             <p lang={code} className="text-2xl font-bold">
               {last.answer}
             </p>
-            <p className="text-xs text-muted-foreground">{nameOf(last.by)} passed</p>
+            <p className="text-xs text-muted-foreground">{t("{name} passed", { name: nameOf(last.by) })}</p>
           </>
         ) : (
           <>
-            <span className="text-8xl leading-none" role="img" aria-label="Name this picture">
+            <span className="text-8xl leading-none" role="img" aria-label={t("Name this picture")}>
               {duel.emoji}
             </span>
-            <p className="text-sm font-medium">{myTurn ? "Your turn: name it!" : `${other.name} is answering…`}</p>
+            <p className="text-sm font-medium">{myTurn ? t("Your turn: name it!") : t("{name} is answering…", { name: other.name })}</p>
           </>
         )}
       </div>
@@ -387,12 +485,12 @@ export function PictureDuelRoom({
       <p className="min-h-5 text-center text-sm text-muted-foreground" role="status">
         {isWrong ? (
           <span className="font-medium text-red-600 dark:text-red-400">
-            {wrong?.article ? "Right word, but the article is missing or wrong" : "Not quite: try again or pass"}
+            {wrong?.article ? t("Right word, but the article is missing or wrong") : t("Not quite: try again or pass")}
           </span>
         ) : last && !revealing && (
           <>
             {last.emoji} <span lang={code} className="font-medium text-foreground">{last.answer}</span> ·{" "}
-            {nameOf(last.by)} {last.result === "right" ? "named it" : "passed"}
+            {last.result === "right" ? t("{name} named it", { name: nameOf(last.by) }) : t("{name} passed", { name: nameOf(last.by) })}
           </>
         )}
       </p>
@@ -416,12 +514,12 @@ export function PictureDuelRoom({
           autoCapitalize="none"
           spellCheck={false}
           enterKeyHint="send"
-          aria-label="Your answer"
-          placeholder={myTurn ? `Type it in ${duel.language}${duel.hard ? ", with its article" : ""}…` : "Wait for your turn"}
+          aria-label={t("Your answer")}
+          placeholder={myTurn ? (duel.hard ? t("Type it in {language}, with its article…", { language: t(duel.language) }) : t("Type it in {language}…", { language: t(duel.language) })) : t("Wait for your turn")}
           className="h-12 flex-1 text-base md:h-12 md:text-base"
         />
         <Button type="button" variant="outline" className="h-12" disabled={!canPlay} onClick={() => void send("pass")}>
-          Pass
+          {t("Pass")}
         </Button>
       </form>
 
@@ -443,11 +541,12 @@ function Title({ children, sub }: { children: React.ReactNode; sub: string }) {
 }
 
 function Closed() {
+  const t = useT();
   return (
     <>
-      <Title sub="It has already started, was cancelled, or expired.">This duel is not available</Title>
+      <Title sub={t("It has already started, was cancelled, or expired.")}>{t("This duel is not available")}</Title>
       <Button asChild variant="outline" className="min-h-11 w-full">
-        <Link href="/picture-duel">Start your own</Link>
+        <Link href="/picture-duel">{t("Start your own")}</Link>
       </Button>
     </>
   );

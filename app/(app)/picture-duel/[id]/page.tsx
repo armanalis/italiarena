@@ -17,6 +17,8 @@ export default async function PictureDuelRoomPage({ params }: { params: Promise<
   return (
     <main className="w-full flex-1 p-4 sm:p-8 lg:px-10">
       <PictureDuelRoom
+        // A rematch opens another duel on this same page: start its screen fresh.
+        key={id}
         me={profile.id}
         initial={isPlayer && duel?.status !== "cancelled" ? duel : null}
         // Only what the invitation shows: no pictures before the friend joins. The room hides it after an hour.

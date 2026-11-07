@@ -46,6 +46,11 @@ export type PictureDuel = {
   log: DuelLogEntry[];
   winner_id: string | null;
   finished_at: string | null;
+  /** A rematch offer: who made it, and when their screen last renewed it. */
+  rematch_by: string | null;
+  rematch_at: string | null;
+  /** The rematch, once both said yes. */
+  rematch_id: string | null;
   rev: number;
 };
 /** article: hard mode, the word is right but its article is missing or wrong. */
@@ -71,6 +76,7 @@ const ERRORS: Record<string, string> = {
   own_duel: "This is your own duel: send the link to a friend.",
   no_such_duel: "This duel is not yours.",
   too_many_tries: "Too many wrong codes. Try again in 15 minutes.",
+  no_rematch: "A rematch is only possible once the duel is over.",
 };
 
 async function rpc<T>(supabase: SupabaseClient, name: string, args: object): Promise<Result<T>> {
@@ -92,6 +98,9 @@ export const timeoutDuel = (supabase: SupabaseClient, id: string) =>
   rpc<PictureDuel>(supabase, "picture_duel_timeout", { p_id: id });
 export const cancelDuel = (supabase: SupabaseClient, id: string) =>
   rpc<null>(supabase, "picture_duel_cancel", { p_id: id });
+/** Offers a rematch, or says yes to the other player's: the rematch's id once it started, else null. */
+export const rematchDuel = (supabase: SupabaseClient, id: string) =>
+  rpc<{ id: string | null }>(supabase, "picture_duel_rematch", { p_id: id });
 /** The open lobby with this code, or null. */
 export const findDuelByCode = (supabase: SupabaseClient, code: string) =>
   rpc<string | null>(supabase, "picture_duel_by_code", { p_code: code });
