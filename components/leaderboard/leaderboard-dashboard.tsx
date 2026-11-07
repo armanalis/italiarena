@@ -1,6 +1,7 @@
 "use client";
 
 import { Trophy, Users } from "lucide-react";
+import { fill, useT, useUiLanguage } from "@/components/ui-language-provider";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -39,6 +40,8 @@ function rankBadge(rank: number) {
 }
 
 export function LeaderboardDashboard({ data, isGuest = false }: LeaderboardDashboardProps) {
+  const t = useT();
+  const uiLanguage = useUiLanguage();
   const { entries, currentUserId, language, level } = data;
   const currentUserEntry = entries.find((entry) => entry.userId === currentUserId);
 
@@ -48,23 +51,24 @@ export function LeaderboardDashboard({ data, isGuest = false }: LeaderboardDashb
         <div className="flex flex-wrap items-center gap-2">
           <Trophy className="size-7 text-primary" />
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Leaderboard
+            {t("Leaderboard")}
           </h1>
         </div>
         <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-          Rankings for <span className="font-medium text-foreground">{language}</span>{" "}
-          · level <span className="font-medium text-foreground">{level}</span>.
-          Only real player vs player matches count — bot games are excluded.
+          {fill(t("Rankings for {language} · level {level}."), {
+            language: <span className="font-medium text-foreground">{t(language)}</span>,
+            level: <span className="font-medium text-foreground">{level}</span>,
+          })}{" "}
+          {t("Only real player vs player matches count — bot games are excluded.")}
         </p>
       </div>
 
       {isGuest && (
         <Card className="border-amber-500/30 bg-amber-500/5">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Guest accounts are not ranked</CardTitle>
+            <CardTitle className="text-base">{t("Guest accounts are not ranked")}</CardTitle>
             <CardDescription>
-              You can view this leaderboard, but guest players do not appear here.
-              Sign up for a full account to compete in your proficiency bracket.
+              {t("You can view this leaderboard, but guest players do not appear here. Sign up for a full account to compete in your proficiency bracket.")}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -73,32 +77,32 @@ export function LeaderboardDashboard({ data, isGuest = false }: LeaderboardDashb
       {currentUserEntry ? (
         <Card className="border-primary/25 bg-primary/5">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Your standing</CardTitle>
+            <CardTitle className="text-base">{t("Your standing")}</CardTitle>
             <CardDescription>
-              Based on your PvP matches in this bracket.
+              {t("Based on your PvP matches in this bracket.")}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-4 text-sm">
             <div>
-              <p className="text-muted-foreground">Rank</p>
+              <p className="text-muted-foreground">{t("Rank")}</p>
               <p className="text-xl font-bold tabular-nums">#{currentUserEntry.rank}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">PvP matches</p>
+              <p className="text-muted-foreground">{t("PvP matches")}</p>
               <p className="text-xl font-bold tabular-nums">
                 {currentUserEntry.pvpMatches}
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Win rate</p>
+              <p className="text-muted-foreground">{t("Win rate")}</p>
               <p className="text-xl font-bold tabular-nums">
                 {currentUserEntry.winRate.toFixed(1)}%
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Total points</p>
+              <p className="text-muted-foreground">{t("Total points")}</p>
               <p className="text-xl font-bold tabular-nums">
-                {currentUserEntry.totalPoints.toLocaleString()}
+                {currentUserEntry.totalPoints.toLocaleString(uiLanguage)}
               </p>
             </div>
           </CardContent>
@@ -108,10 +112,7 @@ export function LeaderboardDashboard({ data, isGuest = false }: LeaderboardDashb
           <CardContent className="flex items-start gap-3 p-5 text-sm text-muted-foreground">
             <Users className="mt-0.5 size-5 shrink-0 text-primary" />
             <p>
-              You are not on the board yet. Finish a{" "}
-              <span className="font-medium text-foreground">Play vs user</span>{" "}
-              match in {language} / {level} and your stats will appear here after
-              the game ends.
+              {t("You are not on the board yet. Finish a live match against another player in {language} / {level} and your stats will appear here after the game ends.", { language: t(language), level })}
             </p>
           </CardContent>
         </Card>
@@ -119,16 +120,15 @@ export function LeaderboardDashboard({ data, isGuest = false }: LeaderboardDashb
 
       <Card className="border-border/60 bg-card/50">
         <CardHeader>
-          <CardTitle className="text-lg">Top players</CardTitle>
+          <CardTitle className="text-lg">{t("Top players")}</CardTitle>
           <CardDescription>
-            Sorted by total points earned, then win rate, then matches played.
+            {t("Sorted by total points earned, then win rate, then matches played.")}
           </CardDescription>
         </CardHeader>
         <CardContent className="px-0 pb-0 sm:px-6 sm:pb-6">
           {entries.length === 0 ? (
             <p className="px-6 pb-6 text-sm text-muted-foreground sm:px-0">
-              No PvP matches recorded in this bracket yet. Be the first to play
-              vs another user!
+              {t("No PvP matches recorded in this bracket yet. Be the first to play vs another user!")}
             </p>
           ) : (
             <>
@@ -154,23 +154,23 @@ export function LeaderboardDashboard({ data, isGuest = false }: LeaderboardDashb
                           </span>
                           {isCurrentUser && (
                             <Badge variant="secondary" className="shrink-0 text-xs">
-                              You
+                              {t("You")}
                             </Badge>
                           )}
                         </div>
                         <span className="shrink-0 font-semibold tabular-nums">
-                          {entry.totalPoints.toLocaleString()} pts
+                          {entry.totalPoints.toLocaleString(uiLanguage)} pts
                         </span>
                       </div>
                       <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                         <span>
-                          Matches:{" "}
+                          {t("Matches:")}{" "}
                           <span className="font-medium text-foreground tabular-nums">
                             {entry.pvpMatches}
                           </span>
                         </span>
                         <span className="text-right">
-                          Win rate:{" "}
+                          {t("Win rate:")}{" "}
                           <span className="font-medium text-foreground tabular-nums">
                             {entry.winRate.toFixed(1)}%
                           </span>
@@ -186,10 +186,10 @@ export function LeaderboardDashboard({ data, isGuest = false }: LeaderboardDashb
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-14">#</TableHead>
-                      <TableHead>Player</TableHead>
-                      <TableHead className="text-right">Matches</TableHead>
-                      <TableHead className="text-right">Win %</TableHead>
-                      <TableHead className="text-right">Points</TableHead>
+                      <TableHead>{t("Player")}</TableHead>
+                      <TableHead className="text-right">{t("Matches")}</TableHead>
+                      <TableHead className="text-right">{t("Win %")}</TableHead>
+                      <TableHead className="text-right">{t("Points")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -211,7 +211,7 @@ export function LeaderboardDashboard({ data, isGuest = false }: LeaderboardDashb
                               <span className="font-medium">{entry.displayName}</span>
                               {isCurrentUser && (
                                 <Badge variant="secondary" className="text-xs">
-                                  You
+                                  {t("You")}
                                 </Badge>
                               )}
                             </div>
@@ -223,7 +223,7 @@ export function LeaderboardDashboard({ data, isGuest = false }: LeaderboardDashb
                             {entry.winRate.toFixed(1)}%
                           </TableCell>
                           <TableCell className="text-right font-semibold tabular-nums">
-                            {entry.totalPoints.toLocaleString()}
+                            {entry.totalPoints.toLocaleString(uiLanguage)}
                           </TableCell>
                         </TableRow>
                       );

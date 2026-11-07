@@ -6,7 +6,9 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { JoinCodeForm } from "@/components/challenge/join-code-form";
 import { ALL_TOPICS, createDuel, findDuelByCode, PICTURE_LEVELS, type PictureTopic } from "@/lib/picture-duel";
+import { isTargetLanguage, LANGUAGE_META } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { fill, useT } from "@/components/ui-language-provider";
 import { createClient } from "@/utils/supabase/client";
 
 /** A friend's code opens their invitation, where Play joins (the countdown must not start mid-navigation). */
@@ -35,11 +37,13 @@ export function PictureDuelSetup({
   topics: PictureTopic[];
 }) {
   const router = useRouter();
+  const t = useT();
   const [level, setLevel] = useState(initialLevel);
   const [hard, setHard] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
   const shown = topics.filter((topic) => topic.level === level);
   const [withArticle, bare] = language === "German" ? ["das Brot", "Brot"] : ["il pane", "pane"];
+  const code = isTargetLanguage(language) ? LANGUAGE_META[language].code : undefined;
 
   async function open(topic: string) {
     setOpening(topic);
@@ -47,7 +51,7 @@ export function PictureDuelSetup({
     if (created.ok) {
       router.push(`/picture-duel/${created.value}`);
     } else {
-      toast.error(created.error);
+      toast.error(t(created.error));
       setOpening(null);
     }
   }
@@ -55,20 +59,18 @@ export function PictureDuelSetup({
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-5">
       <header className="space-y-1">
-        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Picture Duel</h1>
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{t("Picture Duel")}</h1>
         <p className="text-sm text-muted-foreground">
-          You and a friend, 60 seconds each, like a chess clock. Name the picture in {language} to stop your
-          clock and start theirs. Pass shows the answer, but your clock keeps running. Whoever runs out of time
-          first loses.
+          {t("You and a friend, 60 seconds each, like a chess clock. Name the picture in {language} to stop your clock and start theirs. Pass shows the answer, but your clock keeps running. Whoever runs out of time first loses.", { language: t(language) })}
         </p>
       </header>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <p className="text-sm font-semibold">Got a code from a friend?</p>
+        <p className="text-sm font-semibold">{t("Got a code from a friend?")}</p>
         <JoinCodeForm join={joinByCode} className="flex-[1_1_11rem]" />
       </div>
 
-      <div className="flex gap-2" role="group" aria-label="Level">
+      <div className="flex gap-2" role="group" aria-label={t("Level")}>
         {PICTURE_LEVELS.map((option) => (
           <button
             key={option}
@@ -94,21 +96,27 @@ export function PictureDuelSetup({
               onClick={() => setHard(option)}
               className={chip(option === hard)}
             >
-              {option ? "Hard" : "Normal"}
+              {option ? t("Hard") : t("Normal")}
             </button>
           ))}
         </div>
         <p className="text-sm text-muted-foreground">
           {hard
-            ? `Hard: type the article too. ${withArticle} is right, ${bare} is not.`
-            : `Normal: the article is optional, ${bare} or ${withArticle}.`}
+            ? fill(t("Hard: type the article too. {right} is right, {wrong} is not."), {
+                right: <span lang={code}>{withArticle}</span>,
+                wrong: <span lang={code}>{bare}</span>,
+              })
+            : fill(t("Normal: the article is optional, {bare} or {full}."), {
+                bare: <span lang={code}>{bare}</span>,
+                full: <span lang={code}>{withArticle}</span>,
+              })}
         </p>
       </div>
 
       {shown.length > 0 && (
         <section aria-labelledby="mix-heading" className="space-y-2">
           <h2 id="mix-heading" className="text-sm font-semibold">
-            Random mix
+            {t("Random mix")}
           </h2>
           <button
             type="button"
@@ -124,10 +132,12 @@ export function PictureDuelSetup({
               </span>
             )}
             <span className="min-w-0">
-              <span className="block text-sm font-semibold">{ALL_TOPICS}</span>
+              <span className="block text-sm font-semibold">{t(ALL_TOPICS)}</span>
               <span className="block text-xs text-muted-foreground">
-                Random pictures from every {level} topic ·{" "}
-                {shown.reduce((sum, topic) => sum + topic.count, 0)} pictures
+                {t("Random pictures from every {level} topic · {n} pictures", {
+                  level,
+                  n: shown.reduce((sum, topic) => sum + topic.count, 0),
+                })}
               </span>
             </span>
           </button>
@@ -136,10 +146,10 @@ export function PictureDuelSetup({
 
       <section aria-labelledby="topics-heading" className="space-y-2">
         <h2 id="topics-heading" className="text-sm font-semibold">
-          Pick a topic, then send the link to a friend
+          {t("Pick a topic, then send the link to a friend")}
         </h2>
         {shown.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No topics for this level yet.</p>
+          <p className="text-sm text-muted-foreground">{t("No topics for this level yet.")}</p>
         ) : (
           <div className="grid grid-cols-2 gap-2">
             {shown.map((topic) => (
@@ -157,8 +167,8 @@ export function PictureDuelSetup({
                     {topic.emoji}
                   </span>
                 )}
-                <span className="text-sm font-semibold">{topic.topic}</span>
-                <span className="text-xs text-muted-foreground">{topic.count} pictures</span>
+                <span className="text-sm font-semibold">{t(topic.topic)}</span>
+                <span className="text-xs text-muted-foreground">{t("{n} pictures", { n: topic.count })}</span>
               </button>
             ))}
           </div>

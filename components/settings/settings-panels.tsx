@@ -60,6 +60,9 @@ import { AddToHomeScreenGuide } from "@/components/settings/add-to-home-screen-g
 import { NotificationsSettingsCard } from "@/components/settings/notifications-settings-card";
 import { PrivacyDataCard } from "@/components/settings/privacy-data-card";
 import { cn } from "@/lib/utils";
+import { UiLanguageCard } from "@/components/settings/ui-language-card";
+import { fill, useT, useUiLanguage } from "@/components/ui-language-provider";
+import { useHydrated } from "@/hooks/use-browser-value";
 
 type SettingsPanelsProps = {
   profile: UserProfile;
@@ -82,11 +85,12 @@ function PreferenceToggle({
   disabled?: boolean;
   onChange: (value: boolean) => void;
 }) {
+  const t = useT();
   return (
     <div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
       <div>
-        <p className="text-sm font-medium">{label}</p>
-        <p className="text-xs text-muted-foreground">{description}</p>
+        <p className="text-sm font-medium">{t(label)}</p>
+        <p className="text-xs text-muted-foreground">{t(description)}</p>
       </div>
       <button
         type="button"
@@ -124,6 +128,10 @@ export function SettingsPanels({
   showDailyResults: initialShowDailyResults,
   languageLevels,
 }: SettingsPanelsProps) {
+  const t = useT();
+  const uiLanguage = useUiLanguage();
+  // The server runs on UTC: match times are printed only in the browser.
+  const hydrated = useHydrated();
   const guest = profile.is_guest;
   const router = useRouter();
   const [targetLanguage, setTargetLanguage] = useState<TargetLanguage>(
@@ -158,10 +166,10 @@ export function SettingsPanels({
 
       const result = await updateLearningProfile(formData);
       if (result.success) {
-        toast.success("Profile updated.");
+        toast.success(t("Profile updated."));
         return;
       }
-      toast.error(result.error);
+      toast.error(t(result.error));
     });
   }
 
@@ -177,10 +185,10 @@ export function SettingsPanels({
     startTransition(async () => {
       const result = await updateGameplayPreferences(nextSound, nextHaptics);
       if (result.success) {
-        toast.success("Gameplay preferences saved.");
+        toast.success(t("Gameplay preferences saved."));
         return;
       }
-      toast.error(result.error);
+      toast.error(t(result.error));
     });
   }
 
@@ -193,11 +201,11 @@ export function SettingsPanels({
     startTransition(async () => {
       const result = await updateFriendPrivacy(setting, value);
       if (result.success) {
-        toast.success("Privacy setting saved.");
+        toast.success(t("Privacy setting saved."));
         return;
       }
       show(!value);
-      toast.error(result.error);
+      toast.error(t(result.error));
     });
   }
 
@@ -205,10 +213,10 @@ export function SettingsPanels({
     startTransition(async () => {
       const result = await changePassword(formData);
       if (result.success) {
-        toast.success("Password updated.");
+        toast.success(t("Password updated."));
         return;
       }
-      toast.error(result.error);
+      toast.error(t(result.error));
     });
   }
 
@@ -216,7 +224,7 @@ export function SettingsPanels({
     startTransition(async () => {
       const result = await deleteAccount(formData);
       if (!result.success) {
-        toast.error(result.error);
+        toast.error(t(result.error));
         return;
       }
 
@@ -228,46 +236,45 @@ export function SettingsPanels({
 
   return (
     <div className="grid w-full max-w-3xl gap-6">
+      <UiLanguageCard />
       {guest ? (
         <Card className="border-amber-500/30 bg-amber-500/5">
           <CardHeader>
-            <CardTitle>Guest account</CardTitle>
+            <CardTitle>{t("Guest account")}</CardTitle>
             <CardDescription>
-              You&apos;re playing as{" "}
-              <span className="font-medium text-foreground">
-                {profile.display_name ?? "Guest"}
-              </span>{" "}
-              at level {profile.proficiency_level}. Guest names are assigned
-              automatically and guest players are excluded from the leaderboard.
+              {fill(t("You're playing as {name} at level {level}. Guest names are assigned automatically and guest players are excluded from the leaderboard."), {
+                name: <span className="font-medium text-foreground">{profile.display_name ?? t("Guest")}</span>,
+                level: profile.proficiency_level ?? "",
+              })}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild className="min-h-11">
-              <a href="/login?mode=signup">Create a full account</a>
+              <a href="/login?mode=signup">{t("Create a full account")}</a>
             </Button>
           </CardContent>
         </Card>
       ) : (
         <Card className="border-border/60">
           <CardHeader>
-            <CardTitle>Learning profile</CardTitle>
+            <CardTitle>{t("Learning profile")}</CardTitle>
             <CardDescription>
-              Choose the language you are learning, your level and your public display name.
+              {t("Choose the language you are learning, your level and your public display name.")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="settings-email">Email</Label>
+              <Label htmlFor="settings-email">{t("Email")}</Label>
               <Input id="settings-email" value={profile.email} disabled />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="settings-display-name">Username</Label>
+              <Label htmlFor="settings-display-name">{t("Username")}</Label>
               <Input
                 id="settings-display-name"
                 value={displayName}
                 maxLength={24}
-                placeholder="Used to sign in and shown to opponents"
+                placeholder={t("Used to sign in and shown to opponents")}
                 disabled={isPending}
                 onChange={(event) => setDisplayName(event.target.value)}
               />
@@ -275,7 +282,7 @@ export function SettingsPanels({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Language</Label>
+                <Label>{t("Language")}</Label>
                 <Select
                   value={targetLanguage}
                   disabled={isPending}
@@ -288,12 +295,12 @@ export function SettingsPanels({
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Language" />
+                    <SelectValue placeholder={t("Language")} />
                   </SelectTrigger>
                   <SelectContent>
                     {TARGET_LANGUAGES.map((language) => (
                       <SelectItem key={language} value={language}>
-                        {language}
+                        {t(language)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -301,14 +308,14 @@ export function SettingsPanels({
               </div>
 
               <div className="space-y-2">
-                <Label>Proficiency level</Label>
+                <Label>{t("Proficiency level")}</Label>
                 <Select
                   value={proficiencyLevel}
                   disabled={isPending}
                   onValueChange={setProficiencyLevel}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Level" />
+                    <SelectValue placeholder={t("Level")} />
                   </SelectTrigger>
                   <SelectContent>
                     {PROFICIENCY_LEVELS.map((level) => (
@@ -330,10 +337,10 @@ export function SettingsPanels({
               {isPending ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Saving...
+                  {t("Saving...")}
                 </>
               ) : (
-                "Save profile"
+                t("Save profile")
               )}
             </Button>
           </CardContent>
@@ -351,8 +358,8 @@ export function SettingsPanels({
 
       <Card className="border-border/60">
         <CardHeader>
-          <CardTitle>Friends</CardTitle>
-          <CardDescription>Choose what your friends can see.</CardDescription>
+          <CardTitle>{t("Friends")}</CardTitle>
+          <CardDescription>{t("Choose what your friends can see.")}</CardDescription>
         </CardHeader>
         <CardContent>
           <PreferenceToggle
@@ -374,15 +381,15 @@ export function SettingsPanels({
 
       <Card className="border-border/60">
         <CardHeader>
-          <CardTitle>Gameplay</CardTitle>
-          <CardDescription>Control sound and haptic feedback during matches.</CardDescription>
+          <CardTitle>{t("Gameplay")}</CardTitle>
+          <CardDescription>{t("Control sound and haptic feedback during matches.")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
             <div className="mb-3">
               <p className="text-sm font-medium">Volume</p>
               <p className="text-xs text-muted-foreground">
-                Drag to turn match sounds up or down.
+                {t("Drag to turn match sounds up or down.")}
               </p>
             </div>
             <SoundVolumeControl showSlider />
@@ -403,9 +410,9 @@ export function SettingsPanels({
           />
           <div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
             <div>
-              <p className="text-sm font-medium">Welcome tour</p>
+              <p className="text-sm font-medium">{t("Welcome tour")}</p>
               <p className="text-xs text-muted-foreground">
-                Replay the quick intro on how to play.
+                {t("Replay the quick intro on how to play.")}
               </p>
             </div>
             <Button
@@ -417,7 +424,7 @@ export function SettingsPanels({
                 router.push("/");
               }}
             >
-              Replay
+              {t("Replay")}
             </Button>
           </div>
         </CardContent>
@@ -425,13 +432,13 @@ export function SettingsPanels({
 
       <Card className="border-border/60">
         <CardHeader>
-          <CardTitle>Recent matches</CardTitle>
-          <CardDescription>Your last 10 completed {profile.target_language ?? DEFAULT_LANGUAGE} games.</CardDescription>
+          <CardTitle>{t("Recent matches")}</CardTitle>
+          <CardDescription>{t("Your last 10 completed {language} games.", { language: t(profile.target_language ?? DEFAULT_LANGUAGE) })}</CardDescription>
         </CardHeader>
         <CardContent>
           {recentMatches.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No completed matches yet. Play a game to see history here.
+              {t("No completed matches yet. Play a game to see history here.")}
             </p>
           ) : (
             <div className="space-y-3">
@@ -442,9 +449,9 @@ export function SettingsPanels({
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-medium">
-                      vs {match.opponent_display_name}
+                      {t("vs {name}", { name: match.opponent_display_name })}
                       <span className="ml-2 text-xs font-normal text-muted-foreground">
-                        {match.opponent_type === "ghost" ? "Ghost" : "Real player"}
+                        {match.opponent_type === "ghost" ? t("Ghost") : t("Real player")}
                       </span>
                     </p>
                     <span
@@ -455,15 +462,14 @@ export function SettingsPanels({
                         match.result === "tie" && "bg-muted text-muted-foreground"
                       )}
                     >
-                      {resultLabel(match.result)}
+                      {t(resultLabel(match.result))}
                     </span>
                   </div>
                   <p className="mt-1 text-muted-foreground">
-                    {match.user_score} — {match.opponent_score} · {match.language} ·{" "}
-                    {match.level}
+                    {match.user_score} — {match.opponent_score} · {t(match.language)} · {match.level}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {new Date(match.played_at).toLocaleString()}
+                    {hydrated ? new Date(match.played_at).toLocaleString(uiLanguage) : "\u00a0"}
                   </p>
                 </div>
               ))}
@@ -475,8 +481,8 @@ export function SettingsPanels({
       {!guest && (
       <Card className="border-border/60">
         <CardHeader>
-          <CardTitle>Change password</CardTitle>
-          <CardDescription>Update your sign-in password.</CardDescription>
+          <CardTitle>{t("Change password")}</CardTitle>
+          <CardDescription>{t("Update your sign-in password.")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -487,7 +493,7 @@ export function SettingsPanels({
             }}
           >
             <div className="space-y-2">
-              <Label htmlFor="current_password">Current password</Label>
+              <Label htmlFor="current_password">{t("Current password")}</Label>
               <Input
                 id="current_password"
                 name="current_password"
@@ -498,7 +504,7 @@ export function SettingsPanels({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="new_password">New password</Label>
+              <Label htmlFor="new_password">{t("New password")}</Label>
               <Input
                 id="new_password"
                 name="new_password"
@@ -510,7 +516,7 @@ export function SettingsPanels({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirm_password">Confirm new password</Label>
+              <Label htmlFor="confirm_password">{t("Confirm new password")}</Label>
               <Input
                 id="confirm_password"
                 name="confirm_password"
@@ -522,7 +528,7 @@ export function SettingsPanels({
               />
             </div>
             <Button type="submit" className="min-h-11" disabled={isPending}>
-              {isPending ? "Updating..." : "Update password"}
+              {isPending ? t("Updating...") : t("Update password")}
             </Button>
           </form>
         </CardContent>
@@ -531,9 +537,9 @@ export function SettingsPanels({
 
       <Card className="border-border/60">
         <CardHeader>
-          <CardTitle>Account</CardTitle>
+          <CardTitle>{t("Account")}</CardTitle>
           <CardDescription>
-            {guest ? "End your guest session or send feedback." : "Sign out or send feedback about the app."}
+            {guest ? t("End your guest session or send feedback.") : t("Sign out or send feedback about the app.")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -542,28 +548,28 @@ export function SettingsPanels({
             <DialogTrigger asChild>
               <Button type="button" variant="outline" className="min-h-11 w-full gap-2 sm:w-auto">
                 <LogOut className="size-4" />
-                {guest ? "End guest session" : "Sign out"}
+                {guest ? t("End guest session") : t("Sign out")}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-sm">
               <DialogHeader>
-                <DialogTitle>{guest ? "End guest session?" : `Sign out of ${APP_NAME}?`}</DialogTitle>
+                <DialogTitle>{guest ? t("End guest session?") : t("Sign out of {app}?", { app: APP_NAME })}</DialogTitle>
                 <DialogDescription>
                   {guest
-                    ? "A guest account can't be opened again, so its progress is lost."
-                    : "Your progress is saved. Sign back in any time."}
+                    ? t("A guest account can't be opened again, so its progress is lost.")
+                    : t("Your progress is saved. Sign back in any time.")}
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <DialogClose asChild>
                   <Button type="button" variant="outline" className="min-h-11">
-                    Cancel
+                    {t("Cancel")}
                   </Button>
                 </DialogClose>
                 <form action={signOut}>
                   <Button type="submit" variant="destructive" className="min-h-11 w-full gap-2">
                     <LogOut className="size-4" />
-                    {guest ? "End session" : "Sign out"}
+                    {guest ? t("End session") : t("Sign out")}
                   </Button>
                 </form>
               </DialogFooter>
@@ -575,7 +581,7 @@ export function SettingsPanels({
               href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`${APP_NAME} feedback`)}`}
             >
               <Mail className="size-4" />
-              Send feedback
+              {t("Send feedback")}
             </a>
           </Button>
 
@@ -584,7 +590,7 @@ export function SettingsPanels({
             <Button asChild variant="secondary" className="min-h-11 w-full gap-2 sm:w-auto md:hidden">
               <Link href="/contribute">
                 <PenLine className="size-4" />
-                Add a question
+                {t("Add a question")}
               </Link>
             </Button>
           )}
@@ -593,9 +599,9 @@ export function SettingsPanels({
 
       <Card className="border-border/60">
         <CardHeader>
-          <CardTitle>Support the project</CardTitle>
+          <CardTitle>{t("Support the project")}</CardTitle>
           <CardDescription>
-            {APP_NAME} is free and open source.
+            {t("{app} is free and open source.", { app: APP_NAME })}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row">
@@ -616,10 +622,9 @@ export function SettingsPanels({
 
       <Card id="delete-account" className="border-destructive/30">
         <CardHeader>
-          <CardTitle className="text-destructive">Delete account</CardTitle>
+          <CardTitle className="text-destructive">{t("Delete account")}</CardTitle>
           <CardDescription>
-            Permanently remove your account, stats, and match history. This cannot be
-            undone.
+            {t("Permanently remove your account, stats, and match history. This cannot be undone.")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -631,7 +636,7 @@ export function SettingsPanels({
             }}
           >
             <div className="space-y-2">
-              <Label htmlFor="confirmation">Type DELETE to confirm</Label>
+              <Label htmlFor="confirmation">{t("Type DELETE to confirm")}</Label>
               <Input
                 id="confirmation"
                 name="confirmation"
@@ -647,7 +652,7 @@ export function SettingsPanels({
               disabled={isPending}
             >
               <Trash2 className="size-4" />
-              {isPending ? "Deleting..." : "Delete my account"}
+              {isPending ? t("Deleting...") : t("Delete my account")}
             </Button>
           </form>
         </CardContent>

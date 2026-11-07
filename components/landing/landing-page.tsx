@@ -1,5 +1,6 @@
 /** Public landing page with sign-in and sign-up entry points (shown at "/" to visitors). */
 import Link from "next/link";
+import { getT } from "@/lib/i18n-server";
 import { ArrowRight, Trophy, Users, Zap } from "lucide-react";
 import { AuroraCanvas } from "@/components/aurora-canvas";
 import { GlassPanel } from "@/components/glass-panel";
@@ -34,25 +35,24 @@ const features = [
 ];
 
 /** `language`: the demo round's language (German after a /german link). */
-export function LandingPage({ language }: { language: TargetLanguage }) {
+export async function LandingPage({ language }: { language: TargetLanguage }) {
+  const t = await getT();
   return (
     <AuroraCanvas>
       <main className="mx-auto w-full max-w-6xl px-4 pb-[max(3rem,env(safe-area-inset-bottom,0px))] pt-10 sm:px-6 sm:pt-14 lg:px-8 lg:pt-20">
         <section className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end lg:gap-14">
           <div className="space-y-8">
-            <p className="swiss-label">Italian · German · live quiz matches</p>
+            <p className="swiss-label">{t("Italian · German · live quiz matches")}</p>
             <h1 className="hero-headline max-w-xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-[3.25rem]">
-              Learn Italian or German through quick, real practice
+              {t("Learn Italian or German through quick, real practice")}
             </h1>
             <p className="max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Play timed rounds against real people or a bot. Pick up new
-              words and grammar naturally — without long lessons or heavy study
-              blocks.
+              {t("Play timed rounds against real people or a bot. Pick up new words and grammar naturally — without long lessons or heavy study blocks.")}
             </p>
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <Button asChild size="lg" className="h-12 min-w-[9.5rem] px-6">
                 <Link href="/login">
-                  Sign in
+                  {t("Sign in")}
                   <ArrowRight className="size-4" />
                 </Link>
               </Button>
@@ -62,15 +62,14 @@ export function LandingPage({ language }: { language: TargetLanguage }) {
                 size="lg"
                 className="glass-panel h-12 min-w-[9.5rem] border bg-transparent px-6 shadow-none"
               >
-                <Link href="/login?mode=signup">Create account</Link>
+                <Link href="/login?mode=signup">{t("Create account")}</Link>
               </Button>
               <Button asChild variant="secondary" size="lg" className="h-12 px-6">
-                <Link href="/guest">Play as guest</Link>
+                <Link href="/guest">{t("Play as guest")}</Link>
               </Button>
             </div>
             <p className="max-w-md text-sm text-muted-foreground">
-              Guest mode works without signing up. You get an auto-generated name
-              and won&apos;t appear on the leaderboard.
+              {t("Guest mode works without signing up. You get an auto-generated name and won't appear on the leaderboard.")}
             </p>
           </div>
 
@@ -80,9 +79,9 @@ export function LandingPage({ language }: { language: TargetLanguage }) {
         <section className="mt-16 sm:mt-20">
           <div className="mb-8 flex items-end justify-between gap-4 border-b border-border pb-4">
             <h2 className="text-lg font-semibold tracking-tight sm:text-xl">
-              Built for daily practice
+              {t("Built for daily practice")}
             </h2>
-            <span className="swiss-label hidden sm:inline">Features</span>
+            <span className="swiss-label hidden sm:inline">{t("Features")}</span>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
             {features.map(({ icon: Icon, num, title, description }) => (
@@ -95,9 +94,9 @@ export function LandingPage({ language }: { language: TargetLanguage }) {
                     {num}
                   </span>
                 </div>
-                <h3 className="font-semibold tracking-tight">{title}</h3>
+                <h3 className="font-semibold tracking-tight">{t(title)}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {description}
+                  {t(description)}
                 </p>
               </GlassPanel>
             ))}

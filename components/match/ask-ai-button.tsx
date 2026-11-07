@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import type { MatchRoundReview } from "@/store/useGameStore";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/ui-language-provider";
 
 type AskAiButtonProps = {
   round: MatchRoundReview;
@@ -38,6 +39,7 @@ export function AskAiButton({
   showLabel = false,
   scopeLabel = "match",
 }: AskAiButtonProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [explanation, setExplanation] = useState<string | null>(null);
   const [fromCache, setFromCache] = useState(false);
@@ -58,7 +60,7 @@ export function AskAiButton({
       });
 
       if (!result.success) {
-        toast.error(result.error);
+        toast.error(t(result.error));
         onAsksRemainingChange(result.asksRemaining);
         return;
       }
@@ -68,7 +70,7 @@ export function AskAiButton({
       onAsksRemainingChange(result.asksRemaining);
 
       if (result.fromCache) {
-        toast.success("Loaded saved explanation.");
+        toast.success(t("Loaded saved explanation."));
       }
     });
   }
@@ -95,20 +97,30 @@ export function AskAiButton({
           className
         )}
         onClick={() => handleOpenChange(true)}
-        aria-label="Ask AI for an explanation"
+        aria-label={t("Ask AI for an explanation")}
       >
         <Sparkles className="size-4" />
-        {showLabel ? "Ask AI" : null}
+        {showLabel ? t("Ask AI") : null}
       </Button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-h-[85dvh] overflow-y-auto touch-scroll sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>AI explanation</DialogTitle>
+            <DialogTitle>{t("AI explanation")}</DialogTitle>
             <DialogDescription>
               {asksRemaining > 0
-                ? `${asksRemaining} new AI explanation${asksRemaining === 1 ? "" : "s"} left this ${scopeLabel} (max ${MAX_AI_ASKS_PER_MATCH}). Re-opening a question you already asked does not use a slot.`
-                : `You have used all ${MAX_AI_ASKS_PER_MATCH} new AI explanations for this ${scopeLabel}.`}
+                ? t(
+                    scopeLabel === "match"
+                      ? "{n} new AI explanations left this match (max {max}). Re-opening a question you already asked does not use a slot."
+                      : "{n} new AI explanations left this practice session (max {max}). Re-opening a question you already asked does not use a slot.",
+                    { n: asksRemaining, max: MAX_AI_ASKS_PER_MATCH }
+                  )
+                : t(
+                    scopeLabel === "match"
+                      ? "You have used all {max} new AI explanations for this match."
+                      : "You have used all {max} new AI explanations for this practice session.",
+                    { max: MAX_AI_ASKS_PER_MATCH }
+                  )}
             </DialogDescription>
           </DialogHeader>
 
@@ -119,7 +131,7 @@ export function AskAiButton({
           {isPending && (
             <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
               <Loader2 className="size-5 animate-spin text-primary" />
-              Thinking...
+              {t("Thinking...")}
             </div>
           )}
 
@@ -127,7 +139,7 @@ export function AskAiButton({
             <div className="space-y-2">
               {fromCache && (
                 <p className="text-xs text-muted-foreground">
-                  Loaded from cache — no AI slot used.
+                  {t("Loaded from cache — no AI slot used.")}
                 </p>
               )}
               <ExplanationMarkdown

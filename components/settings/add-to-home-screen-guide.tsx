@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { APP_NAME } from "@/lib/legal";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/ui-language-provider";
 
 const STANDALONE_QUERY = "(display-mode: standalone)";
 
@@ -39,6 +40,7 @@ function StepList({
   steps: string[];
   className?: string;
 }) {
+  const t = useT();
   return (
     <ol className={cn("space-y-3", className)}>
       {steps.map((step, index) => (
@@ -46,7 +48,7 @@ function StepList({
           <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
             {index + 1}
           </span>
-          <span className="pt-0.5 text-muted-foreground">{step}</span>
+          <span className="pt-0.5 text-muted-foreground">{t(step, { app: APP_NAME })}</span>
         </li>
       ))}
     </ol>
@@ -54,6 +56,7 @@ function StepList({
 }
 
 export function AddToHomeScreenGuide() {
+  const t = useT();
   const installed = useIsInstalledApp();
 
   return (
@@ -64,10 +67,9 @@ export function AddToHomeScreenGuide() {
             <Smartphone className="size-5" />
           </div>
           <div>
-            <CardTitle>Add to your home screen</CardTitle>
+            <CardTitle>{t("Add to your home screen")}</CardTitle>
             <CardDescription className="mt-1.5">
-              Install {APP_NAME} like an app for quick access, full screen,
-              smoother mobile play, and out-of-app notifications on iPhone.
+              {t("Install {app} like an app for quick access, full screen, smoother mobile play, and out-of-app notifications on iPhone.", { app: APP_NAME })}
             </CardDescription>
           </div>
         </div>
@@ -77,9 +79,7 @@ export function AddToHomeScreenGuide() {
           <div className="flex items-start gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
             <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
             <p>
-              You&apos;re already using the installed app. Open it from your home
-              screen anytime to jump straight into a match — and enable daily
-              reminders in Settings for out-of-app alerts.
+              {t("You're already using the installed app. Open it from your home screen anytime to jump straight into a match — and enable daily reminders in Settings for out-of-app alerts.")}
             </p>
           </div>
         ) : (
@@ -87,8 +87,7 @@ export function AddToHomeScreenGuide() {
             <div className="space-y-3">
               <h3 className="text-sm font-semibold">iPhone (Safari)</h3>
               <p className="text-xs text-muted-foreground">
-                Use Safari — other browsers on iPhone can&apos;t add sites to the home
-                screen.
+                {t("Use Safari — other browsers on iPhone can't add sites to the home screen.")}
               </p>
               <StepList
                 steps={[
@@ -97,7 +96,7 @@ export function AddToHomeScreenGuide() {
                   "Tap Share in the menu that opens.",
                   "In the share panel, scroll down and tap Add to Home Screen.",
                   "Tap Add in the top-right corner. The app icon will appear on your home screen.",
-                  `Open ${APP_NAME} from that icon, then turn on Daily practice reminder in Settings.`,
+                  "Open {app} from that icon, then turn on Daily practice reminder in Settings.",
                 ]}
               />
             </div>
@@ -107,8 +106,7 @@ export function AddToHomeScreenGuide() {
             <div className="space-y-3">
               <h3 className="text-sm font-semibold">Android (Chrome)</h3>
               <p className="text-xs text-muted-foreground">
-                Chrome works best. Some phones may show Install app instead of Add to
-                Home screen.
+                {t("Chrome works best. Some phones may show Install app instead of Add to Home screen.")}
               </p>
               <StepList
                 steps={[

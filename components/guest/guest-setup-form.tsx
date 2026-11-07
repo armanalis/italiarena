@@ -1,6 +1,7 @@
 /** Guest mode — proficiency picker and one-click start. */
 "use client";
 
+import { fill, useT } from "@/components/ui-language-provider";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, GraduationCap, UserRound } from "lucide-react";
@@ -28,6 +29,7 @@ type GuestSetupFormProps = {
 };
 
 export function GuestSetupForm({ defaultLanguage }: GuestSetupFormProps = {}) {
+  const t = useT();
   const router = useRouter();
   const [targetLanguage, setTargetLanguage] = useState(defaultLanguage ?? "");
   const [proficiencyLevel, setProficiencyLevel] = useState("");
@@ -74,9 +76,9 @@ export function GuestSetupForm({ defaultLanguage }: GuestSetupFormProps = {}) {
         <div className="mb-5 flex size-12 items-center justify-center rounded-md border border-border bg-muted text-foreground">
           <UserRound className="size-6" />
         </div>
-        <h1 className="text-2xl font-bold tracking-tight">Play as a Guest</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("Play as a Guest")}</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Pick a language and your level and start playing — no account or username needed.
+          {t("Pick a language and your level and start playing — no account or username needed.")}
         </p>
       </div>
 
@@ -87,26 +89,25 @@ export function GuestSetupForm({ defaultLanguage }: GuestSetupFormProps = {}) {
         >
           <div className="flex items-start gap-2.5">
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-            <p className="text-sm font-medium text-foreground">Quick guest play</p>
+            <p className="text-sm font-medium text-foreground">{t("Quick guest play")}</p>
           </div>
           <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
             <li>
-              You&apos;ll get a unique auto-generated name (like{" "}
-              <span className="font-medium text-foreground">Guesta1b2c3d4e5f6</span>
-              ) — a new one every time you play as a guest.
+              {fill(t("You'll get a unique auto-generated name (like {example}) — a new one every time you play as a guest."), {
+                example: <span className="font-medium text-foreground">Guesta1b2c3d4e5f6</span>,
+              })}
             </li>
-            <li>Guest players don&apos;t appear on the proficiency leaderboard.</li>
+            <li>{t("Guest players don't appear on the proficiency leaderboard.")}</li>
             <li>
-              Guests cannot contribute questions to the community pool — sign up
-              for a full account to submit.
+              {t("Guests cannot contribute questions to the community pool — sign up for a full account to submit.")}
             </li>
             <li>
-              Sign up later to save progress and pick your own username.{" "}
+              {t("Sign up later to save progress and pick your own username.")}{" "}
               <Link
                 href="/privacy?lang=en"
                 className="font-medium text-primary underline-offset-4 hover:underline"
               >
-                Privacy policy
+                {t("Privacy policy")}
               </Link>
             </li>
           </ul>
@@ -114,7 +115,7 @@ export function GuestSetupForm({ defaultLanguage }: GuestSetupFormProps = {}) {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="guest-target_language">Language to learn</Label>
+            <Label htmlFor="guest-target_language">{t("Language to learn")}</Label>
             <select
               id="guest-target_language"
               name="target_language"
@@ -126,11 +127,11 @@ export function GuestSetupForm({ defaultLanguage }: GuestSetupFormProps = {}) {
               onFocus={(event) => scrollFieldIntoView(event.currentTarget)}
             >
               <option value="" disabled>
-                Select a language
+                {t("Select a language")}
               </option>
               {TARGET_LANGUAGES.map((language) => (
                 <option key={language} value={language}>
-                  {language}
+                  {t(language)}
                 </option>
               ))}
             </select>
@@ -139,7 +140,7 @@ export function GuestSetupForm({ defaultLanguage }: GuestSetupFormProps = {}) {
           <div className="space-y-2">
             <Label htmlFor="guest-proficiency_level" className="flex items-center gap-2">
               <GraduationCap className="size-4 text-muted-foreground" />
-              Proficiency level
+              {t("Proficiency level")}
             </Label>
             <select
               id="guest-proficiency_level"
@@ -152,7 +153,7 @@ export function GuestSetupForm({ defaultLanguage }: GuestSetupFormProps = {}) {
               onFocus={(event) => scrollFieldIntoView(event.currentTarget)}
             >
               <option value="" disabled>
-                Select your level
+                {t("Select your level")}
               </option>
               {PROFICIENCY_LEVELS.map((level) => (
                 <option key={level} value={level}>
@@ -167,7 +168,7 @@ export function GuestSetupForm({ defaultLanguage }: GuestSetupFormProps = {}) {
               className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
               role="alert"
             >
-              {error}
+              {t(error)}
             </div>
           )}
 
@@ -176,16 +177,16 @@ export function GuestSetupForm({ defaultLanguage }: GuestSetupFormProps = {}) {
             disabled={isPending || !targetLanguage || !proficiencyLevel}
             className="h-11 w-full "
           >
-            {isPending ? "Starting..." : "Start playing"}
+            {isPending ? t("Starting...") : t("Start playing")}
           </Button>
 
           <p className="text-center text-sm text-muted-foreground">
-            Want a permanent account?{" "}
+            {t("Want a permanent account?")}{" "}
             <Link
               href="/login?mode=signup"
               className="font-medium text-primary underline-offset-4 hover:underline"
             >
-              Sign up instead
+              {t("Sign up instead")}
             </Link>
           </p>
         </form>

@@ -15,6 +15,8 @@ import { SiteHeaderSkeleton } from "@/components/site-header-skeleton";
 import { PRODUCTION_SITE_URL } from "@/lib/site-url";
 import { APP_NAME } from "@/lib/legal";
 import { cn } from "@/lib/utils";
+import { UiLanguageProvider } from "@/components/ui-language-provider";
+import { dictionaryFor, getUiLanguage } from "@/lib/i18n-server";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -47,34 +49,38 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { language, fromCookie } = await getUiLanguage();
   return (
-    <html lang="en" suppressHydrationWarning className={cn("font-sans", inter.variable)}>
+    // lang: screen readers, and Turkish upper case (i → İ) in uppercase text.
+    <html lang={language} suppressHydrationWarning className={cn("font-sans", inter.variable)}>
       <body className="flex h-dvh min-h-dvh w-full min-w-[320px] flex-col antialiased">
         {/* Saved sidebar width before first paint (no jump on load). */}
         <script dangerouslySetInnerHTML={{ __html: SIDEBAR_WIDTH_BOOT_SCRIPT }} />
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <StaleChunkRecovery />
-          <ServiceWorkerRegister />
-          <Suspense fallback={<SiteHeaderSkeleton />}>
-            <SiteHeader />
-          </Suspense>
-          <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto touch-scroll">
-            {children}
-          </div>
-          <AppToaster />
-          <ClarityAnalytics />
-          <CookieConsentBanner />
-        </ThemeProvider>
+        <UiLanguageProvider language={language} dictionary={dictionaryFor(language)} remember={!fromCookie}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <StaleChunkRecovery />
+            <ServiceWorkerRegister />
+            <Suspense fallback={<SiteHeaderSkeleton />}>
+              <SiteHeader />
+            </Suspense>
+            <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto touch-scroll">
+              {children}
+            </div>
+            <AppToaster />
+            <ClarityAnalytics />
+            <CookieConsentBanner />
+          </ThemeProvider>
+        </UiLanguageProvider>
       </body>
     </html>
   );

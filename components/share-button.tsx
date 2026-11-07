@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/ui-language-provider";
 import { useState } from "react";
 import { Check, Copy, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ export function ShareButton({
   description: string;
   className?: string;
 }) {
+  const t = useT();
   // The result being shared in the popup (computers), or null when it is closed.
   const [shareText, setShareText] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -60,12 +62,12 @@ export function ShareButton({
     <>
       <Button type="button" className={className} onClick={() => void share()}>
         <Share2 className="size-4" />
-        Share
+        {t("Share")}
       </Button>
       <Dialog open={shareText !== null} onOpenChange={(open) => !open && setShareText(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Share your result</DialogTitle>
+            <DialogTitle>{t("Share your result")}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
           <pre className="whitespace-pre-wrap break-all rounded-lg bg-muted p-3 font-sans text-sm leading-relaxed">
@@ -74,7 +76,7 @@ export function ShareButton({
           <DialogFooter className="gap-2 sm:justify-start">
             <Button type="button" className="min-h-11" onClick={() => void copyShareText()}>
               {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-              {copied ? "Copied" : "Copy"}
+              {copied ? t("Copied") : t("Copy")}
             </Button>
             <Button asChild variant="outline" className="min-h-11">
               <a

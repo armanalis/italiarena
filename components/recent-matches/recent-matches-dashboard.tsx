@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useT, useUiLanguage } from "@/components/ui-language-provider";
+import { useHydrated } from "@/hooks/use-browser-value";
 import { ChevronDown, History } from "lucide-react";
 import type { CorrectAnswer } from "@/types/database.types";
 import type {
@@ -118,6 +120,7 @@ function MatchQuestionCard({
   reported: boolean;
   onReported: () => void;
 }) {
+  const t = useT();
   const aiRound = toMatchRoundReview(question);
   const spoken = language && speakableQuestion(question.questionText, aiRound.correctOptionText);
   return (
@@ -134,14 +137,14 @@ function MatchQuestionCard({
           Q{question.questionIndex + 1}
         </Badge>
         <Badge variant="secondary" className="text-xs uppercase">
-          {formatCategoryLabel(question.category)}
+          {t(formatCategoryLabel(question.category))}
         </Badge>
         {question.wasCorrect ? (
           <Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-300">
-            Correct
+            {t("Correct")}
           </Badge>
         ) : (
-          <Badge variant="destructive">Wrong</Badge>
+          <Badge variant="destructive">{t("Wrong")}</Badge>
         )}
       </div>
 
@@ -198,7 +201,7 @@ function MatchQuestionCard({
                       label !== "Correct" && "text-destructive"
                     )}
                   >
-                    {label}
+                    {t(label)}
                   </span>
                 )}
               </div>
@@ -209,7 +212,7 @@ function MatchQuestionCard({
 
       {!question.wasCorrect && !question.selectedAnswer && (
         <p className="mt-2 text-xs text-muted-foreground">
-          You timed out on this question.
+          {t("You timed out on this question.")}
         </p>
       )}
 
@@ -245,6 +248,10 @@ function MatchCard({
   reportedQuestionIds: Set<string>;
   onQuestionReported: (questionId: string) => void;
 }) {
+  const t = useT();
+  const uiLanguage = useUiLanguage();
+  // The server runs on UTC: print the time only in the browser, in the player's own zone.
+  const hydrated = useHydrated();
   const [expanded, setExpanded] = useState(false);
   const [asksRemaining, setAsksRemaining] = useState(MAX_AI_ASKS_PER_MATCH);
   const correctCount = match.questions.filter((q) => q.wasCorrect).length;
@@ -255,15 +262,14 @@ function MatchCard({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
             <CardTitle className="text-base sm:text-lg">
-              vs {match.opponentDisplayName}
+              {t("vs {name}", { name: match.opponentDisplayName })}
             </CardTitle>
             <CardDescription>
-              {match.userScore} — {match.opponentScore} · {match.language} ·{" "}
-              {match.level}
-              {match.opponentType === "ghost" ? " · Bot" : " · Real player"}
+              {match.userScore} — {match.opponentScore} · {t(match.language)} · {match.level} ·{" "}
+              {match.opponentType === "ghost" ? t("Bot") : t("Real player")}
             </CardDescription>
             <p className="text-xs text-muted-foreground">
-              {new Date(match.playedAt).toLocaleString()}
+              {hydrated ? new Date(match.playedAt).toLocaleString(uiLanguage) : "\u00a0"}
             </p>
           </div>
           <Badge
@@ -274,7 +280,7 @@ function MatchCard({
               match.result === "tie" && "bg-muted text-muted-foreground"
             )}
           >
-            {resultLabel(match.result)}
+            {t(resultLabel(match.result))}
           </Badge>
         </div>
       </CardHeader>
@@ -283,10 +289,10 @@ function MatchCard({
           <p className="text-sm text-muted-foreground">
             {match.questions.length > 0 ? (
               <>
-                {correctCount}/{match.questions.length} correct
+                {t("{n}/{total} correct", { n: correctCount, total: match.questions.length })}
               </>
             ) : (
-              "Question list unavailable for this match"
+              t("Question list unavailable for this match")
             )}
           </p>
           {match.questions.length > 0 && (
@@ -298,7 +304,7 @@ function MatchCard({
               onClick={() => setExpanded((value) => !value)}
               aria-expanded={expanded}
             >
-              {expanded ? "Hide questions" : "View all questions"}
+              {expanded ? t("Hide questions") : t("View all questions")}
               <ChevronDown
                 className={cn(
                   "size-4 transition-transform",
@@ -335,6 +341,7 @@ export function RecentMatchesDashboard({
   matches,
   reportedQuestionIds: initialReportedIds,
 }: RecentMatchesDashboardProps) {
+  const t = useT();
   const [reportedQuestionIds, setReportedQuestionIds] = useState(
     () => new Set(initialReportedIds)
   );
@@ -352,11 +359,10 @@ export function RecentMatchesDashboard({
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
-              Recent matches
+              {t("Recent matches")}
             </h1>
             <p className="text-sm text-muted-foreground">
-              Your last 10 {language} games with every question from each match. Ask AI for
-              explanations or tap Report to flag an issue.
+              {t("Your last 10 {language} games with every question from each match. Ask AI for explanations or tap Report to flag an issue.", { language: t(language) })}
             </p>
           </div>
         </div>
@@ -366,8 +372,7 @@ export function RecentMatchesDashboard({
         {matches.length === 0 ? (
           <Card className="border-border/60">
             <CardContent className="py-10 text-center text-sm text-muted-foreground">
-              No completed matches yet. Finish a game and all 10 questions will
-              show up here.
+              {t("No completed matches yet. Finish a game and all 10 questions will show up here.")}
             </CardContent>
           </Card>
         ) : (

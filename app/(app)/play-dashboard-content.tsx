@@ -21,6 +21,7 @@ import { OnlineLevelBadge } from "@/components/dashboard/online-players";
 import { WelcomeTour } from "@/components/dashboard/welcome-tour";
 import { MatchmakingStartLink } from "@/components/matchmaking/matchmaking-start-link";
 import { getAdminQueueCounts } from "@/lib/admin-queue-counts";
+import { getT } from "@/lib/i18n-server";
 import { getCurrentUserProfile, isGuestUser } from "@/lib/auth";
 import { loadArticleStats } from "@/lib/articles";
 import { loadFriendsToday } from "@/lib/friends-today";
@@ -47,6 +48,7 @@ export async function PlayDashboardContent({
     return null;
   }
   const guest = isGuestUser(profile);
+  const t = await getT();
   const adminQueue =
     profile.role === "admin"
       ? await getAdminQueueCounts()
@@ -74,10 +76,10 @@ export async function PlayDashboardContent({
       <header className="page-intro w-full px-4 pt-5 sm:px-8 sm:pt-6 lg:px-10 xl:px-12">
         <div className="flex w-full flex-wrap items-start justify-between gap-3 sm:items-center sm:gap-4">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Arena</h1>
+            <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{t("Arena")}</h1>
             {guest && (
               <p className="text-sm text-muted-foreground">
-                Playing as {profile.display_name ?? "Guest"}
+                {t("Playing as {name}", { name: profile.display_name ?? t("Guest") })}
               </p>
             )}
           </div>
@@ -86,10 +88,10 @@ export async function PlayDashboardContent({
               <Button asChild variant="outline" className="min-h-10">
                 <Link href="/admin">
                   <ShieldAlert className="size-4" />
-                  Admin
+                  {t("Admin")}
                   <AdminQueueBadge
                     count={adminQueue.total}
-                    label="questions waiting for review"
+                    label={t("questions waiting for review")}
                   />
                 </Link>
               </Button>
@@ -101,7 +103,7 @@ export async function PlayDashboardContent({
       <div className="flex w-full flex-1 flex-col gap-6 p-4 sm:gap-8 sm:p-8 lg:px-10 xl:px-12">
         {accessDenied && (
           <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            Admin access denied. You do not have permission to view that page.
+            {t("Admin access denied. You do not have permission to view that page.")}
           </div>
         )}
 
@@ -110,13 +112,11 @@ export async function PlayDashboardContent({
             <p className="flex items-start gap-2">
               <UserRound className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
               <span>
-                You&apos;re in <span className="font-medium text-foreground">guest mode</span>.
-                Your name was assigned automatically and you won&apos;t appear on the
-                proficiency leaderboard.{" "}
+                <span className="font-medium text-foreground">{t("You're in guest mode.")}</span>{" "}
+                {t("Your name was assigned automatically and you won't appear on the proficiency leaderboard.")}{" "}
                 <a href="/login?mode=signup" className="font-medium text-primary underline-offset-4 hover:underline">
-                  Sign up
-                </a>{" "}
-                for a full account to choose a username and compete on the board.
+                  {t("Sign up for a full account to choose a username and compete on the board.")}
+                </a>
               </span>
             </p>
           </div>
@@ -128,18 +128,18 @@ export async function PlayDashboardContent({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Swords className="size-5 text-primary" aria-hidden />
-                Arena Duel
+                {t("Arena Duel")}
               </CardTitle>
               {/* Who is around, right next to the button that matches you with them. */}
               <CardAction>
                 <OnlineLevelBadge level={level} language={language} />
               </CardAction>
-              <CardDescription>Live 1v1 at your level.</CardDescription>
+              <CardDescription>{t("Live 1v1 at your level.")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               <Button asChild size="lg" className="h-11 w-full md:h-10">
                 <MatchmakingStartLink href="/matchmaking?mode=real">
-                  Enter the Arena
+                  {t("Enter the Arena")}
                   <ArrowRight className="size-4" aria-hidden />
                 </MatchmakingStartLink>
               </Button>
@@ -169,7 +169,7 @@ export async function PlayDashboardContent({
         {friendsToday.some((row) => !row.is_me) && (
           <section aria-labelledby="friends-today-heading" className="mx-auto w-full max-w-3xl space-y-2">
             <h2 id="friends-today-heading" className="text-sm font-semibold text-muted-foreground">
-              Today with friends
+              {t("Today with friends")}
             </h2>
             <FriendsTodayList rows={friendsToday} language={language} />
           </section>

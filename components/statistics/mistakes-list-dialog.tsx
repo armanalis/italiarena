@@ -16,6 +16,7 @@ import { NOUN_QUESTION_PREFIX } from "@/lib/articles";
 import { REVIEWS_TO_LEARN, whenDue } from "@/lib/review";
 import { formatCategoryLabel, getOptionText } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
+import { useT, useUiLanguage } from "@/components/ui-language-provider";
 
 type MistakesListDialogProps = {
   open: boolean;
@@ -33,6 +34,8 @@ export function MistakesListDialog({
   reportedQuestionIds: initialReportedQuestionIds,
   today,
 }: MistakesListDialogProps) {
+  const t = useT();
+  const uiLanguage = useUiLanguage();
   const [reportedQuestionIds, setReportedQuestionIds] = useState(
     () => new Set(initialReportedQuestionIds)
   );
@@ -51,20 +54,18 @@ export function MistakesListDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85dvh] overflow-y-auto touch-scroll sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Your mistakes</DialogTitle>
+          <DialogTitle>{t("Your mistakes")}</DialogTitle>
           <DialogDescription>
-            Questions and nouns you got wrong. Each comes back for review on
-            its day; right on 4 different days and it leaves this list. Report
-            any question with a typo or wrong answer so admins can fix it.
+            {t("Questions and nouns you got wrong. Each comes back for review on its day; right on 4 different days and it leaves this list. Report any question with a typo or wrong answer so admins can fix it.")}
           </DialogDescription>
         </DialogHeader>
 
         {mistakes.length === 0 ? (
           <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-6 text-center">
             <CheckCircle2 className="mx-auto size-8 text-emerald-400" />
-            <p className="mt-3 font-medium text-emerald-100">No mistakes saved</p>
+            <p className="mt-3 font-medium text-emerald-100">{t("No mistakes saved")}</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Wrong answers from your next match will appear here.
+              {t("Wrong answers from your next match will appear here.")}
             </p>
           </div>
         ) : (
@@ -77,12 +78,12 @@ export function MistakesListDialog({
                 <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="secondary" className="text-xs uppercase">
-                      {formatCategoryLabel(mistake.question.category)}
+                      {t(formatCategoryLabel(mistake.question.category))}
                     </Badge>
                     <Badge variant="outline" className="tabular-nums">
                       {mistake.next_review_on <= today
-                        ? "Due today"
-                        : `Next ${whenDue(mistake.next_review_on, today)}`}{" "}
+                        ? t("Due today")
+                        : t("Next {when}", { when: whenDue(mistake.next_review_on, today, t, uiLanguage) })}{" "}
                       · {mistake.practice_streak}/{REVIEWS_TO_LEARN}
                     </Badge>
                   </div>
@@ -107,7 +108,7 @@ export function MistakesListDialog({
                     <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
                     <div>
                       <p className="text-xs font-medium uppercase tracking-wide text-destructive/90">
-                        Your last answer
+                        {t("Your last answer")}
                       </p>
                       <p className="text-foreground">
                         {mistake.selected_answer ? (
@@ -122,7 +123,7 @@ export function MistakesListDialog({
                           </>
                         ) : (
                           <span className="text-muted-foreground">
-                            No answer / timed out
+                            {t("No answer / timed out")}
                           </span>
                         )}
                       </p>
@@ -138,7 +139,7 @@ export function MistakesListDialog({
                     <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-400" />
                     <div>
                       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Correct answer
+                        {t("Correct answer")}
                       </p>
                       <p className="text-foreground">
                         <span className="font-semibold text-emerald-400">

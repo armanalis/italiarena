@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { fill, useT } from "@/components/ui-language-provider";
 import {
   fitsLetter,
   nextLetter,
@@ -63,6 +64,7 @@ export function PassaparolaGame({
   initialLevel: string;
   initial: PassaparolaTurnResult;
 }) {
+  const t = useT();
   const [supabase] = useState(createClient);
   const [level, setLevel] = useState(initialLevel);
   const [view, setView] = useState<PassaparolaView | null>(initial.ok ? initial.view : null);
@@ -75,7 +77,7 @@ export function PassaparolaGame({
   const [msLeft, setMsLeft] = useState(initial.ok ? initial.view.msLeft : 300_000);
   const [input, setInput] = useState("");
   const [message, setMessage] = useState<Message | null>(
-    initial.ok ? null : { text: initial.error, tone: "wrong" }
+    initial.ok ? null : { text: t(initial.error), tone: "wrong" }
   );
   const [pending, setPending] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -102,7 +104,7 @@ export function PassaparolaGame({
     const result = await playPassaparola(supabase, language, nextLevel, move);
     setPending(false);
     if (!result.ok) {
-      setMessage({ text: result.error, tone: "wrong" });
+      setMessage({ text: t(result.error), tone: "wrong" });
       return result;
     }
     setView(result.view);
@@ -130,13 +132,13 @@ export function PassaparolaGame({
             setView(result.view);
             setMsLeft(result.view.msLeft);
           } else {
-            setMessage({ text: result.error, tone: "wrong" });
+            setMessage({ text: t(result.error), tone: "wrong" });
           }
         });
       }
     }, 250);
     return () => clearInterval(timer);
-  }, [language, supabase, view]);
+  }, [language, supabase, t, view]);
 
   async function begin() {
     setPassed(new Set());
@@ -189,8 +191,8 @@ export function PassaparolaGame({
       if (mark) {
         setMessage(
           mark === "right"
-            ? { text: `${letter}: correct!`, tone: "right" }
-            : { text: `${letter}: wrong. You will see the answer at the end.`, tone: "wrong" }
+            ? { text: t("{letter}: correct!", { letter }), tone: "right" }
+            : { text: t("{letter}: wrong. You will see the answer at the end.", { letter }), tone: "wrong" }
         );
       }
     }
@@ -206,16 +208,16 @@ export function PassaparolaGame({
     : [...passed].filter((letter) => !view?.marks[letter]).length;
   const clue = view?.clues.find((item) => item.letter === current)?.clue;
 
-  const skippedLabel = view?.finished ? "Not answered" : "Passed";
+  const skippedLabel = view?.finished ? t("Not answered") : t("Passed");
   const counts = (
     <p className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-sm text-muted-foreground">
       <span className="flex items-center gap-1">
         <Check className="size-4 text-emerald-600" aria-hidden />
-        <b className="text-emerald-600 dark:text-emerald-400">{right}</b> Correct
+        <b className="text-emerald-600 dark:text-emerald-400">{right}</b> {t("Correct")}
       </span>
       <span className="flex items-center gap-1">
         <X className="size-4 text-red-600" aria-hidden />
-        <b className="text-red-600 dark:text-red-400">{wrong}</b> Wrong
+        <b className="text-red-600 dark:text-red-400">{wrong}</b> {t("Wrong")}
       </span>
       <span className="flex items-center gap-1">
         <SkipForward className="size-4 text-amber-500" aria-hidden />
@@ -228,15 +230,15 @@ export function PassaparolaGame({
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6">
       {/* Same title and level chips as the Wordle page. */}
       <header className={cn("space-y-1", compact && "max-md:hidden")}>
-        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Word Wheel</h1>
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{t("Word Wheel")}</h1>
         <p className="text-sm text-muted-foreground">
-          A clue for every letter from A to Z in 5 minutes. One board a day for each level.
+          {t("A clue for every letter from A to Z in 5 minutes. One board a day for each level.")}
         </p>
       </header>
       <div
         className={cn("-mx-1 -mt-3 flex gap-2 overflow-x-auto px-1 pb-1 touch-scroll", compact && "max-md:hidden")}
         role="group"
-        aria-label="Level"
+        aria-label={t("Level")}
       >
           {PROFICIENCY_LEVELS.filter((option) => !locked || option === level).map((option) => (
             <button
@@ -282,16 +284,22 @@ export function PassaparolaGame({
           {view?.finished && (
             <div className="glass-panel space-y-2 p-4 text-center">
               <p className="text-lg font-semibold">
-                {right === letters.length ? "Perfetto! Every letter right." : `${right} of ${letters.length} right.`}
+                {right === letters.length
+                  ? t("Perfetto! Every letter right.")
+                  : t("{right} of {total} right.", { right, total: letters.length })}
               </p>
-              <p className="text-xs text-muted-foreground">A new board comes tomorrow. Try another level above.</p>
+              <p className="text-xs text-muted-foreground">{t("A new board comes tomorrow. Try another level above.")}</p>
               {counts}
             </div>
           )}
 
           <div
             role="img"
-            aria-label={`${right} correct, ${wrong} wrong, ${skipped} ${skippedLabel.toLowerCase()}`}
+            aria-label={
+              view?.finished
+                ? t("{right} correct, {wrong} wrong, {skipped} not answered", { right, wrong, skipped })
+                : t("{right} correct, {wrong} wrong, {skipped} passed", { right, wrong, skipped })
+            }
             className="relative aspect-square w-full"
           >
             {letters.map((letter, index) => {
@@ -336,7 +344,7 @@ export function PassaparolaGame({
               </span>
               {playing && current && (
                 <span className={cn("text-sm font-medium text-muted-foreground", compact && "max-md:text-xs")}>
-                  Starts with {current}
+                  {t("Starts with {letter}", { letter: current })}
                 </span>
               )}
             </div>
@@ -347,18 +355,21 @@ export function PassaparolaGame({
           {view && !view.started && (
             <div className="glass-panel space-y-4 p-5 text-center">
               <ul className="space-y-1.5 text-left text-sm">
-                <li>Type the {language} word starting with the letter and press Enter.</li>
+                <li>{t("Type the {language} word starting with the letter and press Enter.", { language: t(language) })}</li>
                 <li>
-                  Type <Keyword word={PASSAPAROLA_PASS_WORD} className="text-amber-500" /> or press Skip
-                  to skip a letter; it comes back once the others are done.
+                  {fill(t("Type {word} or press Skip to skip a letter; it comes back once the others are done."), {
+                    word: <Keyword word={PASSAPAROLA_PASS_WORD} className="text-amber-500" />,
+                  })}
                 </li>
                 <li>
-                  Type <Keyword word={PASSAPAROLA_FINISH_WORD} className="text-red-500" /> to finish early.
+                  {fill(t("Type {word} to finish early."), {
+                    word: <Keyword word={PASSAPAROLA_FINISH_WORD} className="text-red-500" />,
+                  })}
                 </li>
-                <li>A wrong answer turns red; you see the right answers at the end.</li>
+                <li>{t("A wrong answer turns red; you see the right answers at the end.")}</li>
               </ul>
               <Button type="button" size="lg" disabled={pending || countdown !== null} onClick={() => void begin()}>
-                Start
+                {t("Start")}
               </Button>
             </div>
           )}
@@ -366,6 +377,8 @@ export function PassaparolaGame({
           {playing && current && (
             <>
               <p
+                // lang: the clue is capitalised, and it is English (a Turkish page would turn "like" into "LİKE").
+                lang="en"
                 className={cn(
                   "flex min-h-24 items-center justify-center text-balance text-center text-2xl font-extrabold uppercase leading-tight tracking-tight md:text-3xl",
                   compact && "max-md:min-h-0 max-md:text-xl"
@@ -388,8 +401,8 @@ export function PassaparolaGame({
                   autoCorrect="off"
                   spellCheck={false}
                   lang={LANGUAGE_META[language].code}
-                  aria-label={`${language} word starting with ${current}`}
-                  placeholder={`${current}… (type the answer)`}
+                  aria-label={t("{language} word starting with {letter}", { language: t(language), letter: current })}
+                  placeholder={t("{letter}… (type the answer)", { letter: current })}
                   value={input}
                   // Typing is ignored while checking. Not readOnly or disabled: on phones both close the keyboard.
                   onChange={(event) => {
@@ -397,7 +410,7 @@ export function PassaparolaGame({
                       return;
                     }
                     if (!fitsLetter(event.target.value, current)) {
-                      setMessage({ text: `Type a word starting with ${current}.`, tone: "wrong" });
+                      setMessage({ text: t("Type a word starting with {letter}.", { letter: current }), tone: "wrong" });
                       return;
                     }
                     setInput(event.target.value);
@@ -413,14 +426,14 @@ export function PassaparolaGame({
                   className="flex h-11 shrink-0 items-center gap-1 rounded-xl bg-amber-400 px-4 text-sm font-bold uppercase tracking-wide text-black transition-colors hover:bg-amber-300 disabled:opacity-60"
                 >
                   <ChevronRight className="size-4" aria-hidden />
-                  Skip
+                  {t("Skip")}
                 </button>
               </form>
             </>
           )}
 
           {view?.finished && (
-            <ul className="space-y-1.5" aria-label="Answers">
+            <ul className="space-y-1.5" aria-label={t("Answers")}>
               {view.clues.map((item) => {
                 const mark = view.marks[item.letter];
                 const given = view.given[item.letter];
@@ -442,7 +455,8 @@ export function PassaparolaGame({
                       <span className="block">
                         <span className="sr-only">{item.letter}: </span>
                         <span className="font-semibold">{view.answers?.[item.letter]?.join(" / ")}</span>
-                        <span className="text-muted-foreground"> · {item.clue}</span>
+                        {/* lang: English until the Turkish clues arrive. */}
+                        <span lang="en" className="text-muted-foreground"> · {item.clue}</span>
                       </span>
                       {mark ? (
                         <span className={cn("flex items-center gap-1 text-xs", TONE[mark])}>
@@ -453,17 +467,17 @@ export function PassaparolaGame({
                           )}
                           {given ? (
                             <span className="min-w-0 truncate">
-                              You: <span className="font-medium">{given}</span>
+                              {fill(t("You: {answer}"), { answer: <span className="font-medium">{given}</span> })}
                             </span>
                           ) : mark === "right" ? (
-                            "Right"
+                            t("Right")
                           ) : (
-                            "Wrong"
+                            t("Wrong")
                           )}
-                          {given && <span className="sr-only">({mark})</span>}
+                          {given && <span className="sr-only">({mark === "right" ? t("Right") : t("Wrong")})</span>}
                         </span>
                       ) : (
-                        <span className="block text-xs text-muted-foreground">Not answered</span>
+                        <span className="block text-xs text-muted-foreground">{t("Not answered")}</span>
                       )}
                     </span>
                     {view.answers?.[item.letter] && (
@@ -499,10 +513,14 @@ export function PassaparolaGame({
             <Loader2 className="mx-auto size-8 animate-spin text-muted-foreground" aria-hidden />
             <ul className="space-y-1 text-left text-sm">
               <li>
-                Stuck? Type <Keyword word={PASSAPAROLA_PASS_WORD} className="text-amber-500" /> to skip a letter.
+                {fill(t("Stuck? Type {word} to skip a letter."), {
+                  word: <Keyword word={PASSAPAROLA_PASS_WORD} className="text-amber-500" />,
+                })}
               </li>
               <li>
-                Done? Type <Keyword word={PASSAPAROLA_FINISH_WORD} className="text-red-500" /> to finish early.
+                {fill(t("Done? Type {word} to finish early."), {
+                  word: <Keyword word={PASSAPAROLA_FINISH_WORD} className="text-red-500" />,
+                })}
               </li>
             </ul>
           </div>

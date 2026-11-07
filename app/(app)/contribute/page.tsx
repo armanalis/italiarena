@@ -1,4 +1,5 @@
 /** Community question submission — reviewed before entering the live pool. */
+import { getT } from "@/lib/i18n-server";
 import Link from "next/link";
 import { PenLine } from "lucide-react";
 import { QuestionSubmissionForm } from "@/components/contribute/question-submission-form";
@@ -9,6 +10,7 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 
 export default async function ContributePage() {
+  const t = await getT();
   const profile = await requireOnboardingComplete();
 
   if (isGuestUser(profile)) {
@@ -32,16 +34,15 @@ export default async function ContributePage() {
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
-                Contribute a question
+                {t("Contribute a question")}
               </h1>
               <p className="text-sm text-muted-foreground">
-                Help grow the {profile.target_language} pool. Every submission is reviewed for level
-                and category accuracy before it goes live.
+                {t("Help grow the {language} pool. Every submission is reviewed for level and category accuracy before it goes live.", { language: t(profile.target_language ?? "Italian") })}
               </p>
             </div>
           </div>
           <Button asChild variant="outline" className="min-h-11 w-full shrink-0 sm:w-auto">
-            <Link href="/">Back to the Arena</Link>
+            <Link href="/">{t("Back to the Arena")}</Link>
           </Button>
         </div>
       </header>

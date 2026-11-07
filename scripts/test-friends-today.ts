@@ -39,13 +39,13 @@ check("sorted by score: Wordle by guesses, letters right, Sprint score", () => {
 
 check("results read like the plan: Wordle 4/6 · Word Wheel 18/21 · Sprint 23", () => {
   assert.deepEqual(todayResults(bea, "German"), [
-    { label: "Wordle 4/6", level: "A2" },
-    { label: "Word Wheel 18/21", level: "A2" },
-    { label: "der·die·das 23", level: "A2" },
+    { game: "Wordle", score: "4/6", level: "A2" },
+    { game: "Word Wheel", score: "18/21", level: "A2" },
+    { game: "der·die·das", score: "23", level: "A2" },
   ]);
-  assert.deepEqual(todayResults(carlo, "Italian"), [{ label: "Wordle X/6", level: "A2" }]);
+  assert.deepEqual(todayResults(carlo, "Italian"), [{ game: "Wordle", score: "X/6", level: "A2" }]);
   assert.deepEqual(todayResults(dario, "Italian"), []);
-  assert.equal(todayResults(you, "Italian")[1].label, "il·lo·la 30");
+  assert.deepEqual(todayResults(you, "Italian")[1], { game: "il·lo·la", score: "30", level: "B1" });
 });
 
 console.log(`\n${passed} friends-today checks passed`);

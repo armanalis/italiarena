@@ -5,6 +5,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { DEFAULT_TIMEZONE } from "@/lib/constants";
 import { APP_NAME, SUPPORT_EMAIL } from "@/lib/legal";
 import { reviewMinutes } from "@/lib/review";
+import { translator, type Translate } from "@/lib/i18n";
 
 export type PushPayload = {
   title: string;
@@ -32,11 +33,11 @@ export function pickDailyReminderMessage() {
   return DAILY_REMINDER_MESSAGES[index] ?? DAILY_REMINDER_MESSAGES[0];
 }
 
-/** A fresh reminder payload with randomly chosen copy. */
-export function buildDailyReminderPayload(): PushPayload {
+/** A fresh reminder payload with randomly chosen copy, in the player's app language. */
+export function buildDailyReminderPayload(t: Translate = translator(null)): PushPayload {
   return {
     title: APP_NAME,
-    body: pickDailyReminderMessage(),
+    body: t(pickDailyReminderMessage()),
     url: "/matchmaking",
     tag: "daily-reminder",
   };
@@ -49,23 +50,12 @@ export type GameStreak = {
   played_today: boolean;
 };
 
-const STREAK_REMINDERS: Record<GameStreak["game"], { url: string; body: (days: number) => string }> = {
-  arena: {
-    url: "/matchmaking",
-    body: (days) => `Keep your ${days}-day Arena streak alive: one quick match is enough.`,
-  },
-  wordle: {
-    url: "/wordle",
-    body: (days) => `Keep your ${days}-day Wordle streak alive: today's word is waiting.`,
-  },
-  passaparola: {
-    url: "/word-wheel",
-    body: (days) => `Keep your ${days}-day Word Wheel streak alive: five minutes is enough.`,
-  },
-  articles: {
-    url: "/articles",
-    body: (days) => `Keep your ${days}-day articles streak alive: one 60-second Sprint is enough.`,
-  },
+// {n}: the streak in days; translated per player with t().
+const STREAK_REMINDERS: Record<GameStreak["game"], { url: string; body: string }> = {
+  arena: { url: "/matchmaking", body: "Keep your {n}-day Arena streak alive: one quick match is enough." },
+  wordle: { url: "/wordle", body: "Keep your {n}-day Wordle streak alive: today's word is waiting." },
+  passaparola: { url: "/word-wheel", body: "Keep your {n}-day Word Wheel streak alive: five minutes is enough." },
+  articles: { url: "/articles", body: "Keep your {n}-day articles streak alive: one 60-second Sprint is enough." },
 };
 
 /**
@@ -75,7 +65,8 @@ const STREAK_REMINDERS: Record<GameStreak["game"], { url: string; body: (days: n
  */
 export function buildDailyReminderPayloads(
   streaks: readonly GameStreak[],
-  reviewDue = 0
+  reviewDue = 0,
+  t: Translate = translator(null)
 ): PushPayload[] {
   const atRisk = streaks.filter(
     ({ game, streak, played_today }) => streak > 0 && !played_today && game in STREAK_REMINDERS
@@ -85,16 +76,19 @@ export function buildDailyReminderPayloads(
       reviewDue > 0
         ? {
             title: APP_NAME,
-            body: `${reviewDue} ${reviewDue === 1 ? "mistake is" : "mistakes are"} waiting for review: about ${reviewMinutes(reviewDue)} min.`,
+            body:
+              reviewDue === 1
+                ? t("1 mistake is waiting for review: about {min} min.", { min: reviewMinutes(reviewDue) })
+                : t("{n} mistakes are waiting for review: about {min} min.", { n: reviewDue, min: reviewMinutes(reviewDue) }),
             url: "/stats?review=1",
             tag: "daily-reminder",
           }
-        : buildDailyReminderPayload(),
+        : buildDailyReminderPayload(t),
     ];
   }
   return atRisk.map(({ game, streak }) => ({
     title: APP_NAME,
-    body: STREAK_REMINDERS[game].body(streak),
+    body: t(STREAK_REMINDERS[game].body, { n: streak }),
     url: STREAK_REMINDERS[game].url,
     tag: `daily-reminder-${game}`,
   }));

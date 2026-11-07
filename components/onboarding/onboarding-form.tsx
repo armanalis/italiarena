@@ -1,6 +1,7 @@
 /** Language and level picker shown to new users before their first match. */
 "use client";
 
+import { useT } from "@/components/ui-language-provider";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { GraduationCap, UserRound } from "lucide-react";
@@ -31,6 +32,7 @@ type OnboardingFormProps = {
 const initialState: OnboardingFormState = { error: null };
 
 function SubmitButton() {
+  const t = useT();
   const { pending } = useFormStatus();
 
   return (
@@ -39,12 +41,13 @@ function SubmitButton() {
       disabled={pending}
       className="h-11 w-full "
     >
-      {pending ? "Saving..." : "Continue to the Arena"}
+      {pending ? t("Saving...") : t("Continue to the Arena")}
     </Button>
   );
 }
 
 export function OnboardingForm({ defaultUsername = "", defaultLanguage }: OnboardingFormProps) {
+  const t = useT();
   const [state, formAction] = useActionState(completeOnboarding, initialState);
   useActionRedirect(state?.redirectTo);
 
@@ -55,10 +58,10 @@ export function OnboardingForm({ defaultUsername = "", defaultLanguage }: Onboar
           <GraduationCap className="size-6" />
         </div>
         <h1 className="text-2xl font-bold tracking-tight">
-          Let&apos;s set up your profile
+          {t("Let's set up your profile")}
         </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Choose a language and your level so we can match you with the right opponents.
+          {t("Choose a language and your level so we can match you with the right opponents.")}
         </p>
       </div>
 
@@ -66,7 +69,7 @@ export function OnboardingForm({ defaultUsername = "", defaultLanguage }: Onboar
         <div className="space-y-2">
           <Label htmlFor="username" className="flex items-center gap-2">
             <UserRound className="size-4 text-muted-foreground" />
-            Username
+            {t("Username")}
           </Label>
           <input
             id="username"
@@ -77,14 +80,14 @@ export function OnboardingForm({ defaultUsername = "", defaultLanguage }: Onboar
             maxLength={24}
             defaultValue={defaultUsername ?? ""}
             autoComplete="username"
-            placeholder="Used to sign in and shown to opponents"
+            placeholder={t("Used to sign in and shown to opponents")}
             className={fieldClassName}
             onFocus={(event) => scrollFieldIntoView(event.currentTarget)}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="target_language">Language to learn</Label>
+          <Label htmlFor="target_language">{t("Language to learn")}</Label>
           <select
             id="target_language"
             name="target_language"
@@ -94,18 +97,18 @@ export function OnboardingForm({ defaultUsername = "", defaultLanguage }: Onboar
             onFocus={(event) => scrollFieldIntoView(event.currentTarget)}
           >
             <option value="" disabled>
-              Select a language
+              {t("Select a language")}
             </option>
             {TARGET_LANGUAGES.map((language) => (
               <option key={language} value={language}>
-                {language}
+                {t(language)}
               </option>
             ))}
           </select>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="proficiency_level">Proficiency Level</Label>
+          <Label htmlFor="proficiency_level">{t("Proficiency Level")}</Label>
           <select
             id="proficiency_level"
             name="proficiency_level"
@@ -115,7 +118,7 @@ export function OnboardingForm({ defaultUsername = "", defaultLanguage }: Onboar
             onFocus={(event) => scrollFieldIntoView(event.currentTarget)}
           >
             <option value="" disabled>
-              Select your level
+              {t("Select your level")}
             </option>
             {PROFICIENCY_LEVELS.map((level) => (
               <option key={level} value={level}>
@@ -130,7 +133,7 @@ export function OnboardingForm({ defaultUsername = "", defaultLanguage }: Onboar
             className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
             role="alert"
           >
-            {state.error}
+            {t(state.error)}
           </div>
         )}
 
@@ -142,7 +145,7 @@ export function OnboardingForm({ defaultUsername = "", defaultLanguage }: Onboar
           type="submit"
           className="inline-flex min-h-11 items-center justify-center px-3 text-sm font-medium text-primary underline-offset-4 hover:underline"
         >
-          Sign out and use a different account
+          {t("Sign out and use a different account")}
         </button>
       </form>
     </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/ui-language-provider";
 import { useSyncExternalStore } from "react";
 import { Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ export function SpeakButton({
   language: TargetLanguage;
   className?: string;
 }) {
+  const t = useT();
   const available = useSyncExternalStore(
     subscribeToVoices,
     () => hasVoice(language),
@@ -30,8 +32,8 @@ export function SpeakButton({
       variant="ghost"
       size="icon"
       className={cn("size-11 shrink-0 text-muted-foreground hover:text-primary", className)}
-      aria-label={`Listen: ${text}`}
-      title="Listen"
+      aria-label={t("Listen: {text}", { text })}
+      title={t("Listen")}
       onClick={() => speak(text, language)}
     >
       <Volume2 className="size-5" aria-hidden />

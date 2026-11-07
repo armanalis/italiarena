@@ -15,6 +15,7 @@ import { ReportQuestionButton } from "@/components/match/report-question-button"
 import { MAX_AI_ASKS_PER_MATCH } from "@/lib/ai-explanations";
 import { formatCategoryLabel } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/ui-language-provider";
 import type { QuestionCategory } from "@/types/database.types";
 
 const CATEGORY_ORDER: QuestionCategory[] = [
@@ -41,6 +42,7 @@ function RoundReviewCard({
   reported: boolean;
   onReported: () => void;
 }) {
+  const t = useT();
   return (
     <li
       className={cn(
@@ -52,20 +54,20 @@ function RoundReviewCard({
     >
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <Badge variant="outline" className="font-mono text-xs">
-          {round.isTiebreaker ? "Tiebreaker" : `Q${round.questionIndex + 1}`}
+          {round.isTiebreaker ? t("Tiebreaker") : `Q${round.questionIndex + 1}`}
         </Badge>
         <Badge variant="secondary" className="text-xs uppercase">
-          {formatCategoryLabel(round.category)}
+          {t(formatCategoryLabel(round.category))}
         </Badge>
         {round.wasCorrect ? (
           <Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-300">
-            Correct
+            {t("Correct")}
           </Badge>
         ) : (
-          <Badge variant="destructive">Wrong</Badge>
+          <Badge variant="destructive">{t("Wrong")}</Badge>
         )}
         <span className="ml-auto text-xs tabular-nums text-muted-foreground">
-          +{round.pointsEarned} pts
+          {t("+{n} pts", { n: round.pointsEarned })}
         </span>
       </div>
 
@@ -84,7 +86,7 @@ function RoundReviewCard({
             <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-destructive/90">
-                Your answer
+                {t("Your answer")}
               </p>
               <p className="text-foreground">
                 {round.selectedAnswer ? (
@@ -95,7 +97,7 @@ function RoundReviewCard({
                     {round.selectedOptionText}
                   </>
                 ) : (
-                  <span className="text-muted-foreground">No answer / timed out</span>
+                  <span className="text-muted-foreground">{t("No answer / timed out")}</span>
                 )}
               </p>
             </div>
@@ -118,7 +120,7 @@ function RoundReviewCard({
                 round.wasCorrect ? "text-emerald-400/90" : "text-muted-foreground"
               )}
             >
-              {round.wasCorrect ? "Your answer" : "Correct answer"}
+              {round.wasCorrect ? t("Your answer") : t("Correct answer")}
             </p>
             <p className="text-foreground">
               <span
@@ -156,6 +158,7 @@ function RoundReviewCard({
 }
 
 function CategorySummary() {
+  const t = useT();
   const categoryProgress = useGameStore((state) => state.categoryProgress);
 
   const rows = CATEGORY_ORDER.map((category) => {
@@ -173,7 +176,7 @@ function CategorySummary() {
   return (
     <div className="rounded-xl border border-border/60 bg-card/40 p-4">
       <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        By topic
+        {t("By topic")}
       </p>
       <ul className="grid gap-2 sm:grid-cols-2">
         {rows.map(({ category, correct, total }) => {
@@ -183,7 +186,7 @@ function CategorySummary() {
               key={category}
               className="flex items-center justify-between gap-2 rounded-lg border border-border/40 bg-background/40 px-3 py-2 text-sm"
             >
-              <span className="truncate">{formatCategoryLabel(category)}</span>
+              <span className="truncate">{t(formatCategoryLabel(category))}</span>
               <span className="shrink-0 tabular-nums text-muted-foreground">
                 {correct}/{total}
                 <span className="ml-1.5 text-foreground">({pct}%)</span>
@@ -205,6 +208,7 @@ function CategoryFilterBar({
   onChange: (value: CategoryFilter) => void;
   rounds: MatchRoundReview[];
 }) {
+  const t = useT();
   const categoriesInMatch = useMemo(() => {
     const set = new Set(rounds.map((round) => round.category));
     return CATEGORY_ORDER.filter((category) => set.has(category));
@@ -226,7 +230,7 @@ function CategoryFilterBar({
             : "border-border/60 bg-background/40 text-muted-foreground hover:text-foreground"
         )}
       >
-        All topics
+        {t("All topics")}
       </button>
       {categoriesInMatch.map((category) => (
         <button
@@ -240,7 +244,7 @@ function CategoryFilterBar({
               : "border-border/60 bg-background/40 text-muted-foreground hover:text-foreground"
           )}
         >
-          {formatCategoryLabel(category)}
+          {t(formatCategoryLabel(category))}
         </button>
       ))}
     </div>
@@ -276,13 +280,14 @@ function RoundList({
   emptyMessage?: string;
   emptyDescription?: string;
 }) {
+  const t = useT();
   if (rounds.length === 0) {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-left">
         <CheckCircle2 className="size-5 shrink-0 text-muted-foreground" />
         <div>
-          <p className="font-medium text-foreground">{emptyMessage}</p>
-          <p className="text-sm text-muted-foreground">{emptyDescription}</p>
+          <p className="font-medium text-foreground">{t(emptyMessage)}</p>
+          <p className="text-sm text-muted-foreground">{t(emptyDescription)}</p>
         </div>
       </div>
     );
@@ -308,6 +313,7 @@ function RoundList({
 type ReviewTab = "mistakes" | "all";
 
 export function MatchMistakesReview() {
+  const t = useT();
   const allRounds = useMatchRoundReviews();
   const mistakes = useMatchMistakes();
   const gameSessionId = useGameStore((state) => state.gameSessionId);
@@ -344,10 +350,9 @@ export function MatchMistakesReview() {
   if (allRounds.length === 0) {
     return (
       <div className="w-full max-w-xl rounded-2xl border border-border/60 bg-card/50 p-5 text-left sm:p-6">
-        <h2 className="text-base font-semibold">Match review</h2>
+        <h2 className="text-base font-semibold">{t("Match review")}</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Question breakdown is not available for this match. Play another round
-          and the review will appear here when the match ends.
+          {t("Question breakdown is not available for this match. Play another round and the review will appear here when the match ends.")}
         </p>
       </div>
     );
@@ -357,15 +362,15 @@ export function MatchMistakesReview() {
     <div className="w-full max-w-xl space-y-4 rounded-2xl border border-border bg-card/50 p-4 text-left sm:p-5">
       <div className="space-y-1">
         <h2 className="text-base font-semibold tracking-tight sm:text-lg">
-          Match review
+          {t("Match review")}
         </h2>
         <p className="text-sm text-muted-foreground">
-          {correctCount}/{totalRegular} correct
+          {t("{n}/{total} correct", { n: correctCount, total: totalRegular })}
           {mistakes.length > 0
-            ? ` · ${mistakes.length} mistake${mistakes.length === 1 ? "" : "s"} to review`
-            : " · perfect round"}
+            ? ` · ${mistakes.length === 1 ? t("1 mistake to review") : t("{n} mistakes to review", { n: mistakes.length })}`
+            : ` · ${t("perfect round")}`}
           {" · "}
-          Ask AI (up to {MAX_AI_ASKS_PER_MATCH}/match) or Report to flag a question
+          {t("Ask AI (up to {n}/match) or Report to flag a question", { n: MAX_AI_ASKS_PER_MATCH })}
         </p>
       </div>
 
@@ -378,7 +383,7 @@ export function MatchMistakesReview() {
           className="min-h-10"
           onClick={() => setActiveTab("mistakes")}
         >
-          Your mistakes
+          {t("Your mistakes")}
           {mistakes.length > 0 && (
             <Badge variant="secondary" className="ml-1.5 tabular-nums">
               {mistakes.length}
@@ -391,7 +396,7 @@ export function MatchMistakesReview() {
           className="min-h-10"
           onClick={() => setActiveTab("all")}
         >
-          All questions
+          {t("All questions")}
           <Badge variant="outline" className="ml-1.5 tabular-nums">
             {allRounds.length}
           </Badge>

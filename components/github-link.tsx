@@ -3,6 +3,7 @@
 import { Button, buttonVariants } from "@/components/ui/button";
 import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/ui-language-provider";
 
 export const GITHUB_REPO_URL = "https://github.com/armanalis/italiarena";
 
@@ -30,6 +31,7 @@ export function GitHubLink({
   showLabel = false,
   variant = "ghost",
 }: GitHubLinkProps) {
+  const t = useT();
   return (
     <Button
       asChild
@@ -44,7 +46,7 @@ export function GitHubLink({
         href={GITHUB_REPO_URL}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="View source on GitHub"
+        aria-label={t("View source on GitHub")}
       >
         <GitHubIcon className="size-4" />
         {showLabel ? "GitHub" : null}

@@ -1,15 +1,17 @@
 import { getSettingsData } from "@/app/(app)/settings/actions";
 import { SettingsPanels } from "@/components/settings/settings-panels";
+import { getT } from "@/lib/i18n-server";
 
 export async function SettingsContent() {
   const { profile, recentMatches, showLastSeen, showDailyResults, languageLevels } = await getSettingsData();
+  const t = await getT();
 
   return (
     <main className="flex flex-1 flex-col gap-6 p-4 sm:p-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("Settings")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Manage your account and learning preferences.
+          {t("Manage your account and learning preferences.")}
         </p>
       </div>
 

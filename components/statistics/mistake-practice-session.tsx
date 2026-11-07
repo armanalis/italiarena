@@ -18,6 +18,7 @@ import { formatCategoryLabel, getOptionText } from "@/lib/scoring";
 import type { MatchRoundReview } from "@/store/useGameStore";
 import type { CorrectAnswer } from "@/types/database.types";
 import { cn } from "@/lib/utils";
+import { useT, useUiLanguage } from "@/components/ui-language-provider";
 
 const OPTIONS: CorrectAnswer[] = ["A", "B", "C", "D"];
 
@@ -57,6 +58,8 @@ export function MistakePracticeSession({
   onClose,
   onAnswered,
 }: MistakePracticeSessionProps) {
+  const t = useT();
+  const uiLanguage = useUiLanguage();
   const [queue] = useState(() => mixMistakes(initialMistakes));
   const [index, setIndex] = useState(0);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
@@ -106,7 +109,7 @@ export function MistakePracticeSession({
       );
 
       if (!result.success) {
-        toast.error(result.error);
+        toast.error(t(result.error));
         return;
       }
 
@@ -133,16 +136,16 @@ export function MistakePracticeSession({
     return (
       <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-8 text-center">
         <CheckCircle2 className="mx-auto size-10 text-emerald-400" />
-        <h2 className="mt-4 text-xl font-semibold">Review done</h2>
+        <h2 className="mt-4 text-xl font-semibold">{t("Review done")}</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           {learnedCount > 0
-            ? `You learned ${learnedCount} for good. The rest come back on their next review day.`
+            ? t("You learned {n} for good. The rest come back on their next review day.", { n: learnedCount })
             : queue.length > 0
-              ? "Each one comes back on its next review day."
-              : "Nothing to review right now."}
+              ? t("Each one comes back on its next review day.")
+              : t("Nothing to review right now.")}
         </p>
         <Button type="button" className="mt-6 min-h-11" onClick={onClose}>
-          Back to statistics
+          {t("Back to statistics")}
         </Button>
       </div>
     );
@@ -178,15 +181,15 @@ export function MistakePracticeSession({
           onClick={onClose}
         >
           <ArrowLeft className="size-4" />
-          Back to statistics
+          {t("Back to statistics")}
         </Button>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="tabular-nums">
-            {left} left
+            {t("{n} left", { n: left })}
           </Badge>
           {learnedCount > 0 && (
             <Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-300">
-              {learnedCount} learned
+              {t("{n} learned", { n: learnedCount })}
             </Badge>
           )}
         </div>
@@ -196,7 +199,7 @@ export function MistakePracticeSession({
         <div className="space-y-2 text-center">
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Badge variant="secondary" className="uppercase tracking-wide">
-              {formatCategoryLabel(question.category)}
+              {t(formatCategoryLabel(question.category))}
             </Badge>
             {!isNoun && (
               <span onClickCapture={pause} className="contents">
@@ -216,8 +219,9 @@ export function MistakePracticeSession({
             {question.question_text}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Right reviews: {current.practice_streak} of {REVIEWS_TO_LEARN}
-            {current.next_review_on > today && ` · due ${whenDue(current.next_review_on, today)}`}
+            {t("Right reviews: {n} of {total}", { n: current.practice_streak, total: REVIEWS_TO_LEARN })}
+            {current.next_review_on > today &&
+              ` · ${t("due {when}", { when: whenDue(current.next_review_on, today, t, uiLanguage) })}`}
           </p>
         </div>
 
@@ -276,13 +280,13 @@ export function MistakePracticeSession({
                   {showWrong && (
                     <XCircle
                       className="size-5 shrink-0 text-destructive"
-                      aria-label="Wrong answer"
+                      aria-label={t("Wrong answer")}
                     />
                   )}
                   {isSelected && feedback?.correct && (
                     <CheckCircle2
                       className="size-5 shrink-0 text-emerald-400"
-                      aria-label="Correct answer"
+                      aria-label={t("Correct answer")}
                     />
                   )}
                 </span>
@@ -294,7 +298,7 @@ export function MistakePracticeSession({
         {isPending && (
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" />
-            Checking answer...
+            {t("Checking answer...")}
           </div>
         )}
 
@@ -321,16 +325,18 @@ export function MistakePracticeSession({
                   )}
                 >
                   {feedback.learned
-                    ? "Learned! It leaves your mistakes."
+                    ? t("Learned! It leaves your mistakes.")
                     : !feedback.correct
-                      ? "Wrong · it comes back tomorrow."
+                      ? t("Wrong · it comes back tomorrow.")
                       : feedback.early
-                        ? `Right · it still comes back ${whenDue(feedback.nextReviewOn!, today)}: reviews count on different days.`
-                        : `Right · next review ${whenDue(feedback.nextReviewOn!, today)}.`}
+                        ? t("Right · it still comes back {when}: reviews count on different days.", {
+                            when: whenDue(feedback.nextReviewOn!, today, t, uiLanguage),
+                          })
+                        : t("Right · next review {when}.", { when: whenDue(feedback.nextReviewOn!, today, t, uiLanguage) })}
                 </p>
                 {!feedback.correct && (
                   <p className="text-muted-foreground">
-                    Correct answer:{" "}
+                    {t("Correct answer:")}{" "}
                     <span className="font-semibold text-emerald-400">
                       {question.correct_answer}.
                     </span>{" "}
@@ -364,7 +370,7 @@ export function MistakePracticeSession({
               className="min-h-11"
               onClick={goNext}
             >
-              {left > 1 ? "Next" : "Finish"}
+              {left > 1 ? t("Next") : t("Finish")}
             </Button>
           </div>
         )}

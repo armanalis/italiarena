@@ -11,6 +11,7 @@ import {
 } from "@/app/(app)/matchmaking/actions";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
+import { useT } from "@/components/ui-language-provider";
 
 type ChallengeLobbyProps = {
   sessionId: string;
@@ -28,6 +29,7 @@ const JOIN_POLL_MS = 3_000;
 
 export function ChallengeLobby({ sessionId, link, code, state, hostName, language, level }: ChallengeLobbyProps) {
   const router = useRouter();
+  const t = useT();
   const [isPending, startTransition] = useTransition();
   const [copied, setCopied] = useState<"link" | "code" | null>(null);
 
@@ -66,10 +68,13 @@ export function ChallengeLobby({ sessionId, link, code, state, hostName, languag
     }
     try {
       await navigator.share({
-        title: "Italiarena challenge",
+        title: t("Italiarena challenge"),
         text: code
-          ? `Play a ${language ?? "language"} quiz match with me! Open the link, or enter code ${code} on the Play page:`
-          : `Play a ${language ?? "language"} quiz match with me:`,
+          ? t("Play a {language} quiz match with me! Open the link, or enter code {code} on the Play page:", {
+              language: language ? t(language) : "",
+              code,
+            })
+          : t("Play a {language} quiz match with me:", { language: language ? t(language) : "" }),
         url: link,
       });
     } catch {
@@ -90,7 +95,7 @@ export function ChallengeLobby({ sessionId, link, code, state, hostName, languag
       if (result.success) {
         router.replace(`/match/${result.sessionId}`);
       } else {
-        toast.error(result.error);
+        toast.error(t(result.error));
         router.refresh();
       }
     });
@@ -106,41 +111,45 @@ export function ChallengeLobby({ sessionId, link, code, state, hostName, languag
         {state === "host" && (
           <>
             <div className="space-y-1">
-              <h1 className="text-xl font-bold tracking-tight">Challenge a friend</h1>
+              <h1 className="text-xl font-bold tracking-tight">{t("Challenge a friend")}</h1>
               <p className="text-sm text-muted-foreground">
-                Send this link to a friend{code ? ", or tell them the code to enter on their Play page" : ""}.
-                The match starts as soon as they join{level ? ` (level ${level})` : ""}. It works for 1 hour.
+                {code
+                  ? t("Send this link to a friend, or tell them the code to enter on their Play page.")
+                  : t("Send this link to a friend.")}{" "}
+                {level
+                  ? t("The match starts as soon as they join (level {level}). It works for 1 hour.", { level })
+                  : t("The match starts as soon as they join. It works for 1 hour.")}
               </p>
             </div>
             <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 p-2 text-left">
               <span className="min-w-0 flex-1 truncate px-2 text-sm">{link}</span>
               <Button type="button" size="sm" variant="secondary" onClick={() => copy("link")}>
                 {copied === "link" ? <Check className="size-4" /> : <Copy className="size-4" />}
-                {copied === "link" ? "Copied" : "Copy"}
+                {copied === "link" ? t("Copied") : t("Copy")}
               </Button>
             </div>
             {code && (
               <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 p-2 text-left">
                 <span className="flex-1 px-2">
-                  <span className="block text-xs text-muted-foreground">Code</span>
+                  <span className="block text-xs text-muted-foreground">{t("Code")}</span>
                   <span className="font-mono text-2xl font-bold tracking-[0.25em]">{code}</span>
                 </span>
                 <Button type="button" size="sm" variant="secondary" onClick={() => copy("code")}>
                   {copied === "code" ? <Check className="size-4" /> : <Copy className="size-4" />}
-                  {copied === "code" ? "Copied" : "Copy"}
+                  {copied === "code" ? t("Copied") : t("Copy")}
                 </Button>
               </div>
             )}
             <Button type="button" className="min-h-11 w-full" onClick={shareLink}>
               <Share2 className="size-4" />
-              Share link
+              {t("Share link")}
             </Button>
             <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground" role="status">
               <Loader2 className="size-4 animate-spin" />
-              Waiting for your friend to join…
+              {t("Waiting for your friend to join…")}
             </p>
             <Button type="button" variant="ghost" onClick={cancel} disabled={isPending}>
-              Cancel challenge
+              {t("Cancel challenge")}
             </Button>
           </>
         )}
@@ -149,15 +158,17 @@ export function ChallengeLobby({ sessionId, link, code, state, hostName, languag
           <>
             <div className="space-y-1">
               <h1 className="text-xl font-bold tracking-tight">
-                {hostName ?? "A player"} challenged you
+                {t("{name} challenged you", { name: hostName ?? t("A player") })}
               </h1>
               <p className="text-sm text-muted-foreground">
-                A 10-question {language ? `${language} ` : ""}match{level ? ` at level ${level}` : ""}. Ready?
+                {language && level
+                  ? t("A 10-question {language} match at level {level}. Ready?", { language: t(language), level })
+                  : t("A 10-question match. Ready?")}
               </p>
             </div>
             <Button type="button" className="min-h-11 w-full" onClick={join} disabled={isPending}>
               {isPending ? <Loader2 className="size-4 animate-spin" /> : <Swords className="size-4" />}
-              Play
+              {t("Play")}
             </Button>
           </>
         )}
@@ -166,16 +177,16 @@ export function ChallengeLobby({ sessionId, link, code, state, hostName, languag
           <>
             <div className="space-y-1">
               <h1 className="text-xl font-bold tracking-tight">
-                {state === "not_for_you" ? "This challenge is for someone else" : "Challenge not available"}
+                {state === "not_for_you" ? t("This challenge is for someone else") : t("Challenge not available")}
               </h1>
               <p className="text-sm text-muted-foreground">
                 {state === "not_for_you"
-                  ? "It was sent to another player."
-                  : "It has already started, was cancelled, or expired."}
+                  ? t("It was sent to another player.")
+                  : t("It has already started, was cancelled, or expired.")}
               </p>
             </div>
             <Button asChild variant="outline" className="min-h-11 w-full">
-              <Link href="/">Back to the Arena</Link>
+              <Link href="/">{t("Back to the Arena")}</Link>
             </Button>
           </>
         )}

@@ -9,6 +9,7 @@ import { offerRematch, type RematchState } from "@/app/(app)/matchmaking/actions
 import { Button } from "@/components/ui/button";
 import { armMatchmakingAutosearch } from "@/lib/matchmaking-intent";
 import { createClient } from "@/utils/supabase/client";
+import { useT } from "@/components/ui-language-provider";
 
 /** KEEP IN SYNC with the 6-second window in the rematch_poll database function. */
 const CHECK_IN_MS = 2_000;
@@ -28,6 +29,7 @@ export function RematchPanel({
   onLeave: () => void;
 }) {
   const router = useRouter();
+  const t = useT();
   const [supabase] = useState(createClient);
   // Null until the first check-in, or while a rematch is not available.
   const [state, setState] = useState<RematchState | null>(null);
@@ -53,11 +55,11 @@ export function RematchPanel({
     setPending(false);
     if (!result.success) {
       failed.current = true;
-      toast.error(result.error);
+      toast.error(t(result.error));
     } else {
       setState((current) => current && { ...current, offered: true });
     }
-  }, [onLeave, router, sessionId]);
+  }, [onLeave, router, sessionId, t]);
 
   // Checking in keeps our offer alive and shows the other player's.
   useEffect(() => {
@@ -86,11 +88,11 @@ export function RematchPanel({
   }, [offer, sessionId, supabase]);
 
   const note = state?.they_left
-    ? `${opponentName} has left.`
+    ? t("{name} has left.", { name: opponentName })
     : state?.offered
-      ? `Rematch offered. Waiting for ${opponentName}…`
+      ? t("Rematch offered. Waiting for {name}…", { name: opponentName })
       : state?.they_offered
-        ? `${opponentName} wants a rematch!`
+        ? t("{name} wants a rematch!", { name: opponentName })
         : null;
 
   return (
@@ -113,7 +115,7 @@ export function RematchPanel({
           ) : (
             <RotateCcw className="size-4" />
           )}
-          {state?.they_offered && !state.offered ? "Accept rematch" : "Rematch"}
+          {state?.they_offered && !state.offered ? t("Accept rematch") : t("Rematch")}
         </Button>
         <Button asChild variant="outline" className="min-h-11 w-full sm:w-auto">
           <Link
@@ -123,12 +125,12 @@ export function RematchPanel({
               onLeave();
             }}
           >
-            Find someone else
+            {t("Find someone else")}
           </Link>
         </Button>
         <Button asChild variant="ghost" className="min-h-11 w-full sm:w-auto">
           <Link href="/" onClick={onLeave}>
-            Back to the Arena
+            {t("Back to the Arena")}
           </Link>
         </Button>
       </div>

@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Link2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useT } from "@/components/ui-language-provider";
 import { createChallenge } from "@/app/(app)/matchmaking/actions";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,7 @@ export function ChallengeLinkButton({
   label?: string;
 }) {
   const router = useRouter();
+  const t = useT();
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -31,13 +33,13 @@ export function ChallengeLinkButton({
           if (result.success) {
             router.push(`/challenge/${result.sessionId}`);
           } else {
-            toast.error(result.error);
+            toast.error(t(result.error));
           }
         })
       }
     >
       {isPending ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}
-      {label}
+      {t(label)}
     </Button>
   );
 }

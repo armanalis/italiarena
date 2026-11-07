@@ -31,6 +31,7 @@ import {
   subscribeToPush,
 } from "@/lib/push-client";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/ui-language-provider";
 
 type NotificationsSettingsCardProps = {
   initialEnabled: boolean;
@@ -84,6 +85,7 @@ function PreferenceToggle({
   disabled?: boolean;
   onChange: (value: boolean) => void;
 }) {
+  const t = useT();
   return (
     <div
       className={cn(
@@ -93,7 +95,7 @@ function PreferenceToggle({
           : "border-border/60 bg-muted/20"
       )}
     >
-      <p className="text-sm font-medium">{label}</p>
+      <p className="text-sm font-medium">{t(label)}</p>
       <div className="flex shrink-0 items-center gap-2.5">
         <span
           className={cn(
@@ -101,13 +103,13 @@ function PreferenceToggle({
             checked ? "text-emerald-400" : "text-muted-foreground"
           )}
         >
-          {checked ? "On" : "Off"}
+          {checked ? t("On") : t("Off")}
         </span>
         <button
           type="button"
           role="switch"
           aria-checked={checked}
-          aria-label={label}
+          aria-label={t(label)}
           disabled={disabled}
           onClick={() => onChange(!checked)}
           className={cn(
@@ -133,6 +135,7 @@ export function NotificationsSettingsCard({
   initialEnabled,
   initialHour,
 }: NotificationsSettingsCardProps) {
+  const t = useT();
   const [enabled, setEnabled] = useState(initialEnabled);
   const [hour, setHour] = useState(
     Number.isInteger(initialHour) && initialHour >= 0 && initialHour <= 23
@@ -154,13 +157,13 @@ export function NotificationsSettingsCard({
     if (isBusy) return;
 
     if (!isPushSupported()) {
-      toast.error("This browser does not support push notifications.");
+      toast.error(t("This browser does not support push notifications."));
       return;
     }
 
     if (isIosDevice() && !isStandaloneDisplay()) {
       toast.error(
-        `On iPhone, add ${APP_NAME} to your Home Screen first, then open it from there to enable alerts.`
+        t("On iPhone, add {app} to your Home Screen first, then open it from there to enable alerts.", { app: APP_NAME })
       );
       return;
     }
@@ -186,7 +189,7 @@ export function NotificationsSettingsCard({
 
       setEnabled(true);
       toast.success(
-        "Daily reminder enabled. You'll get one clash nudge per day."
+        t("Daily reminder enabled. You'll get one clash nudge per day.")
       );
     } catch (error) {
       const message =
@@ -195,7 +198,7 @@ export function NotificationsSettingsCard({
             ? "Request timed out. Check your connection and try again."
             : error.message
           : "Could not enable daily reminder.";
-      toast.error(message);
+      toast.error(t(message));
     } finally {
       setBusy("idle");
     }
@@ -226,13 +229,13 @@ export function NotificationsSettingsCard({
       }
 
       setEnabled(false);
-      toast.success("Daily reminder turned off.");
+      toast.success(t("Daily reminder turned off."));
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : "Could not disable daily reminder.";
-      toast.error(message);
+      toast.error(t(message));
     } finally {
       setBusy("idle");
     }
@@ -255,16 +258,16 @@ export function NotificationsSettingsCard({
 
       if (!result.success) {
         setHour(previousHour);
-        toast.error(result.error);
+        toast.error(t(result.error));
         return;
       }
 
       toast.success(
-        `Preferred time saved as ${formatReminderHour(nextHour)}.`
+        t("Preferred time saved as {time}.", { time: formatReminderHour(nextHour) })
       );
     } catch {
       setHour(previousHour);
-      toast.error("Could not save reminder time.");
+      toast.error(t("Could not save reminder time."));
     } finally {
       setBusy("idle");
     }
@@ -285,7 +288,7 @@ export function NotificationsSettingsCard({
       }
       setTestSentAt(Date.now());
       toast.success(
-        "Test sent. If you don’t see a banner, check Notification Center (swipe down)."
+        t("Test sent. If you don’t see a banner, check Notification Center (swipe down).")
       );
     } catch (error) {
       const message =
@@ -294,7 +297,7 @@ export function NotificationsSettingsCard({
             ? "Request timed out. Check your connection and try again."
             : error.message
           : "Could not send a test notification.";
-      toast.error(message);
+      toast.error(t(message));
     } finally {
       setBusy("idle");
     }
@@ -308,10 +311,9 @@ export function NotificationsSettingsCard({
             <Bell className="size-5" />
           </div>
           <div>
-            <CardTitle>Notifications</CardTitle>
+            <CardTitle>{t("Notifications")}</CardTitle>
             <CardDescription className="mt-1.5">
-              Get a daily clash reminder on your phone or computer — even when{" "}
-              {APP_NAME} is closed.
+              {t("Get a daily clash reminder on your phone or computer — even when {app} is closed.", { app: APP_NAME })}
             </CardDescription>
           </div>
         </div>
@@ -328,10 +330,9 @@ export function NotificationsSettingsCard({
         />
 
         <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
-          <Label htmlFor="daily-reminder-hour">Preferred reminder time</Label>
+          <Label htmlFor="daily-reminder-hour">{t("Preferred reminder time")}</Label>
           <p className="text-xs text-muted-foreground">
-            One reminder a day, at this hour in your own timezone. Delivery is
-            checked every hour, so it can arrive a little after the exact time.
+            {t("One reminder a day, at this hour in your own timezone. Delivery is checked every hour, so it can arrive a little after the exact time.")}
           </p>
           <Select
             value={String(hour)}
@@ -339,7 +340,7 @@ export function NotificationsSettingsCard({
             onValueChange={(value) => void changeReminderHour(Number(value))}
           >
             <SelectTrigger id="daily-reminder-hour" className="min-h-11">
-              <SelectValue placeholder="Choose a time" />
+              <SelectValue placeholder={t("Choose a time")} />
             </SelectTrigger>
             <SelectContent>
               {REMINDER_HOURS.map((optionHour) => (
@@ -366,34 +367,33 @@ export function NotificationsSettingsCard({
             {busy === "testing" ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                Sending...
+                {t("Sending...")}
               </>
             ) : busy === "enabling" || busy === "disabling" ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                Please wait...
+                {t("Please wait...")}
               </>
             ) : justSentTest ? (
               <>
                 <Check className="size-4" />
-                Sent — check your notifications
+                {t("Sent — check your notifications")}
               </>
             ) : (
-              "Send a test notification"
+              t("Send a test notification")
             )}
           </Button>
         ) : null}
 
         {busy === "enabling" ? (
           <p className="text-xs text-muted-foreground">
-            Enabling reminders… If iPhone asks for permission, tap Allow.
+            {t("Enabling reminders… If iPhone asks for permission, tap Allow.")}
           </p>
         ) : null}
 
         {isIosDevice() && !isStandaloneDisplay() ? (
           <p className="text-xs text-muted-foreground">
-            On iPhone, install {APP_NAME} to your Home Screen (see the guide
-            above), then open it from the icon to enable out-of-app alerts.
+            {t("On iPhone, install {app} to your Home Screen (see the guide above), then open it from the icon to enable out-of-app alerts.", { app: APP_NAME })}
           </p>
         ) : null}
       </CardContent>

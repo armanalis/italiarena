@@ -25,6 +25,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { ARTICLE_GAME_NAME } from "@/lib/articles";
+import { useT } from "@/components/ui-language-provider";
 import type { TargetLanguage } from "@/lib/constants";
 
 /** Desktop sidebar only: phones play every game from Home. */
@@ -72,11 +73,13 @@ function isImmersiveRoute(pathname: string) {
 
 export function DashboardShell({ children, language, guest }: DashboardShellProps) {
   const pathname = usePathname();
+  const t = useT();
   const items = [
     ...gameItems.map((item) =>
-      item.href === "/articles" ? { ...item, label: ARTICLE_GAME_NAME[language] } : item
+      // il·lo·la / der·die·das: the game's buttons, the same in every app language.
+      item.href === "/articles" ? { ...item, label: ARTICLE_GAME_NAME[language] } : { ...item, label: t(item.label) }
     ),
-    ...pageItems,
+    ...pageItems.map((item) => ({ ...item, label: t(item.label) })),
   ];
   const [botsOpen, setBotsOpen] = useState(false);
   const immersive = isImmersiveRoute(pathname);
@@ -131,7 +134,7 @@ export function DashboardShell({ children, language, guest }: DashboardShellProp
             <Button asChild variant="ghost" size="sm" className="min-h-10 w-full justify-start gap-2 px-3 text-muted-foreground">
               <Link href="/contribute">
                 <PenLine className="size-4" />
-                Add a question
+                {t("Add a question")}
               </Link>
             </Button>
           )}
@@ -151,7 +154,7 @@ export function DashboardShell({ children, language, guest }: DashboardShellProp
       <BotPickerDialog open={botsOpen} onOpenChange={setBotsOpen} />
 
       <nav
-        aria-label="Main"
+        aria-label={t("Main")}
         className="glass-header hide-while-typing fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom,0px)] md:hidden"
       >
         <div className="mx-auto grid max-w-lg grid-cols-5 gap-1 px-2 py-2">
@@ -159,7 +162,7 @@ export function DashboardShell({ children, language, guest }: DashboardShellProp
             <DashboardNavLink
               key={href}
               href={href}
-              label={label}
+              label={t(label)}
               icon={icon}
               // Games open from Home, so Home stays lit while one is being played.
               isActive={href === "/" ? pathname === "/" || isGameRoute(pathname) : pathname.startsWith(href)}

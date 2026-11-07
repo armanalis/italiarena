@@ -6,6 +6,7 @@ import { Popover } from "radix-ui";
 import { badgeVariants } from "@/components/ui/badge";
 import { PROFICIENCY_LEVELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/ui-language-provider";
 import { createClient } from "@/utils/supabase/client";
 
 /** KEEP IN SYNC with the 2-minute window in the online_counts database function. */
@@ -29,6 +30,7 @@ export function OnlineHeartbeat() {
 
 /** "A2 · 5 online" in the language being played; opens the online count of every level. */
 export function OnlineLevelBadge({ level, language }: { level: string; language: string }) {
+  const t = useT();
   const [counts, setCounts] = useState<Record<string, number> | null>(null);
 
   useEffect(() => {
@@ -65,7 +67,7 @@ export function OnlineLevelBadge({ level, language }: { level: string; language:
       >
         <span>{level}</span>
         {counts && (
-          <span className="text-muted-foreground">· {onlineIn(level)} online</span>
+          <span className="text-muted-foreground">· {t("{n} online", { n: onlineIn(level) })}</span>
         )}
         <ChevronDown />
       </Popover.Trigger>
@@ -76,7 +78,7 @@ export function OnlineLevelBadge({ level, language }: { level: string; language:
           className="z-50 w-52 rounded-xl bg-popover p-3 text-sm text-popover-foreground shadow-md border border-border outline-none"
         >
           <p className="mb-2 px-2 text-xs font-medium text-muted-foreground">
-            Online now
+            {t("Online now")}
           </p>
           <ul className="space-y-0.5">
             {PROFICIENCY_LEVELS.map((other) => (
@@ -90,7 +92,7 @@ export function OnlineLevelBadge({ level, language }: { level: string; language:
                 <span>
                   {other}
                   {other === level && (
-                    <span className="text-muted-foreground"> (you)</span>
+                    <span className="text-muted-foreground"> {t("(you)")}</span>
                   )}
                 </span>
                 <span className="tabular-nums">{counts ? onlineIn(other) : "–"}</span>

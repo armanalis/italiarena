@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/ui-language-provider";
 
 type AuthMode = "signin" | "signup" | "forgot" | "resend";
 
@@ -36,25 +37,26 @@ function SubmitButton({
   mode: AuthMode;
   pendingOverride?: boolean;
 }) {
+  const t = useT();
   const { pending: formPending } = useFormStatus();
   const pending = pendingOverride ?? formPending;
 
   const label =
     mode === "signin"
       ? pending
-        ? "Signing in..."
-        : "Sign In"
+        ? t("Signing in...")
+        : t("Sign In")
       : mode === "signup"
         ? pending
-          ? "Creating account..."
-          : "Create Account"
+          ? t("Creating account...")
+          : t("Create Account")
         : mode === "resend"
           ? pending
-            ? "Sending email..."
-            : "Resend verification email"
+            ? t("Sending email...")
+            : t("Resend verification email")
           : pending
-            ? "Sending link..."
-            : "Send reset link";
+            ? t("Sending link...")
+            : t("Send reset link");
 
   return (
     <Button
@@ -68,6 +70,7 @@ function SubmitButton({
 }
 
 export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }) {
+  const t = useT();
   const router = useRouter();
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [signInSuccess, setSignInSuccess] = useState<string | null>(null);
@@ -189,10 +192,10 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
           <h1 className="text-2xl font-bold tracking-tight">{APP_NAME}</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
             {isForgot
-              ? "Enter your email and we'll send you a reset link."
+              ? t("Enter your email and we'll send you a reset link.")
               : isResend
-                ? "Enter your email and we'll send a fresh verification link."
-                : "Practice Italian or German through quick, real-time sessions with others at your level."}
+                ? t("Enter your email and we'll send a fresh verification link.")
+                : t("Practice Italian or German through quick, real-time sessions with others at your level.")}
           </p>
         </div>
 
@@ -213,7 +216,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                Sign In
+                {t("Sign In")}
               </button>
               <button
                 type="button"
@@ -229,7 +232,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                Sign Up
+                {t("Sign Up")}
               </button>
             </div>
           ) : (
@@ -243,7 +246,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
               className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft className="size-4" />
-              Back to sign in
+              {t("Back to sign in")}
             </button>
           )}
 
@@ -256,7 +259,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
                   <span className="bg-card px-2 text-muted-foreground dark:bg-card/60">
-                    {isSignUp ? "or continue with email" : "or continue with email / username"}
+                    {isSignUp ? t("or continue with email") : t("or continue with email / username")}
                   </span>
                 </div>
               </div>
@@ -270,14 +273,14 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
           >
             {isSignUp && (
               <div className="space-y-2">
-                <Label htmlFor="auth-username">Username</Label>
+                <Label htmlFor="auth-username">{t("Username")}</Label>
                 <div className="relative">
                   <UserRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="auth-username"
                     name="username"
                     type="text"
-                    placeholder="Your public username"
+                    placeholder={t("Your public username")}
                     required
                     minLength={2}
                     maxLength={24}
@@ -286,7 +289,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  You can change this later in settings. Use it to sign in.
+                  {t("You can change this later in settings. Use it to sign in.")}
                 </p>
               </div>
             )}
@@ -294,7 +297,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
             {(isEmailOnly || isSignIn) && (
               <div className="space-y-2">
                 <Label htmlFor={isEmailOnly ? "auth-email" : "auth-login"}>
-                  {isEmailOnly ? "Email" : "Email or username"}
+                  {isEmailOnly ? t("Email") : t("Email or username")}
                 </Label>
                 <div className="relative">
                   {isEmailOnly ? (
@@ -307,7 +310,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
                     name={isEmailOnly ? "email" : "login"}
                     type={isEmailOnly ? "email" : "text"}
                     placeholder={
-                      isEmailOnly ? "you@example.com" : "you@example.com or yourname"
+                      isEmailOnly ? "you@example.com" : t("you@example.com or yourname")
                     }
                     required
                     autoComplete={isEmailOnly ? "email" : "username"}
@@ -319,7 +322,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
 
             {isSignUp && (
               <div className="space-y-2">
-                <Label htmlFor="auth-email">Email</Label>
+                <Label htmlFor="auth-email">{t("Email")}</Label>
                 <div className="relative">
                   <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -338,7 +341,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
             {!isEmailOnly && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <Label htmlFor="auth-password">Password</Label>
+                  <Label htmlFor="auth-password">{t("Password")}</Label>
                   {isSignIn && (
                     <button
                       type="button"
@@ -348,7 +351,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
                       }}
                       className="text-xs text-primary underline-offset-4 hover:underline"
                     >
-                      Forgot password?
+                      {t("Forgot password?")}
                     </button>
                   )}
                 </div>
@@ -358,7 +361,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
                     id="auth-password"
                     name="password"
                     type="password"
-                    placeholder={isSignIn ? "Your password" : "At least 6 characters"}
+                    placeholder={isSignIn ? t("Your password") : t("At least 6 characters")}
                     required
                     minLength={isSignIn ? undefined : 6}
                     autoComplete={isSignIn ? "current-password" : "new-password"}
@@ -373,7 +376,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
                 className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
                 role="alert"
               >
-                {errorMessage}
+                {t(errorMessage)}
               </div>
             )}
 
@@ -382,7 +385,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
                 className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-600 dark:text-emerald-400"
                 role="status"
               >
-                {successMessage}
+                {t(successMessage)}
               </div>
             )}
 
@@ -394,19 +397,19 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
 
           {!isEmailOnly && (
             <p className="text-center text-sm text-muted-foreground">
-              Just want to play with friends?{" "}
+              {t("Just want to play with friends?")}{" "}
               <Link
                 href="/guest"
                 className="font-medium text-primary underline-offset-4 hover:underline"
               >
-                Play as a Guest
+                {t("Play as a Guest")}
               </Link>
             </p>
           )}
 
           {isSignIn && (
             <p className="text-center text-sm text-muted-foreground">
-              Waiting on a verification email?{" "}
+              {t("Waiting on a verification email?")}{" "}
               <button
                 type="button"
                 onClick={() => {
@@ -416,7 +419,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
                 }}
                 className="font-medium text-primary underline-offset-4 hover:underline"
               >
-                Resend verification email
+                {t("Resend verification email")}
               </button>
             </p>
           )}
@@ -425,17 +428,17 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
             <>
               <p className="flex items-start gap-2 rounded-lg bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground dark:bg-white/5">
                 <Sparkles className="mt-0.5 size-3.5 shrink-0 text-primary" />
-                New accounts pick a language and get matched by level after a quick setup.
+                {t("New accounts pick a language and get matched by level after a quick setup.")}
               </p>
               <p className="text-center text-xs text-muted-foreground">
-                By creating an account, you acknowledge our{" "}
+                {t("By creating an account, you acknowledge our")}{" "}
                 <Link
                   href="/privacy?lang=en"
                   className="font-medium text-primary underline-offset-4 hover:underline"
                 >
-                  Privacy policy
+                  {t("Privacy policy")}
                 </Link>
-                . {PRIVACY_FOOTER_NOTICE}
+                . {t(PRIVACY_FOOTER_NOTICE)}
               </p>
             </>
           )}
