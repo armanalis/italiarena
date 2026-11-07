@@ -3,6 +3,7 @@
  * the Sprint page, the noun bank builder (tmp/articles/build.ts) and tests
  * (scripts/test-articles.ts). Scoring runs in the database: article_sprint_finish.
  */
+import { pickLocalized, translator, type Translate, type UiLanguage } from "@/lib/i18n";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { LANGUAGE_META, type TargetLanguage } from "@/lib/constants";
 import { knownError, type Result } from "@/lib/errors";
@@ -20,7 +21,8 @@ export const ARTICLE_GAME_NAME: Record<TargetLanguage, string> = {
   Italian: "il·lo·la",
 };
 
-export type ArticleCard = { id: number; noun: string; article: string; meaning: string };
+/** meaningTr: the meaning in Turkish, null where the bank has none yet. */
+export type ArticleCard = { id: number; noun: string; article: string; meaning: string; meaningTr?: string | null };
 
 const GERMAN = ["der", "die", "das"];
 const ITALIAN = ["il", "lo", "la", "l'"];
@@ -115,6 +117,7 @@ export type ArticleNoun = {
   noun: string;
   article: string;
   meaning: string;
+  meaning_tr?: string | null;
 };
 
 /**
@@ -122,7 +125,7 @@ export type ArticleNoun = {
  * work unchanged: its buttons are options A–D (D empty for 3 buttons).
  * KEEP IN SYNC with the letters article_sprint_finish saves.
  */
-export function nounQuestion(noun: ArticleNoun): QuestionActive {
+export function nounQuestion(noun: ArticleNoun, t: Translate = translator(null), language: UiLanguage = "en"): QuestionActive {
   const choices = articleChoices(noun.language, noun.article);
   const [a = "", b = "", c = "", d = ""] = choices;
   return {
@@ -130,7 +133,10 @@ export function nounQuestion(noun: ArticleNoun): QuestionActive {
     language: noun.language,
     level: noun.level as QuestionLevel,
     category: "grammar",
-    question_text: `Which article? ${noun.noun} (${noun.meaning})`,
+    question_text: t("Which article? {noun} ({meaning})", {
+      noun: noun.noun,
+      meaning: pickLocalized(language, noun.meaning, noun.meaning_tr),
+    }),
     option_a: a,
     option_b: b,
     option_c: c,

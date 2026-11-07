@@ -46,3 +46,8 @@ export function translator(dictionary: Dictionary | null): Translate {
     return vars ? template.replace(/\{(\w+)\}/g, (match, name: string) => (name in vars ? String(vars[name]) : match)) : template;
   };
 }
+
+/** A text the database keeps in both languages (word meanings): Turkish when the app is Turkish and it exists. */
+export function pickLocalized(language: UiLanguage, english: string, turkish: string | null | undefined): string {
+  return language === "tr" && turkish ? turkish : english;
+}

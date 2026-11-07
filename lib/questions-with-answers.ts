@@ -1,5 +1,7 @@
 import { nounQuestion, type ArticleNoun } from "@/lib/articles";
 import { createAdminClientOrNull } from "@/utils/supabase/admin";
+import { translator } from "@/lib/i18n";
+import { dictionaryFor, getUiLanguage } from "@/lib/i18n-server";
 import type { QuestionActive } from "@/types/database.types";
 
 /**
@@ -43,12 +45,14 @@ export async function resolveNounQuestions(ids: number[]): Promise<Map<number, Q
   if (!admin || ids.length === 0) {
     return byId;
   }
-  const { data } = await admin
-    .from("article_nouns")
-    .select("id, language, level, noun, article, meaning")
-    .in("id", [...new Set(ids)]);
+  const [{ data }, { language }] = await Promise.all([
+    // "*": meaning_tr exists only once 20261107203342_meanings_tr ran; naming it would fail before that.
+    admin.from("article_nouns").select("*").in("id", [...new Set(ids)]),
+    getUiLanguage(),
+  ]);
+  const t = translator(dictionaryFor(language));
   for (const noun of (data ?? []) as ArticleNoun[]) {
-    byId.set(noun.id, nounQuestion(noun));
+    byId.set(noun.id, nounQuestion(noun, t, language));
   }
   return byId;
 }
