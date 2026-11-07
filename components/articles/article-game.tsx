@@ -25,6 +25,7 @@ import {
 } from "@/lib/articles";
 import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { fill, useT } from "@/components/ui-language-provider";
 import { createClient } from "@/utils/supabase/client";
 
 type Phase = "ready" | "starting" | "playing" | "sending" | "done";
@@ -41,6 +42,7 @@ export function ArticleGame({
   initialLevel: string;
   initialStats: ArticleStats | null;
 }) {
+  const t = useT();
   const [supabase] = useState(() => createClient());
   const [level, setLevel] = useState(initialLevel);
   const [stats, setStats] = useState(initialStats ?? NO_STATS);
@@ -191,6 +193,9 @@ export function ArticleGame({
         .map((miss) => [miss.card.id, miss])
     ).values(),
   ];
+  // Right every time it came up; a noun missed even once is listed under Missed only.
+  const missedIds = new Set(missed.map(({ card }) => card.id));
+  const knew = [...new Map(played.filter((card) => !missedIds.has(card.id)).map((card) => [card.id, card])).values()];
 
   function chooseLevel(option: string) {
     setLevel(option);
@@ -204,13 +209,12 @@ export function ArticleGame({
       <header className="space-y-1">
         <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{ARTICLE_GAME_NAME[language]}</h1>
         <p className="text-sm text-muted-foreground">
-          Pick the article of each {language} noun, as fast as you can. One scored Sprint a day for each
-          level, then practice as much as you like.
+          {t("Pick the article of each {language} noun, as fast as you can. One scored Sprint a day for each level, then practice as much as you like.", { language: t(language) })}
         </p>
       </header>
 
       {phase !== "playing" && phase !== "sending" && (
-        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 touch-scroll" role="group" aria-label="Level">
+        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 touch-scroll" role="group" aria-label={t("Level")}>
           {PROFICIENCY_LEVELS.map((option) => (
             <button
               key={option}
@@ -235,11 +239,11 @@ export function ArticleGame({
         <div className="glass-panel space-y-4 p-5 text-center">
           <div className="space-y-1">
             <p className="font-semibold">
-              {today === undefined ? `Today's Sprint · ${level}` : `Today's Sprint: ${today}`}
+              {today === undefined ? t("Today's Sprint · {level}", { level }) : t("Today's Sprint: {score}", { score: today })}
             </p>
             <p className="text-sm text-muted-foreground">
-              60 seconds · every {BONUS_EVERY} right in a row add a second
-              {best !== undefined && ` · best ${best}`}
+              {t("60 seconds · every {n} right in a row add a second", { n: BONUS_EVERY })}
+              {best !== undefined && ` · ${t("best {n}", { n: best })}`}
             </p>
           </div>
           <Button
@@ -249,11 +253,11 @@ export function ArticleGame({
             onClick={() => void start()}
           >
             {phase === "starting" && <Loader2 className="size-4 animate-spin" />}
-            {today === undefined ? "Start today's Sprint" : "Practice"}
+            {today === undefined ? t("Start today's Sprint") : t("Practice")}
           </Button>
           {error && (
             <p role="alert" className="text-sm font-medium text-destructive">
-              {error}
+              {t(error)}
             </p>
           )}
         </div>
@@ -263,7 +267,7 @@ export function ArticleGame({
         <div className="space-y-4">
           <div className="space-y-1.5">
             <div className="flex items-baseline justify-between text-sm">
-              <span className="font-semibold tabular-nums" aria-label={`${Math.ceil(msLeft / 1000)} seconds left`}>
+              <span className="font-semibold tabular-nums" aria-label={t("{n} seconds left", { n: Math.ceil(msLeft / 1000) })}>
                 {Math.ceil(msLeft / 1000)}s
                 {bonusShown > 0 && (
                   <span key={bonusShown} className="ml-1.5 text-emerald-600 animate-out fade-out duration-1000 fill-mode-forwards dark:text-emerald-400">
@@ -272,9 +276,9 @@ export function ArticleGame({
                 )}
               </span>
               <span className="text-muted-foreground">
-                {sprint.scored ? "Today's Sprint" : "Practice"} · {level}
+                {sprint.scored ? t("Today's Sprint") : t("Practice")} · {level}
               </span>
-              <span className="font-semibold tabular-nums">{rightCount} right</span>
+              <span className="font-semibold tabular-nums">{t("{n} right", { n: rightCount })}</span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
               <div
@@ -293,7 +297,7 @@ export function ArticleGame({
                 <p className="text-sm text-muted-foreground">{card.meaning}</p>
               </>
             ) : (
-              <Loader2 className="size-6 animate-spin text-muted-foreground" aria-label="Sending your answers" />
+              <Loader2 className="size-6 animate-spin text-muted-foreground" aria-label={t("Sending your answers")} />
             )}
           </div>
 
@@ -323,7 +327,7 @@ export function ArticleGame({
                   <Check className="size-4" aria-hidden />
                   <span lang={code}>{withArticle(feedback.card.article, feedback.card.noun)}</span>
                   {streak > 0 && streak % BONUS_EVERY !== 0 && (
-                    <span className="text-muted-foreground"> · {streak % BONUS_EVERY}/{BONUS_EVERY} to +1s</span>
+                    <span className="text-muted-foreground"> · {t("{n}/{total} to +1s", { n: streak % BONUS_EVERY, total: BONUS_EVERY })}</span>
                   )}
                 </span>
               ) : (
@@ -334,7 +338,7 @@ export function ArticleGame({
                   </span>
                   {articleRule(language, feedback.card.noun, feedback.card.article) && (
                     <span className="block text-xs text-muted-foreground">
-                      {articleRule(language, feedback.card.noun, feedback.card.article)}
+                      {t(articleRule(language, feedback.card.noun, feedback.card.article)!)}
                     </span>
                   )}
                 </span>
@@ -347,15 +351,15 @@ export function ArticleGame({
         <div className="space-y-4">
           <div className="glass-panel space-y-2 p-5 text-center">
             <p className="text-sm font-medium text-muted-foreground">
-              {sprint.scored ? "Today's Sprint" : "Practice"} · {level}
+              {sprint.scored ? t("Today's Sprint") : t("Practice")} · {level}
             </p>
             {result ? (
               <>
                 <p className="text-4xl font-bold tabular-nums">{result.score}</p>
                 <p className="text-sm text-muted-foreground">
                   {result.rejected
-                    ? "Your answers reached us too late, so this one counts as 0."
-                    : `right out of ${answers.length}${result.best !== null ? ` · best ${result.best}` : ""}`}
+                    ? t("Your answers reached us too late, so this one counts as 0.")
+                    : `${t("right out of {n}", { n: answers.length })}${result.best !== null ? ` · ${t("best {n}", { n: result.best })}` : ""}`}
                 </p>
               </>
             ) : sprint.scored && today !== undefined ? (
@@ -364,7 +368,7 @@ export function ArticleGame({
             ) : (
               <>
                 <p role="alert" className="text-sm font-medium text-destructive">
-                  {error}
+                  {error && t(error)}
                 </p>
                 <Button
                   type="button"
@@ -374,7 +378,7 @@ export function ArticleGame({
                     void finish(answers);
                   }}
                 >
-                  Try again
+                  {t("Try again")}
                 </Button>
               </>
             )}
@@ -382,12 +386,12 @@ export function ArticleGame({
               {sprint.scored && result && !result.rejected && (
                 <ShareButton
                   className="min-h-11"
-                  description="Just your score: the link opens the same game for your friends."
+                  description={t("Just your score: the link opens the same game for your friends.")}
                   text={() => articleShareText(language, level, result.score, window.location.origin)}
                 />
               )}
               <Button type="button" variant="outline" className="min-h-11" onClick={() => void start()}>
-                Practice
+                {t("Practice")}
               </Button>
             </div>
           </div>
@@ -395,22 +399,25 @@ export function ArticleGame({
           {missed.length > 0 && (
             <section className="space-y-2" aria-labelledby="missed-heading">
               <h2 id="missed-heading" className="text-sm font-semibold">
-                Missed {result && !result.rejected && <span className="font-normal text-muted-foreground">· added to your Mistakes</span>}
+                {t("Missed")} {result && !result.rejected && <span className="font-normal text-muted-foreground">· {t("added to your Mistakes")}</span>}
               </h2>
               <ul className="space-y-1.5">
                 {missed.map(({ card: miss, picked }) => (
-                  <li key={miss.id} className="flex items-center gap-3 rounded-lg border border-border px-3 py-1.5 text-sm">
-                    <span className="min-w-0 flex-1">
-                      <span lang={code} className="font-semibold">
-                        {withArticle(miss.article, miss.noun)}
-                      </span>
-                      <span className="text-muted-foreground"> · {miss.meaning}</span>
-                      <span className="block text-xs text-red-600 dark:text-red-400">
-                        You: <span lang={code}>{picked}</span>
-                      </span>
-                    </span>
-                    <SpeakButton className="-my-1.5" text={withArticle(miss.article, miss.noun)} language={language} />
-                  </li>
+                  <WordRow key={miss.id} card={miss} language={language} picked={picked} />
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* Right ones too, like the Word Wheel's answers: a lucky guess still gets its meaning and sound. */}
+          {knew.length > 0 && (
+            <section className="space-y-2" aria-labelledby="knew-heading">
+              <h2 id="knew-heading" className="text-sm font-semibold">
+                {t("Right")}
+              </h2>
+              <ul className="space-y-1.5">
+                {knew.map((right) => (
+                  <WordRow key={right.id} card={right} language={language} />
                 ))}
               </ul>
             </section>
@@ -419,12 +426,39 @@ export function ArticleGame({
       )}
 
       <p className="text-xs text-muted-foreground">
-        Every article is checked against{" "}
-        <a className="underline underline-offset-2" href="https://www.wiktionary.org/" target="_blank" rel="noreferrer">
-          Wiktionary
-        </a>{" "}
-        (CC BY-SA 4.0).
+        {fill(t("Every article is checked against {source} (CC BY-SA 4.0)."), {
+          source: (
+            <a className="underline underline-offset-2" href="https://www.wiktionary.org/" target="_blank" rel="noreferrer">
+              Wiktionary
+            </a>
+          ),
+        })}
       </p>
     </div>
+  );
+}
+
+/** One noun of the results: article, noun and meaning, what was picked if it was wrong, and its sound. */
+function WordRow({ card, language, picked }: { card: ArticleCard; language: TargetLanguage; picked?: string }) {
+  const t = useT();
+  const code = LANGUAGE_META[language].code;
+  return (
+    <li className="flex items-center gap-3 rounded-lg border border-border px-3 py-1.5 text-sm">
+      {picked === undefined && (
+        <Check className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+      )}
+      <span className="min-w-0 flex-1">
+        <span lang={code} className="font-semibold">
+          {withArticle(card.article, card.noun)}
+        </span>
+        <span className="text-muted-foreground"> · {card.meaning}</span>
+        {picked !== undefined && (
+          <span className="block text-xs text-red-600 dark:text-red-400">
+            {fill(t("You: {answer}"), { answer: <span lang={code}>{picked}</span> })}
+          </span>
+        )}
+      </span>
+      <SpeakButton className="-my-1.5" text={withArticle(card.article, card.noun)} language={language} />
+    </li>
   );
 }
