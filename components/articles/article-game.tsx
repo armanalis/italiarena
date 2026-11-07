@@ -25,7 +25,8 @@ import {
 } from "@/lib/articles";
 import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { fill, useT } from "@/components/ui-language-provider";
+import { fill, useT, useUiLanguage } from "@/components/ui-language-provider";
+import { pickLocalized } from "@/lib/i18n";
 import { createClient } from "@/utils/supabase/client";
 
 type Phase = "ready" | "starting" | "playing" | "sending" | "done";
@@ -43,6 +44,7 @@ export function ArticleGame({
   initialStats: ArticleStats | null;
 }) {
   const t = useT();
+  const uiLanguage = useUiLanguage();
   const [supabase] = useState(() => createClient());
   const [level, setLevel] = useState(initialLevel);
   const [stats, setStats] = useState(initialStats ?? NO_STATS);
@@ -294,7 +296,7 @@ export function ArticleGame({
                 <p lang={code} className="text-3xl font-bold tracking-tight sm:text-4xl">
                   {card.noun}
                 </p>
-                <p className="text-sm text-muted-foreground">{card.meaning}</p>
+                <p className="text-sm text-muted-foreground">{pickLocalized(uiLanguage, card.meaning, card.meaningTr)}</p>
               </>
             ) : (
               <Loader2 className="size-6 animate-spin text-muted-foreground" aria-label={t("Sending your answers")} />
@@ -441,6 +443,7 @@ export function ArticleGame({
 /** One noun of the results: article, noun and meaning, what was picked if it was wrong, and its sound. */
 function WordRow({ card, language, picked }: { card: ArticleCard; language: TargetLanguage; picked?: string }) {
   const t = useT();
+  const uiLanguage = useUiLanguage();
   const code = LANGUAGE_META[language].code;
   return (
     <li className="flex items-center gap-3 rounded-lg border border-border px-3 py-1.5 text-sm">
@@ -451,7 +454,7 @@ function WordRow({ card, language, picked }: { card: ArticleCard; language: Targ
         <span lang={code} className="font-semibold">
           {withArticle(card.article, card.noun)}
         </span>
-        <span className="text-muted-foreground"> · {card.meaning}</span>
+        <span className="text-muted-foreground"> · {pickLocalized(uiLanguage, card.meaning, card.meaningTr)}</span>
         {picked !== undefined && (
           <span className="block text-xs text-red-600 dark:text-red-400">
             {fill(t("You: {answer}"), { answer: <span lang={code}>{picked}</span> })}

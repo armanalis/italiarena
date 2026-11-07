@@ -942,4 +942,7 @@ export const TR: Record<string, string> = {
 
   // Picture Duel rematch window
   "{name} did not answer. Offer again, or start a new duel.": "{name} cevap vermedi. Tekrar teklif et ya da yeni bir düello başlat.",
+
+  // Phase 3: meanings
+  "Which article? {noun} ({meaning})": "Hangi artikel? {noun} ({meaning})",
 };

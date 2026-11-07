@@ -3,6 +3,8 @@
  * one-line rules, the time bonus. (Scoring is in the database: npm run test:sql.)
  * Run: npx tsx scripts/test-articles.ts
  */
+import { translator } from "../lib/i18n";
+import { TR } from "../lib/i18n-tr";
 import assert from "node:assert/strict";
 import {
   articleChoices,
@@ -95,6 +97,17 @@ check("a missed noun becomes a Mistakes question with the letters the database s
   assert.equal(studenti.correct_answer, "B");
   const amico = nounQuestion({ id: 9, language: "Italian", level: "A1", noun: "amico", article: "l'", meaning: "friend" });
   assert.equal(amico.correct_answer, "D");
+});
+
+check("the question reads in the app language, with the Turkish meaning when there is one", () => {
+  const casa = { id: 10, language: "Italian" as const, level: "A1", noun: "casa", article: "la", meaning: "house, home", meaning_tr: "ev" };
+  assert.equal(nounQuestion(casa).question_text, "Which article? casa (house, home)");
+  assert.equal(nounQuestion(casa, translator(TR), "tr").question_text, "Hangi artikel? casa (ev)");
+  assert.equal(
+    nounQuestion({ ...casa, meaning_tr: null }, translator(TR), "tr").question_text,
+    "Hangi artikel? casa (house, home)",
+    "no Turkish meaning yet: the English one"
+  );
 });
 
 console.log(`\n${passed} article checks passed`);

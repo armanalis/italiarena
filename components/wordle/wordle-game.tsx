@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useT, useUiLanguage } from "@/components/ui-language-provider";
-import type { UiLanguage } from "@/lib/i18n";
+import { pickLocalized, type UiLanguage } from "@/lib/i18n";
 import {
   keyboardMarks,
   playWordle,
@@ -342,7 +342,7 @@ export function WordleGame({
           <p className="flex flex-wrap items-center justify-center gap-x-1.5 text-sm">
             <span lang={LANGUAGE_META[language].code} className="font-bold uppercase tracking-wider">{view.answer}</span>
             {view.answer && <SpeakButton className="-my-2" text={view.answer} language={language} />}
-            {view.meaning && <span className="text-muted-foreground">· {view.meaning}</span>}
+            {view.meaning && <span className="text-muted-foreground">· {pickLocalized(uiLanguage, view.meaning, view.meaningTr)}</span>}
           </p>
           <p className="text-xs text-muted-foreground">
             {view.isToday

@@ -70,6 +70,8 @@ export type WordleView = {
   /** Only once the game is over. */
   answer: string | null;
   meaning: string | null;
+  /** The meaning in Turkish (null before the meanings_tr migration, or for a word without one). */
+  meaningTr: string | null;
 };
 
 export type WordleArchiveDay = {
@@ -86,6 +88,8 @@ type WordleTurn = {
   status: WordleStatus;
   answer: string | null;
   meaning: string | null;
+  /** The meaning in Turkish (null before the meanings_tr migration, or for a word without one). */
+  meaningTr: string | null;
   history: Record<string, WordleStatus> | null;
 };
 
@@ -110,6 +114,7 @@ export function toWordleView(
     status: turn.status,
     answer: turn.answer,
     meaning: turn.meaning,
+    meaningTr: turn.meaningTr ?? null,
   };
 }
 
