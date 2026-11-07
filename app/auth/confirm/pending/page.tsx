@@ -1,4 +1,5 @@
 /** Landing page for email links — avoids inbox scanners consuming one-time tokens. */
+import { getT } from "@/lib/i18n-server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { EmailOtpType } from "@supabase/supabase-js";
@@ -30,6 +31,7 @@ function isEmailOtpType(value: string | undefined): value is EmailOtpType {
 export default async function ConfirmPendingPage({
   searchParams,
 }: ConfirmPendingPageProps) {
+  const t = await getT();
   const params = await searchParams;
   const tokenHash = params.token_hash;
   const type = params.type;
@@ -64,12 +66,12 @@ export default async function ConfirmPendingPage({
               <ItalianBrandIcon className="size-10" />
             </div>
             <h1 className="text-2xl font-semibold tracking-tight">
-              {isRecovery ? "Reset your password" : "Confirm your email"}
+              {isRecovery ? t("Reset your password") : t("Confirm your email")}
             </h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
               {isRecovery
-                ? "Tap the button below to open the secure password reset form."
-                : "Tap the button below to verify your email and finish setting up your account."}
+                ? t("Tap the button below to open the secure password reset form.")
+                : t("Tap the button below to verify your email and finish setting up your account.")}
             </p>
           </div>
 
@@ -81,19 +83,18 @@ export default async function ConfirmPendingPage({
                 {isRecovery ? (
                   <>
                     <KeyRound className="size-4" />
-                    Continue to reset password
+                    {t("Continue to reset password")}
                   </>
                 ) : (
                   <>
                     <MailCheck className="size-4" />
-                    Confirm email address
+                    {t("Confirm email address")}
                   </>
                 )}
               </a>
             </Button>
             <p className="text-center text-xs text-muted-foreground">
-              This extra step keeps automated inbox scanners from using your
-              one-time link before you do.
+              {t("This extra step keeps automated inbox scanners from using your one-time link before you do.")}
             </p>
           </div>
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { fill, useT } from "@/components/ui-language-provider";
 import { useMemo, useState, useTransition } from "react";
 import { Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
@@ -34,6 +35,7 @@ type QuestionSubmissionFormProps = {
 };
 
 export function QuestionSubmissionForm({ pendingCount, language }: QuestionSubmissionFormProps) {
+  const t = useT();
   const [level, setLevel] = useState<(typeof PROFICIENCY_LEVELS)[number]>("B1");
   const [category, setCategory] =
     useState<QuestionCategory>("vocabulary");
@@ -79,7 +81,7 @@ export function QuestionSubmissionForm({ pendingCount, language }: QuestionSubmi
 
       if (result.success) {
         toast.success(
-          "Submitted for review. An admin will make the final decision after an AI pre-check."
+          t("Submitted for review. An admin will make the final decision after an AI pre-check.")
         );
         form.reset();
         setLevelConfirmed(false);
@@ -87,21 +89,21 @@ export function QuestionSubmissionForm({ pendingCount, language }: QuestionSubmi
         return;
       }
 
-      toast.error(result.error);
+      toast.error(t(result.error));
     });
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="rounded-xl border border-border bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
-        Submissions are reviewed before going live. You have{" "}
-        <span className="font-medium text-foreground">{pendingCount}</span> pending
-        {pendingCount === 1 ? "" : "s"}.
+        {pendingCount === 1
+          ? t("Submissions are reviewed before going live. You have 1 pending.")
+          : t("Submissions are reviewed before going live. You have {n} pending.", { n: pendingCount })}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>CEFR level</Label>
+          <Label>{t("CEFR level")}</Label>
           <Select value={level} onValueChange={(value) => {
             setLevel(value as (typeof PROFICIENCY_LEVELS)[number]);
             setLevelConfirmed(false);
@@ -120,7 +122,7 @@ export function QuestionSubmissionForm({ pendingCount, language }: QuestionSubmi
         </div>
 
         <div className="space-y-2">
-          <Label>Category</Label>
+          <Label>{t("Category")}</Label>
           <Select value={category} onValueChange={(value) => {
             setCategory(value as QuestionCategory);
             setCategoryConfirmed(false);
@@ -131,7 +133,7 @@ export function QuestionSubmissionForm({ pendingCount, language }: QuestionSubmi
             <SelectContent>
               {QUESTION_CATEGORIES.map((item) => (
                 <SelectItem key={item} value={item}>
-                  {formatCategoryLabel(item)}
+                  {t(formatCategoryLabel(item))}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -141,46 +143,46 @@ export function QuestionSubmissionForm({ pendingCount, language }: QuestionSubmi
 
       <div className="grid gap-4 md:grid-cols-2">
         <section className="rounded-xl border border-border/60 bg-muted/20 p-4 text-sm">
-          <h3 className="font-medium text-foreground">Level guide · {level}</h3>
-          <p className="mt-2 text-muted-foreground">{levelGuide.summary}</p>
-          <p className="mt-3 font-medium text-foreground">Good fit</p>
+          <h3 className="font-medium text-foreground">{t("Level guide · {level}", { level })}</h3>
+          <p className="mt-2 text-muted-foreground">{t(levelGuide.summary)}</p>
+          <p className="mt-3 font-medium text-foreground">{t("Good fit")}</p>
           <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
             {levelGuide.suitable[language].map((item) => (
-              <li key={item}>{item}</li>
+              <li key={item}>{t(item)}</li>
             ))}
           </ul>
-          <p className="mt-3 font-medium text-foreground">Too hard for this level</p>
+          <p className="mt-3 font-medium text-foreground">{t("Too hard for this level")}</p>
           <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
             {levelGuide.too_hard.map((item) => (
-              <li key={item}>{item}</li>
+              <li key={item}>{t(item)}</li>
             ))}
           </ul>
           {levelWarning && (
-            <p className="mt-3 text-amber-400/90">{levelWarning}</p>
+            <p className="mt-3 text-amber-400/90">{t(levelWarning)}</p>
           )}
         </section>
 
         <section className="rounded-xl border border-border/60 bg-muted/20 p-4 text-sm">
           <h3 className="font-medium text-foreground">
-            Category guide · {categoryGuide.title}
+            {t("Category guide · {category}", { category: t(categoryGuide.title) })}
           </h3>
-          <p className="mt-3 font-medium text-foreground">Must</p>
+          <p className="mt-3 font-medium text-foreground">{t("Must")}</p>
           <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
             {categoryGuide.must.map((item) => (
-              <li key={item}>{item}</li>
+              <li key={item}>{t(item)}</li>
             ))}
           </ul>
-          <p className="mt-3 font-medium text-foreground">Avoid</p>
+          <p className="mt-3 font-medium text-foreground">{t("Avoid")}</p>
           <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
             {categoryGuide.avoid.map((item) => (
-              <li key={item}>{item}</li>
+              <li key={item}>{t(item)}</li>
             ))}
           </ul>
         </section>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="question_text">Question</Label>
+        <Label htmlFor="question_text">{t("Question")}</Label>
         <textarea
           id="question_text"
           name="question_text"
@@ -190,7 +192,7 @@ export function QuestionSubmissionForm({ pendingCount, language }: QuestionSubmi
           placeholder={
             category === "fill-in-the-blank"
               ? 'Es: "Domani ___ al cinema con i miei amici."'
-              : 'Es: "What does venerdì mean?"'
+              : t('Es: "What does venerdì mean?"')
           }
           className={cn(
             "flex min-h-24 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-base shadow-sm",
@@ -206,7 +208,7 @@ export function QuestionSubmissionForm({ pendingCount, language }: QuestionSubmi
           const letter = CORRECT_ANSWERS[index];
           return (
             <div key={field} className="space-y-2">
-              <Label htmlFor={field}>Option {letter}</Label>
+              <Label htmlFor={field}>{t("Option {letter}", { letter })}</Label>
               <input
                 id={field}
                 name={field}
@@ -226,7 +228,7 @@ export function QuestionSubmissionForm({ pendingCount, language }: QuestionSubmi
       </div>
 
       <div className="space-y-2">
-        <Label>Correct answer</Label>
+        <Label>{t("Correct answer")}</Label>
         <div className="grid grid-cols-4 gap-2">
           {CORRECT_ANSWERS.map((letter) => (
             <button
@@ -247,14 +249,14 @@ export function QuestionSubmissionForm({ pendingCount, language }: QuestionSubmi
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="rationale">Why this level and category?</Label>
+        <Label htmlFor="rationale">{t("Why this level and category?")}</Label>
         <textarea
           id="rationale"
           name="rationale"
           required
           rows={3}
           maxLength={500}
-          placeholder="Explain the grammar/vocab point and why it fits this CEFR level."
+          placeholder={t("Explain the grammar/vocab point and why it fits this CEFR level.")}
           className={cn(
             "flex min-h-24 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-base shadow-sm",
             "focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
@@ -273,8 +275,9 @@ export function QuestionSubmissionForm({ pendingCount, language }: QuestionSubmi
             className="mt-0.5 size-5 shrink-0 rounded border-input"
           />
           <span>
-            I confirm this question matches <strong>{level}</strong> difficulty —
-            not easier, not harder.
+            {fill(t("I confirm this question matches {level} difficulty — not easier, not harder."), {
+              level: <strong>{level}</strong>,
+            })}
           </span>
         </label>
         <label className="flex cursor-pointer items-start gap-3 text-sm">
@@ -285,8 +288,9 @@ export function QuestionSubmissionForm({ pendingCount, language }: QuestionSubmi
             className="mt-0.5 size-5 shrink-0 rounded border-input"
           />
           <span>
-            I confirm this is a <strong>{formatCategoryLabel(category)}</strong>{" "}
-            question, not another category relabeled.
+            {fill(t("I confirm this is a {category} question, not another category relabeled."), {
+              category: <strong>{t(formatCategoryLabel(category))}</strong>,
+            })}
           </span>
         </label>
       </div>
@@ -299,12 +303,12 @@ export function QuestionSubmissionForm({ pendingCount, language }: QuestionSubmi
         {isPending ? (
           <>
             <Loader2 className="size-4 animate-spin" />
-            Submitting...
+            {t("Submitting...")}
           </>
         ) : (
           <>
             <Send className="size-4" />
-            Submit for review
+            {t("Submit for review")}
           </>
         )}
       </Button>

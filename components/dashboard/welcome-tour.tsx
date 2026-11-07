@@ -23,6 +23,7 @@ import { useCookieConsent } from "@/hooks/use-cookie-consent";
 import { APP_NAME } from "@/lib/legal";
 import { hasSeenWelcomeTour, markWelcomeTourSeen } from "@/lib/welcome-tour";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/ui-language-provider";
 
 type TourStep = {
   icon: LucideIcon;
@@ -33,7 +34,7 @@ type TourStep = {
 const STEPS: TourStep[] = [
   {
     icon: Sparkles,
-    title: `Welcome to ${APP_NAME}`,
+    title: "Welcome to {app}",
     body: "Learn Italian or German through quick 1v1 trivia matches: 10 timed questions on grammar, vocabulary, fill-in-the-blank, and idioms.",
   },
   {
@@ -54,6 +55,7 @@ const STEPS: TourStep[] = [
 ];
 
 export function WelcomeTour() {
+  const t = useT();
   const consent = useCookieConsent();
   const seen = useBrowserValue(hasSeenWelcomeTour, true);
   const [closed, setClosed] = useState(false);
@@ -77,10 +79,10 @@ export function WelcomeTour() {
             <Icon className="size-7" />
           </div>
           <p className="text-xs font-medium text-muted-foreground">
-            Step {step + 1} of {STEPS.length}
+            {t("Step {n} of {total}", { n: step + 1, total: STEPS.length })}
           </p>
-          <DialogTitle className="text-lg font-semibold">{title}</DialogTitle>
-          <DialogDescription className="leading-relaxed">{body}</DialogDescription>
+          <DialogTitle className="text-lg font-semibold">{t(title, { app: APP_NAME })}</DialogTitle>
+          <DialogDescription className="leading-relaxed">{t(body)}</DialogDescription>
         </DialogHeader>
 
         <div className="flex justify-center gap-1.5" aria-hidden>
@@ -100,15 +102,15 @@ export function WelcomeTour() {
         <DialogFooter>
           {step === 0 ? (
             <Button variant="ghost" onClick={close}>
-              Skip
+              {t("Skip")}
             </Button>
           ) : (
             <Button variant="outline" onClick={() => setStep(step - 1)}>
-              Back
+              {t("Back")}
             </Button>
           )}
           <Button onClick={() => (isLast ? close() : setStep(step + 1))}>
-            {isLast ? "Start playing" : "Next"}
+            {isLast ? t("Start playing") : t("Next")}
           </Button>
         </DialogFooter>
       </DialogContent>

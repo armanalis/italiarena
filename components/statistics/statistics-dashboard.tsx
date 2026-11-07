@@ -23,6 +23,7 @@ import { REVIEW_STEPS_DAYS, reviewMinutes, whenDue } from "@/lib/review";
 import { formatCategoryLabel } from "@/lib/scoring";
 import { normalizeQuestionCategory } from "@/lib/match";
 import type { PlayerStats, QuestionCategory } from "@/types/database.types";
+import { useT, useUiLanguage } from "@/components/ui-language-provider";
 
 type StatisticsDashboardProps = {
   language: TargetLanguage;
@@ -59,6 +60,8 @@ export function StatisticsDashboard({
   today,
   startReview,
 }: StatisticsDashboardProps) {
+  const t = useT();
+  const uiLanguage = useUiLanguage();
   const [mistakes, setMistakes] = useState(initialMistakes);
   const [showMistakes, setShowMistakes] = useState(false);
   const dueMistakes = mistakes.filter((mistake) => mistake.next_review_on <= today);
@@ -68,7 +71,7 @@ export function StatisticsDashboard({
     sessionId: string;
   } | null>(() =>
     startReview && dueMistakes.length > 0
-      ? { mistakes: dueMistakes, label: "Today's review", sessionId: crypto.randomUUID() }
+      ? { mistakes: dueMistakes, label: t("Today's review"), sessionId: crypto.randomUUID() }
       : null
   );
   const nextDue = mistakes.map((mistake) => mistake.next_review_on).sort()[0];
@@ -120,8 +123,7 @@ export function StatisticsDashboard({
             {activePractice.label}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            A mistake comes back tomorrow, then in 3 days, a week and 2 weeks.
-            Right {REVIEW_STEPS_DAYS.length} times on different days and it is learned.
+            {t("A mistake comes back tomorrow, then in 3 days, a week and 2 weeks. Right {n} times on different days and it is learned.", { n: REVIEW_STEPS_DAYS.length })}
           </p>
         </div>
         <MistakePracticeSession
@@ -141,9 +143,9 @@ export function StatisticsDashboard({
     <main className="flex w-full min-w-0 flex-1 flex-col gap-6 p-4 sm:p-8 lg:px-10 xl:px-12">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Statistics</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("Statistics")}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Track your {language} match performance and review questions you still need to learn.
+            {t("Track your {language} match performance and review questions you still need to learn.", { language: t(language) })}
           </p>
         </div>
         <ResetStatsButton hasStats={hasStats} />
@@ -154,7 +156,7 @@ export function StatisticsDashboard({
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <TrendingUp className="size-4" />
-              Win / Loss
+              {t("Win / Loss")}
             </CardDescription>
             <CardTitle className="text-3xl">
               {stats ? `${stats.matches_won} / ${stats.matches_lost}` : "— / —"}
@@ -163,8 +165,10 @@ export function StatisticsDashboard({
           <CardContent>
             <p className="text-sm text-muted-foreground">
               {stats?.matches_played
-                ? `${stats.matches_played} match${stats.matches_played === 1 ? "" : "es"} played`
-                : "Complete a match to start tracking wins and losses."}
+                ? stats.matches_played === 1
+                  ? t("1 match played")
+                  : t("{n} matches played", { n: stats.matches_played })
+                : t("Complete a match to start tracking wins and losses.")}
             </p>
           </CardContent>
         </Card>
@@ -173,7 +177,7 @@ export function StatisticsDashboard({
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <Target className="size-4" />
-              Overall accuracy
+              {t("Overall accuracy")}
             </CardDescription>
             <CardTitle className="text-3xl">
               {stats ? overallAccuracy(stats) : "—%"}
@@ -181,7 +185,7 @@ export function StatisticsDashboard({
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Based on live matches only — practice tests do not change this.
+              {t("Based on live matches only — practice tests do not change this.")}
             </p>
           </CardContent>
         </Card>
@@ -190,15 +194,15 @@ export function StatisticsDashboard({
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">
               <ClipboardList className="size-4" />
-              Mistakes to review
+              {t("Mistakes to review")}
             </CardDescription>
             <CardTitle className="text-3xl">{mistakes.length}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
               {hasMistakes
-                ? "Wrong answers saved from your recent matches."
-                : "Play a match — wrong answers will show up here."}
+                ? t("Wrong answers saved from your recent matches.")
+                : t("Play a match — wrong answers will show up here.")}
             </p>
           </CardContent>
         </Card>
@@ -206,9 +210,9 @@ export function StatisticsDashboard({
 
       <Card className="border-border/60">
         <CardHeader>
-          <CardTitle>Accuracy by category</CardTitle>
+          <CardTitle>{t("Accuracy by category")}</CardTitle>
           <CardDescription>
-            Match accuracy for each question type.
+            {t("Match accuracy for each question type.")}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -223,14 +227,14 @@ export function StatisticsDashboard({
                 key={category.key}
                 className="flex flex-col rounded-lg border border-border/60 bg-muted/20 px-4 py-3"
               >
-                <p className="text-sm font-medium">{category.label}</p>
+                <p className="text-sm font-medium">{t(category.label)}</p>
                 <p className="mt-1 text-2xl font-bold">
                   {pct(category.correct, category.total)}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {category.total > 0
-                    ? `${category.correct} correct out of ${category.total}`
-                    : "No answers recorded yet"}
+                    ? t("{n} correct out of {total}", { n: category.correct, total: category.total })
+                    : t("No answers recorded yet")}
                 </p>
                 <Button
                   type="button"
@@ -241,12 +245,12 @@ export function StatisticsDashboard({
                   onClick={() =>
                     startPractice(
                       categoryMistakes,
-                      `${category.label} practice`
+                      t("{category} practice", { category: t(category.label) })
                     )
                   }
                 >
                   <Dumbbell className="size-3.5" />
-                  Practice mistakes
+                  {t("Practice mistakes")}
                   {mistakeCount > 0 && (
                     <span className="text-muted-foreground">
                       ({mistakeCount})
@@ -263,8 +267,7 @@ export function StatisticsDashboard({
         <CardHeader>
           <CardTitle lang={LANGUAGE_META[language].code}>{ARTICLE_GAME_NAME[language]}</CardTitle>
           <CardDescription>
-            Your best Sprint for each level, and how often you pick each article right. Missed nouns join
-            your mistakes below.
+            {t("Your best Sprint for each level, and how often you pick each article right. Missed nouns join your mistakes below.")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -273,7 +276,7 @@ export function StatisticsDashboard({
               <div className="flex flex-wrap gap-2">
                 {PROFICIENCY_LEVELS.filter((level) => articleStats.best[level] !== undefined).map((level) => (
                   <Badge key={level} variant="secondary" className="tabular-nums">
-                    {level} · best {articleStats.best[level]}
+                    {level} · {t("best {n}", { n: articleStats.best[level] })}
                   </Badge>
                 ))}
               </div>
@@ -289,7 +292,7 @@ export function StatisticsDashboard({
                         </p>
                         <p className="text-xl font-bold tabular-nums">{pct(right, answered)}</p>
                         <p className="text-xs text-muted-foreground tabular-nums">
-                          {right} of {answered}
+                          {t("{n} of {total}", { n: right, total: answered })}
                         </p>
                       </div>
                     );
@@ -298,11 +301,10 @@ export function StatisticsDashboard({
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
-              No Sprints yet.{" "}
+              {t("No Sprints yet.")}{" "}
               <Link href="/articles" className="font-medium text-primary underline-offset-2 hover:underline">
-                Play your first one
+                {t("Play your first one")}
               </Link>
-              .
             </p>
           )}
         </CardContent>
@@ -314,17 +316,15 @@ export function StatisticsDashboard({
             <div>
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="size-5 text-primary" />
-                Learn from your mistakes
+                {t("Learn from your mistakes")}
               </CardTitle>
               <CardDescription className="mt-1.5">
-                Each mistake comes back tomorrow, then in 3 days, a week and 2
-                weeks, so it sticks. Right on 4 different days and it is learned
-                and leaves this list; your match percentages stay the same.
+                {t("Each mistake comes back tomorrow, then in 3 days, a week and 2 weeks, so it sticks. Right on 4 different days and it is learned and leaves this list; your match percentages stay the same.")}
               </CardDescription>
             </div>
             {hasMistakes && (
               <Badge variant="secondary" className="tabular-nums">
-                {mistakes.length} active
+                {t("{n} active", { n: mistakes.length })}
               </Badge>
             )}
           </div>
@@ -336,9 +336,9 @@ export function StatisticsDashboard({
                 key={category}
                 className="rounded-lg border border-border/60 bg-background/40 px-3 py-2 text-sm"
               >
-                <p className="font-medium">{label}</p>
+                <p className="font-medium">{t(label)}</p>
                 <p className="mt-1 text-muted-foreground">
-                  {count} mistake{count === 1 ? "" : "s"} to practice
+                  {count === 1 ? t("1 mistake to practice") : t("{n} mistakes to practice", { n: count })}
                 </p>
               </div>
             ))}
@@ -351,19 +351,19 @@ export function StatisticsDashboard({
               className="min-h-11"
               onClick={() => setShowMistakes(true)}
             >
-              See my mistakes
+              {t("See my mistakes")}
             </Button>
             <Button
               type="button"
               className="min-h-11"
               disabled={dueMistakes.length === 0}
-              onClick={() => startPractice(dueMistakes, "Today's review")}
+              onClick={() => startPractice(dueMistakes, t("Today's review"))}
             >
               {dueMistakes.length > 0
-                ? `Review today: ${dueMistakes.length} · about ${reviewMinutes(dueMistakes.length)} min`
+                ? t("Review today: {n} · about {min} min", { n: dueMistakes.length, min: reviewMinutes(dueMistakes.length) })
                 : nextDue
-                  ? `Nothing due · next ${whenDue(nextDue, today)}`
-                  : "Nothing to review"}
+                  ? t("Nothing due · next {when}", { when: whenDue(nextDue, today, t, uiLanguage) })
+                  : t("Nothing to review")}
             </Button>
           </div>
         </CardContent>

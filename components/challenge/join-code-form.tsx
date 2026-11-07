@@ -8,6 +8,7 @@ import { joinChallengeByCode } from "@/app/(app)/matchmaking/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/ui-language-provider";
 
 type Join = (code: string) => Promise<{ href: string } | { error: string }>;
 
@@ -19,6 +20,7 @@ async function joinArena(code: string) {
 /** Joins a friend's game by the 6-digit code shown on their lobby: an Arena challenge unless `join` says otherwise. */
 export function JoinCodeForm({ className, join = joinArena }: { className?: string; join?: Join }) {
   const router = useRouter();
+  const t = useT();
   const [code, setCode] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -34,14 +36,14 @@ export function JoinCodeForm({ className, join = joinArena }: { className?: stri
             toast.dismiss();
             router.push(result.href);
           } else {
-            toast.error(result.error);
+            toast.error(t(result.error));
           }
         });
       }}
     >
       <Input
-        aria-label="Challenge code"
-        placeholder="Code"
+        aria-label={t("Challenge code")}
+        placeholder={t("Code")}
         inputMode="numeric"
         autoComplete="off"
         maxLength={6}
@@ -56,7 +58,7 @@ export function JoinCodeForm({ className, join = joinArena }: { className?: stri
         disabled={isPending || code.length !== 6}
       >
         {isPending ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />}
-        Join
+        {t("Join")}
       </Button>
     </form>
   );

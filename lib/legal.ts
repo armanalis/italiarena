@@ -16,9 +16,9 @@ export const SUPPORT_EMAIL = "support@italiarena.com";
 /** Privacy and data-protection requests (same inbox as general support). */
 export const PRIVACY_CONTACT_EMAIL = SUPPORT_EMAIL;
 
-export const PRIVACY_POLICY_LAST_UPDATED_ISO = "2026-11-02";
-export const PRIVACY_POLICY_LAST_UPDATED_IT = "2 novembre 2026";
-export const PRIVACY_POLICY_LAST_UPDATED_EN = "2 November 2026";
+export const PRIVACY_POLICY_LAST_UPDATED_ISO = "2026-11-07";
+export const PRIVACY_POLICY_LAST_UPDATED_IT = "7 novembre 2026";
+export const PRIVACY_POLICY_LAST_UPDATED_EN = "7 November 2026";
 
 export const PRIVACY_HREF_IT = "/privacy";
 export const PRIVACY_HREF_EN = "/privacy?lang=en";
@@ -94,7 +94,8 @@ function buildItalianCopy(): PrivacyCopy {
     title: "Informativa sul trattamento dei dati personali",
     metaDescription:
       "Informativa privacy di Italiarena ai sensi degli artt. 13 e 14 del GDPR, del Codice privacy italiano (D.Lgs. 196/2003) e della normativa italiana su cookie, comunicazioni elettroniche e intelligenza artificiale.",
-    lastUpdated: `Aggiornata l’${PRIVACY_POLICY_LAST_UPDATED_IT}`,
+    // "il 7 novembre"; dates that start with a vowel sound (1, 8, 11) take "l’".
+    lastUpdated: `Aggiornata il ${PRIVACY_POLICY_LAST_UPDATED_IT}`,
     jurisdictionLabel: "Italia",
     intro:
       "La presente informativa è resa ai sensi degli articoli 12, 13 e 14 del Regolamento (UE) 2016/679 («GDPR») e del Codice in materia di protezione dei dati personali (D.Lgs. 30 giugno 2003, n. 196, come modificato dal D.Lgs. 10 agosto 2018, n. 101 e successive modificazioni, «Codice privacy») a chi usa Italiarena in Italia o dal territorio italiano. Il testo è redatto in linguaggio chiaro e semplice, come richiesto dagli artt. 12–14 GDPR, dalle Linee guida WP29 sulla trasparenza (WP260 rev. 01, 11 aprile 2018) e dalle indicazioni del Garante. In caso di contrasto tra versioni linguistiche, prevale il testo italiano.",
@@ -270,6 +271,20 @@ function buildItalianCopy(): PrivacyCopy {
               "Tecnico",
               "Ricordare il tema chiaro o scuro",
               "Fino alla cancellazione da parte dell’utente",
+              "Prima parte",
+            ],
+            [
+              "Cookie ui_lang",
+              "Tecnico",
+              "Ricordare la lingua dell’interfaccia (inglese o turco), scelta nelle Impostazioni o, alla prima visita, dalla lingua del browser",
+              "1 anno",
+              "Prima parte",
+            ],
+            [
+              "Cookie preferred_language",
+              "Tecnico",
+              "Aprire il sito nella lingua da imparare indicata da un link /german o /italian",
+              "30 giorni",
               "Prima parte",
             ],
             [
@@ -559,6 +574,20 @@ function buildEnglishCopy(): PrivacyCopy {
               "Technical",
               "Remember light or dark theme",
               "Until you clear it",
+              "First party",
+            ],
+            [
+              "ui_lang cookie",
+              "Technical",
+              "Remember the interface language (English or Turkish), chosen in Settings or, on a first visit, taken from the browser's language",
+              "1 year",
+              "First party",
+            ],
+            [
+              "preferred_language cookie",
+              "Technical",
+              "Open the site in the language to learn named by a /german or /italian link",
+              "30 days",
               "First party",
             ],
             [

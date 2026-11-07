@@ -15,10 +15,12 @@ import {
   type TargetLanguage,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/ui-language-provider";
 
 /** Header button: which language every game uses. A new language asks for a level first. */
 export function LanguageSwitcher({ language }: { language: TargetLanguage }) {
   const router = useRouter();
+  const t = useT();
   const pathname = usePathname();
   // A /german link for a player with no German level yet lands on ?lang=de: ask for it.
   const linked = languageFromCode(useSearchParams().get("lang") ?? undefined);
@@ -38,7 +40,7 @@ export function LanguageSwitcher({ language }: { language: TargetLanguage }) {
         if ("needsLevel" in result) {
           setAskLevelFor(next);
         } else {
-          toast.error(result.error);
+          toast.error(t(result.error));
         }
         return;
       }
@@ -64,8 +66,10 @@ export function LanguageSwitcher({ language }: { language: TargetLanguage }) {
           type="button"
           variant="outline"
           size="sm"
+          // lang: a code, not a word; a Turkish page would capitalise "it" as "İT".
+          lang="en"
           className="min-h-10 gap-1.5 px-2 font-semibold uppercase sm:px-3"
-          aria-label={`Learning ${language}. Change language`}
+          aria-label={t("Learning {language}. Change language", { language: t(language) })}
         >
           <Languages className="size-3.5" aria-hidden />
           {LANGUAGE_META[language].code}
@@ -80,7 +84,7 @@ export function LanguageSwitcher({ language }: { language: TargetLanguage }) {
         >
           {askLevelFor ? (
             <div className="space-y-2 p-2">
-              <p className="font-medium">Your {askLevelFor} level</p>
+              <p className="font-medium">{t("Your {language} level", { language: t(askLevelFor) })}</p>
               <div className="grid grid-cols-3 gap-1.5">
                 {PROFICIENCY_LEVELS.map((level) => (
                   <button
@@ -107,11 +111,11 @@ export function LanguageSwitcher({ language }: { language: TargetLanguage }) {
                   option === language && "font-semibold"
                 )}
               >
-                <span className="w-6 text-xs font-bold uppercase text-muted-foreground">
+                <span lang="en" className="w-6 text-xs font-bold uppercase text-muted-foreground">
                   {LANGUAGE_META[option].code}
                 </span>
                 <span className="flex-1">
-                  {option} <span className="text-muted-foreground">· {LANGUAGE_META[option].label}</span>
+                  {t(option)} <span lang={LANGUAGE_META[option].code} className="text-muted-foreground">· {LANGUAGE_META[option].label}</span>
                 </span>
                 {option === language && <Check className="size-4" aria-hidden />}
               </button>

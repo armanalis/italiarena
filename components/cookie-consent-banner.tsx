@@ -7,6 +7,7 @@
  */
 "use client";
 
+import { useT } from "@/components/ui-language-provider";
 import Link from "next/link";
 import { Cookie } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { useCookieConsent } from "@/hooks/use-cookie-consent";
 import { setCookieConsent } from "@/lib/cookie-consent";
 
 export function CookieConsentBanner() {
+  const t = useT();
   const consent = useCookieConsent();
 
   // Already answered — nothing to ask.
@@ -34,19 +36,15 @@ export function CookieConsentBanner() {
           <div className="min-w-0 space-y-3">
             <div className="space-y-1">
               <p id="cookie-consent-title" className="text-sm font-medium text-foreground">
-                Help us improve Italiarena?
+                {t("Help us improve Italiarena?")}
               </p>
               <p className="text-sm text-muted-foreground">
-                We&apos;d like to use Microsoft Clarity to see which parts of
-                the app confuse people: heatmaps and session replays, with
-                anything you type masked out. It&apos;s optional, the app works
-                exactly the same if you say no, and you can change your mind in
-                Settings. The cookies needed to sign in and play are always on.{" "}
+                {t("We'd like to use Microsoft Clarity to see which parts of the app confuse people: heatmaps and session replays, with anything you type masked out. It's optional, the app works exactly the same if you say no, and you can change your mind in Settings. The cookies needed to sign in and play are always on.")}{" "}
                 <Link
                   href="/privacy?lang=en#cookies"
                   className="text-primary underline-offset-4 hover:underline"
                 >
-                  Details in our privacy notice
+                  {t("Details in our privacy notice")}
                 </Link>
                 .
               </p>
@@ -58,7 +56,7 @@ export function CookieConsentBanner() {
                 onClick={() => setCookieConsent("granted")}
                 className="min-w-28 flex-1 sm:flex-none"
               >
-                Accept
+                {t("Accept")}
               </Button>
               <Button
                 size="lg"
@@ -66,7 +64,7 @@ export function CookieConsentBanner() {
                 onClick={() => setCookieConsent("denied")}
                 className="min-w-28 flex-1 sm:flex-none"
               >
-                Reject
+                {t("Reject")}
               </Button>
             </div>
           </div>

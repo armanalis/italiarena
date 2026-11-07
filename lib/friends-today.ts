@@ -29,18 +29,18 @@ export function sortFriendsToday(rows: readonly FriendToday[]): FriendToday[] {
   );
 }
 
-/** "Wordle 4/6", "Word Wheel 18/23", "der·die·das 23", each with the level it was played at. */
-export function todayResults(row: FriendToday, language: TargetLanguage): { label: string; level: string }[] {
-  const results: { label: string; level: string }[] = [];
+/** Wordle 4/6, Word Wheel 18/23, der·die·das 23, each with its level; the screen translates the game. */
+export function todayResults(row: FriendToday, language: TargetLanguage): { game: string; score: string; level: string }[] {
+  const results: { game: string; score: string; level: string }[] = [];
   if (row.wordle) {
     const score = row.wordle.won ? row.wordle.guesses : "X";
-    results.push({ label: `Wordle ${score}/${WORDLE_MAX_GUESSES}`, level: row.wordle.level });
+    results.push({ game: "Wordle", score: `${score}/${WORDLE_MAX_GUESSES}`, level: row.wordle.level });
   }
   if (row.word_wheel) {
-    results.push({ label: `Word Wheel ${row.word_wheel.right}/${row.word_wheel.total}`, level: row.word_wheel.level });
+    results.push({ game: "Word Wheel", score: `${row.word_wheel.right}/${row.word_wheel.total}`, level: row.word_wheel.level });
   }
   if (row.sprint) {
-    results.push({ label: `${ARTICLE_GAME_NAME[language]} ${row.sprint.score}`, level: row.sprint.level });
+    results.push({ game: ARTICLE_GAME_NAME[language], score: String(row.sprint.score), level: row.sprint.level });
   }
   return results;
 }

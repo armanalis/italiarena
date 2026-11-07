@@ -60,9 +60,12 @@ export function isAnswerCorrect(
 
 export function formatCategoryLabel(category: string | null | undefined): string {
   if (!category || typeof category !== "string") {
-    return "GENERAL";
+    return "General";
   }
-  return category.replace(/-/g, " ").toUpperCase();
+  // "Fill in the blank": screens translate it, and badges capitalise it in CSS
+  // (capitals in the text would turn Turkish İ into "i̇" when lowercased).
+  const words = category.replace(/-/g, " ").toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 /** Text for a multiple-choice option letter on a question row. */

@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/ui-language-provider";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Script from "next/script";
 import { Loader2 } from "lucide-react";
@@ -37,6 +38,7 @@ function GoogleIcon() {
 }
 
 export function GoogleSignInButton() {
+  const t = useT();
   const clientId = getGoogleWebClientId();
   const buttonHostRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
@@ -202,18 +204,18 @@ export function GoogleSignInButton() {
         {loading ? (
           <>
             <Loader2 className="size-4 animate-spin" />
-            Signing in with Google...
+            {t("Signing in with Google...")}
           </>
         ) : (
           <>
             <GoogleIcon />
-            Continue with Google
+            {t("Continue with Google")}
           </>
         )}
       </Button>
       {error && (
         <p className="text-sm text-destructive" role="alert">
-          {error}
+          {t(error)}
         </p>
       )}
     </div>

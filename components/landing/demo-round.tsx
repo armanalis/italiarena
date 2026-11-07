@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/ui-language-provider";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, XCircle } from "lucide-react";
@@ -39,6 +40,7 @@ type DemoRoundProps = {
 
 /** Playable sample round in the live match's styling: answer three questions, then sign up. */
 export function DemoRound({ questions, opponent, className }: DemoRoundProps) {
+  const t = useT();
   const [phase, setPhase] = useState<Phase>("intro");
   const [index, setIndex] = useState(0);
   const [introLeft, setIntroLeft] = useState(INTRO_SECONDS);
@@ -121,17 +123,17 @@ export function DemoRound({ questions, opponent, className }: DemoRoundProps) {
   return (
     <section
       className={cn("glass-panel relative overflow-hidden", className)}
-      aria-label="Try a round: three sample questions"
+      aria-label={t("Try a round: three sample questions")}
     >
       <header className="flex flex-wrap items-start justify-between gap-x-2 gap-y-2 border-b border-border/60 px-4 py-3 sm:items-center sm:px-5 sm:py-4">
         <div className="min-w-0 flex-1 space-y-0.5">
           <p className="text-sm font-semibold tabular-nums text-foreground">
             {phase === "intro"
-              ? `Match starts in ${introLeft}s`
-              : `Question ${index + 1}/${questions.length}`}
+              ? t("Match starts in {n}s", { n: introLeft })
+              : t("Question {n}/{total}", { n: index + 1, total: questions.length })}
           </p>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-medium">
-            <span className="truncate">You · {scores.you}</span>
+            <span className="truncate">{t("You")} · {scores.you}</span>
             <span className="text-muted-foreground">vs</span>
             <span className="truncate">
               {opponent} · {scores.opponent}
@@ -153,9 +155,9 @@ export function DemoRound({ questions, opponent, className }: DemoRoundProps) {
         {phase === "intro" ? (
           <div className="animate-in fade-in zoom-in flex min-h-[180px] items-center justify-center rounded-2xl border border-primary/25 bg-muted/40 p-6 text-center duration-300">
             <div>
-              <p className="text-xs uppercase tracking-[0.25em] text-primary">Up next</p>
-              <h3 className="mt-2 text-2xl font-black tracking-tight">
-                {question.category.toUpperCase()}
+              <p className="text-xs uppercase tracking-[0.25em] text-primary">{t("Up next")}</p>
+              <h3 className="mt-2 text-2xl font-black uppercase tracking-tight">
+                {t(question.category)}
               </h3>
             </div>
           </div>
@@ -175,15 +177,15 @@ export function DemoRound({ questions, opponent, className }: DemoRoundProps) {
                 {answeredRight ? (
                   <>
                     <CheckCircle2 className="size-5 shrink-0" />
-                    Correct!
+                    {t("Correct!")}
                   </>
                 ) : picked !== null ? (
                   <>
                     <XCircle className="size-5 shrink-0" />
-                    Wrong answer
+                    {t("Wrong answer")}
                   </>
                 ) : (
-                  <>Timed out</>
+                  <>{t("Timed out")}</>
                 )}
               </div>
             )}
@@ -227,13 +229,13 @@ export function DemoRound({ questions, opponent, className }: DemoRoundProps) {
                     {isCorrect && (
                       <CheckCircle2
                         className={cn("size-4 shrink-0", CORRECT_TEXT)}
-                        aria-label="Correct answer"
+                        aria-label={t("Correct answer")}
                       />
                     )}
                     {isWrong && (
                       <XCircle
                         className={cn("size-4 shrink-0", WRONG_TEXT)}
-                        aria-label="Your answer, wrong"
+                        aria-label={t("Your answer, wrong")}
                       />
                     )}
                   </button>
@@ -257,21 +259,21 @@ export function DemoRound({ questions, opponent, className }: DemoRoundProps) {
               style={{ background: "var(--card)" }}
             >
               <p className="text-base font-semibold tracking-tight sm:text-lg">
-                Want to improve your Italian or German?
+                {t("Want to improve your Italian or German?")}
               </p>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                A real match is ten questions against a live opponent at your level.
+                {t("A real match is ten questions against a live opponent at your level.")}
               </p>
               <Button asChild className="mt-4 h-11 w-full">
-                <Link href="/login?mode=signup">Create account</Link>
+                <Link href="/login?mode=signup">{t("Create account")}</Link>
               </Button>
               <p className="mt-3 text-center text-sm text-muted-foreground">
-                Already have an account?{" "}
+                {t("Already have an account?")}{" "}
                 <Link
                   href="/login"
                   className="font-medium text-foreground underline-offset-4 hover:underline"
                 >
-                  Sign in
+                  {t("Sign in")}
                 </Link>
               </p>
             </div>

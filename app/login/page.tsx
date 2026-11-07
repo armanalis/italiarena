@@ -8,6 +8,7 @@ import { getPostAuthPath } from "@/lib/auth";
 import { isEmailVerifiedUser } from "@/lib/guest-auth";
 import { getProductionSiteUrl } from "@/lib/site-url";
 import { createClient } from "@/utils/supabase/server";
+import { getT } from "@/lib/i18n-server";
 
 const loginErrors: Record<string, string> = {
   auth_callback_failed: `Google sign-in did not complete. In Supabase → Authentication → URL configuration, set Site URL to ${getProductionSiteUrl()}, add ${getProductionSiteUrl()}/auth/callback and ${getProductionSiteUrl()}/auth/confirm to Redirect URLs, and remove any old language-quiz-one.vercel.app entries. Then try again. You can still sign in with email or username.`,
@@ -53,6 +54,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     }
   }
 
+  const t = await getT();
   const authError = params.error ? loginErrors[params.error] ?? null : null;
   const authSuccess = params.success ? loginSuccess[params.success] ?? null : null;
   const initialMode =
@@ -69,7 +71,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           href="/"
           className="mb-6 inline-flex text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
-          ← Back to home
+          ← {t("Back to home")}
         </Link>
 
         <div className="space-y-4">
@@ -78,7 +80,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
               role="alert"
             >
-              {authError}
+              {params.error === "auth_callback_failed" ? authError : t(authError)}
             </div>
           )}
           {authSuccess && (
@@ -86,7 +88,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400"
               role="status"
             >
-              {authSuccess}
+              {t(authSuccess)}
             </div>
           )}
           {/* Keyed so client navigation between ?mode=signup and sign-in swaps the form */}

@@ -3,6 +3,8 @@
  * Run: npx tsx scripts/test-review.ts
  */
 import assert from "node:assert/strict";
+import { TR } from "../lib/i18n-tr";
+import { translator } from "../lib/i18n";
 import { nextReview, reviewMinutes, whenDue } from "../lib/review";
 
 let passed = 0;
@@ -62,6 +64,8 @@ check("about 20 seconds a mistake; due dates in words", () => {
   assert.equal(whenDue("2026-11-09", "2026-11-02"), "in a week");
   assert.equal(whenDue("2026-11-16", "2026-11-02"), "in 2 weeks");
   assert.equal(whenDue("2026-11-20", "2026-11-02"), "on 20 Nov");
+  assert.equal(whenDue("2026-11-05", "2026-11-02", translator(TR), "tr"), "3 gün sonra");
+  assert.equal(whenDue("2026-11-20", "2026-11-02", translator(TR), "tr"), "20 Kas");
 });
 
 console.log(`\n${passed} review checks passed`);

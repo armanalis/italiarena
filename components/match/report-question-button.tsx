@@ -20,6 +20,7 @@ import {
 import { REPORT_ISSUE_OPTIONS } from "@/lib/report-issues";
 import type { ReportIssueType } from "@/types/database.types";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/ui-language-provider";
 
 const REPORT_TIMEOUT_MS = 12_000;
 
@@ -61,6 +62,7 @@ export function ReportQuestionButton({
   reported = false,
   onReported,
 }: ReportQuestionButtonProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<ReportIssueType | null>(
     null
@@ -70,7 +72,7 @@ export function ReportQuestionButton({
   async function handleSubmit() {
     if (!selectedIssue || isSubmitting) {
       if (!selectedIssue) {
-        toast.error("Select an issue type before submitting.");
+        toast.error(t("Select an issue type before submitting."));
       }
       return;
     }
@@ -84,7 +86,7 @@ export function ReportQuestionButton({
       );
 
       if (result.success) {
-        toast.success("Report logged. Thanks for the feedback!");
+        toast.success(t("Report logged. Thanks for the feedback!"));
         onReported?.();
         closeDialog();
         return;
@@ -92,15 +94,15 @@ export function ReportQuestionButton({
 
       if (result.error === "You already reported this question.") {
         onReported?.();
-        toast.success("You already reported this question.");
+        toast.success(t("You already reported this question."));
         closeDialog();
         return;
       }
 
-      toast.error(result.error);
+      toast.error(t(result.error));
     } catch {
       toast.error(
-        "Could not submit your report right now. The match will continue — try again from the review at the end."
+        t("Could not submit your report right now. The match will continue — try again from the review at the end.")
       );
       closeDialog();
     } finally {
@@ -138,7 +140,7 @@ export function ReportQuestionButton({
         )}
       >
         <Flag className="size-4" />
-        {showLabel ? "Reported" : null}
+        {showLabel ? t("Reported") : null}
       </Button>
     );
   }
@@ -156,18 +158,17 @@ export function ReportQuestionButton({
               : "size-11 shrink-0 text-muted-foreground hover:text-amber-400",
             className
           )}
-          aria-label="Report question"
+          aria-label={t("Report question")}
         >
           <Flag className="size-4" />
-          {showLabel ? "Report" : null}
+          {showLabel ? t("Report") : null}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Report this question</DialogTitle>
+          <DialogTitle>{t("Report this question")}</DialogTitle>
           <DialogDescription>
-            Help us improve the question pool. You can only report each question
-            once.
+            {t("Help us improve the question pool. You can only report each question once.")}
           </DialogDescription>
         </DialogHeader>
 
@@ -189,7 +190,7 @@ export function ReportQuestionButton({
                   "border-amber-500 bg-amber-500/10 text-amber-100"
               )}
             >
-              {option.label}
+              {t(option.label)}
             </button>
           ))}
         </div>
@@ -200,7 +201,7 @@ export function ReportQuestionButton({
             variant="outline"
             onClick={() => handleOpenChange(false)}
           >
-            Cancel
+            {t("Cancel")}
           </Button>
           <Button
             type="button"
@@ -210,10 +211,10 @@ export function ReportQuestionButton({
             {isSubmitting ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                Submitting...
+                {t("Submitting...")}
               </>
             ) : (
-              "Submit report"
+              t("Submit report")
             )}
           </Button>
         </DialogFooter>

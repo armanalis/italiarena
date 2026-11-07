@@ -7,6 +7,7 @@
  * (user_mistakes_schedule, supabase/migrations/*_mistake_review.sql).
  * Tested by scripts/test-review.ts.
  */
+import { translator, type Translate } from "@/lib/i18n";
 import { addDays } from "@/lib/wordle";
 
 /** Days until the next review after 0, 1, 2 and 3 right reviews. */
@@ -42,12 +43,13 @@ export function reviewMinutes(count: number): number {
 }
 
 /** "tomorrow", "in 3 days", "on 14 Nov". */
-export function whenDue(dueOn: string, today: string): string {
+export function whenDue(dueOn: string, today: string, t: Translate = translator(null), locale = "en-GB"): string {
   const days = Math.round((Date.parse(dueOn) - Date.parse(today)) / 86_400_000);
-  if (days <= 0) return "today";
-  if (days === 1) return "tomorrow";
-  if (days < 7) return `in ${days} days`;
-  if (days === 7) return "in a week";
-  if (days === 14) return "in 2 weeks";
-  return `on ${new Date(`${dueOn}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}`;
+  if (days <= 0) return t("today");
+  if (days === 1) return t("tomorrow");
+  if (days < 7) return t("in {n} days", { n: days });
+  if (days === 7) return t("in a week");
+  if (days === 14) return t("in 2 weeks");
+  const date = new Date(`${dueOn}T12:00:00Z`).toLocaleDateString(locale, { day: "numeric", month: "short", timeZone: "UTC" });
+  return t("on {date}", { date });
 }

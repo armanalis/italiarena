@@ -5,6 +5,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import type { VariantProps } from "class-variance-authority";
 import { BUY_ME_A_COFFEE_URL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/ui-language-provider";
 
 type CoffeeLinkProps = {
   className?: string;
@@ -17,6 +18,7 @@ export function CoffeeLink({
   showLabel = false,
   variant = "ghost",
 }: CoffeeLinkProps) {
+  const t = useT();
   return (
     <Button
       asChild
@@ -31,10 +33,10 @@ export function CoffeeLink({
         href={BUY_ME_A_COFFEE_URL}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="Buy me a coffee"
+        aria-label={t("Buy me a coffee")}
       >
         <Coffee className="size-4" />
-        {showLabel ? "Buy me a coffee" : null}
+        {showLabel ? t("Buy me a coffee") : null}
       </a>
     </Button>
   );

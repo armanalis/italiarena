@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { recordMatchMistakes } from "@/app/(app)/stats/actions";
 import { getAuthUserId, getCurrentUserProfile, isGuestUser } from "@/lib/auth";
@@ -10,6 +11,7 @@ import {
   revalidateUserDashboard,
 } from "@/lib/dashboard-cache";
 import { createClient } from "@/utils/supabase/server";
+import { isUiLanguage, UI_LANGUAGE_COOKIE, UI_LANGUAGE_MAX_AGE, type UiLanguage } from "@/lib/i18n";
 import {
   DEFAULT_LANGUAGE,
   isProficiencyLevel,
@@ -220,6 +222,22 @@ export async function updateGameplayPreferences(
 
   revalidatePath("/settings");
   revalidateUserDashboard(user.id);
+  return { success: true };
+}
+
+/** The app language: this device keeps it in a cookie, the account for new devices and reminders. */
+export async function setUiLanguage(language: UiLanguage): Promise<SettingsActionResult> {
+  if (!isUiLanguage(language)) {
+    return { success: false, error: "Could not change the language. Try again." };
+  }
+  (await cookies()).set(UI_LANGUAGE_COOKIE, language, { path: "/", maxAge: UI_LANGUAGE_MAX_AGE, sameSite: "lax" });
+  const userId = await getAuthUserId();
+  if (userId) {
+    // No error check: before the ui_language migration the cookie alone keeps the choice.
+    await (await createClient()).from("users").update({ ui_language: language }).eq("id", userId);
+  }
+  // Every page was drawn in the old language.
+  revalidatePath("/", "layout");
   return { success: true };
 }
 

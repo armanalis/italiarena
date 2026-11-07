@@ -5,12 +5,14 @@ import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { useHydrated } from "@/hooks/use-browser-value";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/ui-language-provider";
 
 type ThemeToggleProps = {
   className?: string;
 };
 
 export function ThemeToggle({ className }: ThemeToggleProps) {
+  const t = useT();
   const { resolvedTheme, setTheme } = useTheme();
   const mounted = useHydrated();
 
@@ -20,7 +22,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
         variant="ghost"
         size="icon"
         className={cn("size-9", className)}
-        aria-label="Toggle theme"
+        aria-label={t("Toggle theme")}
         disabled
       />
     );
@@ -34,7 +36,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       variant="ghost"
       size="icon"
       className={cn("size-9", className)}
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={isDark ? t("Switch to light mode") : t("Switch to dark mode")}
       onClick={() => setTheme(isDark ? "light" : "dark")}
     >
       {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Loader2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
+import { useT } from "@/components/ui-language-provider";
 import { resetPlayerStatistics } from "@/app/(app)/stats/actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,7 @@ type ResetStatsButtonProps = {
 };
 
 export function ResetStatsButton({ hasStats }: ResetStatsButtonProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -28,12 +30,12 @@ export function ResetStatsButton({ hasStats }: ResetStatsButtonProps) {
       const result = await resetPlayerStatistics();
 
       if (result.success) {
-        toast.success("Statistics reset.");
+        toast.success(t("Statistics reset."));
         setOpen(false);
         return;
       }
 
-      toast.error(result.error);
+      toast.error(t(result.error));
     });
   }
 
@@ -47,16 +49,14 @@ export function ResetStatsButton({ hasStats }: ResetStatsButtonProps) {
           disabled={!hasStats || isPending}
         >
           <RotateCcw className="size-4" />
-          Reset stats
+          {t("Reset stats")}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Reset all statistics?</DialogTitle>
+          <DialogTitle>{t("Reset all statistics?")}</DialogTitle>
           <DialogDescription>
-            This clears your wins, losses, accuracy by category, match history,
-            leaderboard standing, and seen-question memory in every language
-            you play. You cannot undo this.
+            {t("This clears your wins, losses, accuracy by category, match history, leaderboard standing, and seen-question memory in every language you play. You cannot undo this.")}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -66,7 +66,7 @@ export function ResetStatsButton({ hasStats }: ResetStatsButtonProps) {
             disabled={isPending}
             onClick={() => setOpen(false)}
           >
-            Cancel
+            {t("Cancel")}
           </Button>
           <Button
             type="button"
@@ -77,10 +77,10 @@ export function ResetStatsButton({ hasStats }: ResetStatsButtonProps) {
             {isPending ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                Resetting...
+                {t("Resetting...")}
               </>
             ) : (
-              "Reset statistics"
+              t("Reset statistics")
             )}
           </Button>
         </DialogFooter>

@@ -5,6 +5,8 @@
  */
 import assert from "node:assert/strict";
 import { buildDailyReminderPayloads, isReminderDue, type ReminderUser } from "../lib/push";
+import { TR } from "../lib/i18n-tr";
+import { translator } from "../lib/i18n";
 
 const rome = (hour: number | null, lastSent: string | null = null): ReminderUser => ({
   daily_reminder_hour: hour,
@@ -65,6 +67,12 @@ assert.equal(
   buildDailyReminderPayloads([{ game: "arena", streak: 3, played_today: false }], 5)[0].tag,
   "daily-reminder-arena",
   "a streak at risk comes first"
+);
+
+// A Turkish player's reminder speaks Turkish.
+assert.equal(
+  buildDailyReminderPayloads([{ game: "wordle", streak: 4, played_today: false }], 0, translator(TR))[0].body,
+  "4 günlük Wordle serini sürdür: bugünün kelimesi seni bekliyor."
 );
 
 console.log("ok - reminder payloads: one per streak at risk, the usual one otherwise");

@@ -1,4 +1,5 @@
 /** Active match — synced game loop with scoring, bots, audio, and haptics. */
+import { getT } from "@/lib/i18n-server";
 import { redirect } from "next/navigation";
 import { MatchResultRecorder } from "@/components/match/match-result-recorder";
 import { GameLoop } from "@/components/match/game-loop";
@@ -33,11 +34,12 @@ export default async function MatchPage({ params }: MatchPageProps) {
     redirect("/matchmaking");
   }
 
+  const t = await getT();
   const isBotMatch = opponent?.isGhost ?? false;
   const localName = getPublicDisplayName(profile);
   const opponentName = isBotMatch
     ? GHOST_PLAYER_NAME
-    : (opponent?.displayName ?? "Waiting...");
+    : (opponent?.displayName ?? t("Waiting..."));
   const [playerAName, playerBName] =
     localPlayerRole === "a" ? [localName, opponentName] : [opponentName, localName];
 

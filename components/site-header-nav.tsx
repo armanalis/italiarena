@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/components/ui-language-provider";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AdminQueueBadge } from "@/components/admin/admin-queue-badge";
@@ -43,6 +44,7 @@ export function SiteHeaderNav({
   const pathname = usePathname();
   const leavingActiveMatch =
     showDashboard && isImmersiveMatchRoute(pathname);
+  const t = useT();
   const [confirmLeave, setConfirmLeave] = useState(false);
 
   function handleDashboardExit(event: React.MouseEvent<HTMLAnchorElement>) {
@@ -75,12 +77,12 @@ export function SiteHeaderNav({
           {!isAuthenticated ? (
             <>
               <Button asChild variant="ghost" size="sm" className="hidden min-h-10 sm:inline-flex">
-                <Link href="/login">Sign In</Link>
+                <Link href="/login">{t("Sign In")}</Link>
               </Button>
               <Button asChild size="sm" className="min-h-10">
                 <Link href="/login?mode=signup">
-                  <span className="sm:hidden">Join</span>
-                  <span className="hidden sm:inline">Sign Up</span>
+                  <span className="sm:hidden">{t("Join")}</span>
+                  <span className="hidden sm:inline">{t("Sign Up")}</span>
                 </Link>
               </Button>
             </>
@@ -98,8 +100,8 @@ export function SiteHeaderNav({
               {showDashboard && (
                 <Button asChild variant="ghost" size="sm" className="min-h-10 px-2 sm:px-3">
                   <Link href="/" onClick={handleDashboardExit}>
-                    <span className="hidden sm:inline">Arena</span>
-                    <span className="sm:hidden">Home</span>
+                    <span className="hidden sm:inline">{t("Arena")}</span>
+                    <span className="sm:hidden">{t("Home")}</span>
                   </Link>
                 </Button>
               )}
@@ -111,10 +113,10 @@ export function SiteHeaderNav({
                   className="hidden min-h-10 gap-1.5 sm:inline-flex"
                 >
                   <Link href="/admin">
-                    Admin
+                    {t("Admin")}
                     <AdminQueueBadge
                       count={adminQueueCount}
-                      label="questions waiting for review"
+                      label={t("questions waiting for review")}
                     />
                   </Link>
                 </Button>
@@ -127,17 +129,17 @@ export function SiteHeaderNav({
       <Dialog open={confirmLeave} onOpenChange={setConfirmLeave}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Leave this match?</DialogTitle>
+            <DialogTitle>{t("Leave this match?")}</DialogTitle>
             <DialogDescription>
-              It counts as a loss, and your opponent gets the win.
+              {t("It counts as a loss, and your opponent gets the win.")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setConfirmLeave(false)}>
-              Keep playing
+              {t("Keep playing")}
             </Button>
             <Button type="button" variant="destructive" onClick={() => void exitToDashboard()}>
-              Leave match
+              {t("Leave match")}
             </Button>
           </DialogFooter>
         </DialogContent>

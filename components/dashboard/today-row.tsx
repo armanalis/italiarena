@@ -6,6 +6,8 @@ import type { TargetLanguage } from "@/lib/constants";
 import { reviewMinutes } from "@/lib/review";
 import type { PassaparolaTurnResult } from "@/lib/passaparola";
 import type { GameStreak } from "@/lib/push";
+import type { Translate } from "@/lib/i18n";
+import { getT } from "@/lib/i18n-server";
 import { cn } from "@/lib/utils";
 import { WORDLE_MAX_GUESSES, type WordleTurnResult } from "@/lib/wordle";
 
@@ -22,19 +24,19 @@ type Tile = {
 
 type Streaks = Partial<Record<GameStreak["game"], GameStreak>>;
 
-function wordleTile(result: WordleTurnResult, streak: GameStreak | undefined): Tile {
+function wordleTile(t: Translate, result: WordleTurnResult, streak: GameStreak | undefined): Tile {
   const view = result.ok ? result.view : null;
   const guesses = view?.guesses.length ?? 0;
   return {
     title: "Wordle",
     status:
       view?.status === "won"
-        ? `Solved ${guesses}/${WORDLE_MAX_GUESSES}`
+        ? t("Solved {n}/{max}", { n: guesses, max: WORDLE_MAX_GUESSES })
         : view?.status === "lost"
-          ? "Missed today"
+          ? t("Missed today")
           : guesses > 0
-            ? `In progress · ${guesses}/${WORDLE_MAX_GUESSES}`
-            : "Not played yet",
+            ? t("In progress · {n}/{max}", { n: guesses, max: WORDLE_MAX_GUESSES })
+            : t("Not played yet"),
     done: view?.status === "won" || view?.status === "lost",
     icon: Grid3x3,
     accent: "text-emerald-500",
@@ -43,16 +45,16 @@ function wordleTile(result: WordleTurnResult, streak: GameStreak | undefined): T
   };
 }
 
-function passaparolaTile(result: PassaparolaTurnResult, streak: GameStreak | undefined): Tile {
+function passaparolaTile(t: Translate, result: PassaparolaTurnResult, streak: GameStreak | undefined): Tile {
   const view = result.ok ? result.view : null;
   const right = view ? Object.values(view.marks).filter((mark) => mark === "right").length : 0;
   return {
-    title: "Word Wheel",
+    title: t("Word Wheel"),
     status: view?.finished
-      ? `${right}/${view.clues.length} right`
+      ? t("{right}/{total} right", { right, total: view.clues.length })
       : view?.started
-        ? "In progress"
-        : "Not played yet · 5 min",
+        ? t("In progress")
+        : t("Not played yet · 5 min"),
     done: Boolean(view?.finished),
     icon: CircleDashed,
     accent: "text-sky-500",
@@ -62,6 +64,7 @@ function passaparolaTile(result: PassaparolaTurnResult, streak: GameStreak | und
 }
 
 function articlesTile(
+  t: Translate,
   language: TargetLanguage,
   level: string,
   stats: ArticleStats | null,
@@ -73,8 +76,12 @@ function articlesTile(
     title: ARTICLE_GAME_NAME[language],
     status:
       today !== undefined
-        ? `Sprint ${today}${best ? ` · best ${best}` : ""}`
-        : `Not played yet · ${best ? `best ${best}` : "60 s"}`,
+        ? best
+          ? t("Sprint {score} · best {best}", { score: today, best })
+          : t("Sprint {score}", { score: today })
+        : best
+          ? t("Not played yet · best {best}", { best })
+          : t("Not played yet · 60 s"),
     done: today !== undefined,
     icon: Timer,
     accent: "text-violet-500",
@@ -83,24 +90,24 @@ function articlesTile(
   };
 }
 
-const pictureDuelTile: Tile = {
-  title: "Picture Duel",
-  status: "With a friend · 60 s each",
+const pictureDuelTile = (t: Translate): Tile => ({
+  title: t("Picture Duel"),
+  status: t("With a friend · 60 s each"),
   done: false,
   icon: Images,
   accent: "text-rose-500",
   href: "/picture-duel",
-};
+});
 
-function arenaStreakTile(streak: GameStreak | undefined): Tile {
+function arenaStreakTile(t: Translate, streak: GameStreak | undefined): Tile {
   const days = streak?.streak ?? 0;
   return {
-    title: days > 0 ? `${days}-day Arena streak` : "Arena streak",
+    title: days > 0 ? t("{n}-day Arena streak", { n: days }) : t("Arena streak"),
     status: streak?.played_today
-      ? "Done for today"
+      ? t("Done for today")
       : days > 0
-        ? "1 match keeps it"
-        : "Play 1 match to start",
+        ? t("1 match keeps it")
+        : t("Play 1 match to start"),
     done: Boolean(streak?.played_today),
     icon: Flame,
     accent: "text-orange-500",
@@ -109,7 +116,7 @@ function arenaStreakTile(streak: GameStreak | undefined): Tile {
 
 const TILE = "flex h-full items-center gap-3 rounded-2xl border border-border px-3 py-2.5";
 
-export function TodayRow({
+export async function TodayRow({
   wordle,
   passaparola,
   articles,
@@ -127,18 +134,19 @@ export function TodayRow({
   level: string;
   streaks: Streaks;
 }) {
+  const t = await getT();
   const tiles = [
-    wordleTile(wordle, streaks.wordle),
-    passaparolaTile(passaparola, streaks.passaparola),
-    articlesTile(language, level, articles, streaks.articles),
-    pictureDuelTile,
-    arenaStreakTile(streaks.arena),
+    wordleTile(t, wordle, streaks.wordle),
+    passaparolaTile(t, passaparola, streaks.passaparola),
+    articlesTile(t, language, level, articles, streaks.articles),
+    pictureDuelTile(t),
+    arenaStreakTile(t, streaks.arena),
   ];
 
   return (
     <section aria-labelledby="games-heading" className="mx-auto w-full max-w-3xl space-y-2">
       <h2 id="games-heading" className="text-sm font-semibold text-muted-foreground">
-        Games
+        {t("Games")}
       </h2>
       <ul className="grid gap-3 sm:grid-cols-2">
         {tiles.map(({ title, status, done, icon: Icon, accent, href, streak }, index) => {
@@ -153,15 +161,15 @@ export function TodayRow({
                   {Boolean(streak) && (
                     <span className="ml-1.5 inline-flex items-center gap-0.5 text-xs text-orange-500">
                       <Flame className="size-3" aria-hidden />
-                      {streak}
-                      <span className="sr-only">-day streak</span>
+                      <span aria-hidden>{streak}</span>
+                      <span className="sr-only">{t("{n}-day streak", { n: streak ?? 0 })}</span>
                     </span>
                   )}
                 </span>
                 <span className="block truncate text-xs text-muted-foreground">{status}</span>
               </span>
               {done ? (
-                <Check className="size-4 shrink-0 text-emerald-500" aria-label="Done" />
+                <Check className="size-4 shrink-0 text-emerald-500" aria-label={t("Done")} />
               ) : (
                 href && <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
               )}
@@ -189,10 +197,10 @@ export function TodayRow({
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-medium">
-              {reviewDue} to review today
+              {t("{n} to review today", { n: reviewDue })}
             </span>
             <span className="block truncate text-xs text-muted-foreground">
-              About {reviewMinutes(reviewDue)} min · mistakes come back until they stick
+              {t("About {n} min · mistakes come back until they stick", { n: reviewMinutes(reviewDue) })}
             </span>
           </span>
           <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />

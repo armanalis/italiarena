@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { isUiLanguage, translator } from "@/lib/i18n";
+import { dictionaryFor } from "@/lib/i18n-server";
 import { authorizeCron } from "@/lib/cron-auth";
 import {
   buildDailyReminderPayloads,
@@ -13,7 +15,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type CronUser = ReminderUser & { id: string; target_language: TargetLanguage | null };
+type CronUser = ReminderUser & { id: string; target_language: TargetLanguage | null; ui_language?: string | null };
 
 /**
  * Users processed in parallel. Each one is an independent claim-then-send, so
@@ -38,7 +40,8 @@ async function runDailyReminderCron(options: { dryRun: boolean }) {
   for (let from = 0; ; from += USER_PAGE_SIZE) {
     const { data, error } = await admin
       .from("users")
-      .select("id, daily_reminder_hour, timezone, last_reminder_sent_at, target_language")
+      // "*": ui_language exists only once its migration ran; naming it would fail the whole run before that.
+      .select("*")
       .eq("daily_reminder_enabled", true)
       .eq("is_guest", false)
       .order("id")
@@ -102,7 +105,8 @@ async function runDailyReminderCron(options: { dryRun: boolean }) {
       ]);
       const totals = { ...empty };
       // One after another: a dead device pruned by the first push is skipped by the rest.
-      for (const payload of buildDailyReminderPayloads(streaks ?? [], (reviewDue as number | null) ?? 0)) {
+      const t = translator(dictionaryFor(isUiLanguage(user.ui_language) ? user.ui_language : "en"));
+      for (const payload of buildDailyReminderPayloads(streaks ?? [], (reviewDue as number | null) ?? 0, t)) {
         const result = await sendPushToUser(user.id, payload);
         totals.sent += result.sent;
         totals.failed += result.failed;

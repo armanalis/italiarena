@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/ui-language-provider";
 import { useEffect, useRef, useState } from "react";
 import {
   SIDEBAR_MAX_WIDTH,
@@ -38,6 +39,7 @@ function saveWidth(width: number | null) {
  * it directly after the <aside>. Double-click resets the default width.
  */
 export function SidebarResizeHandle() {
+  const t = useT();
   const handleRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const lastWidthRef = useRef<number | null>(null);
@@ -130,12 +132,12 @@ export function SidebarResizeHandle() {
       ref={handleRef}
       role="separator"
       aria-orientation="vertical"
-      aria-label="Resize sidebar (left and right arrow keys)"
+      aria-label={t("Resize sidebar (left and right arrow keys)")}
       aria-valuemin={SIDEBAR_MIN_WIDTH}
       aria-valuemax={SIDEBAR_MAX_WIDTH}
       aria-valuenow={width ?? undefined}
       tabIndex={0}
-      title="Drag to resize · double-click to reset"
+      title={t("Drag to resize · double-click to reset")}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}

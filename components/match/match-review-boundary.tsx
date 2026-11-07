@@ -2,6 +2,7 @@
 
 import { Component, type ReactNode } from "react";
 import { CheckCircle2 } from "lucide-react";
+import { useT } from "@/components/ui-language-provider";
 
 type MatchReviewBoundaryProps = {
   children: ReactNode;
@@ -24,22 +25,27 @@ export class MatchReviewBoundary extends Component<
 
   render() {
     if (this.state.hasError) {
-      return (
-        <div className="w-full max-w-xl rounded-2xl border border-border/60 bg-card/50 p-5 text-left">
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
-            <div>
-              <h2 className="font-semibold">Match review unavailable</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Your score was saved, but the question breakdown could not be
-                shown. You can still play again from the buttons below.
-              </p>
-            </div>
-          </div>
-        </div>
-      );
+      return <ReviewUnavailable />;
     }
 
     return this.props.children;
   }
+}
+
+// A function component: the class above cannot read the app language (hooks).
+function ReviewUnavailable() {
+  const t = useT();
+  return (
+    <div className="w-full max-w-xl rounded-2xl border border-border/60 bg-card/50 p-5 text-left">
+      <div className="flex items-start gap-3">
+        <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
+        <div>
+          <h2 className="font-semibold">{t("Match review unavailable")}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t("Your score was saved, but the question breakdown could not be shown. You can still play again from the buttons below.")}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }

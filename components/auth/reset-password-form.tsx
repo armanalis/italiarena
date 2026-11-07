@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/ui-language-provider";
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import { Lock } from "lucide-react";
@@ -26,6 +27,7 @@ const MIN_SESSION_MS = 5 * 60 * 1000;
 const KEEP_ALIVE_EVERY_MS = 60 * 1000;
 
 export function ResetPasswordForm() {
+  const t = useT();
   const [error, setError] = useState<string | null>(null);
   const [linkExpired, setLinkExpired] = useState(false);
   const [pending, setPending] = useState(false);
@@ -168,7 +170,7 @@ export function ResetPasswordForm() {
       </p>
 
       <div className="space-y-2">
-        <Label htmlFor="reset-password">New password</Label>
+        <Label htmlFor="reset-password">{t("New password")}</Label>
         <div className="relative">
           <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -186,14 +188,14 @@ export function ResetPasswordForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="reset-confirm-password">Re-enter new password</Label>
+        <Label htmlFor="reset-confirm-password">{t("Re-enter new password")}</Label>
         <div className="relative">
           <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="reset-confirm-password"
             name="confirm_password"
             type="password"
-            placeholder="Repeat your new password"
+            placeholder={t("Repeat your new password")}
             minLength={PASSWORD_MIN_LENGTH}
             autoComplete="new-password"
             required
@@ -208,14 +210,14 @@ export function ResetPasswordForm() {
           className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
           role="alert"
         >
-          <p>{error}</p>
+          <p>{t(error)}</p>
           {linkExpired && (
             <p className="mt-2">
               <Link
                 href="/login"
                 className="font-medium underline underline-offset-4"
               >
-                Go to login and request a new reset link
+                {t("Go to login and request a new reset link")}
               </Link>
             </p>
           )}
@@ -223,7 +225,7 @@ export function ResetPasswordForm() {
       )}
 
       <Button type="submit" disabled={pending} className="h-11 w-full">
-        {pending ? "Updating password..." : "Set new password"}
+        {pending ? t("Updating password...") : t("Set new password")}
       </Button>
     </form>
   );

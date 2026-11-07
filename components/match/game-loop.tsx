@@ -31,6 +31,7 @@ import { SoundVolumeControl } from "@/components/sound-volume-control";
 import type { CorrectAnswer, PublicQuestion } from "@/types/database.types";
 import type { ProficiencyLevel } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/ui-language-provider";
 
 type GameLoopProps = {
   sessionId: string;
@@ -60,6 +61,7 @@ export function GameLoop({
   playerBName,
   serverPlaylist,
 }: GameLoopProps) {
+  const t = useT();
   const hydrated = useGameStoreHydrated();
   const playerAScore = usePlayerAScore();
   const playerBScore = usePlayerBScore();
@@ -121,36 +123,35 @@ export function GameLoop({
           {matchClosed.result === "win" ? (
             <>
               <Trophy className="mx-auto mb-2 size-10 text-primary" />
-              <p className="text-lg font-semibold">You win!</p>
+              <p className="text-lg font-semibold">{t("You win!")}</p>
               <p className="text-sm text-muted-foreground">
-                Your opponent left the match, so the victory is yours.
+                {t("Your opponent left the match, so the victory is yours.")}
               </p>
               {matchClosed.points > 0 && (
                 <p className="text-sm font-medium text-foreground">
-                  +{matchClosed.points} points added to your leaderboard total.
+                  {t("+{n} points added to your leaderboard total.", { n: matchClosed.points })}
                 </p>
               )}
             </>
           ) : matchClosed.result === "loss" ? (
             <>
-              <p className="text-lg font-semibold">Match lost</p>
+              <p className="text-lg font-semibold">{t("Match lost")}</p>
               <p className="text-sm text-muted-foreground">
-                You left this match after it started, so it counts as a loss.
+                {t("You left this match after it started, so it counts as a loss.")}
               </p>
             </>
           ) : (
             <>
-              <p className="text-lg font-semibold">Match ended</p>
+              <p className="text-lg font-semibold">{t("Match ended")}</p>
               <p className="text-sm text-muted-foreground">
-                A player left before the first round was scored, so this match
-                does not count.
+                {t("A player left before the first round was scored, so this match does not count.")}
               </p>
             </>
           )}
         </div>
         <Button asChild className="min-h-11">
           <Link href="/" onClick={() => reset()}>
-            Back to the Arena
+            {t("Back to the Arena")}
           </Link>
         </Button>
       </div>
@@ -165,7 +166,7 @@ export function GameLoop({
   ) {
     return (
       <div className="flex flex-1 items-center justify-center p-8">
-        <p className="text-muted-foreground">Loading match...</p>
+        <p className="text-muted-foreground">{t("Loading match...")}</p>
       </div>
     );
   }
@@ -175,9 +176,9 @@ export function GameLoop({
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
         <Loader2 className="size-10 animate-spin text-primary" />
         <div className="space-y-1">
-          <p className="text-lg font-semibold">Preparing match</p>
+          <p className="text-lg font-semibold">{t("Preparing match")}</p>
           <p className="text-sm text-muted-foreground">
-            Syncing questions with your opponent...
+            {t("Syncing questions with your opponent...")}
           </p>
         </div>
       </div>
@@ -189,9 +190,9 @@ export function GameLoop({
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
         <Loader2 className="size-10 animate-spin text-primary" />
         <div className="space-y-1">
-          <p className="text-lg font-semibold">Scores tied</p>
+          <p className="text-lg font-semibold">{t("Scores tied")}</p>
           <p className="text-sm text-muted-foreground">
-            Picking a random tiebreaker question from any topic...
+            {t("Picking a random tiebreaker question from any topic...")}
           </p>
         </div>
       </div>
@@ -241,26 +242,21 @@ export function GameLoop({
           </div>
           <div className="space-y-1.5">
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-              {isTie || scoresEven
-                ? "It's a tie!"
-                : didWin
-                  ? "You win!"
-                  : "You lose!"}
+              {isTie || scoresEven ? t("It's a tie!") : didWin ? t("You win!") : t("You lose!")}
             </h1>
             <p className="text-sm text-muted-foreground sm:text-base">
-              Final score · {playerAName} {playerAScore} — {playerBName}{" "}
-              {playerBScore}
+              {t("Final score")} · {playerAName} {playerAScore} — {playerBName} {playerBScore}
             </p>
             {(isTie || scoresEven) && (
               <p className="text-sm text-muted-foreground">
                 {tiebreakerUsed
-                  ? "Still tied after the sudden-death round."
-                  : "Both players finished with the same score."}
+                  ? t("Still tied after the sudden-death round.")
+                  : t("Both players finished with the same score.")}
               </p>
             )}
             {tiebreakerUsed && !isTie && !scoresEven && (
               <p className="text-sm text-muted-foreground">
-                Decided by sudden-death tiebreaker.
+                {t("Decided by sudden-death tiebreaker.")}
               </p>
             )}
           </div>
@@ -268,7 +264,7 @@ export function GameLoop({
 
         <div className="flex flex-col items-center gap-6 px-4 pb-10 sm:px-8 sm:pb-12">
           <p className="max-w-xl text-center text-sm font-medium text-foreground">
-            Scroll down to review your mistakes and all questions from this match.
+            {t("Scroll down to review your mistakes and all questions from this match.")}
           </p>
           <MatchReviewBoundary>
             <MatchMistakesReview />
@@ -278,7 +274,7 @@ export function GameLoop({
             <div className="flex w-full max-w-xl flex-col items-center gap-3 border-t border-border/60 pt-6 sm:flex-row sm:justify-center">
               <Button asChild variant="outline" className="min-h-11 w-full sm:w-auto">
                 <Link href="/" onClick={() => reset()}>
-                  Back to the Arena
+                  {t("Back to the Arena")}
                 </Link>
               </Button>
               <Button asChild className="min-h-11 w-full sm:w-auto">
@@ -289,7 +285,7 @@ export function GameLoop({
                     reset();
                   }}
                 >
-                  Play again
+                  {t("Play again")}
                 </Link>
               </Button>
             </div>
@@ -311,14 +307,14 @@ export function GameLoop({
         <div className="min-w-0 flex-1 space-y-0.5 sm:space-y-1">
           <p className="text-sm font-semibold tabular-nums text-foreground sm:text-base">
             {isTiebreakerRound
-              ? "Tiebreaker"
-              : `Question ${currentQuestionIndex + 1}/${totalQuestions}`}
+              ? t("Tiebreaker")
+              : t("Question {n}/{total}", { n: currentQuestionIndex + 1, total: totalQuestions })}
           </p>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-medium sm:gap-3 sm:text-sm">
             <span className="truncate">
               {playerAName} · {playerAScore}
             </span>
-            <span className="text-muted-foreground">vs</span>
+            <span className="text-muted-foreground">{t("vs")}</span>
             <span className="truncate">
               {playerBName} · {playerBScore}
             </span>
@@ -366,7 +362,7 @@ export function GameLoop({
               </span>
               <span className="hidden h-4 w-px bg-border/60 sm:inline" aria-hidden />
               <span className="inline-flex items-center gap-1">
-                <span className="hidden text-muted-foreground sm:inline">Next</span>
+                <span className="hidden text-muted-foreground sm:inline">{t("Next")}</span>
                 <Badge
                   variant={
                     roundResultSecondsLeft <= 3 ? "destructive" : "default"
@@ -381,7 +377,7 @@ export function GameLoop({
           <SoundVolumeControl collapsible />
           {isBotMatch && (
             <Badge variant="secondary">
-              {botDifficulty ? BOT_DIFFICULTY_LABELS[botDifficulty] : "Bot"}
+              {botDifficulty ? t(BOT_DIFFICULTY_LABELS[botDifficulty]) : t("Bot")}
             </Badge>
           )}
           {roundPhase !== "round_result" && (
@@ -415,10 +411,10 @@ export function GameLoop({
           <div className="animate-in fade-in zoom-in flex min-h-[180px] w-full max-w-xl items-center justify-center rounded-2xl border border-primary/25 bg-muted/40 p-6 text-center duration-300 sm:min-h-[280px] sm:p-12">
             <div>
               <p className="text-xs uppercase tracking-[0.25em] text-primary sm:text-sm sm:tracking-[0.35em]">
-                {isTiebreakerRound ? "Sudden death" : "Up next"}
+                {isTiebreakerRound ? t("Sudden death") : t("Up next")}
               </p>
-              <h2 className="mt-2 text-2xl font-black tracking-tight sm:mt-3 sm:text-4xl">
-                {formatCategoryLabel(currentQuestion.category)}
+              <h2 className="mt-2 text-2xl font-black uppercase tracking-tight sm:mt-3 sm:text-4xl">
+                {t(formatCategoryLabel(currentQuestion.category))}
               </h2>
             </div>
           </div>
@@ -429,7 +425,7 @@ export function GameLoop({
               <div className="space-y-2 text-center sm:space-y-3">
                 <div className="flex flex-wrap items-center justify-center gap-2">
                   <Badge variant="secondary" className="uppercase tracking-wide">
-                    {formatCategoryLabel(currentQuestion.category)}
+                    {t(formatCategoryLabel(currentQuestion.category))}
                   </Badge>
                   <ReportQuestionButton
                     questionId={currentQuestion.id}
@@ -479,14 +475,14 @@ export function GameLoop({
               {showWaiting && (
                 <div className="flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
                   <Loader2 className="size-4 animate-spin" />
-                  Waiting for {opponentDisplayName}...
+                  {t("Waiting for {name}...", { name: opponentDisplayName })}
                 </div>
               )}
 
               {isLocked && opponentAnswer && (
                 <div className="flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
                   <Loader2 className="size-4 animate-spin" />
-                  Revealing answers...
+                  {t("Revealing answers...")}
                 </div>
               )}
             </div>
@@ -519,15 +515,15 @@ export function GameLoop({
               {localWasCorrect ? (
                 <>
                   <CheckCircle2 className="size-5 shrink-0" />
-                  Correct!
+                  {t("Correct!")}
                 </>
               ) : localAnswer?.answer ? (
                 <>
                   <XCircle className="size-5 shrink-0" />
-                  Wrong answer
+                  {t("Wrong answer")}
                 </>
               ) : (
-                <>Timed out</>
+                <>{t("Timed out")}</>
               )}
             </div>
 
@@ -599,7 +595,7 @@ export function GameLoop({
                       <span className="flex shrink-0 flex-wrap items-center justify-end gap-1">
                         {isLocalPick && (
                           <Badge variant="secondary" className="h-5 px-2 text-[10px] sm:text-xs">
-                            You
+                            {t("You")}
                           </Badge>
                         )}
                         {isOpponentPick && (
@@ -629,7 +625,7 @@ export function GameLoop({
             {revealedAnswer && (
               <div className="w-full shrink-0 rounded-2xl border border-border/60 bg-card/80 px-4 py-3 text-center sm:py-4">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground sm:text-sm">
-                  Correct answer
+                  {t("Correct answer")}
                 </p>
                 <p className="mt-1.5 text-base leading-snug sm:mt-2 sm:text-lg">
                   <span className="font-bold text-emerald-400">
@@ -646,8 +642,8 @@ export function GameLoop({
       <footer className="flex shrink-0 flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-border/60 px-3 py-2 text-center text-[10px] text-muted-foreground sm:px-6 sm:py-3 sm:text-xs">
         <span className="font-medium tabular-nums text-foreground">
           {isTiebreakerRound
-            ? "Tiebreaker"
-            : `Question ${currentQuestionIndex + 1}/${totalQuestions}`}
+            ? t("Tiebreaker")
+            : t("Question {n}/{total}", { n: currentQuestionIndex + 1, total: totalQuestions })}
         </span>
         <span className="hidden text-border sm:inline">|</span>
         <span>

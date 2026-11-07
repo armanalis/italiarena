@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/ui-language-provider";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ function HorizontalVolumeSlider({
   onChange: (value: number) => void;
   className?: string;
 }) {
+  const t = useT();
   return (
     <div className={cn("flex min-w-[112px] max-w-[168px] items-center gap-2", className)}>
       <VolumeX className="size-3.5 shrink-0 text-muted-foreground" />
@@ -38,7 +40,7 @@ function HorizontalVolumeSlider({
         max={100}
         step={1}
         value={volume}
-        aria-label="Sound volume"
+        aria-label={t("Sound volume")}
         onChange={(event) => onChange(Number(event.target.value))}
         className="h-2 w-full min-w-0 cursor-pointer touch-target accent-primary"
       />
@@ -65,6 +67,7 @@ function VerticalVolumeSlider({
   onChange: (value: number) => void;
   className?: string;
 }) {
+  const t = useT();
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
 
@@ -109,7 +112,7 @@ function VerticalVolumeSlider({
       <div
         ref={trackRef}
         role="slider"
-        aria-label="Sound volume"
+        aria-label={t("Sound volume")}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={volume}
@@ -154,7 +157,7 @@ function VerticalVolumeSlider({
       <button
         type="button"
         className="rounded-md p-0.5 text-foreground/60 transition-colors hover:bg-white/10 hover:text-foreground"
-        aria-label="Mute sound"
+        aria-label={t("Mute sound")}
         onClick={() => onChange(0)}
       >
         <VolumeX className="size-3 shrink-0" />
@@ -168,6 +171,7 @@ export function SoundVolumeControl({
   showSlider = false,
   collapsible = false,
 }: SoundVolumeControlProps) {
+  const t = useT();
   // The saved volume lives in localStorage: the server renders the default.
   const storedVolume = useBrowserValue(getSoundVolume, DEFAULT_SOUND_VOLUME);
   const [chosenVolume, setChosenVolume] = useState<number | null>(null);
@@ -250,11 +254,11 @@ export function SoundVolumeControl({
         aria-label={
           collapsible
             ? open
-              ? "Close volume control"
-              : "Open volume control"
+              ? t("Close volume control")
+              : t("Open volume control")
             : volume > 0
-              ? "Mute sound"
-              : "Unmute sound"
+              ? t("Mute sound")
+              : t("Unmute sound")
         }
         aria-expanded={collapsible ? open : undefined}
         aria-pressed={!collapsible && volume === 0}
@@ -271,7 +275,7 @@ export function SoundVolumeControl({
         <div
           className="absolute right-0 top-[calc(100%+0.5rem)] z-50 animate-in fade-in-0 zoom-in-95 rounded-lg border border-white/10 bg-[#2a3138]/95 px-1.5 py-1.5 shadow-[0_4px_20px_rgb(0_0_0_/_0.45)] backdrop-blur-sm duration-150"
           role="dialog"
-          aria-label="Sound volume"
+          aria-label={t("Sound volume")}
         >
           <VerticalVolumeSlider volume={volume} onChange={persistVolume} />
         </div>

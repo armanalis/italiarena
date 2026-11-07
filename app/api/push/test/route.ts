@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { buildDailyReminderPayload, sendPushToUser } from "@/lib/push";
 import { isGuestAuthUser } from "@/lib/guest-auth";
+import { getT } from "@/lib/i18n-server";
 
 /** Sends one test notification to the signed-in user's devices. */
 export async function POST() {
@@ -23,7 +24,8 @@ export async function POST() {
 
   try {
     const result = await sendPushToUser(user.id, {
-      ...buildDailyReminderPayload(),
+      // The test speaks the app language this device shows.
+      ...buildDailyReminderPayload(await getT()),
       tag: "daily-reminder-test",
     });
 

@@ -15,6 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { TargetLanguage } from "@/lib/constants";
 import { loadFriendsToday, type FriendToday } from "@/lib/friends-today";
 import { cn } from "@/lib/utils";
+import { useT, useUiLanguage } from "@/components/ui-language-provider";
+import type { UiLanguage } from "@/lib/i18n";
 import { createClient } from "@/utils/supabase/client";
 
 type FriendRow = {
@@ -28,10 +30,9 @@ type FriendRow = {
   last_seen_at?: string | null;
 };
 
-const relativeTime = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
-
-/** "5 minutes ago", "3 hours ago", "yesterday", "12 days ago". */
-function lastSeenLabel(iso: string) {
+/** "5 minutes ago", "3 hours ago", "yesterday", "12 days ago", in the app language ("5 dakika önce"). */
+function lastSeenLabel(iso: string, language: UiLanguage) {
+  const relativeTime = new Intl.RelativeTimeFormat(language, { numeric: "auto" });
   const minutes = Math.min(-1, Math.round((Date.parse(iso) - Date.now()) / 60_000));
   if (minutes > -60) return relativeTime.format(minutes, "minute");
   const hours = Math.round(minutes / 60);
@@ -55,6 +56,8 @@ const REQUEST_MESSAGES: Record<string, string> = {
 /** Bottom-right friends button and panel (the shell leaves it out of matches and game screens). */
 export function FriendsPanel({ language }: { language: TargetLanguage }) {
   const router = useRouter();
+  const t = useT();
+  const uiLanguage = useUiLanguage();
   const [rows, setRows] = useState<FriendRow[]>([]);
   const [tab, setTab] = useState("friends");
   // Today's scores load when their tab opens, not every minute with the list.
@@ -108,10 +111,10 @@ export function FriendsPanel({ language }: { language: TargetLanguage }) {
         p_display_name: name,
       });
       if (error) {
-        toast.error(error.message);
+        toast.error(t(error.message));
         return;
       }
-      const message = REQUEST_MESSAGES[String(data)] ?? "Done.";
+      const message = t(REQUEST_MESSAGES[String(data)] ?? "Done.");
       if (data === "sent" || data === "accepted") {
         toast.success(message);
         setUsername("");
@@ -127,7 +130,7 @@ export function FriendsPanel({ language }: { language: TargetLanguage }) {
       if (result.success) {
         router.push(`/challenge/${result.sessionId}`);
       } else {
-        toast.error(result.error);
+        toast.error(t(result.error));
       }
     });
   }
@@ -148,11 +151,11 @@ export function FriendsPanel({ language }: { language: TargetLanguage }) {
           className="hide-while-typing fixed right-4 bottom-[calc(var(--app-mobile-nav-height)+env(safe-area-inset-bottom,0px)+0.75rem)] z-40 min-h-11 gap-2 rounded-full px-4 shadow-md md:bottom-6"
         >
           <Users className="size-4" />
-          Friends
+          {t("Friends")}
           {waitingForYou > 0 && (
             <span className="flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground">
               {waitingForYou}
-              <span className="sr-only"> waiting for you</span>
+              <span className="sr-only"> {t("waiting for you")}</span>
             </span>
           )}
         </Button>
@@ -165,7 +168,7 @@ export function FriendsPanel({ language }: { language: TargetLanguage }) {
           collisionPadding={16}
           className="z-50 max-h-[min(70dvh,32rem)] w-[min(22rem,calc(100vw-2rem))] space-y-4 overflow-y-auto rounded-xl border border-border bg-popover p-4 text-sm text-popover-foreground shadow-md outline-none"
         >
-          <h2 className="sr-only">Friends</h2>
+          <h2 className="sr-only">{t("Friends")}</h2>
           <Tabs
             value={tab}
             onValueChange={(value) => {
@@ -174,26 +177,26 @@ export function FriendsPanel({ language }: { language: TargetLanguage }) {
             }}
           >
             <TabsList className="w-full">
-              <TabsTrigger value="friends">Friends</TabsTrigger>
-              <TabsTrigger value="today">Today</TabsTrigger>
+              <TabsTrigger value="friends">{t("Friends")}</TabsTrigger>
+              <TabsTrigger value="today">{t("Today")}</TabsTrigger>
             </TabsList>
             <TabsContent value="today" className="pt-2">
               {today ? (
                 <FriendsTodayList rows={today} language={language} />
               ) : (
-                <p className="text-sm text-muted-foreground">Loading…</p>
+                <p className="text-sm text-muted-foreground">{t("Loading…")}</p>
               )}
             </TabsContent>
             <TabsContent value="friends" className="space-y-4 pt-2">
               {challenges.length > 0 && (
-                <section className="space-y-2" aria-label="Challenges">
+                <section className="space-y-2" aria-label={t("Challenges")}>
                   {challenges.map((row) => (
                     <div key={row.friend_id} className="flex items-center justify-between gap-2 rounded-lg bg-primary/10 px-3 py-2">
                       <span className="min-w-0 truncate">
-                        <span className="font-medium">{row.display_name}</span> challenged you
+                        {t("{name} challenged you", { name: row.display_name })}
                       </span>
                       <Button asChild size="sm">
-                        <Link href={`/challenge/${row.challenge_session_id}`}>Play</Link>
+                        <Link href={`/challenge/${row.challenge_session_id}`}>{t("Play")}</Link>
                       </Button>
                     </div>
                   ))}
@@ -201,8 +204,8 @@ export function FriendsPanel({ language }: { language: TargetLanguage }) {
               )}
 
               {incoming.length > 0 && (
-                <section className="space-y-2" aria-label="Friend requests">
-                  <h3 className="text-xs font-medium text-muted-foreground">Requests</h3>
+                <section className="space-y-2" aria-label={t("Friend requests")}>
+                  <h3 className="text-xs font-medium text-muted-foreground">{t("Requests")}</h3>
                   {incoming.map((row) => (
                     <div key={row.friend_id} className="flex items-center justify-between gap-2">
                       <span className="min-w-0 truncate font-medium">{row.display_name}</span>
@@ -213,7 +216,7 @@ export function FriendsPanel({ language }: { language: TargetLanguage }) {
                           disabled={isPending}
                           onClick={() => run(() => createClient().rpc("respond_friend_request", { p_requester: row.friend_id, p_accept: true }))}
                         >
-                          Accept
+                          {t("Accept")}
                         </Button>
                         <Button
                           type="button"
@@ -222,7 +225,7 @@ export function FriendsPanel({ language }: { language: TargetLanguage }) {
                           disabled={isPending}
                           onClick={() => run(() => createClient().rpc("respond_friend_request", { p_requester: row.friend_id, p_accept: false }))}
                         >
-                          Decline
+                          {t("Decline")}
                         </Button>
                       </div>
                     </div>
@@ -230,16 +233,16 @@ export function FriendsPanel({ language }: { language: TargetLanguage }) {
                 </section>
               )}
 
-              <section className="space-y-1" aria-label="Your friends">
+              <section className="space-y-1" aria-label={t("Your friends")}>
                 {friends.length === 0 ? (
                   <p className="text-muted-foreground">
-                    No friends yet. Add one by username, or share a challenge link.
+                    {t("No friends yet. Add one by username, or share a challenge link.")}
                   </p>
                 ) : (
                   friends.map((row) =>
                     confirmRemove === row.friend_id ? (
                       <div key={row.friend_id} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5">
-                        <span className="min-w-0 truncate">Remove {row.display_name}?</span>
+                        <span className="min-w-0 truncate">{t("Remove {name}?", { name: row.display_name })}</span>
                         <div className="flex shrink-0 gap-1">
                           <Button
                             type="button"
@@ -253,10 +256,10 @@ export function FriendsPanel({ language }: { language: TargetLanguage }) {
                               })
                             }
                           >
-                            Remove
+                            {t("Remove")}
                           </Button>
                           <Button type="button" size="sm" variant="ghost" onClick={() => setConfirmRemove(null)}>
-                            Keep
+                            {t("Keep")}
                           </Button>
                         </div>
                       </div>
@@ -268,10 +271,10 @@ export function FriendsPanel({ language }: { language: TargetLanguage }) {
                         />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate font-medium">{row.display_name}</span>
-                          <span className="sr-only">{row.online ? ", online" : ", offline"}</span>
+                          <span className="sr-only">{row.online ? t(", online") : t(", offline")}</span>
                           {!row.online && row.last_seen_at && (
                             <span className="block truncate text-xs text-muted-foreground">
-                              Last seen {lastSeenLabel(row.last_seen_at)}
+                              {t("Last seen {when}", { when: lastSeenLabel(row.last_seen_at, uiLanguage) })}
                             </span>
                           )}
                         </span>
@@ -285,8 +288,8 @@ export function FriendsPanel({ language }: { language: TargetLanguage }) {
                           size="icon-sm"
                           variant="ghost"
                           className="size-11 md:size-7"
-                          aria-label={`Challenge ${row.display_name}`}
-                          title="Challenge"
+                          aria-label={t("Challenge {name}", { name: row.display_name })}
+                          title={t("Challenge")}
                           disabled={isPending}
                           onClick={() => challenge(row.friend_id)}
                         >
@@ -297,8 +300,8 @@ export function FriendsPanel({ language }: { language: TargetLanguage }) {
                           size="icon-sm"
                           variant="ghost"
                           className="size-11 md:size-7"
-                          aria-label={`Remove ${row.display_name}`}
-                          title="Remove friend"
+                          aria-label={t("Remove {name}", { name: row.display_name })}
+                          title={t("Remove friend")}
                           onClick={() => setConfirmRemove(row.friend_id)}
                         >
                           <X className="size-4" />
@@ -310,11 +313,11 @@ export function FriendsPanel({ language }: { language: TargetLanguage }) {
               </section>
 
               {outgoing.length > 0 && (
-                <section className="space-y-1" aria-label="Sent requests">
-                  <h3 className="text-xs font-medium text-muted-foreground">Sent</h3>
+                <section className="space-y-1" aria-label={t("Sent requests")}>
+                  <h3 className="text-xs font-medium text-muted-foreground">{t("Sent")}</h3>
                   {outgoing.map((row) => (
                     <div key={row.friend_id} className="flex items-center justify-between gap-2 px-2">
-                      <span className="min-w-0 truncate text-muted-foreground">Waiting for {row.display_name}</span>
+                      <span className="min-w-0 truncate text-muted-foreground">{t("Waiting for {name}", { name: row.display_name })}</span>
                       <Button
                         type="button"
                         size="sm"
@@ -322,7 +325,7 @@ export function FriendsPanel({ language }: { language: TargetLanguage }) {
                         disabled={isPending}
                         onClick={() => run(() => createClient().rpc("remove_friend", { p_other: row.friend_id }))}
                       >
-                        Cancel
+                        {t("Cancel")}
                       </Button>
                     </div>
                   ))}
@@ -331,17 +334,17 @@ export function FriendsPanel({ language }: { language: TargetLanguage }) {
 
               <form onSubmit={sendRequest} className="flex gap-2 border-t border-border/60 pt-4">
                 <label htmlFor="friend-username" className="sr-only">
-                  Friend&apos;s username
+                  {t("Friend's username")}
                 </label>
                 <Input
                   id="friend-username"
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
-                  placeholder="Add by username"
+                  placeholder={t("Add by username")}
                   autoComplete="off"
                   maxLength={24}
                 />
-                <Button type="submit" disabled={isPending || !username.trim()} aria-label="Send friend request">
+                <Button type="submit" disabled={isPending || !username.trim()} aria-label={t("Send friend request")}>
                   <UserPlus className="size-4" />
                 </Button>
               </form>

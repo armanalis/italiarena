@@ -33,6 +33,7 @@ import {
 } from "@/lib/matchmaking-intent";
 import type { UserProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/ui-language-provider";
 
 const SEARCH_INTERVAL_MS = 1500;
 const MATCH_SEARCH_SECONDS = 10;
@@ -88,12 +89,13 @@ export function MatchmakingLobby({
   const [isExiting, setIsExiting] = useState(false);
   const [showNoMatchDialog, setShowNoMatchDialog] = useState(false);
   const [isStartingBot, setIsStartingBot] = useState(false);
+  const t = useT();
   const [statusMessage, setStatusMessage] = useState(() =>
     mode === "bot"
-      ? "Summoning ghost opponent..."
+      ? t("Summoning ghost opponent...")
       : shouldAutosearchMatchmaking()
-        ? "Searching for opponent..."
-        : "Ready when you are"
+        ? t("Searching for opponent...")
+        : t("Ready when you are")
   );
 
   const language = profile.target_language!;
@@ -154,10 +156,10 @@ export function MatchmakingLobby({
     setSecondsLeft(MATCH_SEARCH_SECONDS);
     setShowNoMatchDialog(false);
     setError(null);
-    setStatusMessage("Searching for opponent...");
+    setStatusMessage(t("Searching for opponent..."));
     setSearchArmed(true);
     setSearching();
-  }, [setSearching]);
+  }, [setSearching, t]);
 
   const handleSearchTimeout = useCallback(async () => {
     if (
@@ -170,12 +172,12 @@ export function MatchmakingLobby({
 
     noMatchHandledRef.current = true;
     clearTimers();
-    setStatusMessage("No matches found");
+    setStatusMessage(t("No matches found"));
 
     const sessionId = useGameStore.getState().gameSessionId;
     await cancelMatchSearch(sessionId);
     setShowNoMatchDialog(true);
-  }, [clearTimers]);
+  }, [clearTimers, t]);
 
   const handlePlayVsBot = useCallback(async () => {
     if (isStartingBot || redirectingRef.current) {
@@ -209,11 +211,9 @@ export function MatchmakingLobby({
       playlist: result.data.playlist,
       botDifficulty,
     });
-    setStatusMessage(
-      `${BOT_DIFFICULTY_LABELS[botDifficulty]} ready — starting match...`
-    );
+    setStatusMessage(t("{bot} ready — starting match...", { bot: t(BOT_DIFFICULTY_LABELS[botDifficulty]) }));
     goToMatch(result.data.sessionId);
-  }, [botDifficulty, clearTimers, goToMatch, isStartingBot, setSessionId, startMatch]);
+  }, [botDifficulty, clearTimers, goToMatch, isStartingBot, setSessionId, startMatch, t]);
 
   const handleReturnToDashboard = useCallback(async () => {
     if (redirectingRef.current) {
@@ -247,12 +247,12 @@ export function MatchmakingLobby({
       });
       setStatusMessage(
         opponent.isGhost
-          ? `${BOT_DIFFICULTY_LABELS[botDifficulty]} ready — starting match...`
-          : "Opponent found — starting match..."
+          ? t("{bot} ready — starting match...", { bot: t(BOT_DIFFICULTY_LABELS[botDifficulty]) })
+          : t("Opponent found — starting match...")
       );
       goToMatch(sessionId);
     },
-    [botDifficulty, goToMatch, startMatch]
+    [botDifficulty, goToMatch, startMatch, t]
   );
 
   // Before the effects below, so they always call the current handler.
@@ -508,24 +508,23 @@ export function MatchmakingLobby({
 
             <div className="space-y-2">
               <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
-                Ready when you are
+                {t("Ready when you are")}
               </h1>
               <p className="text-sm text-muted-foreground">
-                Take your time reviewing the last match. Search only starts when
-                you choose to play again.
+                {t("Take your time reviewing the last match. Search only starts when you choose to play again.")}
               </p>
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-2">
               <Badge variant="secondary" className="gap-1.5">
                 <Users className="size-3.5" />
-                {onlineCount} online in your bracket
+                {t("{n} online in your bracket", { n: onlineCount })}
               </Badge>
             </div>
 
             {error && (
               <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                {error}
+                {t(error)}
               </div>
             )}
 
@@ -535,7 +534,7 @@ export function MatchmakingLobby({
                 className="min-h-11 w-full sm:w-auto"
                 onClick={beginSearch}
               >
-                Find opponent
+                {t("Find opponent")}
               </Button>
               <Button
                 type="button"
@@ -546,7 +545,7 @@ export function MatchmakingLobby({
                   void exitLobby();
                 }}
               >
-                {isExiting ? "Leaving..." : "Back to the Arena"}
+                {isExiting ? t("Leaving...") : t("Back to the Arena")}
               </Button>
             </div>
           </div>
@@ -567,8 +566,8 @@ export function MatchmakingLobby({
             <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{statusMessage}</h1>
             <p className="text-sm text-muted-foreground">
               {isBotMode
-                ? `${getBotDifficultyDescription(botDifficulty)} · ${language} · ${level}`
-                : `Matching ${language} learners at level ${level}`}
+                ? `${t(getBotDifficultyDescription(botDifficulty))} · ${t(language)} · ${level}`
+                : t("Matching {language} learners at level {level}", { language: t(language), level })}
             </p>
           </div>
 
@@ -576,7 +575,7 @@ export function MatchmakingLobby({
             <div className="flex flex-wrap items-center justify-center gap-2">
               <Badge variant="secondary" className="gap-1.5">
                 <Users className="size-3.5" />
-                {onlineCount} online in your bracket
+                {t("{n} online in your bracket", { n: onlineCount })}
               </Badge>
             </div>
           )}
@@ -587,7 +586,7 @@ export function MatchmakingLobby({
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-2 text-muted-foreground">
                     <Ghost className="size-4" />
-                    Time remaining
+                    {t("Time remaining")}
                   </span>
                   <span
                     className={cn(
@@ -607,21 +606,20 @@ export function MatchmakingLobby({
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  If no real player joins within {MATCH_SEARCH_SECONDS} seconds,
-                  you can play vs bot or go back to the Arena.
+                  {t("If no real player joins within {n} seconds, you can play vs bot or go back to the Arena.", { n: MATCH_SEARCH_SECONDS })}
                 </p>
               </>
             )}
             {isBotMode && (
               <p className="text-xs text-muted-foreground">
-                Starting {BOT_DIFFICULTY_LABELS[botDifficulty]} immediately — no waiting room.
+                {t("Starting {bot} immediately — no waiting room.", { bot: t(BOT_DIFFICULTY_LABELS[botDifficulty]) })}
               </p>
             )}
           </div>
 
           {error && (
             <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {error}
+              {t(error)}
             </div>
           )}
 
@@ -634,7 +632,7 @@ export function MatchmakingLobby({
               void exitLobby();
             }}
           >
-            {isExiting ? "Cancelling..." : isBotMode ? "Cancel" : "Cancel search"}
+            {isExiting ? t("Cancelling...") : isBotMode ? t("Cancel") : t("Cancel search")}
           </Button>
         </div>
       </div>
@@ -646,10 +644,9 @@ export function MatchmakingLobby({
           onEscapeKeyDown={(event) => event.preventDefault()}
         >
           <DialogHeader>
-            <DialogTitle>No matches found</DialogTitle>
+            <DialogTitle>{t("No matches found")}</DialogTitle>
             <DialogDescription>
-              We couldn&apos;t find another player at your {language} level.
-              Would you like to play vs bot or go back to the Arena?
+              {t("We couldn't find another player at your {language} level. Would you like to play vs bot or go back to the Arena?", { language: t(language) })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col gap-2 sm:flex-col">
@@ -661,7 +658,7 @@ export function MatchmakingLobby({
                 void handlePlayVsBot();
               }}
             >
-              {isStartingBot ? "Starting bot match..." : "Play vs bot"}
+              {isStartingBot ? t("Starting bot match...") : t("Play vs bot")}
             </Button>
             <Button
               type="button"
@@ -672,7 +669,7 @@ export function MatchmakingLobby({
                 void handleReturnToDashboard();
               }}
             >
-              Back to the Arena
+              {t("Back to the Arena")}
             </Button>
           </DialogFooter>
         </DialogContent>
