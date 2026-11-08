@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AuroraCanvas } from "@/components/aurora-canvas";
 import { LegalFooter, PrivacyPolicyContent } from "@/components/legal/privacy-policy";
-import { getPrivacyCopy, resolvePrivacyLocale } from "@/lib/legal";
+import { PRIVACY_LOCALES, getPrivacyCopy, privacyHref, resolvePrivacyLocale } from "@/lib/legal";
+
+const BACK_LABEL = { it: "← Torna alla home", en: "← Back to home", tr: "← Ana sayfaya dön" } as const;
 
 type PrivacyPageProps = {
   searchParams: Promise<{ lang?: string }>;
@@ -19,17 +21,13 @@ export async function generateMetadata({
     title: copy.title,
     description: copy.metaDescription,
     alternates: {
-      languages: {
-        it: "/privacy",
-        en: "/privacy?lang=en",
-      },
+      languages: Object.fromEntries(PRIVACY_LOCALES.map((option) => [option, privacyHref(option)])),
     },
   };
 }
 
 export default async function PrivacyPage({ searchParams }: PrivacyPageProps) {
   const locale = resolvePrivacyLocale((await searchParams).lang);
-  const backLabel = locale === "en" ? "← Back to home" : "← Torna alla home";
 
   return (
     <AuroraCanvas subtle>
@@ -38,7 +36,7 @@ export default async function PrivacyPage({ searchParams }: PrivacyPageProps) {
           href="/"
           className="mb-8 inline-flex min-h-11 items-center text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
-          {backLabel}
+          {BACK_LABEL[locale]}
         </Link>
 
         <PrivacyPolicyContent locale={locale} />

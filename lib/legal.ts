@@ -16,15 +16,16 @@ export const SUPPORT_EMAIL = "support@italiarena.com";
 /** Privacy and data-protection requests (same inbox as general support). */
 export const PRIVACY_CONTACT_EMAIL = SUPPORT_EMAIL;
 
-export const PRIVACY_POLICY_LAST_UPDATED_ISO = "2026-11-07";
-export const PRIVACY_POLICY_LAST_UPDATED_IT = "7 novembre 2026";
-export const PRIVACY_POLICY_LAST_UPDATED_EN = "7 November 2026";
+export const PRIVACY_POLICY_LAST_UPDATED_ISO = "2026-11-08";
+export const PRIVACY_POLICY_LAST_UPDATED_IT = "8 novembre 2026";
+export const PRIVACY_POLICY_LAST_UPDATED_EN = "8 November 2026";
+export const PRIVACY_POLICY_LAST_UPDATED_TR = "8 Kasım 2026";
 
-export const PRIVACY_HREF_IT = "/privacy";
-export const PRIVACY_HREF_EN = "/privacy?lang=en";
+/** The notice in each language; Italian is the official one. */
+export const PRIVACY_LOCALES = ["it", "en", "tr"] as const;
 
 export function privacyHref(locale: PrivacyLocale) {
-  return locale === "en" ? PRIVACY_HREF_EN : PRIVACY_HREF_IT;
+  return locale === "it" ? "/privacy" : `/privacy?lang=${locale}`;
 }
 
 /** Minimum age to use the service in Italy (art. 2-quinquies Codice privacy). */
@@ -50,10 +51,12 @@ export const VERCEL_PRIVACY_URL = "https://vercel.com/legal/privacy-policy";
 export const GROQ_PRIVACY_URL = "https://groq.com/privacy-policy";
 export const MICROSOFT_PRIVACY_URL = "https://privacy.microsoft.com/privacystatement";
 
-export type PrivacyLocale = "it" | "en";
+export type PrivacyLocale = (typeof PRIVACY_LOCALES)[number];
+
+const LANGUAGE_NAMES: Readonly<Record<PrivacyLocale, string>> = { it: "Italiano", en: "English", tr: "Türkçe" };
 
 export function resolvePrivacyLocale(value: string | undefined): PrivacyLocale {
-  return value === "en" ? "en" : "it";
+  return PRIVACY_LOCALES.includes(value as PrivacyLocale) ? (value as PrivacyLocale) : "it";
 }
 
 export type PrivacyPolicyTable = {
@@ -78,8 +81,8 @@ export type PrivacyCopy = {
   intro: string;
   officialLanguageNote: string;
   languageSwitchLabel: string;
-  languageSwitchIt: string;
-  languageSwitchEn: string;
+  /** Each language's name in itself: the same in every copy. */
+  languageNames: Readonly<Record<PrivacyLocale, string>>;
   contactHeading: string;
   contactBefore: string;
   contactBetween: string;
@@ -100,10 +103,9 @@ function buildItalianCopy(): PrivacyCopy {
     intro:
       "La presente informativa è resa ai sensi degli articoli 12, 13 e 14 del Regolamento (UE) 2016/679 («GDPR») e del Codice in materia di protezione dei dati personali (D.Lgs. 30 giugno 2003, n. 196, come modificato dal D.Lgs. 10 agosto 2018, n. 101 e successive modificazioni, «Codice privacy») a chi usa Italiarena in Italia o dal territorio italiano. Il testo è redatto in linguaggio chiaro e semplice, come richiesto dagli artt. 12–14 GDPR, dalle Linee guida WP29 sulla trasparenza (WP260 rev. 01, 11 aprile 2018) e dalle indicazioni del Garante. In caso di contrasto tra versioni linguistiche, prevale il testo italiano.",
     officialLanguageNote:
-      "Versione ufficiale in italiano. È disponibile una traduzione in inglese.",
+      "Versione ufficiale in italiano. Sono disponibili traduzioni in inglese e in turco.",
     languageSwitchLabel: "Lingua dell’informativa",
-    languageSwitchIt: "Italiano",
-    languageSwitchEn: "English",
+    languageNames: LANGUAGE_NAMES,
     contactHeading: "Contatti",
     contactBefore: "Per richieste in materia di privacy scrivere a ",
     contactBetween:
@@ -342,7 +344,7 @@ function buildItalianCopy(): PrivacyCopy {
         body:
           "Italiarena usa sistemi di IA di terzi (modelli ospitati da Groq) in due casi, entrambi facoltativi e con sorveglianza umana, in linea con gli artt. 3 e 4 della L. 23 settembre 2025, n. 132 e con i principi di trasparenza del Regolamento (UE) 2024/1689:",
         items: [
-          "«Ask AI»: su richiesta esplicita, il testo della domanda, il testo della risposta corretta e quello della risposta selezionata sono inviati al fornitore per generare una spiegazione didattica in inglese. Non inviamo il nome, l’e-mail, l’elenco completo delle opzioni o altri dati di contatto nel prompt. L’utente può astenersi dal chiedere spiegazioni in qualsiasi momento.",
+          "«Ask AI»: su richiesta esplicita, il testo della domanda, il testo della risposta corretta e quello della risposta selezionata sono inviati al fornitore per generare una spiegazione didattica nella lingua dell’interfaccia (inglese o turco). Non inviamo il nome, l’e-mail, l’elenco completo delle opzioni o altri dati di contatto nel prompt. L’utente può astenersi dal chiedere spiegazioni in qualsiasi momento.",
           "Pre-controllo dei contributi: se si invia una domanda alla community, un modello di IA formula un parere non vincolante (ad esempio su lingua, livello QECR e categoria). Un amministratore umano decide se approvare o respingere. Non è una decisione basata unicamente su un trattamento automatizzato con effetti giuridici o analogamente significativi (art. 22 GDPR).",
           "I dati inviati all’IA non sono usati da Italiarena per addestrare modelli propri. Il fornitore li tratta secondo il proprio contratto e la propria informativa.",
           "L’accesso alle funzioni di IA è riservato a chi ha almeno 14 anni, come il resto del servizio. Per i minori di 14 anni occorrerebbe il consenso di chi esercita la responsabilità genitoriale (art. 2-quinquies Codice privacy e art. 4, comma 4, L. 132/2025); il servizio non è destinato a quella fascia di età.",
@@ -413,8 +415,7 @@ function buildEnglishCopy(): PrivacyCopy {
     officialLanguageNote:
       "Official version: Italian. This English text is a translation.",
     languageSwitchLabel: "Notice language",
-    languageSwitchIt: "Italiano",
-    languageSwitchEn: "English",
+    languageNames: LANGUAGE_NAMES,
     contactHeading: "Contact",
     contactBefore: "For privacy requests, email ",
     contactBetween:
@@ -645,7 +646,7 @@ function buildEnglishCopy(): PrivacyCopy {
         body:
           "Italiarena uses third-party AI systems (models hosted by Groq) in two optional cases, both with human oversight, in line with Articles 3 and 4 of Italian Law no. 132 of 23 September 2025 and the transparency principles of Regulation (EU) 2024/1689:",
         items: [
-          "«Ask AI»: on an explicit request, the question text, the correct option text, and the selected option text are sent to the provider to generate an educational explanation in English. We do not send your name, email, the full option list, or other contact details in the prompt. You can simply not request explanations.",
+          "«Ask AI»: on an explicit request, the question text, the correct option text, and the selected option text are sent to the provider to generate an educational explanation in the app’s interface language (English or Turkish). We do not send your name, email, the full option list, or other contact details in the prompt. You can simply not request explanations.",
           "Submission pre-check: if you submit a community question, an AI model gives a non-binding opinion (for example on language, CEFR level, and category). A human administrator decides whether to approve or reject. This is not solely automated decision-making with legal or similarly significant effects (Article 22 GDPR).",
           "Italiarena does not use AI-sent data to train its own models. The provider processes the data under its contract and privacy notice.",
           "AI features, like the rest of the service, are for users aged 14 and over. Under-14s would need consent from the holder of parental responsibility (Article 2-quinquies Codice privacy and Article 4(4) of Law 132/2025); the service is not intended for that age group.",
@@ -704,13 +705,317 @@ function buildEnglishCopy(): PrivacyCopy {
   };
 }
 
-const PRIVACY_COPY: Record<PrivacyLocale, PrivacyCopy> = {
-  it: buildItalianCopy(),
-  en: buildEnglishCopy(),
+function buildTurkishCopy(): PrivacyCopy {
+  return {
+    title: "Kişisel verilerin işlenmesine ilişkin aydınlatma metni",
+    metaDescription:
+      "GDPR'ın 13. ve 14. maddeleri, İtalyan Kişisel Verilerin Korunması Kanunu (196/2003 sayılı Kanun Hükmünde Kararname) ve çerezler, elektronik iletişim ve yapay zekâya ilişkin İtalyan kuralları kapsamında Italiarena aydınlatma metni.",
+    lastUpdated: `Son güncelleme: ${PRIVACY_POLICY_LAST_UPDATED_TR}`,
+    jurisdictionLabel: "İtalya",
+    intro:
+      "Bu metin, 2016/679 sayılı (AB) Tüzüğün («GDPR») 12, 13 ve 14. maddeleri ile İtalyan Kişisel Verilerin Korunması Kanunu (30 Haziran 2003 tarihli ve 196 sayılı Kanun Hükmünde Kararname; 10 Ağustos 2018 tarihli ve 101 sayılı Kanun Hükmünde Kararname ile değişik, «Codice privacy») uyarınca, İtalya'da bulunan ya da hizmeti İtalya'dan kullanan Italiarena kullanıcılarına sunulmaktadır. GDPR'ın 12–14. maddeleri, 29. Madde Çalışma Grubu'nun şeffaflık kılavuzu (WP260 rev. 01, 11 Nisan 2018) ve Garante'nin yönlendirmeleri gereği anlaşılır bir dille yazılmıştır. Sürümler arasında çelişki olursa İtalyanca metin geçerlidir.",
+    officialLanguageNote:
+      "Resmî sürüm: İtalyanca. Bu Türkçe metin bir çeviridir.",
+    languageSwitchLabel: "Metnin dili",
+    languageNames: LANGUAGE_NAMES,
+    contactHeading: "İletişim",
+    contactBefore: "Gizlilikle ilgili talepler için e-posta gönderin: ",
+    contactBetween:
+      ". İtalyan denetim makamına şikâyette bulunmak için başvurun: ",
+    contactAfter: ".",
+    footerLinkLabel: "Gizlilik politikası",
+    footerNotice:
+      "Veriler GDPR'a ve İtalyan Kişisel Verilerin Korunması Kanunu'na (196/2003 sayılı KHK) uygun olarak işlenir.",
+    sections: [
+      {
+        title: "1. Uygulanan hukuki çerçeve",
+        body:
+          "İşleme, Italiarena'nın fiilen işlediği verilere (hesaplar, maçlar, tercihler, isteğe bağlı Google ile giriş, isteğe bağlı anlık bildirim hatırlatmaları, isteğe bağlı yapay zekâ açıklamaları, bildirimler ve topluluk gönderimleri) uygulandığı ölçüde aşağıdaki kurallara tabidir:",
+        items: [
+          "2016/679 sayılı (AB) Tüzük (GDPR), özellikle 5–7, 12–22, 24–25, 28, 32, 37, 44–49 ve 77–79. maddeler.",
+          "30 Haziran 2003 tarihli ve 196 sayılı Kanun Hükmünde Kararname (Codice privacy), 10 Ağustos 2018 tarihli ve 101 sayılı Kanun Hükmünde Kararname ile GDPR'a uyumlu hâliyle; özellikle 2-quinquies (dijital rıza yaşı), 2-terdecies (vefat etmiş kişiler), 122 (kullanıcının cihazında bilgi saklanması), 130 (elektronik iletişim), 141 (Garante'ye şikâyet) ve 152. (yargısal koruma) maddeler.",
+          "İtalya'da Codice privacy'nin 122 ve 130. maddeleriyle uygulanan 2002/58/AT sayılı Direktif (ePrivacy).",
+          "Garante'nin çerezler ve diğer izleme araçlarına ilişkin 10 Haziran 2021 tarihli ve 231 sayılı kararı.",
+          "Hizmetin yapay zekâ özelliklerinin şeffaflık yönleri için 2024/1689 sayılı (AB) Tüzük (Yapay Zekâ Yasası).",
+          "Yapay zekâya ilişkin 23 Eylül 2025 tarihli ve 132 sayılı İtalyan Kanunu, özellikle şeffaflık, gizlilik ve küçüklerin yapay zekâya erişimine ilişkin 3 ve 4. maddeler.",
+        ],
+      },
+      {
+        title: "2. Veri sorumlusu",
+        body:
+          `Veri sorumlusu, ${APP_LEGAL_NAME} hizmetini işleten (web sitesi: ${APP_WEBSITE}) ve İtalya'da yerleşik gerçek kişi ${CONTROLLER_NAME}'dir. ` +
+          `Hizmet ücretsizdir ve ticari bir faaliyet değildir; bu nedenle belirtilecek bir kayıtlı merkez ya da işyeri yoktur. ` +
+          `GDPR'ın 15–22. maddelerindeki haklar dahil, kişisel verilerinize ilişkin her türlü talep için ${PRIVACY_CONTACT_EMAIL} adresine yazın. ` +
+          `Veri sorumlusu Avrupa Birliği'nde yerleşik olduğundan GDPR'ın 27. maddesi uyarınca AB temsilcisi atanmamıştır.`,
+      },
+      {
+        title: "3. Veri Koruma Görevlisi (DPO)",
+        body:
+          "İşleme, GDPR'ın 37. maddesindeki zorunlu hâllere girmediği için Veri Koruma Görevlisi atanmamıştır (kamu kurumu değiliz, büyük ölçekte düzenli ve sistematik izleme yapmıyoruz, özel nitelikli verileri ya da suç verilerini büyük ölçekte işlemiyoruz).",
+      },
+      {
+        title: "4. İşlenen kişisel veri kategorileri",
+        body:
+          "Veri en aza indirme ve amaçla sınırlılık ilkelerine (GDPR m. 5) uygun olarak yalnızca hizmet için gereken verileri işleriz. Bu kategoriler uygulamanın fiilen topladıklarıyla örtüşür:",
+        items: [
+          "Kimlik ve iletişim verileri: e-posta adresi, karma (hash) hâlindeki parola (kimlik doğrulama sağlayıcımız tarafından işlenir), görünen ad (kullanıcı adı), iç rol (kullanıcı ya da yönetici) ve e-posta doğrulama durumu.",
+          "Google ile giriş (yalnızca siz seçerseniz): Google'ın kimlik doğrulama sırasında gönderdiği Google hesap kimliği, ad ve e-posta.",
+          "Misafir modu: otomatik oluşturulan bir görünen ad ve misafir kimlik doğrulaması kullanılıyorsa gerçek olmayan teknik bir e-posta (guest-…@guest.local). Misafirler sıralamada görünmez ve topluluk sorusu gönderemez.",
+          "Öğrenme profili: hedef dil (İtalyanca ya da Almanca), her dil için yeterlik seviyesi (CEFR), ses ve titreşim tercihleri ve uygulama arayüzünün dili (İngilizce ya da Türkçe).",
+          "Oyun verileri: istatistikler, görülen sorular, maç geçmişi, puanlar, sonuç (galibiyet/mağlubiyet/beraberlik), rakip türü, günlük Wordle, Kelime Çarkı ve artikel Sprint sonuçları, tekrar tarihleriyle birlikte hatalar ve devam eden oturumdaki cevaplar ve puanlar.",
+          "Hayalet maçlar: tamamlanmış bir maçın cevapları otomatik bir rakip için yeniden kullanılabilir. Arayüz, asıl kullanıcının adını değil genel bir ad («Ghost Opponent») gösterir.",
+          "Sıralama: kayıtlı hesaplar için görünen ad ve PvP sonuçları (maçlar, galibiyetler, kazanma oranı, puanlar) diğer giriş yapmış kullanıcılara görünür.",
+          "Arkadaşlar: kabul ettiğiniz arkadaşlar çevrimiçi olup olmadığınızı, en son ne zaman görüldüğünüzü ve günün puanlarınızı (Wordle, Kelime Çarkı, Sprint) görür; cevaplarınızı asla görmez. Son görülme bilgisini ve puanlarınızı Ayarlar → Arkadaşlar bölümünden gizleyebilirsiniz.",
+          "Bildirimler ve katkılar: bir soruda bildirilen sorunun türü; gönderilen soru metni, şıklar, doğru cevap, isteğe bağlı gerekçe ve inceleyici notları.",
+          "Yapay zekâ (yalnızca talep üzerine): soru metni, doğru şıkkın metni, seçilen şıkkın metni ve üretilen «Ask AI» açıklaması; maç başına yapay zekâ taleplerinin sayısı; topluluk gönderimleri için ise otomatik bir ön kontrol (yalnızca insan inceleyiciye yol gösterir).",
+          "Anlık bildirimler (yalnızca etkinleştirilirse): abonelik uç noktası, teknik anahtarlar (p256dh ve auth), tarayıcı user-agent bilgisi, IANA saat dilimi, tercih edilen günlük hatırlatma saati ve son gönderim zamanı.",
+          "Kimlik doğrulama ve güvenliğe ilişkin teknik veriler: oturum çerezleri ve belirteçleri ile barındırma teknik kayıtlarında erişim zamanlarıyla birlikte görünebilecek IP adresi / user-agent.",
+          "Cihazda saklananlar: ses/ses düzeyi/titreşim tercihleri, renk teması, yerel maç durumu ve kısa ömürlü gezinme verileri (çerezler bölümüne bakın).",
+        ],
+      },
+      {
+        title: "5. Verilerin kaynağı (GDPR m. 13 ve 14)",
+        body: "Veriler şu kaynaklardan gelir:",
+        items: [
+          "Sizin verdiğiniz veriler: kayıt, ilk kurulum, ayarlar, maçlar, bildirimler, gönderimler, «Ask AI» talepleri ve bildirimlerin etkinleştirilmesi.",
+          "Hizmetin ürettiği veriler: puanlar, istatistikler, sıralama, oyun oturumları, gönderimlerin yapay zekâ ön kontrolleri ve güvenlik kayıtları.",
+          "Üçüncü kişilerden gelen veriler: «Google ile giriş» kullanırsanız Google LLC kimlik doğrulama için gereken hesap verilerini gönderir. Google kendi hesap verilerini kendi aydınlatma metni kapsamında bağımsız veri sorumlusu olarak işler.",
+          "Kullanıcıların profilini çıkarmak için iletişim listesi satın almayız ya da kamuya açık kaynaklardan veri toplamayız.",
+        ],
+      },
+      {
+        title: "6. Özel nitelikli veriler ve suç verileri",
+        body:
+          "GDPR'ın 9. maddesi kapsamındaki özel nitelikli verileri (ırk ya da etnik köken, siyasi görüş, dinî ya da felsefi inanç, sendika üyeliği, genetik veri, biyometrik veri, sağlık verisi ya da cinsel yaşam veya yönelime ilişkin veri) veya GDPR'ın 10. maddesi ve Codice privacy'nin 2-octies maddesi kapsamındaki suç verilerini bilerek toplamayız. Lütfen soru ya da bildirim metinlerine bu tür veriler yazmayın.",
+      },
+      {
+        title: "7. Amaçlar, hukuki dayanaklar ve saklama süreleri",
+        body:
+          "Her amaç için hukuki dayanağı (GDPR m. 6) ve saklama süresini (GDPR m. 13(2)(a)) belirtiyoruz:",
+        items: [
+          "Hesap oluşturma ve yönetimi (e-posta, kimlik bilgileri, kullanıcı adı, profil): sözleşmenin ifası ya da sözleşme öncesi adımlar, GDPR m. 6(1)(b); hesap etkin olduğu sürece saklanır.",
+          "E-posta doğrulama ve parola sıfırlama: sözleşmenin ifası, m. 6(1)(b); bağlantıların süresi kısa bir teknik süreden sonra dolar.",
+          "Google ile giriş: sözleşmenin ifası, m. 6(1)(b) ve bu giriş için gereken Google çerezleri/betikleri bakımından Codice privacy m. 122(1) ikinci cümle (talep ettiğiniz hizmet için kesinlikle gerekli).",
+          "Misafir modu: sözleşmenin ifası, m. 6(1)(b); misafir oturumu süresince ya da kayıtlı hesaba dönüştürülene kadar saklanır.",
+          "Maçlar, sıralamalar, istatistikler, hata tekrarı, hayalet maçlar ve oturum durumu: sözleşmenin ifası, m. 6(1)(b); hesap etkin olduğu sürece saklanır. Hayalet verileri hesap etkin kaldığı sürece eşleştirme için kullanılabilir.",
+          "Ses, titreşim, tema ve arayüz dili tercihleri: sözleşmenin ifası, m. 6(1)(b); siz silene kadar cihazda (arayüz dili hesapta da) kalır.",
+          "Hatalı ya da belirsiz soruların bildirilmesi: öğrenme içeriğini doğru tutmaya yönelik meşru menfaat (m. 6(1)(f)); menfaat tüm kullanıcılar için soru kalitesidir ve bildiren kişi üzerindeki etkisi sınırlıdır (sorun türünü ve bildirenin kimliğini saklarız); bildirim çözülene kadar ve her hâlükârda en fazla 24 ay saklanır.",
+          "Topluluk soru gönderimleri: sözleşmenin ifası, m. 6(1)(b); incelemeye kadar saklanır; onaylanırsa soru oyun havuzunda kalır (gönderenin e-postası diğer oyunculara gösterilmez).",
+          "«Ask AI» açıklamaları: belirli talep ile verilen rıza, m. 6(1)(a); üretilen açıklamalar soru/cevap çifti başına ortak bir önbellekte kimliksiz biçimde saklanabilir; maç başına talep sayıları hesap süresince saklanır. Özelliği artık kullanmayarak rızanızı geri alırsınız.",
+          "Gönderimlerin otomatik ön kontrolü: sözleşmenin ifası, m. 6(1)(b) ve bir yapay zekâ sisteminin kullanımı olarak 132/2025 sayılı Kanun'un 4. maddesine uygun şekilde (açık bilgilendirme ve gönderimlerin kullanılmaması seçeneği). Son kararı her zaman insan bir yönetici verir; bu, GDPR'ın 22. maddesi anlamında otomatik karar verme değildir.",
+          "Günlük anlık hatırlatmalar: özelliği Ayarlar'dan etkinleştirip tarayıcı izni vererek verdiğiniz rıza, GDPR m. 6(1)(a). Ayrıca Codice privacy m. 122 (anlık bildirim aboneliğinin cihazda saklanması) ve mesaj sizi uygulamaya geri çağırdığı için Codice privacy m. 130 (elektronik iletişim: önceden, özgür, belirli, bilgilendirilmiş ve belgelenmiş rıza) uygulanır. Hatırlatmaları kapatana ya da hesabı silene kadar saklanır.",
+          "Microsoft Clarity ile kullanım analitiği (ısı haritaları ve yazılan metni maskeleyen oturum kaydı): çerez bandında verilen rıza, GDPR m. 6(1)(a) ve Codice privacy m. 122. Rıza olmadan etiket yüklenmez ve hiçbir Clarity çerezi yazılmaz. Saklama süresi Microsoft'un aydınlatma metnine göredir (oturum kayıtları için kural olarak 30 güne kadar). Rızanızı istediğiniz zaman Ayarlar → Gizlilik ve veriler bölümünden geri alabilirsiniz.",
+          "Güvenlik, kötüye kullanımın önlenmesi ve teknik işletim: meşru menfaat, m. 6(1)(f); daha uzun bir yasal saklama süresi gerekmedikçe teknik kayıtlar kural olarak 90 güne kadar saklanır.",
+          "Yasal yükümlülüklere uyum (örneğin yetkili bir makama cevap verilmesi): GDPR m. 6(1)(c).",
+        ],
+      },
+      {
+        title: "8. Verilerin zorunlu olup olmadığı ve vermemenin sonuçları",
+        body:
+          "E-posta ve parola (ya da bir Google hesabı) ve misafir modunda İtalyanca yeterlik seviyesi, sözleşmenin kurulması ve hizmetin kullanılması için gereklidir (GDPR m. 13(2)(e)). Bunları vermemek hesap oluşturmayı ya da maçlara erişimi engeller. Özel bir kullanıcı adı, bildirimler, topluluk gönderimleri, «Ask AI» ve anlık bildirimler isteğe bağlıdır; bunları kullanmamak temel oyunu engellemez ama ilgili özellikleri sınırlar. Hizmet mesajları (e-posta doğrulama, parola sıfırlama) hesabın işleyişi için gereklidir ve tanıtım amaçlı değildir.",
+      },
+      {
+        title: "9. Alıcılar ve veri işleyenler",
+        body:
+          "Veriler, yukarıdaki amaçlar dahilinde, GDPR'ın 28. maddesi uyarınca bir veri işleme sözleşmesiyle bağlı olarak bizim adımıza işleyen taraflarla ya da belirli durumlarda bağımsız veri sorumlularıyla paylaşılabilir:",
+        items: [
+          `Supabase Inc. — veritabanı, kimlik doğrulama ve uygulama verilerinin barındırılması (${SUPABASE_PRIVACY_URL}).`,
+          `Vercel Inc. — web uygulamasının barındırılması (${VERCEL_PRIVACY_URL}).`,
+          `Groq Inc. — «Ask AI» açıklamaları ve gönderim ön kontrolleri, yalnızca bu özellikleri kullanırsanız (${GROQ_PRIVACY_URL}).`,
+          `Google LLC — «Google ile giriş», yalnızca siz seçerseniz. Google, kendi hesap işlemleri için bağımsız veri sorumlusudur (${GOOGLE_PRIVACY_URL}).`,
+          `Microsoft Ireland Operations Limited / Microsoft Corporation — Microsoft Clarity ile kullanım analitiği, yalnızca çerez bandında verdiğiniz rızayla (${MICROSOFT_PRIVACY_URL}).`,
+          "Tarayıcı/işletim sistemi anlık bildirim hizmetleri (cihaza göre örneğin Apple, Google FCM ya da Mozilla) — bildirimlerin iletilmesi, yalnızca etkinleştirilirse.",
+          "Kanunen gerektiğinde kamu makamları.",
+        ],
+      },
+      {
+        title: "10. Üçüncü ülkelere aktarım",
+        body:
+          "Bazı sağlayıcılar verileri Amerika Birleşik Devletleri dahil Avrupa Ekonomik Alanı dışında işleyebilir. Aktarımlar GDPR'ın 44–49. maddeleri uyarınca, Avrupa Komisyonu'nun yeterlilik kararına (alıcı sertifikalıysa AB–ABD Veri Gizliliği Çerçevesi dahil) ve/veya Komisyon'un onayladığı Standart Sözleşme Maddelerine (SCC) ve sağlayıcıların aldığı ek güvencelere dayanır. Uygulanan güvencelerin kopyaları şu adresten istenebilir: " +
+          PRIVACY_CONTACT_EMAIL +
+          ".",
+      },
+      {
+        title: "11. Çerezler ve cihazda saklanan diğer bilgiler (Codice privacy m. 122)",
+        anchor: "cookies",
+        body:
+          "Codice privacy'nin 122. maddesi ve Garante'nin 10 Haziran 2021 tarihli kılavuzu uyarınca, bir cihazda bilgi saklamak ya da orada saklanmış bilgiye erişmek ancak teknik nitelikteyse — bir iletişimi iletmek ya da talep ettiğiniz hizmeti sunmak için kesinlikle gerekliyse — rıza olmadan yapılabilir. Italiarena profil çıkarma ya da reklam çerezleri kullanmaz ve verileri pazarlama için satmaz. Bununla birlikte, kesinlikle gerekli olmayan ve bu nedenle önceden rızanızı gerektiren, anonimleştirilmemiş bir ziyaretçi ölçüm aracı (Microsoft Clarity) kullanırız. İlk ziyaretinizde bir bant, boyut, görsel öne çıkma ve tıklama sayısı bakımından eşit «Kabul et» ve «Reddet» seçenekleri sunar. Siz seçim yapana kadar zorunlu olmayan hiçbir araç yüklenmez ve hiçbir Clarity çerezi yazılmaz; bandı seçim yapmadan kapatmak rıza sayılmaz. Rızanızı, verdiğiniz kadar kolay biçimde, istediğiniz zaman Ayarlar → Gizlilik ve veriler bölümünden geri alabilirsiniz. Kullandığımız araçlar:",
+        table: {
+          headers: ["Araç", "Tür", "Amaç", "Saklama süresi", "Taraf"],
+          rows: [
+            [
+              "Supabase oturum çerezleri (sb- önekli, kimlik doğrulama belirteci)",
+              "Teknik",
+              "Oturumunuzu güvenle açık tutmak",
+              "Oturum belirtecinin süresi dolana ya da yenilenene kadar",
+              "Birinci taraf, kimlik doğrulama sağlayıcısı aracılığıyla",
+            ],
+            [
+              "Giriş için PKCE / code-verifier çerezi ya da depolama",
+              "Teknik",
+              "Giriş ya da OAuth akışını güvenle tamamlamak",
+              "Oturum ya da kısa teknik süre",
+              "Birinci taraf",
+            ],
+            [
+              "localStorage language-quiz-game",
+              "Teknik (yerel depolama)",
+              "Cihazdaki yerel maç durumu",
+              "Siz silene kadar",
+              "Birinci taraf",
+            ],
+            [
+              "localStorage lq-gameplay-preferences",
+              "Teknik",
+              "Ses düzeyi, ses ve titreşim geri bildirimi",
+              "Siz silene kadar",
+              "Birinci taraf",
+            ],
+            [
+              "Renk teması için localStorage",
+              "Teknik",
+              "Açık ya da koyu temayı hatırlamak",
+              "Siz silene kadar",
+              "Birinci taraf",
+            ],
+            [
+              "ui_lang çerezi",
+              "Teknik",
+              "Ayarlar'da seçilen ya da ilk ziyarette tarayıcının dilinden alınan arayüz dilini (İngilizce ya da Türkçe) hatırlamak",
+              "1 yıl",
+              "Birinci taraf",
+            ],
+            [
+              "preferred_language çerezi",
+              "Teknik",
+              "Siteyi bir /german ya da /italian bağlantısında belirtilen öğrenme dilinde açmak",
+              "30 gün",
+              "Birinci taraf",
+            ],
+            [
+              "sessionStorage (eşleşme niyeti, yükleme hatasından kurtarma)",
+              "Teknik",
+              "Gezinme ve uygulama kararlılığı",
+              "Tarayıcı oturumunun sonu",
+              "Birinci taraf",
+            ],
+            [
+              "Service worker ve Web Push aboneliği",
+              "Teknik, yalnızca bildirim rızasıyla etkinleşir",
+              "Seçtiğiniz hatırlatmaları iletmek",
+              "Aboneliği iptal edene ya da hesabı silene kadar",
+              "Birinci taraf ve tarayıcının anlık bildirim hizmeti",
+            ],
+            [
+              "Google Identity Services (giriş sayfası betiği)",
+              "Üçüncü taraf kimlik doğrulama teknik aracı",
+              "Google ile kimlik doğrulama. Özellik etkinse betik, yalnızca düğmeye dokunduğunuzda değil, giriş sayfası açıldığında yüklenir.",
+              "Google'ın ayarlarına ve aydınlatma metnine göre",
+              "Google LLC",
+            ],
+            [
+              "localStorage lq-cookie-consent",
+              "Teknik",
+              "Çerez bandına verdiğiniz cevabı hatırlamak, böylece bant her ziyarette gösterilmez",
+              "Siz silene kadar",
+              "Birinci taraf",
+            ],
+            [
+              "Microsoft Clarity (_clck ve _clsk çerezleri ile etiketin yerel depolaması)",
+              "Anonimleştirilmemiş ziyaretçi ölçümü — rıza gerekir",
+              "Uygulamanın kafa karıştıran bölümlerini bulmak için ısı haritaları ve yazılan metnin varsayılan olarak maskelendiği oturum kaydı",
+              "_clck 1 yıla kadar, _clsk 1 gün; kayıtlar Microsoft tarafından kendi aydınlatma metnine göre, kural olarak 30 güne kadar saklanır",
+              "Microsoft Ireland Operations Limited / Microsoft Corporation",
+            ],
+          ],
+        },
+        items: [
+          "Google ile giriş yapılandırılmışsa giriş sayfası açıldığında Google Identity Services betiğini yükler. Google bu noktada, yalnızca «Google ile giriş» düğmesine dokunduktan sonra değil, kendi alan adında çerez saklayabilir.",
+          "Çerezleri ve yerel verileri tarayıcı ayarlarınızdan silebilirsiniz; ardından yeniden giriş yapmanız gerekebilir.",
+          "Google Analytics, reklam pikselleri ya da izleme yapan sosyal eklentiler kullanmayız. Zorunlu olmayan tek araç Microsoft Clarity'dir ve yalnızca rızanızla çalışır.",
+          "Microsoft Clarity giriş ve parola alanlarına yazılan metni varsayılan olarak maskeler. Clarity'ye e-posta adresinizi, kimlik bilgilerinizi ya da başka doğrudan tanımlayıcıları göndermeyiz. Clarity yine de takma adlı bir cihaz tanımlayıcısı atar; bu nedenle oturum kaydı anonim değil, takma adlandırılmış kişisel verilerin işlenmesidir.",
+          "Rızanızı istediğiniz zaman Ayarlar → Gizlilik ve veriler bölümünden ya da tarayıcınızda site verilerini silerek geri alabilirsiniz. Geri alındığında etiket kapatılır ve birinci taraf _clck ve _clsk çerezleri silinir.",
+        ],
+      },
+      {
+        title: "12. Elektronik iletişim ve anlık bildirimler (Codice privacy m. 130)",
+        body:
+          "Codice privacy'nin 130. maddesi uyarınca, önceden alınmış özgür, belirli, bilgilendirilmiş ve belgelenmiş rıza olmadan e-posta, telefon ya da otomatik sistemlerle tanıtım iletişimi, bülten ya da reklam göndermeyiz. 130(4). maddedeki «soft spam» istisnasına dayanmayız. Hizmet yalnızca şunları gönderir: (i) hesap için kesinlikle gerekli mesajlar (e-posta doğrulama, parola sıfırlama); (ii) yalnızca Ayarlar'dan etkinleştirir ve tarayıcı izni verirseniz, istediğiniz zaman kapatabileceğiniz günlük anlık hatırlatmalar. Hatırlatmalar ticari profil çıkarma için kullanılmaz.",
+      },
+      {
+        title: "13. Yapay zekâ sistemleri",
+        body:
+          "Italiarena, 23 Eylül 2025 tarihli ve 132 sayılı İtalyan Kanunu'nun 3 ve 4. maddeleri ile 2024/1689 sayılı (AB) Tüzüğün şeffaflık ilkelerine uygun olarak, üçüncü taraf yapay zekâ sistemlerini (Groq'ta barındırılan modeller) iki isteğe bağlı durumda ve her ikisinde de insan gözetimiyle kullanır:",
+        items: [
+          "«Ask AI»: açık bir talep üzerine soru metni, doğru şıkkın metni ve seçilen şıkkın metni, uygulamanın arayüz dilinde (İngilizce ya da Türkçe) eğitici bir açıklama üretmek için sağlayıcıya gönderilir. İsminizi, e-postanızı, şıkların tam listesini ya da başka iletişim bilgilerini isteme koymayız. Açıklama talep etmemeyi seçebilirsiniz.",
+          "Gönderim ön kontrolü: bir topluluk sorusu gönderirseniz bir yapay zekâ modeli bağlayıcı olmayan bir görüş verir (örneğin dil, CEFR seviyesi ve kategori hakkında). Onaylama ya da reddetme kararını insan bir yönetici verir. Bu, hukuki ya da benzer ölçüde önemli etkileri olan tamamen otomatik bir karar verme değildir (GDPR m. 22).",
+          "Italiarena, yapay zekâya gönderilen verileri kendi modellerini eğitmek için kullanmaz. Sağlayıcı verileri kendi sözleşmesi ve aydınlatma metni kapsamında işler.",
+          "Yapay zekâ özellikleri, hizmetin geri kalanı gibi 14 yaş ve üzerindeki kullanıcılar içindir. 14 yaşından küçükler için velayet sahibinin rızası gerekir (Codice privacy m. 2-quinquies ve 132/2025 sayılı Kanun m. 4(4)); hizmet bu yaş grubuna yönelik değildir.",
+        ],
+      },
+      {
+        title: "14. Otomatik karar verme ve profil çıkarma",
+        body:
+          "GDPR'ın 22. maddesi anlamında hukuki sonuç doğuran ya da sizi benzer ölçüde önemli şekilde etkileyen otomatik karar verme yapmayız. Eşleştirme, ticari profil çıkarma olmaksızın, yalnızca adil maçlar düzenlemek için beyan edilen yeterlik seviyesine dayanır. Kişisel verileri pazarlama için üçüncü kişilere satmayız ya da onlarla paylaşmayız.",
+      },
+      {
+        title: "15. Güvenlik önlemleri",
+        body:
+          "GDPR'ın 32. maddesi ile tasarımdan ve varsayılan olarak gizlilik (GDPR m. 25) ilkesi uyarınca uygun teknik ve idari önlemleri uygularız; bunlar arasında aktarım sırasında şifreleme (HTTPS/TLS), kimlik bilgilerinin kimlik doğrulama sağlayıcımız aracılığıyla işlenmesi (parolalar düz metin olarak saklanmaz), üretim verilerine kısıtlı erişim, veri işleyenlerle sözleşmeler ve talep üzerine hesap silme yer alır.",
+      },
+      {
+        title: "16. Haklarınız",
+        body:
+          `GDPR'ın 15–22. maddeleri ve Codice privacy uyarınca erişim, düzeltme, silme, kısıtlama, itiraz (uygulanabildiği hâllerde, özellikle meşru menfaate dayalı işlemelerde) ve veri taşınabilirliği haklarına ve daha önce yapılmış işlemeleri etkilemeden «Ask AI» ve anlık bildirimler için verdiğiniz rızayı geri alma hakkına sahipsiniz. Profilinizi Ayarlar'dan güncelleyebilir, hesabınızı istediğiniz zaman silebilir ya da ${PRIVACY_CONTACT_EMAIL} adresine yazabilirsiniz. GDPR'ın 12(3). maddesi uyarınca bir ay içinde, karmaşık durumlarda iki ay daha uzatılabilecek şekilde cevap veririz. Bu hakların kullanılması ilke olarak ücretsizdir (m. 12(5)).`,
+      },
+      {
+        title: "17. Vefat etmiş kişilere ilişkin haklar (Codice privacy m. 2-terdecies)",
+        body:
+          "Vefat etmiş kişilerin kişisel verilerine ilişkin GDPR'ın 15–22. maddelerindeki haklar, 2-terdecies maddesinde öngörüldüğü üzere, yasal sınırlar ve ilgili kişinin açık, belirli ve bilgilendirilmiş yasağı saklı kalmak kaydıyla, kendi menfaati bulunan, ilgili kişiyi temsilci olarak korumak için hareket eden ya da korunmaya değer aile sebepleriyle hareket eden kişi tarafından kullanılabilir. Bu tür talepleri şu adrese gönderin: " +
+          PRIVACY_CONTACT_EMAIL +
+          ".",
+      },
+      {
+        title: "18. Şikâyet hakkı ve yargısal koruma",
+        body:
+          `GDPR'ın 77. maddesi ve Codice privacy'nin 141. maddesi uyarınca ${ITALIAN_DPA_NAME}'a şikâyette bulunabilir ya da GDPR'ın 78 ve 79. maddeleri ve Codice privacy'nin 152. maddesi uyarınca genel mahkemelerde dava açabilirsiniz. Şikâyet, diğer idari ya da yargısal başvuru yollarını etkilemez.`,
+        items: [
+          `Web sitesi: ${ITALIAN_DPA_URL}`,
+          `Şikâyet nasıl yapılır: ${ITALIAN_DPA_COMPLAINT_URL}`,
+          `Adres: ${ITALIAN_DPA_ADDRESS}`,
+          `Telefon: ${ITALIAN_DPA_PHONE}`,
+          `PEC: ${ITALIAN_DPA_PEC}`,
+        ],
+      },
+      {
+        title: "19. Çocuklar",
+        body:
+          `Hizmet, GDPR'ın 8. maddesi ve Codice privacy'nin 2-quinquies maddesi (İtalya'da bilgi toplumu hizmetleri için rıza yaşı) ve yapay zekâ özellikleri bakımından 132/2025 sayılı Kanun'un 4(4). maddesi uyarınca ${MINIMUM_AGE_ITALY} yaş ve üzerindeki kullanıcılar içindir. ${MINIMUM_AGE_ITALY} yaşından küçük kimseden bilerek kişisel veri toplamayız. Bir küçüğün velayet sahibinin geçerli rızası olmadan veri verdiğini düşünüyorsanız ${PRIVACY_CONTACT_EMAIL} adresine yazın; verileri gecikmeksizin sileriz.`,
+      },
+      {
+        title: "20. Hesabın silinmesi ve kalan saklama",
+        body:
+          "Hesabınızı Ayarlar'dan sildiğinizde profilinizi, istatistiklerinizi, maç geçmişinizi, hatalarınızı, anlık bildirim aboneliklerinizi, size bağlı «Ask AI» kayıtlarını ve bağlantılı diğer kişisel verileri gecikmeksizin sileriz. Kalan kopyalar, otomatik silinmeden önce sınırlı bir teknik süre (30 güne kadar) şifreli yedeklerde kalabilir. Soru/cevap başına ortak önbellekte saklanan yapay zekâ açıklamaları ve önceden onaylanmış topluluk soruları anonimleştirilmiş ya da kimliği belirlenemez biçimde saklanabilir. Hukuki talepleri savunmak ya da İtalyan yasal yükümlülüklerini yerine getirmek için kesinlikle gereken veriler kanunun öngördüğü süre boyunca saklanabilir.",
+      },
+      {
+        title: "21. Bu metindeki değişiklikler",
+        body:
+          "Hizmetteki ya da uygulanan hukuktaki değişiklikleri yansıtmak için bu metni güncelleyebiliriz. Güncelleme tarihi bu sayfanın başında görünür. Önemli değişikliklerde, uygun olduğunda uygulama içinde açık bir bildirim sunarız.",
+      },
+    ],
+  };
+}
+
+// Built when asked for, not at import: client components import this module's
+// constants, and a notice nobody builds can be left out of their bundle.
+const PRIVACY_COPY: Record<PrivacyLocale, () => PrivacyCopy> = {
+  it: buildItalianCopy,
+  en: buildEnglishCopy,
+  tr: buildTurkishCopy,
 };
 
 export function getPrivacyCopy(locale: PrivacyLocale): PrivacyCopy {
-  return PRIVACY_COPY[locale];
+  return PRIVACY_COPY[locale]();
 }
 
 /** Short notice for English footers and auth screens. */

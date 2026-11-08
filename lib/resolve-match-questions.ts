@@ -55,7 +55,7 @@ export function localizeQuestion<Q extends Pick<PublicQuestion, "text_tr">>(ques
 }
 
 export function getOptionText(
-  question: PublicQuestion,
+  question: Pick<PublicQuestion, "option_a" | "option_b" | "option_c" | "option_d">,
   answer: CorrectAnswer
 ): string {
   const key = `option_${answer.toLowerCase()}` as

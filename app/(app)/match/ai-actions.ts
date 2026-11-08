@@ -9,7 +9,7 @@ import {
 } from "@/lib/ai-explanations";
 import { generateGroqExplanation } from "@/lib/groq";
 import { getUiLanguage } from "@/lib/i18n-server";
-import { localizeQuestion } from "@/lib/resolve-match-questions";
+import { getOptionText, localizeQuestion } from "@/lib/resolve-match-questions";
 import { isMatchScoreState } from "@/lib/match-score-state";
 import { extractQuestionIds } from "@/lib/session-playlist";
 import { createAdminClientOrNull } from "@/utils/supabase/admin";
@@ -46,16 +46,6 @@ const ANSWER_LETTERS: readonly CorrectAnswer[] = ["A", "B", "C", "D"];
 
 function isAnswerLetter(value: unknown): value is CorrectAnswer {
   return ANSWER_LETTERS.includes(value as CorrectAnswer);
-}
-
-function optionText(question: ExplainableQuestion, letter: CorrectAnswer) {
-  const options: Record<CorrectAnswer, string> = {
-    A: question.option_a,
-    B: question.option_b,
-    C: question.option_c,
-    D: question.option_d,
-  };
-  return options[letter];
 }
 
 async function countMatchAiAsks(
@@ -275,9 +265,9 @@ export async function askQuestionExplanation(
     category: question.category,
     questionText: shown.question_text,
     correctAnswer: question.correct_answer,
-    correctOptionText: optionText(shown, question.correct_answer),
+    correctOptionText: getOptionText(shown, question.correct_answer),
     selectedAnswer,
-    selectedOptionText: selectedAnswer ? optionText(shown, selectedAnswer) : null,
+    selectedOptionText: selectedAnswer ? getOptionText(shown, selectedAnswer) : null,
     wasCorrect: selectedAnswer === question.correct_answer,
   }, question.language, uiLanguage);
 

@@ -14,7 +14,8 @@ import type { UserMistakeWithQuestion } from "@/app/(app)/stats/actions";
 import { ReportQuestionButton } from "@/components/match/report-question-button";
 import { NOUN_QUESTION_PREFIX } from "@/lib/articles";
 import { REVIEWS_TO_LEARN, whenDue } from "@/lib/review";
-import { formatCategoryLabel, getOptionText } from "@/lib/scoring";
+import { formatCategoryLabel } from "@/lib/scoring";
+import { getOptionText } from "@/lib/resolve-match-questions";
 import { cn } from "@/lib/utils";
 import { useT, useUiLanguage } from "@/components/ui-language-provider";
 

@@ -7,7 +7,8 @@
  */
 "use client";
 
-import { useT } from "@/components/ui-language-provider";
+import { useT, useUiLanguage } from "@/components/ui-language-provider";
+import { privacyHref } from "@/lib/legal";
 import Link from "next/link";
 import { Cookie } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { setCookieConsent } from "@/lib/cookie-consent";
 
 export function CookieConsentBanner() {
   const t = useT();
+  const uiLanguage = useUiLanguage();
   const consent = useCookieConsent();
 
   // Already answered — nothing to ask.
@@ -41,7 +43,7 @@ export function CookieConsentBanner() {
               <p className="text-sm text-muted-foreground">
                 {t("We'd like to use Microsoft Clarity to see which parts of the app confuse people: heatmaps and session replays, with anything you type masked out. It's optional, the app works exactly the same if you say no, and you can change your mind in Settings. The cookies needed to sign in and play are always on.")}{" "}
                 <Link
-                  href="/privacy?lang=en#cookies"
+                  href={`${privacyHref(uiLanguage)}#cookies`}
                   className="text-primary underline-offset-4 hover:underline"
                 >
                   {t("Details in our privacy notice")}

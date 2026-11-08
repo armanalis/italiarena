@@ -18,11 +18,7 @@ import {
   disarmMatchmakingAutosearch,
 } from "@/lib/matchmaking-intent";
 import { MATCH_SYNC_VERSION } from "@/lib/match-sync";
-import {
-  formatCategoryLabel,
-  getOptionText,
-  isAnswerCorrect,
-} from "@/lib/scoring";
+import { formatCategoryLabel, isAnswerCorrect } from "@/lib/scoring";
 import { MatchMistakesReview } from "@/components/match/match-mistakes-review";
 import { MatchReviewBoundary } from "@/components/match/match-review-boundary";
 import { RematchPanel } from "@/components/match/rematch-panel";
@@ -32,7 +28,7 @@ import type { CorrectAnswer, PublicQuestion } from "@/types/database.types";
 import type { ProficiencyLevel } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useT, useUiLanguage } from "@/components/ui-language-provider";
-import { localizeQuestion } from "@/lib/resolve-match-questions";
+import { getOptionText, localizeQuestion } from "@/lib/resolve-match-questions";
 
 type GameLoopProps = {
   sessionId: string;

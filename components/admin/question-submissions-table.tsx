@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Check, Loader2, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
+import { useT } from "@/components/ui-language-provider";
 import {
   approveQuestionSubmission,
   rejectQuestionSubmission,
@@ -53,6 +54,7 @@ type QuestionSubmissionsTableProps = {
 export function QuestionSubmissionsTable({
   submissions,
 }: QuestionSubmissionsTableProps) {
+  const t = useT();
   const [rejecting, setRejecting] = useState<AdminSubmissionReview | null>(null);
   const [rejectNotes, setRejectNotes] = useState("");
   const [editing, setEditing] = useState<AdminSubmissionReview | null>(null);
@@ -62,7 +64,7 @@ export function QuestionSubmissionsTable({
   if (submissions.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border/60 px-4 py-10 text-center text-sm text-muted-foreground">
-        No community submissions waiting for review.
+        {t("No community submissions waiting for review.")}
       </div>
     );
   }
@@ -92,11 +94,11 @@ export function QuestionSubmissionsTable({
       const result = await approveQuestionSubmission(submission.id);
 
       if (result.success) {
-        toast.success("Question approved and added to the live pool.");
+        toast.success(t("Question approved and added to the live pool."));
         return;
       }
 
-      toast.error(result.error);
+      toast.error(t(result.error));
     });
   }
 
@@ -112,7 +114,7 @@ export function QuestionSubmissionsTable({
       !editForm.option_c.trim() ||
       !editForm.option_d.trim()
     ) {
-      toast.error("All question fields are required.");
+      toast.error(t("All question fields are required."));
       return;
     }
 
@@ -132,12 +134,12 @@ export function QuestionSubmissionsTable({
       const result = await approveQuestionSubmission(editing.id, overrides);
 
       if (result.success) {
-        toast.success("Question edited and approved.");
+        toast.success(t("Question edited and approved."));
         closeEditDialog();
         return;
       }
 
-      toast.error(result.error);
+      toast.error(t(result.error));
     });
   }
 
@@ -150,13 +152,13 @@ export function QuestionSubmissionsTable({
       const result = await rejectQuestionSubmission(rejecting.id, rejectNotes);
 
       if (result.success) {
-        toast.success("Submission rejected.");
+        toast.success(t("Submission rejected."));
         setRejecting(null);
         setRejectNotes("");
         return;
       }
 
-      toast.error(result.error);
+      toast.error(t(result.error));
     });
   }
 
@@ -174,7 +176,7 @@ export function QuestionSubmissionsTable({
                   <Badge variant="secondary">{submission.language}</Badge>
                   <Badge variant="secondary">{submission.level}</Badge>
                   <Badge variant="outline">
-                    {formatCategoryLabel(submission.category)}
+                    {t(formatCategoryLabel(submission.category))}
                   </Badge>
                   <span className="text-xs text-muted-foreground">
                     by{" "}
@@ -219,7 +221,7 @@ export function QuestionSubmissionsTable({
 
             {submission.rationale && (
               <div className="mt-4 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-sm">
-                <p className="font-medium text-foreground">Contributor rationale</p>
+                <p className="font-medium text-foreground">{t("Contributor rationale")}</p>
                 <p className="mt-1 text-muted-foreground">{submission.rationale}</p>
               </div>
             )}
@@ -248,7 +250,7 @@ export function QuestionSubmissionsTable({
                 className="min-h-10"
               >
                 <Pencil className="size-4" />
-                Edit
+                {t("Edit")}
               </Button>
               <Button
                 type="button"
@@ -261,7 +263,7 @@ export function QuestionSubmissionsTable({
                 className="min-h-10"
               >
                 <X className="size-4" />
-                Reject
+                {t("Reject")}
               </Button>
             </div>
           </article>
@@ -278,7 +280,7 @@ export function QuestionSubmissionsTable({
       >
         <DialogContent className="max-h-[85dvh] overflow-y-auto touch-scroll sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit &amp; approve submission</DialogTitle>
+            <DialogTitle>{t("Edit & approve submission")}</DialogTitle>
             <DialogDescription>
               Adjust the question, options, level, or category, then approve it
               into the live pool.
@@ -299,7 +301,7 @@ export function QuestionSubmissionsTable({
             <div className="grid gap-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label>Level</Label>
+                  <Label>{t("Level")}</Label>
                   <Select
                     value={editForm.level}
                     disabled={isPending}
@@ -311,7 +313,7 @@ export function QuestionSubmissionsTable({
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select level" />
+                      <SelectValue placeholder={t("Select level")} />
                     </SelectTrigger>
                     <SelectContent>
                       {PROFICIENCY_LEVELS.map((level) => (
@@ -324,7 +326,7 @@ export function QuestionSubmissionsTable({
                 </div>
 
                 <div className="grid gap-2">
-                  <Label>Category</Label>
+                  <Label>{t("Category")}</Label>
                   <Select
                     value={editForm.category}
                     disabled={isPending}
@@ -336,12 +338,12 @@ export function QuestionSubmissionsTable({
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
+                      <SelectValue placeholder={t("Select category")} />
                     </SelectTrigger>
                     <SelectContent>
                       {QUESTION_CATEGORIES.map((category) => (
                         <SelectItem key={category} value={category}>
-                          {formatCategoryLabel(category)}
+                          {t(formatCategoryLabel(category))}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -350,7 +352,7 @@ export function QuestionSubmissionsTable({
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="edit-question-text">Question text</Label>
+                <Label htmlFor="edit-question-text">{t("Question text")}</Label>
                 <textarea
                   id="edit-question-text"
                   rows={3}
@@ -389,7 +391,7 @@ export function QuestionSubmissionsTable({
               })}
 
               <div className="grid gap-2">
-                <Label>Correct answer</Label>
+                <Label>{t("Correct answer")}</Label>
                 <Select
                   value={editForm.correct_answer}
                   disabled={isPending}
@@ -401,7 +403,7 @@ export function QuestionSubmissionsTable({
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select correct option" />
+                    <SelectValue placeholder={t("Select correct option")} />
                   </SelectTrigger>
                   <SelectContent>
                     {(["A", "B", "C", "D"] as const).map((letter) => (
@@ -431,7 +433,7 @@ export function QuestionSubmissionsTable({
                       reviewer_notes: event.target.value,
                     })
                   }
-                  placeholder="Optional note about what you changed"
+                  placeholder={t("Optional note about what you changed")}
                   className="min-h-16 w-full rounded-lg border border-input bg-background px-3 py-2 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
                 />
               </div>
@@ -445,7 +447,7 @@ export function QuestionSubmissionsTable({
               disabled={isPending}
               onClick={closeEditDialog}
             >
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button
               type="button"
@@ -455,12 +457,12 @@ export function QuestionSubmissionsTable({
               {isPending ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Saving...
+                  {t("Saving...")}
                 </>
               ) : (
                 <>
                   <Check className="size-4" />
-                  Save &amp; approve
+                  {t("Save & approve")}
                 </>
               )}
             </Button>
@@ -479,21 +481,20 @@ export function QuestionSubmissionsTable({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject submission</DialogTitle>
+            <DialogTitle>{t("Reject submission")}</DialogTitle>
             <DialogDescription>
-              Explain what is wrong — especially level or category mismatch — so
-              contributors learn the standard.
+              {t("Explain what is wrong — especially level or category mismatch — so contributors learn the standard.")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2">
-            <Label htmlFor="reject-notes">Reviewer notes</Label>
+            <Label htmlFor="reject-notes">{t("Reviewer notes")}</Label>
             <textarea
               id="reject-notes"
               value={rejectNotes}
               onChange={(event) => setRejectNotes(event.target.value)}
               rows={4}
-              placeholder="Example: This is A2 vocabulary, not B2. The subjunctive trigger makes it too advanced for the selected level."
+              placeholder={t("Example: This is A2 vocabulary, not B2. The subjunctive trigger makes it too advanced for the selected level.")}
               className="flex min-h-24 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-base focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 md:text-sm"
             />
           </div>
@@ -508,7 +509,7 @@ export function QuestionSubmissionsTable({
                 setRejectNotes("");
               }}
             >
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button
               type="button"
@@ -516,7 +517,7 @@ export function QuestionSubmissionsTable({
               disabled={isPending || rejectNotes.trim().length < 8}
               onClick={handleReject}
             >
-              Reject submission
+              {t("Reject submission")}
             </Button>
           </DialogFooter>
         </DialogContent>

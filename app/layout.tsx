@@ -16,27 +16,31 @@ import { PRODUCTION_SITE_URL } from "@/lib/site-url";
 import { APP_NAME } from "@/lib/legal";
 import { cn } from "@/lib/utils";
 import { UiLanguageProvider } from "@/components/ui-language-provider";
-import { dictionaryFor, getUiLanguage } from "@/lib/i18n-server";
+import { dictionaryFor, getT, getUiLanguage } from "@/lib/i18n-server";
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(PRODUCTION_SITE_URL),
-  title: APP_NAME,
-  description: "Learn Italian or German through quick, playful practice with others",
-  applicationName: APP_NAME,
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
+// The description search engines and link previews show, in the visitor's language.
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return {
+    metadataBase: new URL(PRODUCTION_SITE_URL),
     title: APP_NAME,
-  },
-  formatDetection: {
-    telephone: false,
-  },
-};
+    description: t("Learn Italian or German through quick, playful practice with others"),
+    applicationName: APP_NAME,
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "black-translucent",
+      title: APP_NAME,
+    },
+    formatDetection: {
+      telephone: false,
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",

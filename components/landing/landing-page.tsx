@@ -103,7 +103,7 @@ export async function LandingPage({ language }: { language: TargetLanguage }) {
           </div>
         </section>
 
-        <LegalFooter className="mt-12 sm:mt-16" />
+        <LegalFooter locale={uiLanguage} className="mt-12 sm:mt-16" />
       </main>
     </AuroraCanvas>
   );

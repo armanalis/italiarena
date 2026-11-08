@@ -1,7 +1,8 @@
 /** Guest mode — proficiency picker and one-click start. */
 "use client";
 
-import { fill, useT } from "@/components/ui-language-provider";
+import { fill, useT, useUiLanguage } from "@/components/ui-language-provider";
+import { privacyHref } from "@/lib/legal";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, GraduationCap, UserRound } from "lucide-react";
@@ -30,6 +31,7 @@ type GuestSetupFormProps = {
 
 export function GuestSetupForm({ defaultLanguage }: GuestSetupFormProps = {}) {
   const t = useT();
+  const uiLanguage = useUiLanguage();
   const router = useRouter();
   const [targetLanguage, setTargetLanguage] = useState(defaultLanguage ?? "");
   const [proficiencyLevel, setProficiencyLevel] = useState("");
@@ -104,7 +106,7 @@ export function GuestSetupForm({ defaultLanguage }: GuestSetupFormProps = {}) {
             <li>
               {t("Sign up later to save progress and pick your own username.")}{" "}
               <Link
-                href="/privacy?lang=en"
+                href={privacyHref(uiLanguage)}
                 className="font-medium text-primary underline-offset-4 hover:underline"
               >
                 {t("Privacy policy")}

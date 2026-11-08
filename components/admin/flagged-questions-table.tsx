@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Loader2, Pencil, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
+import { useT } from "@/components/ui-language-provider";
 import {
   approveReportedQuestion,
   deleteReportedQuestion,
@@ -46,6 +47,7 @@ type FlaggedQuestionsTableProps = {
 };
 
 export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps) {
+  const t = useT();
   const [editingQuestion, setEditingQuestion] = useState<AdminReviewQuestion | null>(
     null
   );
@@ -74,11 +76,11 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
       const result = await dismissReportedQuestion(questionId);
 
       if (result.success) {
-        toast.success("Reports dismissed. Question restored to the active pool.");
+        toast.success(t("Reports dismissed. Question restored to the active pool."));
         return;
       }
 
-      toast.error(result.error);
+      toast.error(t(result.error));
     });
   }
 
@@ -87,11 +89,11 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
       const result = await deleteReportedQuestion(questionId);
 
       if (result.success) {
-        toast.success("Question permanently deleted.");
+        toast.success(t("Question permanently deleted."));
         return;
       }
 
-      toast.error(result.error);
+      toast.error(t(result.error));
     });
   }
 
@@ -107,7 +109,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
       !form.option_c.trim() ||
       !form.option_d.trim()
     ) {
-      toast.error("All fields are required.");
+      toast.error(t("All fields are required."));
       return;
     }
 
@@ -115,22 +117,21 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
       const result = await approveReportedQuestion(editingQuestion.id, form);
 
       if (result.success) {
-        toast.success("Question updated and returned to the active pool.");
+        toast.success(t("Question updated and returned to the active pool."));
         closeEditDialog();
         return;
       }
 
-      toast.error(result.error);
+      toast.error(t(result.error));
     });
   }
 
   if (questions.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 px-6 py-16 text-center">
-        <p className="text-lg font-medium">No reported questions</p>
+        <p className="text-lg font-medium">{t("No reported questions")}</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Player reports appear here immediately. Questions are removed from the
-          active pool after the first report.
+          {t("Player reports appear here immediately. Questions are removed from the active pool after the first report.")}
         </p>
       </div>
     );
@@ -145,7 +146,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
       <div className="mt-2 flex flex-wrap gap-1.5">
         {issueTypes.map((issueType) => (
           <Badge key={issueType} variant="outline" className="text-[10px] uppercase">
-            {REPORT_ISSUE_LABELS[issueType]}
+            {t(REPORT_ISSUE_LABELS[issueType])}
           </Badge>
         ))}
       </div>
@@ -154,12 +155,12 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
 
   function renderStatusBadge(question: AdminReviewQuestion) {
     if (question.status === "quarantined") {
-      return <Badge variant="destructive">Quarantined</Badge>;
+      return <Badge variant="destructive">{t("Quarantined")}</Badge>;
     }
 
     return (
       <Badge className="border-amber-500/30 bg-amber-500/15 text-amber-200">
-        Pending review
+        {t("Pending review")}
       </Badge>
     );
   }
@@ -176,7 +177,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="flex flex-wrap gap-2">
                 <Badge variant="secondary">
-                  {formatCategoryLabel(question.category)}
+                  {t(formatCategoryLabel(question.category))}
                 </Badge>
                 {renderStatusBadge(question)}
               </div>
@@ -197,7 +198,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
                 onClick={() => handleDismiss(question.id)}
               >
                 <Undo2 className="size-4" />
-                Dismiss Reports
+                {t("Dismiss Reports")}
               </Button>
               <Button
                 type="button"
@@ -207,7 +208,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
                 onClick={() => openEditDialog(question)}
               >
                 <Pencil className="size-4" />
-                Update &amp; Approve
+                {t("Update & Approve")}
               </Button>
               <Button
                 type="button"
@@ -217,7 +218,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
                 onClick={() => handleDelete(question.id)}
               >
                 <Trash2 className="size-4" />
-                Permanently Delete
+                {t("Permanently Delete")}
               </Button>
             </div>
           </article>
@@ -229,13 +230,13 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Question</TableHead>
-              <TableHead>Language</TableHead>
-              <TableHead>Level</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Reports</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t("Question")}</TableHead>
+              <TableHead>{t("Language")}</TableHead>
+              <TableHead>{t("Level")}</TableHead>
+              <TableHead>{t("Category")}</TableHead>
+              <TableHead>{t("Status")}</TableHead>
+              <TableHead>{t("Reports")}</TableHead>
+              <TableHead className="text-right">{t("Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -263,7 +264,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
                 <TableCell>{question.level}</TableCell>
                 <TableCell>
                   <Badge variant="secondary">
-                    {formatCategoryLabel(question.category)}
+                    {t(formatCategoryLabel(question.category))}
                   </Badge>
                 </TableCell>
                 <TableCell>{renderStatusBadge(question)}</TableCell>
@@ -279,7 +280,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
                       onClick={() => handleDismiss(question.id)}
                     >
                       <Undo2 className="size-3.5" />
-                      Dismiss
+                      {t("Dismiss")}
                     </Button>
                     <Button
                       type="button"
@@ -288,7 +289,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
                       onClick={() => openEditDialog(question)}
                     >
                       <Pencil className="size-3.5" />
-                      Update &amp; Approve
+                      {t("Update & Approve")}
                     </Button>
                     <Button
                       type="button"
@@ -297,7 +298,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
                       onClick={() => handleDelete(question.id)}
                     >
                       <Trash2 className="size-3.5" />
-                      Delete
+                      {t("Delete")}
                     </Button>
                   </div>
                 </TableCell>
@@ -317,17 +318,16 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
       >
         <DialogContent className="max-h-[85dvh] overflow-y-auto touch-scroll sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Update &amp; approve question</DialogTitle>
+            <DialogTitle>{t("Update & approve question")}</DialogTitle>
             <DialogDescription>
-              Edit the question content, then return it to the active pool with
-              reports cleared.
+              {t("Edit the question content, then return it to the active pool with reports cleared.")}
             </DialogDescription>
           </DialogHeader>
 
           {form && (
             <div className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="question_text">Question text</Label>
+                <Label htmlFor="question_text">{t("Question text")}</Label>
                 <textarea
                   id="question_text"
                   rows={3}
@@ -363,7 +363,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
               })}
 
               <div className="grid gap-2">
-                <Label>Correct answer</Label>
+                <Label>{t("Correct answer")}</Label>
                 <Select
                   value={form.correct_answer}
                   disabled={isPending}
@@ -375,7 +375,7 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select correct option" />
+                    <SelectValue placeholder={t("Select correct option")} />
                   </SelectTrigger>
                   <SelectContent>
                     {(["A", "B", "C", "D"] as const).map((letter) => (
@@ -396,13 +396,13 @@ export function FlaggedQuestionsTable({ questions }: FlaggedQuestionsTableProps)
               disabled={isPending}
               onClick={closeEditDialog}
             >
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button type="button" disabled={isPending} onClick={handleApprove}>
               {isPending ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Saving...
+                  {t("Saving...")}
                 </>
               ) : (
                 "Save & return to pool"
