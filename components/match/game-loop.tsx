@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { CheckCircle2, Loader2, Trophy, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,8 @@ import { SoundVolumeControl } from "@/components/sound-volume-control";
 import type { CorrectAnswer, PublicQuestion } from "@/types/database.types";
 import type { ProficiencyLevel } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { useT } from "@/components/ui-language-provider";
+import { useT, useUiLanguage } from "@/components/ui-language-provider";
+import { localizeQuestion } from "@/lib/resolve-match-questions";
 
 type GameLoopProps = {
   sessionId: string;
@@ -82,7 +83,7 @@ export function GameLoop({
 
   const {
     roundPhase,
-    currentQuestion,
+    currentQuestion: playedQuestion,
     currentQuestionIndex,
     totalQuestions,
     isTiebreakerRound,
@@ -100,6 +101,12 @@ export function GameLoop({
     proficiencyLevel,
     serverPlaylist,
   });
+  const uiLanguage = useUiLanguage();
+  // Shown in the app language; the store keeps the bank's original.
+  const currentQuestion = useMemo(
+    () => playedQuestion && localizeQuestion(playedQuestion, uiLanguage),
+    [playedQuestion, uiLanguage]
+  );
 
   // Keep review sticky against accidental Back into the lobby auto-search.
   useEffect(() => {

@@ -1,6 +1,6 @@
 /** Public landing page with sign-in and sign-up entry points (shown at "/" to visitors). */
 import Link from "next/link";
-import { getT } from "@/lib/i18n-server";
+import { getT, getUiLanguage } from "@/lib/i18n-server";
 import { ArrowRight, Trophy, Users, Zap } from "lucide-react";
 import { AuroraCanvas } from "@/components/aurora-canvas";
 import { GlassPanel } from "@/components/glass-panel";
@@ -36,7 +36,7 @@ const features = [
 
 /** `language`: the demo round's language (German after a /german link). */
 export async function LandingPage({ language }: { language: TargetLanguage }) {
-  const t = await getT();
+  const [t, { language: uiLanguage }] = await Promise.all([getT(), getUiLanguage()]);
   return (
     <AuroraCanvas>
       <main className="mx-auto w-full max-w-6xl px-4 pb-[max(3rem,env(safe-area-inset-bottom,0px))] pt-10 sm:px-6 sm:pt-14 lg:px-8 lg:pt-20">
@@ -73,7 +73,7 @@ export async function LandingPage({ language }: { language: TargetLanguage }) {
             </p>
           </div>
 
-          <DemoRound questions={pickDemoQuestions(3, language)} opponent={pickDemoOpponent(language)} />
+          <DemoRound questions={pickDemoQuestions(3, language, uiLanguage)} opponent={pickDemoOpponent(language)} />
         </section>
 
         <section className="mt-16 sm:mt-20">

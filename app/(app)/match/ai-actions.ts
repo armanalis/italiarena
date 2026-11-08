@@ -8,11 +8,13 @@ import {
   type AskAiExplanationPayload,
 } from "@/lib/ai-explanations";
 import { generateGroqExplanation } from "@/lib/groq";
+import { getUiLanguage } from "@/lib/i18n-server";
+import { localizeQuestion } from "@/lib/resolve-match-questions";
 import { isMatchScoreState } from "@/lib/match-score-state";
 import { extractQuestionIds } from "@/lib/session-playlist";
 import { createAdminClientOrNull } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
-import type { CorrectAnswer } from "@/types/database.types";
+import type { CorrectAnswer, QuestionTextTr } from "@/types/database.types";
 
 export type AskAiExplanationResult =
   | {
@@ -37,6 +39,7 @@ type ExplainableQuestion = {
   option_c: string;
   option_d: string;
   correct_answer: CorrectAnswer;
+  text_tr: QuestionTextTr | null;
 };
 
 const ANSWER_LETTERS: readonly CorrectAnswer[] = ["A", "B", "C", "D"];
@@ -82,7 +85,7 @@ async function loadExplainableQuestion(
   questionId: string
 ): Promise<ExplainableQuestion | null> {
   const columns =
-    "id, language, category, question_text, option_a, option_b, option_c, option_d, correct_answer";
+    "id, language, category, question_text, option_a, option_b, option_c, option_d, correct_answer, text_tr";
 
   for (const table of ["questions_active", "questions_flagged"]) {
     const { data } = await supabase
@@ -195,7 +198,9 @@ export async function askQuestionExplanation(
     };
   }
 
-  const cacheKey = buildAiExplanationCacheKey(payload.questionId, selectedAnswer);
+  // Explained in the app language, cached per language.
+  const { language: uiLanguage } = await getUiLanguage();
+  const cacheKey = buildAiExplanationCacheKey(payload.questionId, selectedAnswer, uiLanguage);
 
   const asksUsed = await countMatchAiAsks(user.id, payload.sessionId);
   const asksRemaining = Math.max(0, MAX_AI_ASKS_PER_MATCH - asksUsed);
@@ -262,17 +267,19 @@ export async function askQuestionExplanation(
     return { success: false, error: reserveError.message, asksRemaining };
   }
 
+  // The texts the player read, so the explanation quotes the same options.
+  const shown = localizeQuestion(question, uiLanguage);
   const generated = await generateGroqExplanation({
     sessionId: payload.sessionId,
     questionId: question.id,
     category: question.category,
-    questionText: question.question_text,
+    questionText: shown.question_text,
     correctAnswer: question.correct_answer,
-    correctOptionText: optionText(question, question.correct_answer),
+    correctOptionText: optionText(shown, question.correct_answer),
     selectedAnswer,
-    selectedOptionText: selectedAnswer ? optionText(question, selectedAnswer) : null,
+    selectedOptionText: selectedAnswer ? optionText(shown, selectedAnswer) : null,
     wasCorrect: selectedAnswer === question.correct_answer,
-  }, question.language);
+  }, question.language, uiLanguage);
 
   if ("error" in generated) {
     // A failed generation gives the slot back, as before.
@@ -285,7 +292,7 @@ export async function askQuestionExplanation(
   // is not in the generated Database type.
   const { error: saveError } = await admin.from("question_ai_explanations").upsert(
     {
-      cache_key: buildAiExplanationCacheKey(question.id, selectedAnswer),
+      cache_key: buildAiExplanationCacheKey(question.id, selectedAnswer, uiLanguage),
       question_id: question.id,
       selected_answer: selectedAnswer,
       explanation: generated.explanation,

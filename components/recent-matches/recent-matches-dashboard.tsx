@@ -13,7 +13,6 @@ import { AskAiButton } from "@/components/match/ask-ai-button";
 import { ReportQuestionButton } from "@/components/match/report-question-button";
 import { SpeakButton } from "@/components/speak-button";
 import { isTargetLanguage, type TargetLanguage } from "@/lib/constants";
-import { speakableQuestion } from "@/lib/speech";
 import { MAX_AI_ASKS_PER_MATCH } from "@/lib/ai-explanations";
 import { normalizeQuestionCategory } from "@/lib/resolve-match-questions";
 import { Badge } from "@/components/ui/badge";
@@ -122,7 +121,7 @@ function MatchQuestionCard({
 }) {
   const t = useT();
   const aiRound = toMatchRoundReview(question);
-  const spoken = language && speakableQuestion(question.questionText, aiRound.correctOptionText);
+  const spoken = language && question.spoken;
   return (
     <li
       className={cn(

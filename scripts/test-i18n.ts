@@ -6,8 +6,12 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { buildAiExplanationCacheKey } from "../lib/ai-explanations";
+import { buildExplanationPrompt } from "../lib/groq";
 import { translator, uiLanguageFromHeader } from "../lib/i18n";
 import { TR } from "../lib/i18n-tr";
+import { getOptionText, localizeQuestion } from "../lib/resolve-match-questions";
+import type { PublicQuestion } from "../types/database.types";
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -42,6 +46,33 @@ check("every Turkish text keeps the {name} parts of its English", () => {
   for (const [english, turkish] of Object.entries(TR)) {
     assert.equal(names(turkish), names(english), `"${english}" → "${turkish}"`);
   }
+});
+
+check("a question in Turkish: the bank's Turkish where it has it, English (or the language learned) elsewhere", () => {
+  const question: PublicQuestion = {
+    id: "q", language: "Italian", level: "A1", category: "vocabulary", random_float: 0.5,
+    question_text: "What does 'il cane' mean?", option_a: "the dog", option_b: "the cat", option_c: "the horse", option_d: "the bird",
+    text_tr: { question_text: "'il cane' ne anlama gelir?", option_a: "köpek", option_b: "kedi", option_c: "at" },
+  };
+  const tr = localizeQuestion(question, "tr");
+  assert.equal(tr.question_text, "'il cane' ne anlama gelir?");
+  assert.equal(getOptionText(tr, "A"), "köpek");
+  assert.equal(getOptionText(tr, "D"), "the bird", "a missing key stays as it was");
+  assert.equal(localizeQuestion(question, "en"), question);
+  assert.equal(localizeQuestion({ ...question, text_tr: null }, "tr").question_text, question.question_text);
+  assert.equal(question.question_text, "What does 'il cane' mean?", "the original is not changed (speech reads it)");
+});
+
+check("AI explanations: in the app language, cached apart; English keys as before", () => {
+  assert.equal(buildAiExplanationCacheKey("q", "B"), "q:B");
+  assert.equal(buildAiExplanationCacheKey("q", null, "en"), "q:none");
+  assert.equal(buildAiExplanationCacheKey("q", "B", "tr"), "q:B:tr");
+  const payload = {
+    sessionId: "s", questionId: "q", category: "Vocabulary", questionText: "'il cane' ne anlama gelir?",
+    correctAnswer: "A" as const, correctOptionText: "köpek", selectedAnswer: "B" as const, selectedOptionText: "kedi", wasCorrect: false,
+  };
+  assert.match(buildExplanationPrompt(payload, "Italian", "tr"), /simple Turkish/);
+  assert.match(buildExplanationPrompt(payload, "Italian"), /simple English/);
 });
 
 check('every t("…") text in the app has its Turkish', () => {

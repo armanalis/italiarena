@@ -492,8 +492,3 @@ export function usePlayerBScore() {
 export function useMatchRoundReviews() {
   return useGameStore((state) => state.roundReviews);
 }
-
-export function useMatchMistakes() {
-  const roundReviews = useMatchRoundReviews();
-  return roundReviews.filter((round) => !round.wasCorrect);
-}

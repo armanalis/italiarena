@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { UiLanguage } from "@/lib/i18n";
 import type {
   CorrectAnswer,
   PublicQuestion,
@@ -10,7 +11,7 @@ import type {
  * column except correct_answer (the database grants nothing else).
  */
 export const PUBLIC_QUESTION_COLUMNS =
-  "id, language, level, category, question_text, option_a, option_b, option_c, option_d, random_float";
+  "id, language, level, category, question_text, option_a, option_b, option_c, option_d, random_float, text_tr";
 
 /**
  * Load questions by id from the active pool and the flagged (quarantined)
@@ -43,6 +44,14 @@ export async function resolveQuestionsByIds(
   }
 
   return byId;
+}
+
+/**
+ * The question as the player reads it: Turkish texts where the bank has them,
+ * English otherwise. Display only: speech and reports keep the original.
+ */
+export function localizeQuestion<Q extends Pick<PublicQuestion, "text_tr">>(question: Q, language: UiLanguage): Q {
+  return language === "tr" && question.text_tr ? { ...question, ...question.text_tr } : question;
 }
 
 export function getOptionText(

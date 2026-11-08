@@ -19,3 +19,20 @@ for (let run = 0; run < 50; run += 1) {
   assert.ok(["Anna", "Lena", "Mia", "Hannah", "Lea", "Lukas", "Jonas", "Felix", "Paul", "Leon"].includes(pickDemoOpponent("German")));
 }
 console.log("ok - landing demo: German questions and names for German visitors, Italian by default");
+
+{
+  // Every question has its Turkish: the help line always, the options when they are meanings (four different ones).
+  const all = [...pickDemoQuestions(100, "Italian", "tr"), ...pickDemoQuestions(100, "German", "tr")];
+  const english = [...pickDemoQuestions(100, "Italian"), ...pickDemoQuestions(100, "German")];
+  assert.equal(all.length, english.length);
+  for (const question of all) {
+    const original = english.find((q) => q.id === question.id)!;
+    const meaning = question.category === "Vocabulary" || question.category === "Idioms";
+    assert.notEqual(question.hint, original.hint, `${question.id}: no Turkish help line`);
+    assert.equal(new Set(question.options).size, 4, question.id);
+    assert.equal(question.optionsLang, meaning ? "tr" : question.lang);
+    assert.equal(question.options.some((o) => original.options.includes(o)), !meaning, `${question.id}: options`);
+    assert.ok(question.correct !== question.trap);
+  }
+  console.log("ok - landing demo in Turkish: every help line, and the options of every meaning question");
+}

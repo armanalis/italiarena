@@ -12,9 +12,13 @@ import { extractQuestionIds } from "@/lib/session-playlist";
 import { REGULAR_MATCH_QUESTIONS } from "@/lib/match";
 import {
   getOptionText,
+  localizeQuestion,
   normalizeQuestionCategory,
 } from "@/lib/resolve-match-questions";
 import { resolveQuestionsWithAnswers } from "@/lib/questions-with-answers";
+import { getUiLanguage } from "@/lib/i18n-server";
+import type { UiLanguage } from "@/lib/i18n";
+import { speakableQuestion } from "@/lib/speech";
 import { createClient } from "@/utils/supabase/server";
 import type {
   CorrectAnswer,
@@ -32,7 +36,10 @@ export type RecentMatchQuestion = {
   questionIndex: number;
   questionId: string;
   category: string;
+  /** In the app language; `spoken` comes from the bank's original. */
   questionText: string;
+  /** The part in the language being learned, for the speak button; null when there is none. */
+  spoken: string | null;
   correctAnswer: CorrectAnswer;
   options: RecentMatchQuestionOption[];
   /** The player's pick; null when they ran out of time. */
@@ -70,16 +77,19 @@ export async function getRecentMatchesWithQuestions(): Promise<RecentMatchesData
   }
 
   const language = profile.target_language ?? DEFAULT_LANGUAGE;
+  // Read outside the cache (request data is not allowed inside) and part of its key.
+  const { language: uiLanguage } = await getUiLanguage();
   return cachedDashboardQuery(
-    ["recent-matches", profile.id, language],
+    ["recent-matches", profile.id, language, uiLanguage],
     dashboardTag(profile.id, "recent-matches"),
-    () => fetchRecentMatchesWithQuestions(profile.id, language)
+    () => fetchRecentMatchesWithQuestions(profile.id, language, uiLanguage)
   );
 }
 
 async function fetchRecentMatchesWithQuestions(
   userId: string,
-  language: string
+  language: string,
+  uiLanguage: UiLanguage
 ): Promise<RecentMatchesData> {
   const supabase = await createClient();
 
@@ -167,9 +177,10 @@ async function fetchRecentMatchesWithQuestions(
           return [];
         }
 
+        const shown = localizeQuestion(question, uiLanguage);
         const options = OPTION_KEYS.map((key) => ({
           key,
-          text: getOptionText(question, key),
+          text: getOptionText(shown, key),
         }));
 
         return [
@@ -177,7 +188,8 @@ async function fetchRecentMatchesWithQuestions(
             questionIndex: index,
             questionId: question.id,
             category: normalizeQuestionCategory(question.category),
-            questionText: question.question_text,
+            questionText: shown.question_text,
+            spoken: speakableQuestion(question.question_text, getOptionText(question, question.correct_answer)),
             correctAnswer: question.correct_answer,
             options,
             selectedAnswer: review.selectedAnswer,

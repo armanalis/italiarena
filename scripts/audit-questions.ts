@@ -182,6 +182,7 @@ async function quarantineQuestion(
       option_d: question.option_d,
       correct_answer: question.correct_answer,
       random_float: question.random_float,
+      text_tr: question.text_tr ?? null,
       report_count: 1,
     },
     { onConflict: "id" }

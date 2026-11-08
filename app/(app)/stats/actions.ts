@@ -8,6 +8,9 @@ import { NOUN_QUESTION_PREFIX } from "@/lib/articles";
 import { nextReview, REVIEWS_TO_LEARN } from "@/lib/review";
 import { italyToday } from "@/lib/wordle";
 import { resolveNounQuestions, resolveQuestionsWithAnswers } from "@/lib/questions-with-answers";
+import { getUiLanguage } from "@/lib/i18n-server";
+import type { UiLanguage } from "@/lib/i18n";
+import { localizeQuestion } from "@/lib/resolve-match-questions";
 import { isAnswerCorrect } from "@/lib/scoring";
 import { createClient } from "@/utils/supabase/server";
 import type {
@@ -68,11 +71,13 @@ export async function getUserMistakes(): Promise<UserMistakeWithQuestion[]> {
   }
 
   const language = profile.target_language ?? DEFAULT_LANGUAGE;
+  // Read outside the cache (request data is not allowed inside) and part of its key.
+  const { language: uiLanguage } = await getUiLanguage();
   return cachedDashboardQuery(
     // v2: rows carry next_review_on; never serve a copy cached before it existed.
-    ["user-mistakes-v2", profile.id, language],
+    ["user-mistakes-v2", profile.id, language, uiLanguage],
     dashboardTag(profile.id, "statistics"),
-    () => fetchUserMistakes(profile.id, language)
+    () => fetchUserMistakes(profile.id, language, uiLanguage)
   );
 }
 
@@ -98,7 +103,8 @@ export async function getReportedQuestionIds(): Promise<string[]> {
 
 async function fetchUserMistakes(
   userId: string,
-  language: string
+  language: string,
+  uiLanguage: UiLanguage
 ): Promise<UserMistakeWithQuestion[]> {
   const supabase = await createClient();
 
@@ -115,7 +121,7 @@ async function fetchUserMistakes(
   // A mistake is a quiz question or a missed article-game noun.
   const [questionsById, nounsById] = await Promise.all([
     resolveQuestionsWithAnswers(data.flatMap((row) => (row.question_id ? [row.question_id] : []))),
-    resolveNounQuestions(data.flatMap((row) => (row.noun_id ? [row.noun_id] : []))),
+    resolveNounQuestions(data.flatMap((row) => (row.noun_id ? [row.noun_id] : [])), uiLanguage),
   ]);
 
   const results: UserMistakeWithQuestion[] = [];
@@ -133,7 +139,7 @@ async function fetchUserMistakes(
       practice_streak: row.practice_streak,
       next_review_on: row.next_review_on,
       last_mistaken_at: row.last_mistaken_at,
-      question,
+      question: localizeQuestion(question, uiLanguage),
     });
   }
 
