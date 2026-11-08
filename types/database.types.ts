@@ -62,6 +62,16 @@ export type QuestionActive = {
   option_d: string;
   correct_answer: CorrectAnswer;
   random_float: number;
+  /** Turkish texts, keyed like the English columns; a missing key (or none) stays English. */
+  text_tr?: QuestionTextTr | null;
+};
+
+export type QuestionTextTr = {
+  question_text?: string;
+  option_a?: string;
+  option_b?: string;
+  option_c?: string;
+  option_d?: string;
 };
 
 /**

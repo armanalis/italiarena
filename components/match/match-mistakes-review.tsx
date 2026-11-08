@@ -5,7 +5,6 @@ import { CheckCircle2, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  useMatchMistakes,
   useMatchRoundReviews,
   useGameStore,
   type MatchRoundReview,
@@ -15,7 +14,8 @@ import { ReportQuestionButton } from "@/components/match/report-question-button"
 import { MAX_AI_ASKS_PER_MATCH } from "@/lib/ai-explanations";
 import { formatCategoryLabel } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
-import { useT } from "@/components/ui-language-provider";
+import { useT, useUiLanguage } from "@/components/ui-language-provider";
+import { getOptionText, localizeQuestion } from "@/lib/resolve-match-questions";
 import type { QuestionCategory } from "@/types/database.types";
 
 const CATEGORY_ORDER: QuestionCategory[] = [
@@ -26,6 +26,28 @@ const CATEGORY_ORDER: QuestionCategory[] = [
 ];
 
 type CategoryFilter = "all" | QuestionCategory;
+
+/** Each round's texts in the app language, from the match's own copy of its question. */
+function useLocalizedRounds(rounds: MatchRoundReview[]) {
+  const uiLanguage = useUiLanguage();
+  const playlist = useGameStore((state) => state.playlist);
+  const tiebreaker = useGameStore((state) => state.tiebreakerQuestion);
+  return useMemo(() => {
+    if (uiLanguage === "en") return rounds;
+    const questions = new Map([...playlist, ...(tiebreaker ? [tiebreaker] : [])].map((q) => [q.id, q]));
+    return rounds.map((round) => {
+      const question = questions.get(round.questionId);
+      if (!question?.text_tr) return round;
+      const shown = localizeQuestion(question, uiLanguage);
+      return {
+        ...round,
+        questionText: shown.question_text,
+        correctOptionText: getOptionText(shown, round.correctAnswer),
+        selectedOptionText: round.selectedAnswer ? getOptionText(shown, round.selectedAnswer) : null,
+      };
+    });
+  }, [rounds, playlist, tiebreaker, uiLanguage]);
+}
 
 function RoundReviewCard({
   round,
@@ -314,8 +336,8 @@ type ReviewTab = "mistakes" | "all";
 
 export function MatchMistakesReview() {
   const t = useT();
-  const allRounds = useMatchRoundReviews();
-  const mistakes = useMatchMistakes();
+  const allRounds = useLocalizedRounds(useMatchRoundReviews());
+  const mistakes = useMemo(() => allRounds.filter((round) => !round.wasCorrect), [allRounds]);
   const gameSessionId = useGameStore((state) => state.gameSessionId);
   const [asksRemaining, setAsksRemaining] = useState(MAX_AI_ASKS_PER_MATCH);
   const [activeTab, setActiveTab] = useState<ReviewTab>(

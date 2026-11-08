@@ -8,6 +8,8 @@
  */
 
 import { LANGUAGE_META, type TargetLanguage } from "@/lib/constants";
+import type { UiLanguage } from "@/lib/i18n";
+import { DEMO_TR } from "@/lib/landing-demo-questions-tr";
 
 export type DemoCategory = "Grammar" | "Fill in the blank" | "Vocabulary" | "Idioms";
 
@@ -653,11 +655,16 @@ function shuffle<T>(items: readonly T[]): T[] {
   return copy;
 }
 
-/** Random questions without repeats, each with its options shuffled. */
-export function pickDemoQuestions(count = 3, language: TargetLanguage = "Italian"): DemoQuestion[] {
+/** Random questions without repeats, each with its options shuffled; help lines and meanings in `uiLanguage`. */
+export function pickDemoQuestions(
+  count = 3,
+  language: TargetLanguage = "Italian",
+  uiLanguage: UiLanguage = "en"
+): DemoQuestion[] {
   const lang = LANGUAGE_META[language].code;
   return shuffle(language === "German" ? GERMAN_POOL : POOL)
     .slice(0, count)
+    .map((pooled) => uiLanguage === "tr" ? { ...pooled, ...DEMO_TR[pooled.id] } : pooled)
     .map(({ answer, trap, distractors, ...question }) => {
       const options = shuffle([answer, trap, ...distractors]);
       return {
@@ -666,7 +673,7 @@ export function pickDemoQuestions(count = 3, language: TargetLanguage = "Italian
         options,
         optionsLang:
           question.category === "Vocabulary" || question.category === "Idioms"
-            ? "en"
+            ? uiLanguage
             : lang,
         correct: options.indexOf(answer),
         trap: options.indexOf(trap),

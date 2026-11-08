@@ -1,7 +1,7 @@
 import { nounQuestion, type ArticleNoun } from "@/lib/articles";
 import { createAdminClientOrNull } from "@/utils/supabase/admin";
-import { translator } from "@/lib/i18n";
-import { dictionaryFor, getUiLanguage } from "@/lib/i18n-server";
+import { translator, type UiLanguage } from "@/lib/i18n";
+import { dictionaryFor } from "@/lib/i18n-server";
 import type { QuestionActive } from "@/types/database.types";
 
 /**
@@ -38,21 +38,23 @@ export async function resolveQuestionsWithAnswers(
   return byId;
 }
 
-/** Server-only: missed article-game nouns as Mistakes questions (players cannot read the noun bank). */
-export async function resolveNounQuestions(ids: number[]): Promise<Map<number, QuestionActive>> {
+/**
+ * Server-only: missed article-game nouns as Mistakes questions (players cannot
+ * read the noun bank), worded in `uiLanguage`.
+ */
+export async function resolveNounQuestions(
+  ids: number[],
+  uiLanguage: UiLanguage = "en"
+): Promise<Map<number, QuestionActive>> {
   const byId = new Map<number, QuestionActive>();
   const admin = createAdminClientOrNull();
   if (!admin || ids.length === 0) {
     return byId;
   }
-  const [{ data }, { language }] = await Promise.all([
-    // "*": meaning_tr exists only once 20261107203342_meanings_tr ran; naming it would fail before that.
-    admin.from("article_nouns").select("*").in("id", [...new Set(ids)]),
-    getUiLanguage(),
-  ]);
-  const t = translator(dictionaryFor(language));
+  const { data } = await admin.from("article_nouns").select("*").in("id", [...new Set(ids)]);
+  const t = translator(dictionaryFor(uiLanguage));
   for (const noun of (data ?? []) as ArticleNoun[]) {
-    byId.set(noun.id, nounQuestion(noun, t, language));
+    byId.set(noun.id, nounQuestion(noun, t, uiLanguage));
   }
   return byId;
 }

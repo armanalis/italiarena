@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { fill, useT } from "@/components/ui-language-provider";
+import { fill, useT, useUiLanguage } from "@/components/ui-language-provider";
+import { pickLocalized } from "@/lib/i18n";
 import {
   fitsLetter,
   nextLetter,
@@ -65,6 +66,7 @@ export function PassaparolaGame({
   initial: PassaparolaTurnResult;
 }) {
   const t = useT();
+  const uiLanguage = useUiLanguage();
   const [supabase] = useState(createClient);
   const [level, setLevel] = useState(initialLevel);
   const [view, setView] = useState<PassaparolaView | null>(initial.ok ? initial.view : null);
@@ -206,7 +208,13 @@ export function PassaparolaGame({
   const skipped = view?.finished
     ? letters.length - right - wrong
     : [...passed].filter((letter) => !view?.marks[letter]).length;
-  const clue = view?.clues.find((item) => item.letter === current)?.clue;
+  // The clue in the app language when the bank has it; lang picks the uppercase rules (Turkish "i" → "İ").
+  const shown = (item: PassaparolaView["clues"][number]) => ({
+    text: pickLocalized(uiLanguage, item.clue, item.clueTr),
+    lang: uiLanguage === "tr" && item.clueTr ? "tr" : "en",
+  });
+  const currentClue = view?.clues.find((item) => item.letter === current);
+  const clue = currentClue && shown(currentClue);
 
   const skippedLabel = view?.finished ? t("Not answered") : t("Passed");
   const counts = (
@@ -377,14 +385,13 @@ export function PassaparolaGame({
           {playing && current && (
             <>
               <p
-                // lang: the clue is capitalised, and it is English (a Turkish page would turn "like" into "LİKE").
-                lang="en"
+                lang={clue?.lang}
                 className={cn(
                   "flex min-h-24 items-center justify-center text-balance text-center text-2xl font-extrabold uppercase leading-tight tracking-tight md:text-3xl",
                   compact && "max-md:min-h-0 max-md:text-xl"
                 )}
               >
-                {clue}
+                {clue?.text}
               </p>
 
               <form
@@ -455,8 +462,7 @@ export function PassaparolaGame({
                       <span className="block">
                         <span className="sr-only">{item.letter}: </span>
                         <span className="font-semibold">{view.answers?.[item.letter]?.join(" / ")}</span>
-                        {/* lang: English until the Turkish clues arrive. */}
-                        <span lang="en" className="text-muted-foreground"> · {item.clue}</span>
+                        <span lang={shown(item).lang} className="text-muted-foreground"> · {shown(item).text}</span>
                       </span>
                       {mark ? (
                         <span className={cn("flex items-center gap-1 text-xs", TONE[mark])}>

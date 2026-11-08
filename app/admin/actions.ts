@@ -207,6 +207,7 @@ export async function dismissReportedQuestion(
         option_d: flagged.option_d,
         correct_answer: flagged.correct_answer,
         random_float: flagged.random_float,
+        text_tr: flagged.text_tr ?? null,
       } as never);
 
     if (insertError) {
@@ -280,6 +281,8 @@ export async function approveReportedQuestion(
     option_d: updates.option_d.trim(),
     correct_answer: updates.correct_answer,
     random_float: source.random_float,
+    // Its Turkish was made for the old texts: English until it is translated again.
+    text_tr: null,
   };
 
   if (active) {

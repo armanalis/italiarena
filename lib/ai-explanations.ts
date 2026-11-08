@@ -1,3 +1,4 @@
+import type { UiLanguage } from "@/lib/i18n";
 import type { CorrectAnswer } from "@/types/database.types";
 
 export const MAX_AI_ASKS_PER_MATCH = 3;
@@ -30,7 +31,9 @@ export type AskAiExplanationPayload = {
 
 export function buildAiExplanationCacheKey(
   questionId: string,
-  selectedAnswer: CorrectAnswer | null
+  selectedAnswer: CorrectAnswer | null,
+  uiLanguage: UiLanguage = "en"
 ): string {
-  return `${questionId}:${selectedAnswer ?? "none"}`;
+  // English keys predate the Turkish app and stay as they were.
+  return `${questionId}:${selectedAnswer ?? "none"}${uiLanguage === "en" ? "" : `:${uiLanguage}`}`;
 }
