@@ -10,9 +10,11 @@ import { FlaggedQuestionsTable } from "@/components/admin/flagged-questions-tabl
 import { QuestionSubmissionsTable } from "@/components/admin/question-submissions-table";
 import { Button } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth";
+import { getT } from "@/lib/i18n-server";
 
 export default async function AdminPage() {
   await requireAdmin();
+  const t = await getT();
   const [reportedQuestions, pendingSubmissions] = await Promise.all([
     getAdminReviewQueue(),
     getPendingQuestionSubmissions(),
@@ -34,16 +36,15 @@ export default async function AdminPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
-                Admin Dashboard
+                {t("Admin Dashboard")}
               </h1>
               <p className="text-sm text-muted-foreground">
-                Review community submissions and player reports before questions
-                enter or return to the live pool.
+                {t("Review community submissions and player reports before questions enter or return to the live pool.")}
               </p>
             </div>
           </div>
           <Button asChild variant="outline" className="min-h-11 w-full shrink-0 sm:w-auto">
-            <Link href="/">Back to the Arena</Link>
+            <Link href="/">{t("Back to the Arena")}</Link>
           </Button>
         </div>
       </header>
@@ -53,10 +54,10 @@ export default async function AdminPage() {
           <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
             <div>
               <h2 className="flex items-center gap-2 text-lg font-semibold">
-                Community submissions
+                {t("Community submissions")}
                 <AdminQueueBadge
                   count={pendingSubmissions.length}
-                  label="submissions waiting for approval"
+                  label={t("submissions waiting for approval")}
                 />
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -73,10 +74,10 @@ export default async function AdminPage() {
         <div className="mb-4 flex items-center justify-between gap-4 sm:mb-6">
           <div>
             <h2 className="flex items-center gap-2 text-lg font-semibold">
-              Reported questions
+              {t("Reported questions")}
               <AdminQueueBadge
                 count={reportedQuestions.length}
-                label="reports awaiting review"
+                label={t("reports awaiting review")}
               />
             </h2>
             <p className="text-sm text-muted-foreground">

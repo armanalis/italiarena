@@ -28,6 +28,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Local, gitignored scratch scripts and exports.
     "tmp/**",
+    // Local agent worktrees: other checkouts with their own builds.
+    ".claude/**",
   ]),
 ]);
 

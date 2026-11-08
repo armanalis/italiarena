@@ -1,4 +1,4 @@
-import type { CorrectAnswer, PublicQuestion } from "@/types/database.types";
+import type { CorrectAnswer } from "@/types/database.types";
 
 /** Speed bonus tiers — response time in milliseconds. */
 export function computePoints(
@@ -69,15 +69,3 @@ export function formatCategoryLabel(category: string | null | undefined): string
 }
 
 /** Text for a multiple-choice option letter on a question row. */
-export function getOptionText(
-  question: PublicQuestion,
-  answer: CorrectAnswer
-): string {
-  const key = `option_${answer.toLowerCase()}` as
-    | "option_a"
-    | "option_b"
-    | "option_c"
-    | "option_d";
-
-  return question[key];
-}

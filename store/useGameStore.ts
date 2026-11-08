@@ -9,11 +9,11 @@ import {
 } from "@/lib/category-progress";
 import type { MatchRoundReview } from "@/lib/match-score-state";
 import { ROUND_DURATION_SEC } from "@/lib/match-timing";
+import { getOptionText } from "@/lib/resolve-match-questions";
 import { safeLocalStorage } from "@/lib/safe-storage";
 import {
   computePoints,
   determineWinner,
-  getOptionText,
   isAnswerCorrect,
   type MatchWinner,
 } from "@/lib/scoring";

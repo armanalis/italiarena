@@ -8,7 +8,7 @@ import { getPostAuthPath } from "@/lib/auth";
 import { isEmailVerifiedUser } from "@/lib/guest-auth";
 import { getProductionSiteUrl } from "@/lib/site-url";
 import { createClient } from "@/utils/supabase/server";
-import { getT } from "@/lib/i18n-server";
+import { getT, getUiLanguage } from "@/lib/i18n-server";
 
 const loginErrors: Record<string, string> = {
   auth_callback_failed: `Google sign-in did not complete. In Supabase → Authentication → URL configuration, set Site URL to ${getProductionSiteUrl()}, add ${getProductionSiteUrl()}/auth/callback and ${getProductionSiteUrl()}/auth/confirm to Redirect URLs, and remove any old language-quiz-one.vercel.app entries. Then try again. You can still sign in with email or username.`,
@@ -54,7 +54,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     }
   }
 
-  const t = await getT();
+  const [t, { language: uiLanguage }] = await Promise.all([getT(), getUiLanguage()]);
   const authError = params.error ? loginErrors[params.error] ?? null : null;
   const authSuccess = params.success ? loginSuccess[params.success] ?? null : null;
   const initialMode =
@@ -94,7 +94,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           {/* Keyed so client navigation between ?mode=signup and sign-in swaps the form */}
           <LoginForm key={initialMode} initialMode={initialMode} />
         </div>
-        <LegalFooter className="mt-8" />
+        <LegalFooter locale={uiLanguage} className="mt-8" />
       </main>
     </AuroraCanvas>
   );

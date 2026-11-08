@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Shield } from "lucide-react";
-import { fill, useT } from "@/components/ui-language-provider";
+import { fill, useT, useUiLanguage } from "@/components/ui-language-provider";
 import { CookiePreferences } from "@/components/settings/cookie-preferences";
 import {
   Card,
@@ -15,10 +15,12 @@ import {
   APP_NAME,
   PRIVACY_CONTACT_EMAIL,
   PRIVACY_SETTINGS_SUMMARY,
+  privacyHref,
 } from "@/lib/legal";
 
 export function PrivacyDataCard() {
   const t = useT();
+  const uiLanguage = useUiLanguage();
   return (
     <Card className="border-border/60">
       <CardHeader>
@@ -55,7 +57,7 @@ export function PrivacyDataCard() {
 
         <div className="flex flex-wrap gap-2 pt-1">
           <Link
-            href="/privacy?lang=en"
+            href={privacyHref(uiLanguage)}
             className="inline-flex min-h-10 items-center rounded-lg border border-border/60 bg-muted/30 px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
           >
             {t("Read full privacy notice")}

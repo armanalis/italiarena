@@ -5,6 +5,7 @@ import {
   type QuestionSubmissionPayload,
 } from "@/lib/question-contribution";
 import { formatCategoryLabel } from "@/lib/scoring";
+import { translator, type Translate } from "@/lib/i18n";
 import type { ProficiencyLevel } from "@/lib/constants";
 
 export type SubmissionAiRecommendation =
@@ -211,61 +212,71 @@ export async function generateSubmissionAiPrecheck(
   return { status: "ready", precheck };
 }
 
+// The labels below take the admin's translator (English by default).
+
 export function formatAiRecommendationLabel(
-  recommendation: SubmissionAiRecommendation
+  recommendation: SubmissionAiRecommendation,
+  t: Translate = translator(null)
 ): string {
   switch (recommendation) {
     case "approve":
-      return "AI: Looks good";
+      return t("AI: Looks good");
     case "review_carefully":
-      return "AI: Review carefully";
+      return t("AI: Review carefully");
     case "likely_reject":
-      return "AI: Likely reject";
+      return t("AI: Likely reject");
   }
 }
 
-export function formatAiLanguageOkLabel(languageOk: SubmissionAiLanguageOk): string {
+export function formatAiLanguageOkLabel(
+  languageOk: SubmissionAiLanguageOk,
+  t: Translate = translator(null)
+): string {
   switch (languageOk) {
     case "yes":
-      return "Language: OK";
+      return t("Language: OK");
     case "no":
-      return "Language: wrong language / junk";
+      return t("Language: wrong language / junk");
     case "unclear":
-      return "Language: unclear";
+      return t("Language: unclear");
   }
 }
 
 export function formatAiLevelMatchLabel(
   levelMatch: SubmissionAiLevelMatch,
   submittedLevel: string,
-  suggestedLevel: string | null
+  suggestedLevel: string | null,
+  t: Translate = translator(null)
 ): string {
+  const vars = { level: submittedLevel, suggested: suggestedLevel ?? "" };
   switch (levelMatch) {
     case "match":
-      return `Level fits ${submittedLevel}`;
+      return t("Level fits {level}", vars);
     case "too_easy_for_label":
       return suggestedLevel
-        ? `May be too easy for ${submittedLevel} — consider ${suggestedLevel}`
-        : `May be too easy for ${submittedLevel}`;
+        ? t("May be too easy for {level} — consider {suggested}", vars)
+        : t("May be too easy for {level}", vars);
     case "too_hard_for_label":
       return suggestedLevel
-        ? `May be too hard for ${submittedLevel} — consider ${suggestedLevel}`
-        : `May be too hard for ${submittedLevel}`;
+        ? t("May be too hard for {level} — consider {suggested}", vars)
+        : t("May be too hard for {level}", vars);
     case "unclear":
-      return "Level fit is unclear";
+      return t("Level fit is unclear");
   }
 }
 
 export function formatAiCategoryMatchLabel(
   categoryMatch: SubmissionAiCategoryMatch,
-  category: string
+  category: string,
+  t: Translate = translator(null)
 ): string {
+  const vars = { category: t(formatCategoryLabel(category)) };
   switch (categoryMatch) {
     case "match":
-      return `Category fits ${formatCategoryLabel(category)}`;
+      return t("Category fits {category}", vars);
     case "mismatch":
-      return `May not be a true ${formatCategoryLabel(category)} question`;
+      return t("May not be a true {category} question", vars);
     case "unclear":
-      return "Category fit is unclear";
+      return t("Category fit is unclear");
   }
 }

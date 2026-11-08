@@ -4,8 +4,7 @@ import {
   ITALIAN_DPA_NAME,
   ITALIAN_DPA_URL,
   PRIVACY_CONTACT_EMAIL,
-  PRIVACY_HREF_EN,
-  PRIVACY_HREF_IT,
+  PRIVACY_LOCALES,
   PRIVACY_POLICY_LAST_UPDATED_ISO,
   getPrivacyCopy,
   privacyHref,
@@ -47,32 +46,23 @@ export function PrivacyPolicyContent({
             className="flex flex-wrap gap-2"
             aria-label={copy.languageSwitchLabel}
           >
-            <Link
-              href={PRIVACY_HREF_IT}
-              hrefLang="it"
-              aria-current={locale === "it" ? "page" : undefined}
-              className={cn(
-                "inline-flex min-h-9 items-center rounded-full border px-3 text-xs font-medium transition-colors",
-                locale === "it"
-                  ? "border-primary/40 bg-primary/10 text-foreground"
-                  : "border-border/60 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-              )}
-            >
-              {copy.languageSwitchIt}
-            </Link>
-            <Link
-              href={PRIVACY_HREF_EN}
-              hrefLang="en"
-              aria-current={locale === "en" ? "page" : undefined}
-              className={cn(
-                "inline-flex min-h-9 items-center rounded-full border px-3 text-xs font-medium transition-colors",
-                locale === "en"
-                  ? "border-primary/40 bg-primary/10 text-foreground"
-                  : "border-border/60 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-              )}
-            >
-              {copy.languageSwitchEn}
-            </Link>
+            {PRIVACY_LOCALES.map((option) => (
+              <Link
+                key={option}
+                href={privacyHref(option)}
+                hrefLang={option}
+                lang={option}
+                aria-current={locale === option ? "page" : undefined}
+                className={cn(
+                  "inline-flex min-h-9 items-center rounded-full border px-3 text-xs font-medium transition-colors",
+                  locale === option
+                    ? "border-primary/40 bg-primary/10 text-foreground"
+                    : "border-border/60 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                )}
+              >
+                {copy.languageNames[option]}
+              </Link>
+            ))}
           </nav>
         </header>
       )}
@@ -184,7 +174,7 @@ type LegalFooterProps = {
   locale?: PrivacyLocale;
 };
 
-/** Standard privacy link shown on public auth pages. Defaults to the English notice. */
+/** Standard privacy link shown on public auth pages: the notice in the page's language (English by default). */
 export function LegalFooter({ className, locale = "en" }: LegalFooterProps) {
   const copy = getPrivacyCopy(locale);
 

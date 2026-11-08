@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useActionRedirect } from "@/hooks/use-action-redirect";
 import { ArrowLeft, Lock, Mail, Sparkles, UserRound } from "lucide-react";
 import { ItalianBrandIcon } from "@/components/italian-brand-icon";
-import { APP_NAME, PRIVACY_FOOTER_NOTICE } from "@/lib/legal";
+import { APP_NAME, PRIVACY_FOOTER_NOTICE, privacyHref } from "@/lib/legal";
 import {
   requestPasswordReset,
   signIn,
@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { useT } from "@/components/ui-language-provider";
+import { useT, useUiLanguage } from "@/components/ui-language-provider";
 
 type AuthMode = "signin" | "signup" | "forgot" | "resend";
 
@@ -71,6 +71,7 @@ function SubmitButton({
 
 export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }) {
   const t = useT();
+  const uiLanguage = useUiLanguage();
   const router = useRouter();
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [signInSuccess, setSignInSuccess] = useState<string | null>(null);
@@ -433,7 +434,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
               <p className="text-center text-xs text-muted-foreground">
                 {t("By creating an account, you acknowledge our")}{" "}
                 <Link
-                  href="/privacy?lang=en"
+                  href={privacyHref(uiLanguage)}
                   className="font-medium text-primary underline-offset-4 hover:underline"
                 >
                   {t("Privacy policy")}

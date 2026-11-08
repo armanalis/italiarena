@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useT } from "@/components/ui-language-provider";
 import { rerunSubmissionAiPrecheck } from "@/app/admin/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,7 @@ type SubmissionAiPrecheckPanelProps = {
 export function SubmissionAiPrecheckPanel({
   submission,
 }: SubmissionAiPrecheckPanelProps) {
+  const t = useT();
   const [isPending, startTransition] = useTransition();
   const status = submission.ai_precheck_status;
 
@@ -85,10 +87,10 @@ export function SubmissionAiPrecheckPanel({
     startTransition(async () => {
       const result = await rerunSubmissionAiPrecheck(submission.id);
       if (result.success) {
-        toast.success("AI advisory refreshed.");
+        toast.success(t("AI advisory refreshed."));
         return;
       }
-      toast.error(result.error);
+      toast.error(t(result.error));
     });
   }
 
@@ -97,7 +99,7 @@ export function SubmissionAiPrecheckPanel({
       <div className="mt-4 rounded-lg border border-border/60 bg-muted/15 px-3 py-2 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
           <Sparkles className="size-4 text-primary" />
-          AI pre-check running…
+          {t("AI pre-check running…")}
         </div>
       </div>
     );
@@ -109,7 +111,7 @@ export function SubmissionAiPrecheckPanel({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 font-medium text-foreground">
             <Sparkles className="size-4 text-muted-foreground" />
-            AI pre-check unavailable
+            {t("AI pre-check unavailable")}
           </div>
           <Button
             type="button"
@@ -124,12 +126,11 @@ export function SubmissionAiPrecheckPanel({
             ) : (
               <RefreshCw className="size-3.5" />
             )}
-            Re-run AI
+            {t("Re-run AI")}
           </Button>
         </div>
         <p className="mt-1 text-muted-foreground">
-          {submission.ai_precheck_summary ??
-            "Review this submission manually."}
+          {submission.ai_precheck_summary ?? t("Review this submission manually.")}
         </p>
       </div>
     );
@@ -151,14 +152,14 @@ export function SubmissionAiPrecheckPanel({
     >
       <div className="flex flex-wrap items-center gap-2">
         <Sparkles className="size-4 text-primary" />
-        <span className="font-medium text-foreground">AI advisory</span>
+        <span className="font-medium text-foreground">{t("AI advisory")}</span>
         {recommendation && (
           <Badge variant={recommendationVariant(recommendation)}>
-            {formatAiRecommendationLabel(recommendation)}
+            {formatAiRecommendationLabel(recommendation, t)}
           </Badge>
         )}
         <span className="text-xs text-muted-foreground">
-          You make the final decision
+          {t("You make the final decision")}
         </span>
         <Button
           type="button"
@@ -173,7 +174,7 @@ export function SubmissionAiPrecheckPanel({
           ) : (
             <RefreshCw className="size-3.5" />
           )}
-          Re-run AI
+          {t("Re-run AI")}
         </Button>
       </div>
 
@@ -188,19 +189,21 @@ export function SubmissionAiPrecheckPanel({
               details.language_ok === "no" && "font-medium text-amber-600 dark:text-amber-400"
             )}
           >
-            {formatAiLanguageOkLabel(details.language_ok)}
+            {formatAiLanguageOkLabel(details.language_ok, t)}
           </p>
           <p>
             {formatAiLevelMatchLabel(
               details.level_match,
               submission.level,
-              details.suggested_level
+              details.suggested_level,
+              t
             )}
           </p>
           <p>
             {formatAiCategoryMatchLabel(
               details.category_match,
-              submission.category
+              submission.category,
+              t
             )}
           </p>
           {details.flags.length > 0 && (
