@@ -1,10 +1,12 @@
-import { EXISTING_EMAIL_MESSAGE } from "@/lib/auth-email-lookup";
 import { isEmailVerifiedUser } from "@/lib/guest-auth";
 import {
   getClientSignupEmailRedirectOrigin,
   isLocalDevHostname,
 } from "@/lib/site-url";
 import { createClient } from "@/utils/supabase/client";
+
+const EXISTING_EMAIL_MESSAGE =
+  "This email is already registered. Please sign in or try a different email.";
 
 const VERIFICATION_SENT_MESSAGE =
   "Verification email sent. Check your inbox to confirm your account, then sign in.";
@@ -127,8 +129,7 @@ export async function signUpOnClient(params: {
   }
 
   // supabase-js >= 2.106 returns `user: null` whenever email confirmation is
-  // pending, so a missing user means "email sent", not "duplicate". Confirmed
-  // emails are already rejected by validateSignUpInput before we get here.
+  // pending, so a missing user means "email sent", not "duplicate".
   if (!data.user) {
     return { ok: true, message: verificationSentMessage() };
   }

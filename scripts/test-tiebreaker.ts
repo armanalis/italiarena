@@ -3,7 +3,7 @@
  * Run: npx tsx scripts/test-tiebreaker.ts
  */
 import assert from "node:assert/strict";
-import { REGULAR_MATCH_QUESTIONS } from "../lib/match";
+import { REGULAR_MATCH_QUESTIONS, shouldStartTiebreaker } from "../lib/match";
 import {
   parseQuestionPlaylist,
 } from "../lib/session-playlist";
@@ -25,18 +25,6 @@ function fakeQuestion(id: string, index: number): QuestionActive {
     explanation: null,
     random_float: 0.5,
   };
-}
-
-function shouldStartTiebreaker(input: {
-  currentQuestionIndex: number;
-  playerAScore: number;
-  playerBScore: number;
-  tiebreakerUsed: boolean;
-}) {
-  const finishedRegularRound =
-    input.currentQuestionIndex === REGULAR_MATCH_QUESTIONS - 1;
-  const isScoreTied = input.playerAScore === input.playerBScore;
-  return finishedRegularRound && isScoreTied && !input.tiebreakerUsed;
 }
 
 function startTiebreakerRoundState(state: {

@@ -278,15 +278,14 @@ export async function askQuestionExplanation(
   }
 
   // Shared cache, keyed from the database's own question id; the first
-  // explanation of a key stays (players never write here). `question_ai_explanations`
-  // is not in the generated Database type.
+  // explanation of a key stays (players never write here).
   const { error: saveError } = await admin.from("question_ai_explanations").upsert(
     {
       cache_key: buildAiExplanationCacheKey(question.id, selectedAnswer, uiLanguage),
       question_id: question.id,
       selected_answer: selectedAnswer,
       explanation: generated.explanation,
-    } as never,
+    },
     { onConflict: "cache_key", ignoreDuplicates: true }
   );
   if (saveError) {

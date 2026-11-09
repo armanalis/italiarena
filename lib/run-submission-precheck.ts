@@ -20,7 +20,7 @@ export async function runSubmissionAiPrecheck(
         ai_precheck_summary: result.reason,
         ai_precheck_details: null,
         ai_precheck_at: new Date().toISOString(),
-      } as never)
+      })
       .eq("id", submissionId);
 
     return;
@@ -36,6 +36,6 @@ export async function runSubmissionAiPrecheck(
       ai_precheck_summary: details.summary,
       ai_precheck_details: details,
       ai_precheck_at: new Date().toISOString(),
-    } as never)
+    })
     .eq("id", submissionId);
 }

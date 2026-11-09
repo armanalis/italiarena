@@ -230,12 +230,14 @@ export async function setUiLanguage(language: UiLanguage): Promise<SettingsActio
   if (!isUiLanguage(language)) {
     return { success: false, error: "Could not change the language. Try again." };
   }
-  (await cookies()).set(UI_LANGUAGE_COOKIE, language, { path: "/", maxAge: UI_LANGUAGE_MAX_AGE, sameSite: "lax" });
   const userId = await getAuthUserId();
   if (userId) {
-    // No error check: before the ui_language migration the cookie alone keeps the choice.
-    await (await createClient()).from("users").update({ ui_language: language }).eq("id", userId);
+    const { error } = await (await createClient()).from("users").update({ ui_language: language }).eq("id", userId);
+    if (error) {
+      return { success: false, error: "Could not change the language. Try again." };
+    }
   }
+  (await cookies()).set(UI_LANGUAGE_COOKIE, language, { path: "/", maxAge: UI_LANGUAGE_MAX_AGE, sameSite: "lax" });
   // Every page was drawn in the old language.
   revalidatePath("/", "layout");
   return { success: true };

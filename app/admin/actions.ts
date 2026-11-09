@@ -208,7 +208,7 @@ export async function dismissReportedQuestion(
         correct_answer: flagged.correct_answer,
         random_float: flagged.random_float,
         text_tr: flagged.text_tr ?? null,
-      } as never);
+      });
 
     if (insertError) {
       return { success: false, error: insertError.message };
@@ -288,7 +288,7 @@ export async function approveReportedQuestion(
   if (active) {
     const { error: updateError } = await supabase
       .from("questions_active")
-      .update(payload as never)
+      .update(payload)
       .eq("id", questionId);
 
     if (updateError) {
@@ -297,7 +297,7 @@ export async function approveReportedQuestion(
   } else {
     const { error: insertError } = await supabase
       .from("questions_active")
-      .insert(payload as never);
+      .insert(payload);
 
     if (insertError) {
       return { success: false, error: insertError.message };
@@ -465,23 +465,8 @@ export async function approveQuestionSubmission(
     return { success: false, error: validated.error };
   }
 
-  const { error: insertError } = await supabase.from("questions_active").insert({
-    language: validated.data.language,
-    level: validated.data.level,
-    category: validated.data.category,
-    question_text: validated.data.question_text,
-    option_a: validated.data.option_a,
-    option_b: validated.data.option_b,
-    option_c: validated.data.option_c,
-    option_d: validated.data.option_d,
-    correct_answer: validated.data.correct_answer,
-  } as never);
-
-  if (insertError) {
-    return { success: false, error: insertError.message };
-  }
-
-  const { error: updateError } = await supabase
+  // Claim first: of two clicks only one gets the pending row, so the question is added once.
+  const { data: claimed, error: updateError } = await supabase
     .from("question_submissions")
     .update({
       status: "approved",
@@ -496,11 +481,51 @@ export async function approveQuestionSubmission(
       option_c: validated.data.option_c,
       option_d: validated.data.option_d,
       correct_answer: validated.data.correct_answer,
-    } as never)
-    .eq("id", submissionId);
+    })
+    .eq("id", submissionId)
+    .eq("status", "pending")
+    .select("id");
 
   if (updateError) {
     return { success: false, error: updateError.message };
+  }
+
+  if (!claimed?.length) {
+    return { success: false, error: "Pending submission not found." };
+  }
+
+  const { error: insertError } = await supabase.from("questions_active").insert({
+    language: validated.data.language,
+    level: validated.data.level,
+    category: validated.data.category,
+    question_text: validated.data.question_text,
+    option_a: validated.data.option_a,
+    option_b: validated.data.option_b,
+    option_c: validated.data.option_c,
+    option_d: validated.data.option_d,
+    correct_answer: validated.data.correct_answer,
+  });
+
+  if (insertError) {
+    // Give the claim back as it was, so the admin can try again.
+    await supabase
+      .from("question_submissions")
+      .update({
+        status: "pending",
+        reviewer_id: null,
+        reviewer_notes: null,
+        reviewed_at: null,
+        level: row.level,
+        category: row.category,
+        question_text: row.question_text,
+        option_a: row.option_a,
+        option_b: row.option_b,
+        option_c: row.option_c,
+        option_d: row.option_d,
+        correct_answer: row.correct_answer,
+      })
+      .eq("id", submissionId);
+    return { success: false, error: insertError.message };
   }
 
   revalidatePath("/admin");
@@ -532,7 +557,7 @@ export async function rejectQuestionSubmission(
       reviewer_id: reviewer.id,
       reviewer_notes: notes,
       reviewed_at: new Date().toISOString(),
-    } as never)
+    })
     .eq("id", submissionId)
     .eq("status", "pending");
 
@@ -576,7 +601,7 @@ export async function rerunSubmissionAiPrecheck(
       ai_precheck_details: null,
       ai_precheck_recommendation: null,
       ai_precheck_at: null,
-    } as never)
+    })
     .eq("id", submissionId);
 
   try {

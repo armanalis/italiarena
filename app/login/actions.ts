@@ -3,7 +3,6 @@
 
 import { redirect } from "next/navigation";
 import { getPostAuthPath } from "@/lib/auth";
-import { EXISTING_EMAIL_MESSAGE, isEmailRegistered } from "@/lib/auth-email-lookup";
 import {
   isUsernameTaken,
   normalizeUsername,
@@ -81,10 +80,6 @@ export async function validateSignUpInput(formData: FormData): Promise<AuthFormS
   const passwordRules = validateNewPassword(password);
   if (!passwordRules.ok) {
     return { error: passwordRules.error };
-  }
-
-  if (await isEmailRegistered(email)) {
-    return { error: EXISTING_EMAIL_MESSAGE };
   }
 
   if (await isUsernameTaken(username)) {

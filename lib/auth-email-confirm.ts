@@ -40,14 +40,11 @@ export function resolveAuthNextPath(next: string | null, origin: string) {
     return null;
   }
 
-  if (next.startsWith("/") && !next.startsWith("//")) {
-    return next;
-  }
-
   try {
-    const url = new URL(next);
+    // Parsed the way a browser reads it: "/\evil.example" and "//evil.example" are other sites.
+    const url = new URL(next, origin);
     if (originsMatch(origin, url.origin)) {
-      return `${url.pathname}${url.search}`;
+      return `${url.pathname}${url.search}${url.hash}`;
     }
   } catch {
     return null;

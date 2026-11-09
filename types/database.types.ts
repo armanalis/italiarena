@@ -4,6 +4,7 @@
  */
 
 import type { ProficiencyLevel, TargetLanguage } from "@/lib/constants";
+import type { UserProfile } from "@/lib/types";
 
 // Columns that only accept a fixed set of string values
 export type QuestionCategory =
@@ -193,6 +194,11 @@ export type QuestionSubmissionUpdate = Partial<
     | "option_d"
     | "correct_answer"
     | "rationale"
+    | "ai_precheck_status"
+    | "ai_precheck_recommendation"
+    | "ai_precheck_summary"
+    | "ai_precheck_details"
+    | "ai_precheck_at"
   >
 >;
 
@@ -377,9 +383,35 @@ export type UpdateSeenQuestionsArgs = {
 };
 
 // Full schema map for a typed Supabase client
+/** public.users: the profile, plus the columns only the server reads. */
+export type UserRow = UserProfile & {
+  ui_language: string | null;
+  last_reminder_sent_at: string | null;
+};
+
+/** Shared cache of AI explanations; written by the service role only. */
+export type QuestionAiExplanation = {
+  cache_key: string;
+  question_id: string;
+  selected_answer: CorrectAnswer | null;
+  explanation: string;
+};
+
 export interface Database {
   public: {
     Tables: {
+      users: {
+        Row: UserRow;
+        Insert: Pick<UserRow, "id" | "email"> & Partial<UserRow>;
+        Update: Partial<UserRow>;
+        Relationships: [];
+      };
+      question_ai_explanations: {
+        Row: QuestionAiExplanation;
+        Insert: QuestionAiExplanation;
+        Update: Partial<QuestionAiExplanation>;
+        Relationships: [];
+      };
       player_stats: {
         Row: PlayerStats;
         Insert: PlayerStatsInsert;

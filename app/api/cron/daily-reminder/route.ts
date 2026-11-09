@@ -40,8 +40,7 @@ async function runDailyReminderCron(options: { dryRun: boolean }) {
   for (let from = 0; ; from += USER_PAGE_SIZE) {
     const { data, error } = await admin
       .from("users")
-      // "*": ui_language exists only once its migration ran; naming it would fail the whole run before that.
-      .select("*")
+      .select("id, target_language, ui_language, daily_reminder_hour, timezone, last_reminder_sent_at")
       .eq("daily_reminder_enabled", true)
       .eq("is_guest", false)
       .order("id")
@@ -79,8 +78,7 @@ async function runDailyReminderCron(options: { dryRun: boolean }) {
     // above, so of two overlapping runs only one sends.
     const claim = admin
       .from("users")
-      // `users` is not in the generated Database type.
-      .update({ last_reminder_sent_at: now.toISOString() } as never)
+      .update({ last_reminder_sent_at: now.toISOString() })
       .eq("id", user.id);
     const { data: claimed, error: claimError } = await (user.last_reminder_sent_at
       ? claim.eq("last_reminder_sent_at", user.last_reminder_sent_at)

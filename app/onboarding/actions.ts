@@ -82,7 +82,6 @@ export async function saveOnboarding(
   }
 
   revalidatePath("/");
-  revalidatePath("/");
   revalidatePath("/onboarding");
 
   return { error: null, redirectTo: "/" };
