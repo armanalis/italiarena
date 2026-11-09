@@ -44,31 +44,6 @@ async function lookupEmailViaRpc(identifier: string): Promise<string | null> {
   return data;
 }
 
-async function lookupEmailViaAdmin(username: string): Promise<string | null> {
-  const admin = createAdminClientOrNull();
-  if (!admin) {
-    return null;
-  }
-
-  const { data, error } = await admin
-    .from("users")
-    .select("email, display_name")
-    .ilike("display_name", username)
-    .limit(10)
-    .returns<{ email: string; display_name: string | null }[]>();
-
-  if (error || !data?.length) {
-    return null;
-  }
-
-  // ilike treats % and _ as wildcards; only accept an exact case-insensitive match.
-  const wanted = username.trim().toLowerCase();
-  return (
-    data.find((row) => row.display_name?.trim().toLowerCase() === wanted)
-      ?.email ?? null
-  );
-}
-
 /** Case-insensitive lookup — always reads the current display_name from the database. */
 export async function findUserEmailByUsername(
   username: string
@@ -81,7 +56,7 @@ export async function findUserEmailByUsername(
   }
 
   try {
-    const email = (await lookupEmailViaRpc(trimmed)) ?? (await lookupEmailViaAdmin(trimmed));
+    const email = await lookupEmailViaRpc(trimmed);
 
     if (!email) {
       return { error: "No account found for that username." };
@@ -113,37 +88,6 @@ export async function resolveLoginEmail(
   return findUserEmailByUsername(trimmed);
 }
 
-async function isUsernameTakenViaLoginLookup(
-  username: string,
-  excludeUserId?: string
-): Promise<boolean | null> {
-  try {
-    const email = await lookupEmailViaRpc(username);
-    if (!email) {
-      return false;
-    }
-
-    if (!excludeUserId) {
-      return true;
-    }
-
-    const supabase = await createClient();
-    const { data: currentUser, error } = await supabase
-      .from("users")
-      .select("email")
-      .eq("id", excludeUserId)
-      .maybeSingle();
-
-    if (error || !currentUser?.email) {
-      return true;
-    }
-
-    return email.toLowerCase() !== currentUser.email.toLowerCase();
-  } catch {
-    return null;
-  }
-}
-
 async function isUsernameTakenViaRpc(
   username: string,
   excludeUserId?: string
@@ -161,30 +105,6 @@ async function isUsernameTakenViaRpc(
   return Boolean(data);
 }
 
-async function isUsernameTakenViaAdmin(
-  username: string,
-  excludeUserId?: string
-): Promise<boolean | null> {
-  const admin = createAdminClientOrNull();
-  if (!admin) {
-    return null;
-  }
-
-  let query = admin.from("users").select("id").ilike("display_name", username).limit(1);
-
-  if (excludeUserId) {
-    query = query.neq("id", excludeUserId);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    return null;
-  }
-
-  return Boolean(data?.length);
-}
-
 export async function isUsernameTaken(
   username: string,
   excludeUserId?: string
@@ -196,16 +116,6 @@ export async function isUsernameTaken(
     return false;
   }
 
-  const viaRpc = await isUsernameTakenViaRpc(trimmed, excludeUserId);
-  if (viaRpc !== null) {
-    return viaRpc;
-  }
-
-  const viaLookup = await isUsernameTakenViaLoginLookup(trimmed, excludeUserId);
-  if (viaLookup !== null) {
-    return viaLookup;
-  }
-
-  const viaAdmin = await isUsernameTakenViaAdmin(trimmed, excludeUserId);
-  return viaAdmin ?? false;
+  // A failed check lets the form go on; the database's own unique rule still decides.
+  return (await isUsernameTakenViaRpc(trimmed, excludeUserId)) ?? false;
 }

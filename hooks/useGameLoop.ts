@@ -4,28 +4,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { exitCountsAsLoss } from "@/lib/exit-match";
 import { createClient } from "@/utils/supabase/client";
 import {
-  buildMatchScoreState,
   isOpponentMissing,
   shouldCheckSilentOpponent,
 } from "@/lib/match-score-state";
 import {
-  appendTiebreakerQuestion,
-  persistBotMatchScoreState,
+  requestTiebreakerQuestion,
   resolveMatchRoundServer,
   revealRoundAnswer,
   type RoundReveal,
 } from "@/lib/match-sync-client";
-import { getBotResponseDelayMs, getBotResponseTimeMs } from "@/lib/bot";
 import { pulseCountdownHaptic } from "@/lib/haptics";
-import {
-  FRESH_ROUND_TIMER_STATE,
-  getRoundTimeRemainingSec,
-} from "@/lib/match-timer";
-import { getRoundResultMs, TOPIC_REVEAL_MS } from "@/lib/match-timing";
+import { getRoundTimeRemainingSec } from "@/lib/match-timer";
+import { getRoundResultMs } from "@/lib/match-timing";
+import { useBotMatch } from "@/hooks/useBotMatch";
 import { useGameAudio } from "@/hooks/useGameAudio";
 import { useServerMatchSync } from "@/hooks/useServerMatchSync";
 import { useGameStore } from "@/store/useGameStore";
-import { REGULAR_MATCH_QUESTIONS } from "@/lib/match";
+import { REGULAR_MATCH_QUESTIONS, shouldStartTiebreaker } from "@/lib/match";
 import { isAnswerCorrect } from "@/lib/scoring";
 import type { CorrectAnswer, PublicQuestion } from "@/types/database.types";
 import type { ProficiencyLevel } from "@/lib/constants";
@@ -54,6 +49,12 @@ type UseGameLoopOptions = {
   serverPlaylist: PublicQuestion[];
 };
 
+/**
+ * The round loop both kinds of match share: the question clock, locking and
+ * saving an answer, the reveal, the result screen. What moves a match from
+ * round to round lives elsewhere: useBotMatch for a bot, and for a real
+ * opponent the host's server rounds (useServerMatchSync) plus the code here.
+ */
 export function useGameLoop({
   sessionId,
   localUserId,
@@ -76,19 +77,17 @@ export function useGameLoop({
   const roundStartedAt = useGameStore((state) => state.roundStartedAt);
 
   const initGameplay = useGameStore((state) => state.initGameplay);
-  const beginRound = useGameStore((state) => state.beginRound);
   const setTimeRemaining = useGameStore((state) => state.setTimeRemaining);
   const lockLocalAnswer = useGameStore((state) => state.lockLocalAnswer);
   const lockOpponentAnswer = useGameStore((state) => state.lockOpponentAnswer);
   const resolveRound = useGameStore((state) => state.resolveRound);
   const advanceToNextRound = useGameStore((state) => state.advanceToNextRound);
-  const startTiebreakerRound = useGameStore((state) => state.startTiebreakerRound);
   const setRoundPhase = useGameStore((state) => state.setRoundPhase);
 
-  const topicTimerRef = useRef<number | null>(null);
   const resultTimerRef = useRef<number | null>(null);
   const roundTimerRef = useRef<number | null>(null);
-  const botTimerRef = useRef<number | null>(null);
+  /** Filled in below, once the round loop it needs exists. */
+  const botRef = useRef<ReturnType<typeof useBotMatch> | null>(null);
   const resolvingRef = useRef(false);
   const resultRemainingMsRef = useRef(0);
   /** Host: round index we are trying to publish after the result screen. */
@@ -105,11 +104,7 @@ export function useGameLoop({
     number | null
   >(null);
 
-  const clearRoundTimers = useCallback(() => {
-    if (topicTimerRef.current) {
-      window.clearTimeout(topicTimerRef.current);
-      topicTimerRef.current = null;
-    }
+  const clearRoundTimer = useCallback(() => {
     if (roundTimerRef.current) {
       window.clearInterval(roundTimerRef.current);
       roundTimerRef.current = null;
@@ -123,18 +118,11 @@ export function useGameLoop({
     }
   }, []);
 
-  const clearBotTimer = useCallback(() => {
-    if (botTimerRef.current) {
-      window.clearTimeout(botTimerRef.current);
-      botTimerRef.current = null;
-    }
-  }, []);
-
   const clearTimers = useCallback(() => {
-    clearRoundTimers();
+    clearRoundTimer();
     clearResultTimer();
-    clearBotTimer();
-  }, [clearBotTimer, clearResultTimer, clearRoundTimers]);
+    botRef.current?.clearBotTimers();
+  }, [clearResultTimer, clearRoundTimer]);
 
   const flushPendingBroadcasts = useCallback(() => {
     if (!channelReadyRef.current || !channelRef.current) {
@@ -155,7 +143,8 @@ export function useGameLoop({
 
   const broadcastAnswer = useCallback(
     (payload: AnswerLockedPayload) => {
-      if (isBotMatch || !channelReadyRef.current) {
+      // Never ready in a bot match: there is no one to tell.
+      if (!channelReadyRef.current) {
         pendingBroadcastsRef.current.push(payload);
         return;
       }
@@ -166,7 +155,7 @@ export function useGameLoop({
         payload,
       });
     },
-    [isBotMatch]
+    []
   );
 
   /**
@@ -228,33 +217,6 @@ export function useGameLoop({
     return Boolean(state.playerAAnswer && state.playerBAnswer);
   }, []);
 
-  /**
-   * Push cumulative scores to the session row so a refresh cannot wipe them.
-   * Bot matches only — PvP scoring is server-resolved from locked answers
-   * (see resolveMatchRoundServer in useServerMatchSync), and the database no
-   * longer accepts a client-written score_state for a real opponent.
-   */
-  const persistScores = useCallback(async () => {
-    if (!isBotMatch) {
-      return;
-    }
-
-    const state = useGameStore.getState();
-    if (!state.gameSessionId) {
-      return;
-    }
-
-    const result = await persistBotMatchScoreState(
-      supabase,
-      state.gameSessionId,
-      buildMatchScoreState(state)
-    );
-
-    if (!result.success) {
-      console.error(`[match-sync] score persist failed: ${result.error}`);
-    }
-  }, [isBotMatch, supabase]);
-
   const startRoundTimer = useCallback(() => {
     if (roundTimerRef.current) {
       window.clearInterval(roundTimerRef.current);
@@ -294,120 +256,17 @@ export function useGameLoop({
           submitLocalAnswer(state.currentQuestionIndex, null, null);
         }
 
-        if (isBotMatch) {
-          const botRole = localRole === "a" ? "b" : "a";
-          const botAnswer =
-            botRole === "a" ? state.playerAAnswer : state.playerBAnswer;
-          if (!botAnswer) {
-            lockOpponentAnswer(null, null);
-          }
-        }
+        botRef.current?.roundTimeUp();
 
         finalizeRoundRef.current();
       }
     }, 250);
   }, [
     broadcastAnswer,
-    isBotMatch,
     lockLocalAnswer,
-    lockOpponentAnswer,
     setTimeRemaining,
     submitLocalAnswer,
   ]);
-
-  const scheduleBotAnswer = useCallback(() => {
-    if (!isBotMatch || botTimerRef.current) {
-      return;
-    }
-
-    const state = useGameStore.getState();
-    const question = state.playlist[state.currentQuestionIndex];
-    const startedAt = state.roundStartedAt;
-
-    if (!question || !startedAt) {
-      return;
-    }
-
-    const botRole = localPlayerRole === "a" ? "b" : "a";
-    const botAlreadyAnswered =
-      botRole === "a" ? state.playerAAnswer : state.playerBAnswer;
-
-    if (botAlreadyAnswered) {
-      return;
-    }
-
-    const botDifficulty = state.botDifficulty ?? "medium";
-    const delay = getBotResponseDelayMs(startedAt, botDifficulty);
-    const questionIndex = state.currentQuestionIndex;
-
-    botTimerRef.current = window.setTimeout(() => {
-      botTimerRef.current = null;
-
-      const latest = useGameStore.getState();
-      if (latest.currentQuestionIndex !== questionIndex) {
-        return;
-      }
-
-      const latestBotAnswer =
-        botRole === "a" ? latest.playerAAnswer : latest.playerBAnswer;
-
-      if (
-        latestBotAnswer ||
-        latest.roundPhase === "round_result" ||
-        latest.roundPhase === "match_finished"
-      ) {
-        return;
-      }
-
-      // The bot "locks in" at its usual time, but its pick stays hidden:
-      // the browser has no answer to choose from. reveal_round_answer
-      // decides the pick on the server and finalizeRound fills it in.
-      const responseTimeMs = getBotResponseTimeMs(latest.botDifficulty ?? "medium");
-      lockOpponentAnswer(null, responseTimeMs);
-
-      if (bothAnswersLocked()) {
-        finalizeRoundRef.current();
-      }
-    }, delay);
-  }, [bothAnswersLocked, isBotMatch, localPlayerRole, lockOpponentAnswer]);
-
-  const beginRoundPlaying = useCallback(
-    (questionIndex: number, startedAt: number) => {
-      if (useGameStore.getState().currentQuestionIndex !== questionIndex) {
-        useGameStore.setState({ currentQuestionIndex: questionIndex });
-      }
-
-      beginRound(startedAt);
-      scheduleBotAnswer();
-      startRoundTimer();
-    },
-    [beginRound, scheduleBotAnswer, startRoundTimer]
-  );
-
-  const startTopicReveal = useCallback(
-    (questionIndex: number) => {
-      clearRoundTimers();
-      resolvingRef.current = false;
-
-      useGameStore.setState({
-        currentQuestionIndex: questionIndex,
-        roundPhase: "topic_reveal",
-        playerAAnswer: null,
-        playerBAnswer: null,
-        roundStartedAt: null,
-        ...FRESH_ROUND_TIMER_STATE,
-        lastRoundPointsA: 0,
-        lastRoundPointsB: 0,
-      });
-
-      play("reveal");
-
-      topicTimerRef.current = window.setTimeout(() => {
-        beginRoundPlaying(questionIndex, Date.now());
-      }, TOPIC_REVEAL_MS);
-    },
-    [beginRoundPlaying, clearRoundTimers, play]
-  );
 
   const handleNewSyncRound = useCallback(() => {
     // A new round arrived from the server: drop all timers and per-round
@@ -429,39 +288,43 @@ export function useGameLoop({
       resolvingRef.current = false;
       setRoundResultSecondsLeft(null);
 
-      if (!isBotMatch && !isSyncLeader) {
+      if (isBotMatch) {
+        await botRef.current?.advanceAfterResult();
         return;
       }
 
-      if (!isBotMatch) {
-        // Rounds score strictly in order, so a round the opponent never
-        // answered (they left) would block every later round and the result.
-        // The server scores it once both answers are in or its clock ran out.
-        const roundIndex = useGameStore.getState().currentQuestionIndex;
-        for (;;) {
-          const resolved = await resolveMatchRoundServer(supabase, sessionId, roundIndex);
-          if (resolved.success || !resolved.error.includes("Round is still open")) {
-            break;
-          }
-          if (useGameStore.getState().roundPhase !== "round_result") {
-            return;
-          }
-          await wait(1_000);
-        }
+      // A real match moves on when the host publishes the next round.
+      if (!isSyncLeader) {
+        return;
+      }
 
-        // The opponent never answered this round, not even "timed out": they
-        // may be gone. Wait for them instead of playing on alone; if they stay
-        // silent, the silent-opponent check below ends the match.
-        for (;;) {
-          const live = useGameStore.getState();
-          if (live.roundPhase !== "round_result") {
-            return;
-          }
-          if (!isOpponentMissing(live)) {
-            break;
-          }
-          await wait(1_000);
+      // Rounds score strictly in order, so a round the opponent never
+      // answered (they left) would block every later round and the result.
+      // The server scores it once both answers are in or its clock ran out.
+      const roundIndex = useGameStore.getState().currentQuestionIndex;
+      for (;;) {
+        const resolved = await resolveMatchRoundServer(supabase, sessionId, roundIndex);
+        if (resolved.success || !resolved.error.includes("Round is still open")) {
+          break;
         }
+        if (useGameStore.getState().roundPhase !== "round_result") {
+          return;
+        }
+        await wait(1_000);
+      }
+
+      // The opponent never answered this round, not even "timed out": they
+      // may be gone. Wait for them instead of playing on alone; if they stay
+      // silent, the silent-opponent check below ends the match.
+      for (;;) {
+        const live = useGameStore.getState();
+        if (live.roundPhase !== "round_result") {
+          return;
+        }
+        if (!isOpponentMissing(live)) {
+          break;
+        }
+        await wait(1_000);
       }
 
       const latest = useGameStore.getState();
@@ -470,51 +333,26 @@ export function useGameLoop({
       if (latest.roundPhase !== "round_result") {
         return;
       }
-      const finishedRegularRound =
-        latest.currentQuestionIndex === REGULAR_MATCH_QUESTIONS - 1;
-      const isScoreTied = latest.playerAScore === latest.playerBScore;
 
       // Sudden-death: tied after the 10 regular questions → one extra round.
-      if (finishedRegularRound && isScoreTied && !latest.tiebreakerUsed) {
+      if (shouldStartTiebreaker(latest)) {
         setRoundPhase("tiebreaker_loading");
 
-        let tiebreaker: Awaited<
-          ReturnType<typeof appendTiebreakerQuestion>
-        > | null = null;
-
-        for (let attempt = 1; attempt <= 3; attempt += 1) {
-          // The server picks the question and appends it to the session
-          // (idempotent, so a retry cannot add a second one).
-          tiebreaker = await appendTiebreakerQuestion(supabase, sessionId);
-          if (tiebreaker.success) {
-            break;
-          }
-          console.error(
-            `[match] tiebreaker fetch failed (attempt ${attempt}): ${tiebreaker.error}`
-          );
-        }
-
-        if (tiebreaker?.success) {
-          if (isBotMatch) {
-            startTiebreakerRound(tiebreaker.data);
-            void persistScores();
-            return;
-          }
-
+        const tiebreaker = await requestTiebreakerQuestion(supabase, sessionId);
+        if (tiebreaker) {
           // Append locally so the host playlist covers Q11, but stay on
           // tiebreaker_loading until publish/applySync advances BOTH clients
           // from the same server-stamped round record.
           useGameStore.setState((state) => ({
             playlist: state.playlist.some(
-              (question) => question.id === tiebreaker.data.id
+              (question) => question.id === tiebreaker.id
             )
               ? state.playlist
-              : [...state.playlist, tiebreaker.data],
-            tiebreakerQuestion: tiebreaker.data,
+              : [...state.playlist, tiebreaker],
+            tiebreakerQuestion: tiebreaker,
             tiebreakerUsed: true,
             roundPhase: "tiebreaker_loading",
           }));
-          void persistScores();
 
           const tiebreakerIndex = REGULAR_MATCH_QUESTIONS;
           pendingNextRoundRef.current = tiebreakerIndex;
@@ -524,30 +362,12 @@ export function useGameLoop({
           }
           return;
         }
-
-        // No sudden-death question available — end as a true tie rather than
-        // inventing a winner from response times.
-        console.error(
-          "[match] tiebreaker unavailable; finishing tied match without sudden-death"
-        );
-      }
-
-      if (isBotMatch) {
-        advanceToNextRound();
-        const afterAdvance = useGameStore.getState();
-        void persistScores();
-        if (afterAdvance.roundPhase === "match_finished") {
-          return;
-        }
-        startTopicReveal(afterAdvance.currentQuestionIndex);
-        return;
       }
 
       const nextIndex = latest.currentQuestionIndex + 1;
       if (nextIndex >= latest.playlist.length) {
         pendingNextRoundRef.current = null;
         advanceToNextRound();
-        void persistScores();
         void leaderFinishMatchRef.current();
         return;
       }
@@ -562,11 +382,8 @@ export function useGameLoop({
     advanceToNextRound,
     isBotMatch,
     isSyncLeader,
-    persistScores,
     sessionId,
     setRoundPhase,
-    startTiebreakerRound,
-    startTopicReveal,
     supabase,
   ]);
 
@@ -603,10 +420,9 @@ export function useGameLoop({
   const handleResumedRoundResult = useCallback(() => {
     // Refresh landed on an already-scored round — continue the between-round
     // beat so the host can publish the next question (no double-scoring).
-    clearRoundTimers();
-    clearBotTimer();
+    clearRoundTimer();
     scheduleRoundResultCountdown();
-  }, [clearBotTimer, clearRoundTimers, scheduleRoundResultCountdown]);
+  }, [clearRoundTimer, scheduleRoundResultCountdown]);
 
   const serverSync = useServerMatchSync({
     sessionId,
@@ -739,14 +555,13 @@ export function useGameLoop({
       );
 
       resolveRound(reveal.correctAnswer);
-      void persistScores();
+      void botRef.current?.persistScores();
       scheduleRoundResultCountdown();
     })();
   }, [
     clearTimers,
     fetchRoundReveal,
     isBotMatch,
-    persistScores,
     play,
     resolveRound,
     scheduleRoundResultCountdown,
@@ -818,15 +633,23 @@ export function useGameLoop({
     proficiencyLevel,
   ]);
 
-  useEffect(() => {
-    if (isBotMatch && serverPlaylist.length > 0) {
-      useGameStore.setState({ playlist: serverPlaylist });
-    }
-  }, [isBotMatch, serverPlaylist]);
+  const bot = useBotMatch({
+    enabled: isBotMatch,
+    sessionId,
+    supabase,
+    localPlayerRole,
+    serverPlaylist,
+    play,
+    startRoundTimer,
+    clearRoundTimer,
+    clearTimers,
+    finalizeRoundRef,
+    resolvingRef,
+  });
+  botRef.current = bot;
 
   useEffect(() => {
     if (isBotMatch) {
-      channelReadyRef.current = true;
       return;
     }
 
@@ -873,49 +696,10 @@ export function useGameLoop({
   }, [flushPendingBroadcasts, isBotMatch, sessionId, supabase]);
 
   useEffect(() => {
-    if (!isBotMatch) {
-      if (roundPhase === "playing" && roundStartedAt) {
-        startRoundTimer();
-      }
-      return;
-    }
-
-    if (
-      roundPhase === "round_result" ||
-      roundPhase === "match_finished" ||
-      roundPhase === "tiebreaker_loading"
-    ) {
-      return;
-    }
-
-    clearTimers();
-    resolvingRef.current = false;
-
-    if (roundPhase === "topic_reveal") {
-      play("reveal");
-      topicTimerRef.current = window.setTimeout(() => {
-        beginRoundPlaying(currentQuestionIndex, Date.now());
-      }, TOPIC_REVEAL_MS);
-    }
-
-    if (roundPhase === "playing" && roundStartedAt) {
-      scheduleBotAnswer();
+    if (!isBotMatch && roundPhase === "playing" && roundStartedAt) {
       startRoundTimer();
     }
-
-    return clearRoundTimers;
-  }, [
-    beginRoundPlaying,
-    clearRoundTimers,
-    clearTimers,
-    currentQuestionIndex,
-    isBotMatch,
-    play,
-    roundPhase,
-    roundStartedAt,
-    scheduleBotAnswer,
-    startRoundTimer,
-  ]);
+  }, [isBotMatch, roundPhase, roundStartedAt, startRoundTimer]);
 
   useEffect(() => {
     if (roundPhase !== "playing") {
@@ -926,26 +710,6 @@ export function useGameLoop({
       finalizeRound();
     }
   }, [finalizeRound, playerAAnswer, playerBAnswer, roundPhase]);
-
-  // Runs when a question starts: schedule the bot answer, and save the
-  // question clock so a refresh resumes the countdown instead of granting a
-  // fresh 25 seconds.
-  useEffect(() => {
-    if (!isBotMatch || roundPhase !== "playing" || !roundStartedAt) {
-      return;
-    }
-
-    clearBotTimer();
-    scheduleBotAnswer();
-    void persistScores();
-  }, [
-    clearBotTimer,
-    isBotMatch,
-    persistScores,
-    roundPhase,
-    roundStartedAt,
-    scheduleBotAnswer,
-  ]);
 
   // An opponent who goes silent (closed the tab, lost connection) must not
   // leave this player waiting. Once the screen has waited a while with

@@ -121,6 +121,31 @@ export async function appendTiebreakerQuestion(
   return { success: true, data: data as PublicQuestion };
 }
 
+/**
+ * The sudden-death question, asked for up to 3 times (the server appends it
+ * once, so a retry cannot add a second). Null when there is none: the match
+ * then ends as a true tie rather than inventing a winner from response times.
+ */
+export async function requestTiebreakerQuestion(
+  supabase: SupabaseClient,
+  sessionId: string
+): Promise<PublicQuestion | null> {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const tiebreaker = await appendTiebreakerQuestion(supabase, sessionId);
+    if (tiebreaker.success) {
+      return tiebreaker.data;
+    }
+    console.error(
+      `[match] tiebreaker fetch failed (attempt ${attempt}): ${tiebreaker.error}`
+    );
+  }
+
+  console.error(
+    "[match] tiebreaker unavailable; finishing tied match without sudden-death"
+  );
+  return null;
+}
+
 export type RoundReveal = {
   correctAnswer: CorrectAnswer;
   /** The caller's answer as locked on the server (null = timed out). */

@@ -115,7 +115,7 @@ npm run test:sql           # SQL suite only (needs the private supabase/migratio
 | Backend | [Supabase](https://supabase.com/) — Postgres, Auth, Realtime, RPC functions |
 | Client state | [Zustand](https://github.com/pmndrs/zustand) |
 | UI | Tailwind CSS + [shadcn/ui](https://ui.shadcn.com/) on [Radix](https://www.radix-ui.com/) primitives |
-| AI explanations | [Groq](https://groq.com/) (Llama 3.1 8B) for optional post-match answer explanations |
+| AI explanations | [Groq](https://groq.com/) (`openai/gpt-oss-120b`) for optional post-match answer explanations |
 | Push notifications | Web Push (`web-push`) + a Vercel Cron job for the daily reminder |
 | Hosting | [Vercel](https://vercel.com/) |
 
@@ -158,13 +158,13 @@ Supabase’s built-in mailer sends from “Supabase Auth” and is rate-limited.
    - **Sender name:** `Italiarena`
    - **Host / port / credentials:** from your provider (Resend, Google Workspace, Postmark, SendGrid, etc.)
    - Verify **SPF**, **DKIM**, and **DMARC** for `italiarena.com` in your provider’s DNS settings so messages land in the inbox.
-2. **Templates** — Supabase → **Authentication** → **Email Templates**. Branded HTML for all six templates is in `supabase/email-templates/` (copy each file into the matching Supabase template). Suggested subjects:
-   - Confirm signup — `Confirm your Italiarena account` → `confirm-signup.html`
-   - Invite user — `You're invited to Italiarena` → `invite-user.html`
-   - Magic link or OTP — `Sign in to Italiarena` → `magic-link.html`
-   - Change email address — `Confirm your new Italiarena email` → `change-email.html`
-   - Reset password — `Reset your Italiarena password` → `reset-password.html`
-   - Reauthentication — `Your Italiarena verification code` → `reauthentication.html`
+2. **Templates** — Supabase → **Authentication** → **Email Templates**. The branded HTML for the six templates is kept in the Supabase dashboard, not in this repository. Suggested subjects:
+   - Confirm signup — `Confirm your Italiarena account`
+   - Invite user — `You're invited to Italiarena`
+   - Magic link or OTP — `Sign in to Italiarena`
+   - Change email address — `Confirm your new Italiarena email`
+   - Reset password — `Reset your Italiarena password`
+   - Reauthentication — `Your Italiarena verification code`
    Link-based templates should point to `{{ .RedirectTo }}auth/confirm/pending?token_hash={{ .TokenHash }}&type=…&next=/onboarding` (use `signup` for Confirm signup; for recovery use `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/login/reset-password`). `RedirectTo` is the signup origin (`http://localhost:3000/` locally or `https://italiarena.com/` in production). Inbox scanners are redirected to a confirmation button page before the one-time token is used.
 3. After saving, send a test signup or password reset to confirm the sender shows as **Italiarena** / `support@italiarena.com` and links open `/auth/confirm/pending` (then continue via the button).
 4. **Password reset timing** — Supabase → **Authentication** → **Providers / Email** (and **Sessions**): set **OTP / email link expiry** to at least `3600` seconds (1 hour), and **JWT expiry** to at least `3600`. The app also refreshes the recovery session while the user is on `/login/reset-password` so they have at least ~5 minutes to submit a new password.

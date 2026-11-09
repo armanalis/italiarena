@@ -39,44 +39,6 @@ export async function submitQuestion(
 
   const supabase = await createClient();
 
-  const { count: pendingCount, error: pendingError } = await supabase
-    .from("question_submissions")
-    .select("id", { count: "exact", head: true })
-    .eq("submitter_id", profile.id)
-    .eq("status", "pending");
-
-  if (pendingError) {
-    return { success: false, error: pendingError.message };
-  }
-
-  if ((pendingCount ?? 0) >= MAX_PENDING_SUBMISSIONS) {
-    return {
-      success: false,
-      error: `You already have ${MAX_PENDING_SUBMISSIONS} questions waiting for review. Wait for admin feedback before submitting more.`,
-    };
-  }
-
-  // Rolling 24 hours: the server clock is UTC, so "since midnight" reset at
-  // 1-2 am in Italy.
-  const dayStart = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-  const { count: todayCount, error: todayError } = await supabase
-    .from("question_submissions")
-    .select("id", { count: "exact", head: true })
-    .eq("submitter_id", profile.id)
-    .gte("created_at", dayStart.toISOString());
-
-  if (todayError) {
-    return { success: false, error: todayError.message };
-  }
-
-  if ((todayCount ?? 0) >= MAX_SUBMISSIONS_PER_DAY) {
-    return {
-      success: false,
-      error: `You can submit up to ${MAX_SUBMISSIONS_PER_DAY} questions per 24 hours. Try again later.`,
-    };
-  }
-
   // ilike reads % and _ as wildcards, and fill-in-the-blank text is full of
   // "___"; escape them so only the same text counts as a duplicate.
   const questionTextPattern = validated.data.question_text.replace(/[\\%_]/g, "\\$&");
@@ -134,6 +96,21 @@ export async function submitQuestion(
       return {
         success: false,
         error: "You already submitted a pending question with the same text.",
+      };
+    }
+
+    // The limits are kept by the question_submissions_limits trigger.
+    if (error.message.includes("SUBMISSION_PENDING_LIMIT_REACHED")) {
+      return {
+        success: false,
+        error: `You already have ${MAX_PENDING_SUBMISSIONS} questions waiting for review. Wait for admin feedback before submitting more.`,
+      };
+    }
+
+    if (error.message.includes("SUBMISSION_DAILY_LIMIT_REACHED")) {
+      return {
+        success: false,
+        error: `You can submit up to ${MAX_SUBMISSIONS_PER_DAY} questions per 24 hours. Try again later.`,
       };
     }
 

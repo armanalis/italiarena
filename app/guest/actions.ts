@@ -122,7 +122,6 @@ export async function completeGuestProfile(
   }
 
   revalidatePath("/");
-  revalidatePath("/");
 
   return { error: null, redirectTo: "/" };
 }

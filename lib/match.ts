@@ -2,6 +2,20 @@ import type { PublicQuestion, QuestionCategory } from "@/types/database.types";
 
 export const REGULAR_MATCH_QUESTIONS = 10;
 
+/** Sudden death: tied after the regular questions, and not played yet. */
+export function shouldStartTiebreaker(state: {
+  currentQuestionIndex: number;
+  playerAScore: number;
+  playerBScore: number;
+  tiebreakerUsed: boolean;
+}) {
+  return (
+    state.currentQuestionIndex === REGULAR_MATCH_QUESTIONS - 1 &&
+    state.playerAScore === state.playerBScore &&
+    !state.tiebreakerUsed
+  );
+}
+
 const QUESTION_CATEGORIES: QuestionCategory[] = [
   "grammar",
   "vocabulary",
