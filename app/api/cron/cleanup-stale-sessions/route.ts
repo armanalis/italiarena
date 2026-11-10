@@ -5,11 +5,15 @@ import { createAdminClient } from "@/utils/supabase/admin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const STALE_AFTER_HOURS = 1;
+/** A lobby stays open for an hour. */
+const STALE_WAITING_HOURS = 1;
+/** A match joined in the lobby's last minute still gets to finish. */
+const STALE_ACTIVE_HOURS = 2;
 
 /**
- * Also deletes practice article Sprints left unfinished for a day and ends
- * Picture Duels both players left.
+ * Also deletes practice article Sprints left unfinished for a day, ends
+ * Picture Duels both players left, and purges old abandoned matches and
+ * guests gone for 30 days (purge_stale_rows in the database).
  *
  * Matchmaking only abandons a user's OWN zombie "waiting" lobby the next
  * time they search — there is no sweep for sessions nobody ever comes back
@@ -22,19 +26,31 @@ const STALE_AFTER_HOURS = 1;
  */
 async function runStaleSessionCleanup() {
   const admin = createAdminClient();
-  const cutoff = new Date(
-    Date.now() - STALE_AFTER_HOURS * 60 * 60 * 1000
-  ).toISOString();
+  const hoursAgo = (hours: number) =>
+    new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 
-  const { data, error } = await admin
-    .from("game_sessions")
-    .update({ status: "abandoned" })
-    .in("status", ["waiting", "active"])
-    .lt("created_at", cutoff)
-    .select("id");
+  const abandonOlder = (status: "waiting" | "active", hours: number) =>
+    admin
+      .from("game_sessions")
+      .update({ status: "abandoned" })
+      .eq("status", status)
+      .lt("created_at", hoursAgo(hours))
+      .select("id");
+
+  const [waiting, active] = await Promise.all([
+    abandonOlder("waiting", STALE_WAITING_HOURS),
+    abandonOlder("active", STALE_ACTIVE_HOURS),
+  ]);
+  const error = waiting.error ?? active.error;
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  const { data: purged, error: purgeError } = await admin.rpc("purge_stale_rows");
+
+  if (purgeError) {
+    throw new Error(purgeError.message);
   }
 
   // Practice Sprints left halfway (each row keeps 120 card ids) are never read
@@ -71,7 +87,9 @@ async function runStaleSessionCleanup() {
   }
 
   return {
-    abandoned: data?.length ?? 0,
+    abandoned: (waiting.data?.length ?? 0) + (active.data?.length ?? 0),
+    sessionsDeleted: purged?.sessions ?? 0,
+    guestsDeleted: purged?.guests ?? 0,
     practiceRunsDeleted: practiceRunsDeleted ?? 0,
     duelsEnded,
   };

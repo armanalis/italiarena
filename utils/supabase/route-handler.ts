@@ -23,3 +23,19 @@ export function createSupabaseRouteClient(
     }
   );
 }
+
+/** Expires every Supabase auth cookie of the request on the response. */
+export function clearSupabaseCookies(request: NextRequest, response: NextResponse) {
+  for (const cookie of request.cookies.getAll()) {
+    if (
+      cookie.name.startsWith("sb-") ||
+      cookie.name.includes("auth-token") ||
+      cookie.name.includes("code-verifier")
+    ) {
+      response.cookies.set(cookie.name, "", {
+        maxAge: 0,
+        path: "/",
+      });
+    }
+  }
+}

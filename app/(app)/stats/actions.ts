@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getAuthUserId, getCurrentUserProfile } from "@/lib/auth";
 import { DEFAULT_LANGUAGE } from "@/lib/constants";
-import { cachedDashboardQuery, dashboardTag, revalidateUserDashboard } from "@/lib/dashboard-cache";
+import { cachedDashboardQuery, dashboardTag, revalidateLeaderboard, revalidateUserDashboard } from "@/lib/dashboard-cache";
 import { NOUN_QUESTION_PREFIX } from "@/lib/articles";
 import { nextReview, REVIEWS_TO_LEARN } from "@/lib/review";
 import { italyToday } from "@/lib/wordle";
@@ -273,5 +273,6 @@ export async function resetPlayerStatistics(): Promise<ResetStatsResult> {
   revalidatePath("/recent");
   revalidatePath("/leaderboard");
   revalidateUserDashboard(user.id);
+  revalidateLeaderboard();
   return { success: true };
 }

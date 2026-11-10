@@ -8,6 +8,7 @@ import { getAuthUserId, getCurrentUserProfile, isGuestUser } from "@/lib/auth";
 import {
   cachedDashboardQuery,
   dashboardTag,
+  revalidateLeaderboard,
   revalidateUserDashboard,
 } from "@/lib/dashboard-cache";
 import { createClient } from "@/utils/supabase/server";
@@ -133,6 +134,7 @@ export async function updateLearningProfile(formData: FormData): Promise<Setting
   revalidatePath("/settings");
   revalidatePath("/");
   revalidateUserDashboard(profile.id);
+  revalidateLeaderboard();
   return { success: true };
 }
 
@@ -459,6 +461,7 @@ export async function refreshDashboardAfterMatch(): Promise<void> {
   const userId = await getAuthUserId();
   if (userId) {
     revalidateUserDashboard(userId);
+    revalidateLeaderboard();
   }
 }
 
@@ -506,6 +509,7 @@ export async function saveMatchResult(payload: {
   revalidatePath("/recent");
   revalidatePath("/leaderboard");
   revalidateUserDashboard(user.id);
+  revalidateLeaderboard();
   return { success: true };
   } catch (error) {
     return {

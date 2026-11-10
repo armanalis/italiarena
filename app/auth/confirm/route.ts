@@ -10,22 +10,10 @@ import {
   verifyEmailTokenHash,
 } from "@/lib/auth-email-confirm";
 import { getPostAuthPathForUser } from "@/lib/auth";
-import {
-  getProductionSiteUrl,
-  isLegacySiteHostname,
-} from "@/lib/site-url";
 import { createSupabaseRouteClient } from "@/utils/supabase/route-handler";
 
 export async function GET(request: NextRequest) {
   const requestUrl = request.nextUrl;
-
-  if (isLegacySiteHostname(requestUrl.hostname)) {
-    const destination = new URL(
-      `${requestUrl.pathname}${requestUrl.search}`,
-      getProductionSiteUrl()
-    );
-    return NextResponse.redirect(destination, 308);
-  }
 
   const origin = requestUrl.origin;
   const tokenHash = requestUrl.searchParams.get("token_hash");
