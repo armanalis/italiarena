@@ -809,6 +809,16 @@ export function useServerMatchSync({
           : null;
         applyScoreState(freshScore);
 
+        // Saved and shown: nothing in the row changes any more, so the result
+        // screen stops asking (it stays open as long as the player reads it).
+        if (
+          session.status === "completed" &&
+          useGameStore.getState().roundPhase === "match_finished"
+        ) {
+          closed = true;
+          return;
+        }
+
         const { questionIds, sync, questionBank } = parseQuestionPlaylist(
           session.question_playlist
         );

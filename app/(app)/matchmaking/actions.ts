@@ -436,6 +436,15 @@ export async function startBotMatch(
   const level = profile.proficiency_level!;
   const botDifficulty = normalizeBotDifficulty(difficulty);
 
+  // One open bot match per player: the ones left behind are closed, and the
+  // nightly cleanup deletes them, so calling this in a loop cannot pile up rows.
+  await (await createClient())
+    .from("game_sessions")
+    .update({ status: "abandoned" })
+    .eq("player_a_id", profile.id)
+    .eq("player_b_id", GHOST_PLAYER_ID)
+    .eq("status", "active");
+
   let matchQuestions;
 
   try {

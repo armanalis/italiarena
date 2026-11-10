@@ -5,18 +5,16 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/utils/supabase/middleware";
-import {
-  getProductionSiteUrl,
-  LEGACY_SITE_HOSTNAMES,
-} from "@/lib/site-url";
+import { clearSupabaseCookies } from "@/utils/supabase/route-handler";
 import { getPostAuthPathForUser } from "@/lib/auth";
 import { isEmailVerifiedUser } from "@/lib/guest-auth";
 
 /**
  * Pages of the signed-in app. "/" is not here: it is the Arena for players
- * and the landing page for visitors. KEEP IN SYNC with app/(app).
+ * and the landing page for visitors. One per folder of app/(app):
+ * scripts/test-app-routes.ts fails when they differ.
  */
-const APP_ROUTES = [
+export const APP_ROUTES = [
   "/wordle",
   "/word-wheel",
   "/articles",
@@ -58,23 +56,6 @@ function isSoftNavigation(request: NextRequest) {
 }
 
 export async function proxy(request: NextRequest) {
-  const host =
-    request.headers.get("x-forwarded-host") ??
-    request.headers.get("host") ??
-    request.nextUrl.host;
-
-  if (
-    LEGACY_SITE_HOSTNAMES.includes(
-      host as (typeof LEGACY_SITE_HOSTNAMES)[number]
-    )
-  ) {
-    const destination = new URL(
-      `${request.nextUrl.pathname}${request.nextUrl.search}`,
-      getProductionSiteUrl()
-    );
-    return NextResponse.redirect(destination, 308);
-  }
-
   const oauthError = request.nextUrl.searchParams.get("error");
   const oauthErrorCode = request.nextUrl.searchParams.get("error_code");
   if (
@@ -191,18 +172,7 @@ export async function proxy(request: NextRequest) {
       await supabase.auth.signOut({ scope: "global" });
     }
 
-    for (const cookie of request.cookies.getAll()) {
-      if (
-        cookie.name.startsWith("sb-") ||
-        cookie.name.includes("auth-token") ||
-        cookie.name.includes("code-verifier")
-      ) {
-        supabaseResponse.cookies.set(cookie.name, "", {
-          maxAge: 0,
-          path: "/",
-        });
-      }
-    }
+    clearSupabaseCookies(request, supabaseResponse);
 
     return supabaseResponse;
   }

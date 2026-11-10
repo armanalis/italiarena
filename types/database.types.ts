@@ -240,31 +240,6 @@ export type GameSession = {
   created_at: string;
 };
 
-// One answer inside a saved ghost match replay
-export interface GhostMatchAnswer {
-  question_id: string;
-  selected_answer: CorrectAnswer;
-  is_correct: boolean;
-  answered_at: string;
-}
-
-// Full replay payload stored in ghost_matches.match_data
-export interface GhostMatchData {
-  answers: GhostMatchAnswer[];
-  final_score?: number;
-  duration_ms?: number;
-}
-
-// A recorded match that can be replayed as a ghost opponent
-export type GhostMatch = {
-  id: string;
-  original_player_id: string;
-  language: QuestionLanguage;
-  level: QuestionLevel;
-  match_data: GhostMatchData;
-  created_at: string;
-};
-
 // Partial types for inserts and updates — only required fields are enforced
 export type PlayerStatsInsert = Pick<PlayerStats, "user_id"> &
   Partial<Omit<PlayerStats, "user_id">>;
@@ -327,12 +302,6 @@ export type GameSessionUpdate = Partial<
   >
 >;
 
-export type GhostMatchInsert = Pick<
-  GhostMatch,
-  "original_player_id" | "language" | "level" | "match_data"
-> &
-  Partial<Pick<GhostMatch, "id" | "created_at">>;
-
 /** Browser push subscription endpoint stored for Web Push delivery. */
 export type PushSubscriptionRow = {
   id: string;
@@ -364,19 +333,6 @@ export type PushSubscriptionUpdate = Partial<
 >;
 
 // Arguments passed to Postgres RPC functions
-export type GetRandomQuestionsArgs = {
-  p_language: QuestionLanguage;
-  p_level: QuestionLevel;
-  p_user_id: string;
-};
-
-export type GetTiebreakerQuestionArgs = {
-  p_language: QuestionLanguage;
-  p_level: QuestionLevel;
-  p_user_id: string;
-  p_exclude_ids: string[];
-};
-
 export type UpdateSeenQuestionsArgs = {
   p_user_id: string;
   p_question_ids: string[];
@@ -460,12 +416,6 @@ export interface Database {
         Update: GameSessionUpdate;
         Relationships: [];
       };
-      ghost_matches: {
-        Row: GhostMatch;
-        Insert: GhostMatchInsert;
-        Update: Partial<GhostMatchInsert>;
-        Relationships: [];
-      };
       push_subscriptions: {
         Row: PushSubscriptionRow;
         Insert: PushSubscriptionInsert;
@@ -475,14 +425,6 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
-      get_random_questions: {
-        Args: GetRandomQuestionsArgs;
-        Returns: QuestionActive[];
-      };
-      get_tiebreaker_question: {
-        Args: GetTiebreakerQuestionArgs;
-        Returns: QuestionActive | null;
-      };
       update_seen_questions: {
         Args: UpdateSeenQuestionsArgs;
         Returns: void;
@@ -553,6 +495,11 @@ export interface Database {
       review_due_count: {
         Args: { p_user_id: string; p_language: string };
         Returns: number;
+      };
+      /** Nightly: deletes old abandoned matches without a result and guests gone for 30 days. */
+      purge_stale_rows: {
+        Args: Record<string, never>;
+        Returns: { sessions: number; guests: number };
       };
       /** Ends an active Picture Duel whose running clock is out; true when it did. */
       picture_duel_settle: {
