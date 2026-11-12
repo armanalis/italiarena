@@ -4,7 +4,7 @@
  * Tested by scripts/test-friends-today.ts.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ARTICLE_GAME_NAME } from "@/lib/articles";
+import { ARTICLE_GAME_NAME, hasArticleGame } from "@/lib/articles";
 import type { TargetLanguage } from "@/lib/constants";
 import { WORDLE_MAX_GUESSES } from "@/lib/wordle";
 
@@ -39,7 +39,7 @@ export function todayResults(row: FriendToday, language: TargetLanguage): { game
   if (row.word_wheel) {
     results.push({ game: "Word Wheel", score: `${row.word_wheel.right}/${row.word_wheel.total}`, level: row.word_wheel.level });
   }
-  if (row.sprint) {
+  if (row.sprint && hasArticleGame(language)) {
     results.push({ game: ARTICLE_GAME_NAME[language], score: String(row.sprint.score), level: row.sprint.level });
   }
   return results;

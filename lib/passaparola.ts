@@ -6,11 +6,13 @@ import { knownError } from "@/lib/errors";
 /**
  * The wheel's letters. Italian: J, K, W, X and Y only appear in foreign words.
  * German: too few words start with Q, X or Y; Ä, Ö and Ü count as A, O and U.
+ * English: too few words start with X.
  * KEEP IN SYNC with the letter check in the passaparola database functions.
  */
 export const PASSAPAROLA_LETTERS: Record<TargetLanguage, string[]> = {
   Italian: [..."ABCDEFGHILMNOPQRSTUVZ"],
   German: [..."ABCDEFGHIJKLMNOPRSTUVWZ"],
+  English: [..."ABCDEFGHIJKLMNOPQRSTUVWYZ"],
 };
 
 /**

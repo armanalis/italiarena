@@ -57,6 +57,19 @@ assert.deepEqual(
   ],
   "one reminder per streak at risk, opening its game"
 );
+assert.deepEqual(
+  buildDailyReminderPayloads(
+    [
+      { game: "arena", streak: 3, played_today: false },
+      { game: "articles", streak: 6, played_today: false },
+    ],
+    0,
+    translator(null),
+    "English"
+  ).map((p) => p.tag),
+  ["daily-reminder-arena"],
+  "English has no article sprint to remind"
+);
 assert.deepEqual(buildDailyReminderPayloads([]).map((p) => p.tag), ["daily-reminder"], "streaks not loaded");
 assert.deepEqual(
   buildDailyReminderPayloads([{ game: "wordle", streak: 4, played_today: true }], 5).map((p) => [p.url, p.body]),

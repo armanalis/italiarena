@@ -147,7 +147,7 @@ export function QuestionSubmissionForm({ pendingCount, language }: QuestionSubmi
           <p className="mt-2 text-muted-foreground">{t(levelGuide.summary)}</p>
           <p className="mt-3 font-medium text-foreground">{t("Good fit")}</p>
           <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
-            {levelGuide.suitable[language].map((item) => (
+            {(levelGuide.suitable[language] ?? []).map((item) => (
               <li key={item}>{t(item)}</li>
             ))}
           </ul>

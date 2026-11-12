@@ -46,6 +46,11 @@ check("results read like the plan: Wordle 4/6 · Word Wheel 18/21 · Sprint 23",
   assert.deepEqual(todayResults(carlo, "Italian"), [{ game: "Wordle", score: "X/6", level: "A2" }]);
   assert.deepEqual(todayResults(dario, "Italian"), []);
   assert.deepEqual(todayResults(you, "Italian")[1], { game: "il·lo·la", score: "30", level: "B1" });
+  assert.deepEqual(
+    todayResults(bea, "English").map((result) => result.game),
+    ["Wordle", "Word Wheel"],
+    "English has no article sprint"
+  );
 });
 
 console.log(`\n${passed} friends-today checks passed`);

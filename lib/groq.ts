@@ -1,6 +1,7 @@
 import {
   GROQ_EXPLANATION_MODEL,
   GROQ_REASONING_EFFORT,
+  teacherIntro,
 } from "@/lib/ai-explanations";
 import type { AskAiExplanationPayload } from "@/lib/ai-explanations";
 import type { UiLanguage } from "@/lib/i18n";
@@ -37,7 +38,7 @@ export function buildExplanationPrompt(
       )}.`;
 
   return [
-    `You are a ${language} teacher helping international university students.`,
+    teacherIntro(language),
     `Explain in clear, simple ${EXPLAIN_IN[uiLanguage]} using at most 4 short paragraphs.`,
     "Focus on the grammar or vocabulary rule. Be concise and practical.",
     "Do not change the correct answer. Do not add unrelated trivia.",

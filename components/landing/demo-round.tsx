@@ -259,7 +259,7 @@ export function DemoRound({ questions, opponent, className }: DemoRoundProps) {
               style={{ background: "var(--card)" }}
             >
               <p className="text-base font-semibold tracking-tight sm:text-lg">
-                {t("Want to improve your Italian or German?")}
+                {t("Want to improve your English, Italian or German?")}
               </p>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                 {t("A real match is ten questions against a live opponent at your level.")}

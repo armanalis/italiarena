@@ -16,7 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
-import { ALL_ARTICLES, ARTICLE_GAME_NAME, type ArticleStats } from "@/lib/articles";
+import { ALL_ARTICLES, ARTICLE_GAME_NAME, hasArticleGame, type ArticleStats } from "@/lib/articles";
 import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
 import { categoryResults, overallAccuracy, pct } from "@/lib/player-stats";
 import { REVIEW_STEPS_DAYS, reviewMinutes, whenDue } from "@/lib/review";
@@ -263,7 +263,7 @@ export function StatisticsDashboard({
         </CardContent>
       </Card>
 
-      <Card className="border-border/60">
+      {hasArticleGame(language) && <Card className="border-border/60">
         <CardHeader>
           <CardTitle lang={LANGUAGE_META[language].code}>{ARTICLE_GAME_NAME[language]}</CardTitle>
           <CardDescription>
@@ -308,7 +308,7 @@ export function StatisticsDashboard({
             </p>
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
       <Card className="border-border bg-card/50">
         <CardHeader>

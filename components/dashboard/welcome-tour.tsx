@@ -35,7 +35,7 @@ const STEPS: TourStep[] = [
   {
     icon: Sparkles,
     title: "Welcome to {app}",
-    body: "Learn Italian or German through quick 1v1 trivia matches: 10 timed questions on grammar, vocabulary, fill-in-the-blank, and idioms.",
+    body: "Learn English, Italian or German through quick 1v1 trivia matches: 10 timed questions on grammar, vocabulary, fill-in-the-blank, and idioms.",
   },
   {
     icon: Swords,

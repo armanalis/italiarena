@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { JoinCodeForm } from "@/components/challenge/join-code-form";
 import { ALL_TOPICS, createDuel, findDuelByCode, PICTURE_LEVELS, type PictureTopic } from "@/lib/picture-duel";
+import { hasArticleGame } from "@/lib/articles";
 import { isTargetLanguage, LANGUAGE_META } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { fill, useT } from "@/components/ui-language-provider";
@@ -42,12 +43,13 @@ export function PictureDuelSetup({
   const [hard, setHard] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
   const shown = topics.filter((topic) => topic.level === level);
+  const articles = hasArticleGame(language);
   const [withArticle, bare] = language === "German" ? ["das Brot", "Brot"] : ["il pane", "pane"];
   const code = isTargetLanguage(language) ? LANGUAGE_META[language].code : undefined;
 
   async function open(topic: string) {
     setOpening(topic);
-    const created = await createDuel(createClient(), language, level, topic, hard);
+    const created = await createDuel(createClient(), language, level, topic, articles && hard);
     if (created.ok) {
       router.push(`/picture-duel/${created.value}`);
     } else {
@@ -85,7 +87,7 @@ export function PictureDuelSetup({
         ))}
       </div>
 
-      <div className="space-y-2">
+      {articles && <div className="space-y-2">
         <div className="flex gap-2" role="group" aria-label="Mode">
           {[false, true].map((option) => (
             <button
@@ -111,7 +113,7 @@ export function PictureDuelSetup({
                 full: <span lang={code}>{withArticle}</span>,
               })}
         </p>
-      </div>
+      </div>}
 
       {shown.length > 0 && (
         <section aria-labelledby="mix-heading" className="space-y-2">

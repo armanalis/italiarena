@@ -2,7 +2,7 @@
  * Languages the app teaches, stored by these names in users.target_language and
  * every `language` column. KEEP IN SYNC with the language checks in the database.
  */
-export const TARGET_LANGUAGES = ["Italian", "German"] as const;
+export const TARGET_LANGUAGES = ["Italian", "German", "English"] as const;
 /** Rows and players from before German existed are Italian. */
 export const DEFAULT_LANGUAGE = "Italian" satisfies (typeof TARGET_LANGUAGES)[number];
 
@@ -10,6 +10,7 @@ export const DEFAULT_LANGUAGE = "Italian" satisfies (typeof TARGET_LANGUAGES)[nu
 export const LANGUAGE_META = {
   Italian: { code: "it", label: "Italiano" },
   German: { code: "de", label: "Deutsch" },
+  English: { code: "en", label: "English" },
 } as const satisfies Record<(typeof TARGET_LANGUAGES)[number], { code: string; label: string }>;
 
 export function isTargetLanguage(value: unknown): value is TargetLanguage {

@@ -24,7 +24,7 @@ import {
   Timer,
   Trophy,
 } from "lucide-react";
-import { ARTICLE_GAME_NAME } from "@/lib/articles";
+import { ARTICLE_GAME_NAME, hasArticleGame } from "@/lib/articles";
 import { useT } from "@/components/ui-language-provider";
 import type { TargetLanguage } from "@/lib/constants";
 
@@ -74,11 +74,16 @@ function isImmersiveRoute(pathname: string) {
 export function DashboardShell({ children, language, guest }: DashboardShellProps) {
   const pathname = usePathname();
   const t = useT();
+  const articles = hasArticleGame(language);
   const items = [
-    ...gameItems.map((item) =>
-      // il·lo·la / der·die·das: the game's buttons, the same in every app language.
-      item.href === "/articles" ? { ...item, label: ARTICLE_GAME_NAME[language] } : { ...item, label: t(item.label) }
-    ),
+    ...gameItems
+      .filter((item) => articles || item.href !== "/articles")
+      .map((item) =>
+        // il·lo·la / der·die·das: the game's buttons, the same in every app language.
+        item.href === "/articles" && articles
+          ? { ...item, label: ARTICLE_GAME_NAME[language] }
+          : { ...item, label: t(item.label) }
+      ),
     ...pageItems.map((item) => ({ ...item, label: t(item.label) })),
   ];
   const [botsOpen, setBotsOpen] = useState(false);

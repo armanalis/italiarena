@@ -23,7 +23,7 @@ import { MatchmakingStartLink } from "@/components/matchmaking/matchmaking-start
 import { getAdminQueueCounts } from "@/lib/admin-queue-counts";
 import { getT } from "@/lib/i18n-server";
 import { getCurrentUserProfile, isGuestUser } from "@/lib/auth";
-import { loadArticleStats } from "@/lib/articles";
+import { hasArticleGame, loadArticleStats } from "@/lib/articles";
 import { loadFriendsToday } from "@/lib/friends-today";
 import { playPassaparola } from "@/lib/passaparola";
 import type { GameStreak } from "@/lib/push";
@@ -63,7 +63,7 @@ export async function PlayDashboardContent({
     getPlayerStatistics(),
     playWordle(supabase, language, level, italyToday(), null),
     playPassaparola(supabase, language, level),
-    loadArticleStats(supabase, language),
+    hasArticleGame(language) ? loadArticleStats(supabase, language) : Promise.resolve(null),
     loadFriendsToday(supabase, language),
   ]);
   const streaks = Object.fromEntries(
