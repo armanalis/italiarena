@@ -5,7 +5,14 @@
  */
 import { LANGUAGE_META, type TargetLanguage } from "@/lib/constants";
 
-/** The voice for this language: its home region first (it-IT, de-DE), then any other (de-AT, it-CH). */
+/** Home-region tag. Italian and German match language-country; English does not (en-US, not en-EN). */
+const HOME_VOICE: Record<TargetLanguage, string> = {
+  Italian: "it-it",
+  German: "de-de",
+  English: "en-us",
+};
+
+/** The voice for this language: its home region first (it-IT, de-DE, en-US), then any other. */
 export function pickVoice<V extends { lang: string }>(
   voices: readonly V[],
   language: TargetLanguage
@@ -14,7 +21,7 @@ export function pickVoice<V extends { lang: string }>(
   // Some Android voices write it_IT.
   const tag = (voice: V) => voice.lang.replace("_", "-").toLowerCase();
   return (
-    voices.find((voice) => tag(voice) === `${code}-${code}`) ??
+    voices.find((voice) => tag(voice) === HOME_VOICE[language]) ??
     voices.find((voice) => tag(voice).split("-")[0] === code)
   );
 }

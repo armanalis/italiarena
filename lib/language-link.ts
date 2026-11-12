@@ -1,4 +1,4 @@
-/** /german and /italian: open the site in that language, for links people share. */
+/** /german, /italian and /english: open the site in that language, for links people share. */
 import { revalidateTag } from "next/cache";
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
@@ -13,7 +13,7 @@ import { createClient } from "@/utils/supabase/server";
 
 const LANGUAGE_COOKIE = "preferred_language";
 
-/** The language of the last /german or /italian link: sign-up and guest setup preselect it. */
+/** The language of the last /german, /italian or /english link: sign-up and guest setup preselect it. */
 export async function linkedLanguage(): Promise<TargetLanguage | null> {
   const value = (await cookies()).get(LANGUAGE_COOKIE)?.value;
   return isTargetLanguage(value) ? value : null;

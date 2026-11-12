@@ -3,7 +3,7 @@
  * Run: npx tsx scripts/test-landing-demo.ts
  */
 import assert from "node:assert/strict";
-import { pickDemoOpponent, pickDemoQuestions } from "../lib/landing-demo-questions";
+import { hasDemoQuestions, pickDemoOpponent, pickDemoQuestions } from "../lib/landing-demo-questions";
 
 for (let run = 0; run < 50; run += 1) {
   const german = pickDemoQuestions(3, "German");
@@ -18,6 +18,8 @@ for (let run = 0; run < 50; run += 1) {
   assert.ok(pickDemoQuestions().every((question) => !question.id.startsWith("de-") && question.lang === "it"));
   assert.ok(["Anna", "Lena", "Mia", "Hannah", "Lea", "Lukas", "Jonas", "Felix", "Paul", "Leon"].includes(pickDemoOpponent("German")));
 }
+assert.equal(hasDemoQuestions("English"), false);
+assert.equal(pickDemoQuestions(3, "English").length, 0);
 console.log("ok - landing demo: German questions and names for German visitors, Italian by default");
 
 {

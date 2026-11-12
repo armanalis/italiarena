@@ -53,6 +53,8 @@ check("only words starting with the letter, or skip/stop, can be typed", () => {
 check("the wheel has the 21 letters of the Italian alphabet, 23 for German", () => {
   assert.equal(PASSAPAROLA_LETTERS.Italian.join(""), "ABCDEFGHILMNOPQRSTUVZ");
   assert.equal(PASSAPAROLA_LETTERS.German.join(""), "ABCDEFGHIJKLMNOPRSTUVWZ");
+  assert.equal(PASSAPAROLA_LETTERS.English.join(""), "ABCDEFGHIJKLMNOPQRSTUVWYZ");
+  assert.equal(PASSAPAROLA_LETTERS.English.includes("X"), false);
   // A German word starting with an umlaut fits its plain letter.
   assert.equal(fitsLetter("Übung", "U"), true);
   assert.equal(fitsLetter("Äpfel", "A"), true);

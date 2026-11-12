@@ -17,6 +17,12 @@ export const GROQ_EXPLANATION_MODEL = "openai/gpt-oss-120b";
 
 export const GROQ_REASONING_EFFORT = "low";
 
+/** "an English teacher", "an Italian teacher", "a German teacher". */
+export function teacherIntro(language: string): string {
+  const article = /^[aeiou]/i.test(language) ? "an" : "a";
+  return `You are ${article} ${language} teacher helping international university students.`;
+}
+
 export type AskAiExplanationPayload = {
   sessionId: string;
   questionId: string;

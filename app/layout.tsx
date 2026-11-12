@@ -29,7 +29,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL(PRODUCTION_SITE_URL),
     title: APP_NAME,
-    description: t("Learn Italian or German through quick, playful practice with others"),
+    description: t("Learn English, Italian or German through quick, playful practice with others"),
     applicationName: APP_NAME,
     appleWebApp: {
       capable: true,

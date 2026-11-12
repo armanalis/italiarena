@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: APP_NAME,
     short_name: APP_NAME,
     description:
-      "Learn Italian or German through quick, playful practice with others",
+      "Learn English, Italian or German through quick, playful practice with others",
     start_url: "/",
     scope: "/",
     display: "standalone",

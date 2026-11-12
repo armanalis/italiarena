@@ -460,7 +460,7 @@ function buildEnglishCopy(): PrivacyCopy {
           "Identification and contact data: email address, hashed password (handled by our authentication provider), display name (username), internal role (user or admin), and email-verification status.",
           "Google sign-in (only if you choose it): Google account identifier, name, and email that Google sends at authentication.",
           "Guest mode: an auto-generated display name and, if guest authentication is used, a technical non-real email (guest-…@guest.local). Guests do not appear on the leaderboard and cannot submit community questions.",
-          "Learning profile: target language (Italian or German), proficiency level (CEFR) for each language, sound and haptic preferences.",
+          "Learning profile: target language (English, Italian or German), proficiency level (CEFR) for each language, sound and haptic preferences.",
           "Gameplay data: statistics, seen questions, match history, scores, result (win/loss/tie), opponent type, daily Wordle, Word Wheel and article Sprint results, mistakes with their review dates, and in-progress session answers and scores.",
           "Ghost matches: answers from a completed match may be reused for an automatic opponent. The interface shows a generic name («Ghost Opponent»), not the original user’s username.",
           "Leaderboard: for registered accounts, display name and PvP results (matches, wins, win rate, points) visible to other authenticated users.",

@@ -196,7 +196,7 @@ export function LoginForm({ initialMode = "signin" }: { initialMode?: AuthMode }
               ? t("Enter your email and we'll send you a reset link.")
               : isResend
                 ? t("Enter your email and we'll send a fresh verification link.")
-                : t("Practice Italian or German through quick, real-time sessions with others at your level.")}
+                : t("Practice English, Italian or German through quick, real-time sessions with others at your level.")}
           </p>
         </div>
 

@@ -2,6 +2,7 @@
 
 import webpush from "web-push";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { hasArticleGame } from "@/lib/articles";
 import { DEFAULT_TIMEZONE } from "@/lib/constants";
 import { APP_NAME, SUPPORT_EMAIL } from "@/lib/legal";
 import { reviewMinutes } from "@/lib/review";
@@ -66,11 +67,13 @@ const STREAK_REMINDERS: Record<GameStreak["game"], { url: string; body: string }
 export function buildDailyReminderPayloads(
   streaks: readonly GameStreak[],
   reviewDue = 0,
-  t: Translate = translator(null)
+  t: Translate = translator(null),
+  language?: string | null
 ): PushPayload[] {
-  const atRisk = streaks.filter(
-    ({ game, streak, played_today }) => streak > 0 && !played_today && game in STREAK_REMINDERS
-  );
+  const atRisk = streaks.filter(({ game, streak, played_today }) => {
+    if (game === "articles" && language && !hasArticleGame(language)) return false;
+    return streak > 0 && !played_today && game in STREAK_REMINDERS;
+  });
   if (atRisk.length === 0) {
     return [
       reviewDue > 0

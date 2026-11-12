@@ -8,6 +8,7 @@ import { SpeakButton } from "@/components/speak-button";
 import { Button } from "@/components/ui/button";
 import {
   ARTICLE_GAME_NAME,
+  type ArticleLanguage,
   BONUS_EVERY,
   SPRINT_MS,
   articleChoices,
@@ -23,7 +24,7 @@ import {
   type SprintResult,
   type SprintStart,
 } from "@/lib/articles";
-import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
+import { LANGUAGE_META, PROFICIENCY_LEVELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { fill, useT, useUiLanguage } from "@/components/ui-language-provider";
 import { pickLocalized } from "@/lib/i18n";
@@ -39,7 +40,7 @@ export function ArticleGame({
   initialLevel,
   initialStats,
 }: {
-  language: TargetLanguage;
+  language: ArticleLanguage;
   initialLevel: string;
   initialStats: ArticleStats | null;
 }) {
@@ -441,7 +442,7 @@ export function ArticleGame({
 }
 
 /** One noun of the results: article, noun and meaning, what was picked if it was wrong, and its sound. */
-function WordRow({ card, language, picked }: { card: ArticleCard; language: TargetLanguage; picked?: string }) {
+function WordRow({ card, language, picked }: { card: ArticleCard; language: ArticleLanguage; picked?: string }) {
   const t = useT();
   const uiLanguage = useUiLanguage();
   const code = LANGUAGE_META[language].code;

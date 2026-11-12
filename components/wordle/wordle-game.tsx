@@ -24,10 +24,11 @@ import {
 } from "@/lib/wordle";
 import { createClient } from "@/utils/supabase/client";
 
-/** On-screen keys, and the only letters a physical keyboard may type. German is QWERTZ with its umlauts. */
+/** On-screen keys, and the only letters a physical keyboard may type. German is QWERTZ with its umlauts; English is QWERTY. */
 const KEY_ROWS: Record<TargetLanguage, string[]> = {
   Italian: ["qwertyuiop", "asdfghjkl", "zxcvbnm"],
   German: ["qwertzuiopü", "asdfghjklöä", "yxcvbnm"],
+  English: ["qwertyuiop", "asdfghjkl", "zxcvbnm"],
 };
 
 function isLetter(language: TargetLanguage, key: string) {

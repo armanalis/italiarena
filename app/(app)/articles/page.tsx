@@ -1,6 +1,7 @@
 /** der·die·das / il·lo·la: a scored 60-second Sprint per level and day, then practice. */
+import { redirect } from "next/navigation";
 import { ArticleGame } from "@/components/articles/article-game";
-import { loadArticleStats } from "@/lib/articles";
+import { hasArticleGame, loadArticleStats } from "@/lib/articles";
 import { requireOnboardingComplete } from "@/lib/auth";
 import { DEFAULT_LANGUAGE, isProficiencyLevel, languageFromCode } from "@/lib/constants";
 import { createClient } from "@/utils/supabase/server";
@@ -14,6 +15,7 @@ export default async function ArticlesPage({
   const profile = await requireOnboardingComplete();
   const { lang, level: sharedLevel } = await searchParams;
   const language = languageFromCode(lang) ?? profile.target_language ?? DEFAULT_LANGUAGE;
+  if (!hasArticleGame(language)) redirect("/");
   const level =
     sharedLevel && isProficiencyLevel(sharedLevel)
       ? sharedLevel

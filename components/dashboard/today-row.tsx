@@ -1,7 +1,7 @@
 /** The Arena's "Games" grid: every game with today's progress. On phones it is the only way into them. */
 import Link from "next/link";
 import { BookOpen, Check, ChevronRight, CircleDashed, Flame, Grid3x3, Images, Timer, type LucideIcon } from "lucide-react";
-import { ARTICLE_GAME_NAME, type ArticleStats } from "@/lib/articles";
+import { ARTICLE_GAME_NAME, hasArticleGame, type ArticleLanguage, type ArticleStats } from "@/lib/articles";
 import type { TargetLanguage } from "@/lib/constants";
 import { reviewMinutes } from "@/lib/review";
 import type { PassaparolaTurnResult } from "@/lib/passaparola";
@@ -65,7 +65,7 @@ function passaparolaTile(t: Translate, result: PassaparolaTurnResult, streak: Ga
 
 function articlesTile(
   t: Translate,
-  language: TargetLanguage,
+  language: ArticleLanguage,
   level: string,
   stats: ArticleStats | null,
   streak: GameStreak | undefined
@@ -138,7 +138,7 @@ export async function TodayRow({
   const tiles = [
     wordleTile(t, wordle, streaks.wordle),
     passaparolaTile(t, passaparola, streaks.passaparola),
-    articlesTile(t, language, level, articles, streaks.articles),
+    ...(hasArticleGame(language) ? [articlesTile(t, language, level, articles, streaks.articles)] : []),
     pictureDuelTile(t),
     arenaStreakTile(t, streaks.arena),
   ];

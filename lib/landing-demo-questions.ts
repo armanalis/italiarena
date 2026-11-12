@@ -634,16 +634,27 @@ const GERMAN_POOL: PoolQuestion[] = [
   },
 ];
 
-/** Opponent names for the landing demo — five women, five men per language. */
-const OPPONENT_NAMES: Record<TargetLanguage, readonly string[]> = {
+/** Opponent names for the landing demo — five women, five men per language. English names arrive with the English questions. */
+const OPPONENT_NAMES: Partial<Record<TargetLanguage, readonly string[]>> = {
   Italian: ["Giulia", "Sofia", "Chiara", "Martina", "Francesca", "Marco", "Luca", "Matteo", "Lorenzo", "Davide"],
   German: ["Anna", "Lena", "Mia", "Hannah", "Lea", "Lukas", "Jonas", "Felix", "Paul", "Leon"],
 };
 
+const DEMO_POOLS: Partial<Record<TargetLanguage, readonly PoolQuestion[]>> = {
+  Italian: POOL,
+  German: GERMAN_POOL,
+};
+
+/** False until that language's questions are in DEMO_POOLS. */
+export function hasDemoQuestions(language: TargetLanguage): boolean {
+  return Boolean(DEMO_POOLS[language]?.length);
+}
+
 /** Random opponent, picked per request like the questions. */
 export function pickDemoOpponent(language: TargetLanguage = "Italian"): string {
   const names = OPPONENT_NAMES[language];
-  return names[Math.floor(Math.random() * names.length)];
+  if (!names?.length) throw new Error(`No landing-demo names for ${language} yet.`);
+  return names[Math.floor(Math.random() * names.length)]!;
 }
 
 function shuffle<T>(items: readonly T[]): T[] {
@@ -661,8 +672,10 @@ export function pickDemoQuestions(
   language: TargetLanguage = "Italian",
   uiLanguage: UiLanguage = "en"
 ): DemoQuestion[] {
+  const pool = DEMO_POOLS[language];
+  if (!pool?.length) return [];
   const lang = LANGUAGE_META[language].code;
-  return shuffle(language === "German" ? GERMAN_POOL : POOL)
+  return shuffle(pool)
     .slice(0, count)
     .map((pooled) => uiLanguage === "tr" ? { ...pooled, ...DEMO_TR[pooled.id] } : pooled)
     .map(({ answer, trap, distractors, ...question }) => {

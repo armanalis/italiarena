@@ -23,6 +23,11 @@ check("the home-region voice wins, any region is the fallback", () => {
   assert.equal(pickVoice(voices, "German")?.name, "Anna");
   assert.equal(pickVoice([voices[0], voices[1]], "German")?.name, "Swiss");
   assert.equal(pickVoice(voices, "Italian")?.name, "Android Italian");
+  assert.equal(pickVoice(voices, "English")?.name, "Samantha");
+  assert.equal(
+    pickVoice([{ lang: "en-GB", name: "Daniel" }, { lang: "en-US", name: "Samantha" }], "English")?.name,
+    "Samantha"
+  );
 });
 
 check("no voice for the language means no button", () => {

@@ -2,6 +2,7 @@
 import { Suspense } from "react";
 import { DashboardSectionSkeleton } from "@/components/dashboard/dashboard-section-skeleton";
 import { LandingPage } from "@/components/landing/landing-page";
+import { hasDemoQuestions } from "@/lib/landing-demo-questions";
 import { PlayDashboardContent } from "@/app/(app)/play-dashboard-content";
 import { getAuthUserId } from "@/lib/auth";
 import { DEFAULT_LANGUAGE } from "@/lib/constants";
@@ -15,7 +16,8 @@ type HomePageProps = {
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   if (!(await getAuthUserId())) {
-    return <LandingPage language={(await linkedLanguage()) ?? DEFAULT_LANGUAGE} />;
+    const linked = (await linkedLanguage()) ?? DEFAULT_LANGUAGE;
+    return <LandingPage language={hasDemoQuestions(linked) ? linked : DEFAULT_LANGUAGE} />;
   }
 
   return (

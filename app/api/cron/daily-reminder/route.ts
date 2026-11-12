@@ -104,7 +104,12 @@ async function runDailyReminderCron(options: { dryRun: boolean }) {
       const totals = { ...empty };
       // One after another: a dead device pruned by the first push is skipped by the rest.
       const t = translator(dictionaryFor(isUiLanguage(user.ui_language) ? user.ui_language : "en"));
-      for (const payload of buildDailyReminderPayloads(streaks ?? [], (reviewDue as number | null) ?? 0, t)) {
+      for (const payload of buildDailyReminderPayloads(
+        streaks ?? [],
+        (reviewDue as number | null) ?? 0,
+        t,
+        user.target_language
+      )) {
         const result = await sendPushToUser(user.id, payload);
         totals.sent += result.sent;
         totals.failed += result.failed;

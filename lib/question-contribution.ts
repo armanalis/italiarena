@@ -88,7 +88,7 @@ export const CATEGORY_GUIDANCE: Record<
 
 export const LEVEL_GUIDANCE: Record<
   ProficiencyLevel,
-  { summary: string; suitable: Record<TargetLanguage, string[]>; too_hard: string[] }
+  { summary: string; suitable: Partial<Record<TargetLanguage, string[]>>; too_hard: string[] }
 > = {
   A1: {
     summary: "Beginner — present tense, basic nouns, everyday survival phrases.",

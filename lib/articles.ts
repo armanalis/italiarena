@@ -15,11 +15,17 @@ export const SPRINT_MS = 60_000;
 export const BONUS_EVERY = 5;
 export const BONUS_MS = 1_000;
 
-/** The game is named after its buttons. */
-export const ARTICLE_GAME_NAME: Record<TargetLanguage, string> = {
+/** The game is named after its buttons. English has none: hide it with hasArticleGame. */
+export const ARTICLE_GAME_NAME = {
   German: "der·die·das",
   Italian: "il·lo·la",
-};
+} as const;
+
+export type ArticleLanguage = keyof typeof ARTICLE_GAME_NAME;
+
+export function hasArticleGame(language: string): language is ArticleLanguage {
+  return Object.prototype.hasOwnProperty.call(ARTICLE_GAME_NAME, language);
+}
 
 /** meaningTr: the meaning in Turkish, null where the bank has none yet. */
 export type ArticleCard = { id: number; noun: string; article: string; meaning: string; meaningTr?: string | null };
@@ -29,13 +35,13 @@ const ITALIAN = ["il", "lo", "la", "l'"];
 const ITALIAN_PLURAL = ["i", "gli", "le"];
 
 /** Every article of a language, in button order (Stats lists accuracy per article). */
-export const ALL_ARTICLES: Record<TargetLanguage, readonly string[]> = {
+export const ALL_ARTICLES: Record<ArticleLanguage, readonly string[]> = {
   German: GERMAN,
   Italian: [...ITALIAN, ...ITALIAN_PLURAL],
 };
 
 /** A card's buttons, in order (A, B, C, D in Mistakes). KEEP IN SYNC with article_choices. */
-export function articleChoices(language: TargetLanguage, article: string): readonly string[] {
+export function articleChoices(language: ArticleLanguage, article: string): readonly string[] {
   if (language === "German") return GERMAN;
   return ITALIAN_PLURAL.includes(article) ? ITALIAN_PLURAL : ITALIAN;
 }
@@ -100,7 +106,7 @@ const GERMAN_RULES: { endings: string[]; article: string; text: string }[] = [
 ];
 
 /** The one-line rule shown after a wrong answer; null when no rule explains this noun. */
-export function articleRule(language: TargetLanguage, noun: string, article: string): string | null {
+export function articleRule(language: ArticleLanguage, noun: string, article: string): string | null {
   if (language === "Italian") return ITALIAN_RULES[article] ?? null;
   const word = noun.toLowerCase();
   const rule = GERMAN_RULES.find(({ endings }) => endings.some((ending) => word.endsWith(ending)));
@@ -126,6 +132,7 @@ export type ArticleNoun = {
  * KEEP IN SYNC with the letters article_sprint_finish saves.
  */
 export function nounQuestion(noun: ArticleNoun, t: Translate = translator(null), language: UiLanguage = "en"): QuestionActive {
+  if (!hasArticleGame(noun.language)) throw new Error(`No article game for ${noun.language}.`);
   const choices = articleChoices(noun.language, noun.article);
   const [a = "", b = "", c = "", d = ""] = choices;
   return {
@@ -147,7 +154,7 @@ export function nounQuestion(noun: ArticleNoun, t: Translate = translator(null),
 }
 
 export function articleShareText(
-  language: TargetLanguage,
+  language: ArticleLanguage,
   level: string,
   score: number,
   origin: string
