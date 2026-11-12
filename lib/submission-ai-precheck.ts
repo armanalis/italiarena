@@ -6,7 +6,7 @@ import {
 } from "@/lib/question-contribution";
 import { formatCategoryLabel } from "@/lib/scoring";
 import { translator, type Translate } from "@/lib/i18n";
-import type { ProficiencyLevel } from "@/lib/constants";
+import { isProficiencyLevel, PROFICIENCY_LEVELS, type ProficiencyLevel } from "@/lib/constants";
 
 export type SubmissionAiRecommendation =
   | "approve"
@@ -33,16 +33,6 @@ export type SubmissionAiPrecheck = {
   flags: string[];
 };
 
-const VALID_LEVELS: ProficiencyLevel[] = [
-  "A1",
-  "A1-A2",
-  "A2",
-  "A2-B1",
-  "B1",
-  "B2",
-  "C1",
-];
-
 function buildPrecheckPrompt(payload: QuestionSubmissionPayload): string {
   const levelGuide = LEVEL_GUIDANCE[payload.level];
   const categoryGuide = CATEGORY_GUIDANCE[payload.category];
@@ -58,7 +48,7 @@ function buildPrecheckPrompt(payload: QuestionSubmissionPayload): string {
     '  "language_ok": "yes" | "no" | "unclear",',
     '  "level_match": "match" | "too_easy_for_label" | "too_hard_for_label" | "unclear",',
     '  "category_match": "match" | "mismatch" | "unclear",',
-    '  "suggested_level": "A1" | "A1-A2" | "A2" | "A2-B1" | "B1" | "B2" | "C1" | null,',
+    `  "suggested_level": ${PROFICIENCY_LEVELS.map((level) => `"${level}"`).join(" | ")} | null,`,
     '  "summary": "1-2 sentences for the admin reviewer",',
     '  "flags": ["short issue strings"]',
     "}",
@@ -165,10 +155,9 @@ function parsePrecheckJson(raw: string): SubmissionAiPrecheck | null {
     let suggested_level: ProficiencyLevel | null = null;
     if (
       language_ok === "yes" &&
-      typeof parsed.suggested_level === "string" &&
-      VALID_LEVELS.includes(parsed.suggested_level as ProficiencyLevel)
+      isProficiencyLevel(parsed.suggested_level)
     ) {
-      suggested_level = parsed.suggested_level as ProficiencyLevel;
+      suggested_level = parsed.suggested_level;
     }
 
     return {

@@ -26,5 +26,6 @@ assert.equal(pictureLevelFor("A1"), "A1");
 assert.equal(pictureLevelFor("A1-A2"), "A1-A2");
 assert.equal(pictureLevelFor("A2-B1"), "A2");
 assert.equal(pictureLevelFor("C1"), "A2");
+assert.equal(pictureLevelFor("C2"), "A2");
 
 console.log("picture duel: ok");

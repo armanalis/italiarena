@@ -48,7 +48,7 @@ export function QuestionSubmissionForm({ pendingCount, language }: QuestionSubmi
   const categoryGuide = CATEGORY_GUIDANCE[category];
 
   const levelWarning = useMemo(() => {
-    if (level === "B2" || level === "C1") {
+    if (level === "B2" || level === "C1" || level === "C2") {
       return "Double-check that this is not a beginner question with an advanced label.";
     }
     if (level === "A1" || level === "A2") {
