@@ -36,6 +36,7 @@ export const PROFICIENCY_LEVELS = [
   "B1",
   "B2",
   "C1",
+  "C2",
 ] as const;
 
 export type TargetLanguage = (typeof TARGET_LANGUAGES)[number];

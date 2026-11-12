@@ -51,7 +51,8 @@ export function botDifficultyFromDisplayName(
 // function): the browser never holds a
 // question's answer before the player has answered. Accuracy there: hard is
 // always right; easy/medium use a per-level base (A1 0.62 … C1 0.74) with a
-// −0.12 / +0.08 tier bonus, clamped to [0.45, 0.95].
+// −0.12 / +0.08 tier bonus, clamped to [0.45, 0.95]. C2 has no row: it uses
+// the default base, 0.70.
 
 export function getBotDifficultyDescription(difficulty: BotDifficulty): string {
   switch (difficulty) {

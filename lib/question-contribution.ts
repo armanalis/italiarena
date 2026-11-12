@@ -150,6 +150,14 @@ export const LEVEL_GUIDANCE: Record<
     },
     too_hard: ["trivial A2 vocabulary with no advanced angle"],
   },
+  C2: {
+    summary: "Mastery — near-native precision, implicit meaning, and rare idioms.",
+    suitable: {
+      Italian: ["stylistic nuance, implicit meaning, rare idioms and fixed expressions"],
+      German: ["stylistic nuance, implicit meaning, rare idioms and fixed expressions"],
+    },
+    too_hard: ["everyday B1 vocabulary with no mastery-level angle"],
+  },
 };
 
 const BLANK_PATTERN = /_{2,}|\.{3}|…|\(\s*\)|\[blank\]/i;
