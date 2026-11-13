@@ -1,8 +1,9 @@
 /** The Arena's "Games" grid: every game with today's progress. On phones it is the only way into them. */
 import Link from "next/link";
-import { BookOpen, Check, ChevronRight, CircleDashed, Flame, Grid3x3, Images, Timer, type LucideIcon } from "lucide-react";
+import { BookOpen, Check, ChevronRight, CircleDashed, Flame, Grid3x3, Images, Timer, WholeWord, type LucideIcon } from "lucide-react";
 import { ARTICLE_GAME_NAME, hasArticleGame, type ArticleLanguage, type ArticleStats } from "@/lib/articles";
 import type { TargetLanguage } from "@/lib/constants";
+import { PREPOSITION_GAME_NAME } from "@/lib/prepositions";
 import { reviewMinutes } from "@/lib/review";
 import type { PassaparolaTurnResult } from "@/lib/passaparola";
 import type { GameStreak } from "@/lib/push";
@@ -90,6 +91,33 @@ function articlesTile(
   };
 }
 
+function prepositionTile(
+  t: Translate,
+  language: TargetLanguage,
+  level: string,
+  stats: ArticleStats | null,
+  streak: GameStreak | undefined
+): Tile {
+  const today = stats?.today[level];
+  const best = stats?.best[level];
+  return {
+    title: PREPOSITION_GAME_NAME[language],
+    status:
+      today !== undefined
+        ? best
+          ? t("Sprint {score} · best {best}", { score: today, best })
+          : t("Sprint {score}", { score: today })
+        : best
+          ? t("Not played yet · best {best}", { best })
+          : t("Not played yet · 90 s"),
+    done: today !== undefined,
+    icon: WholeWord,
+    accent: "text-amber-500",
+    href: "/prepositions",
+    streak: streak?.streak,
+  };
+}
+
 const pictureDuelTile = (t: Translate): Tile => ({
   title: t("Picture Duel"),
   status: t("With a friend · 60 s each"),
@@ -120,6 +148,7 @@ export async function TodayRow({
   wordle,
   passaparola,
   articles,
+  prepositions,
   reviewDue,
   language,
   level,
@@ -128,6 +157,8 @@ export async function TodayRow({
   wordle: WordleTurnResult;
   passaparola: PassaparolaTurnResult;
   articles: ArticleStats | null;
+  /** Null hides the game: this language has no cards yet. */
+  prepositions: ArticleStats | null;
   /** Mistakes due for review today, in this language. */
   reviewDue: number;
   language: TargetLanguage;
@@ -139,6 +170,7 @@ export async function TodayRow({
     wordleTile(t, wordle, streaks.wordle),
     passaparolaTile(t, passaparola, streaks.passaparola),
     ...(hasArticleGame(language) ? [articlesTile(t, language, level, articles, streaks.articles)] : []),
+    ...(prepositions ? [prepositionTile(t, language, level, prepositions, streaks.prepositions)] : []),
     pictureDuelTile(t),
     arenaStreakTile(t, streaks.arena),
   ];

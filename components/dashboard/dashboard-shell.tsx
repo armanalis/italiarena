@@ -23,8 +23,10 @@ import {
   Swords,
   Timer,
   Trophy,
+  WholeWord,
 } from "lucide-react";
 import { ARTICLE_GAME_NAME, hasArticleGame } from "@/lib/articles";
+import { PREPOSITION_GAME_NAME } from "@/lib/prepositions";
 import { useT } from "@/components/ui-language-provider";
 import type { TargetLanguage } from "@/lib/constants";
 
@@ -37,6 +39,8 @@ const gameItems = [
   { href: "/word-wheel", label: "Word Wheel", icon: CircleDashed, exact: false },
   // Named after its buttons in the language being played: der·die·das, il·lo·la.
   { href: "/articles", label: "Articles", icon: Timer, exact: false },
+  // in·on·at / di·a·da / in·an·auf. Hidden until that language has cards.
+  { href: "/prepositions", label: "Prepositions", icon: WholeWord, exact: false },
   { href: "/picture-duel", label: "Picture Duel", icon: Images, exact: false },
 ];
 
@@ -55,10 +59,12 @@ type DashboardShellProps = {
   language: TargetLanguage;
   /** Guests can't add questions to the pool. */
   guest: boolean;
+  /** False while this language has no preposition cards (no_nouns). */
+  prepositions?: boolean;
 };
 
 /** Game screens: on phones the Friends button would sit on the game, so it shows everywhere else. */
-const GAME_ROUTES = ["/wordle", "/word-wheel", "/articles", "/picture-duel"];
+const GAME_ROUTES = ["/wordle", "/word-wheel", "/articles", "/prepositions", "/picture-duel"];
 
 function isGameRoute(pathname: string) {
   return GAME_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
@@ -71,18 +77,20 @@ function isImmersiveRoute(pathname: string) {
   );
 }
 
-export function DashboardShell({ children, language, guest }: DashboardShellProps) {
+export function DashboardShell({ children, language, guest, prepositions = false }: DashboardShellProps) {
   const pathname = usePathname();
   const t = useT();
   const articles = hasArticleGame(language);
   const items = [
     ...gameItems
-      .filter((item) => articles || item.href !== "/articles")
+      .filter((item) => (articles || item.href !== "/articles") && (prepositions || item.href !== "/prepositions"))
       .map((item) =>
-        // il·lo·la / der·die·das: the game's buttons, the same in every app language.
+        // The names are the buttons, the same in every app language.
         item.href === "/articles" && articles
           ? { ...item, label: ARTICLE_GAME_NAME[language] }
-          : { ...item, label: t(item.label) }
+          : item.href === "/prepositions" && prepositions
+            ? { ...item, label: PREPOSITION_GAME_NAME[language] }
+            : { ...item, label: t(item.label) }
       ),
     ...pageItems.map((item) => ({ ...item, label: t(item.label) })),
   ];
