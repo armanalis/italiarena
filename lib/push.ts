@@ -46,7 +46,7 @@ export function buildDailyReminderPayload(t: Translate = translator(null)): Push
 
 /** One row of get_my_streaks / game_streaks. */
 export type GameStreak = {
-  game: "arena" | "wordle" | "passaparola" | "articles";
+  game: "arena" | "wordle" | "passaparola" | "articles" | "prepositions";
   streak: number;
   played_today: boolean;
 };
@@ -57,6 +57,7 @@ const STREAK_REMINDERS: Record<GameStreak["game"], { url: string; body: string }
   wordle: { url: "/wordle", body: "Keep your {n}-day Wordle streak alive: today's word is waiting." },
   passaparola: { url: "/word-wheel", body: "Keep your {n}-day Word Wheel streak alive: five minutes is enough." },
   articles: { url: "/articles", body: "Keep your {n}-day articles streak alive: one 60-second Sprint is enough." },
+  prepositions: { url: "/prepositions", body: "Keep your {n}-day prepositions streak alive: one 90-second Sprint is enough." },
 };
 
 /**

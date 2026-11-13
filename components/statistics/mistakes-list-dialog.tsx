@@ -13,6 +13,7 @@ import {
 import type { UserMistakeWithQuestion } from "@/app/(app)/stats/actions";
 import { ReportQuestionButton } from "@/components/match/report-question-button";
 import { NOUN_QUESTION_PREFIX } from "@/lib/articles";
+import { PREPOSITION_RULES } from "@/lib/prepositions";
 import { REVIEWS_TO_LEARN, whenDue } from "@/lib/review";
 import { formatCategoryLabel } from "@/lib/scoring";
 import { getOptionText } from "@/lib/resolve-match-questions";
@@ -103,6 +104,9 @@ export function MistakesListDialog({
                 <p className="text-sm font-medium leading-snug sm:text-base">
                   {mistake.question.question_text}
                 </p>
+                {mistake.question.rule && PREPOSITION_RULES[mistake.question.rule] && (
+                  <p className="mt-1 text-xs text-muted-foreground">{t(PREPOSITION_RULES[mistake.question.rule])}</p>
+                )}
 
                 <div className="mt-3 space-y-2 text-sm">
                   <div className="flex gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2">

@@ -97,6 +97,21 @@ check("a missed noun becomes a Mistakes question with the letters the database s
   assert.equal(studenti.correct_answer, "B");
   const amico = nounQuestion({ id: 9, language: "Italian", level: "A1", noun: "amico", article: "l'", meaning: "friend" });
   assert.equal(amico.correct_answer, "D");
+  const born = nounQuestion({
+    id: 11,
+    language: "English",
+    level: "A2",
+    kind: "preposition",
+    noun: "She was born ___ 1990.",
+    article: "in",
+    meaning: null,
+    choices: ["in", "on", "at", "to"],
+    rule: "time-in",
+  });
+  assert.equal(born.question_text, "She was born ___ 1990.");
+  assert.deepEqual([born.option_a, born.option_b, born.option_c, born.option_d], ["in", "on", "at", "to"]);
+  assert.equal(born.correct_answer, "A");
+  assert.equal(born.rule, "time-in");
 });
 
 check("the question reads in the app language, with the Turkish meaning when there is one", () => {
