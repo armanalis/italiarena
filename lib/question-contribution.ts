@@ -88,13 +88,14 @@ export const CATEGORY_GUIDANCE: Record<
 
 export const LEVEL_GUIDANCE: Record<
   ProficiencyLevel,
-  { summary: string; suitable: Partial<Record<TargetLanguage, string[]>>; too_hard: string[] }
+  { summary: string; suitable: Record<TargetLanguage, string[]>; too_hard: string[] }
 > = {
   A1: {
     summary: "Beginner — present tense, basic nouns, everyday survival phrases.",
     suitable: {
       Italian: ["ciao, essere/avere, numbers, family, food, simple present tense"],
       German: ["hallo, sein/haben, numbers, family, food, simple present tense"],
+      English: ["hello, to be/to have, numbers, family, food, present simple"],
     },
     too_hard: [
       "subjunctive, complex clauses, abstract topics, literary vocabulary",
@@ -105,6 +106,7 @@ export const LEVEL_GUIDANCE: Record<
     suitable: {
       Italian: ["routine actions, passato prossimo with common verbs, basic questions"],
       German: ["routine actions, Perfekt with common verbs, W-questions"],
+      English: ["daily routines, past simple of common verbs, basic questions"],
     },
     too_hard: ["conditionals, passive voice, formal register, idioms"],
   },
@@ -113,6 +115,7 @@ export const LEVEL_GUIDANCE: Record<
     suitable: {
       Italian: ["passato prossimo vs imperfetto basics, shopping, travel, daily routine"],
       German: ["Perfekt vs Präteritum of sein/haben, modal verbs, shopping, travel"],
+      English: ["past simple vs present perfect basics, can/must/should, shopping, travel"],
     },
     too_hard: ["nuanced subjunctive, advanced idioms, specialized jargon"],
   },
@@ -121,6 +124,7 @@ export const LEVEL_GUIDANCE: Record<
     suitable: {
       Italian: ["comparisons, common connectors (perché, quindi), B1-adjacent vocab in clear context"],
       German: ["comparisons, common connectors (weil, deshalb), dative and accusative prepositions"],
+      English: ["comparisons, common connectors (because, so, although), prepositions of time and place"],
     },
     too_hard: ["C1 literary style, rare idioms, legal/medical terminology"],
   },
@@ -129,6 +133,7 @@ export const LEVEL_GUIDANCE: Record<
     suitable: {
       Italian: ["imperfect vs perfect contrast, ci/ne, pronouns, intermediate connectors"],
       German: ["subordinate clause word order (dass, wenn, als), reflexive verbs, adjective endings"],
+      English: ["present perfect vs past simple, first and second conditional, common phrasal verbs"],
     },
     too_hard: ["dense subjunctive chains, highly formal or archaic language"],
   },
@@ -137,6 +142,7 @@ export const LEVEL_GUIDANCE: Record<
     suitable: {
       Italian: ["subjunctive in common triggers, passive, relative clauses, less common idioms"],
       German: ["Konjunktiv II, passive, relative clauses, less common idioms"],
+      English: ["third conditional, passive, relative clauses, reported speech, less common idioms"],
     },
     too_hard: [
       "A1-level greetings or single-word meaning unless testing a subtle B2 point",
@@ -147,6 +153,7 @@ export const LEVEL_GUIDANCE: Record<
     suitable: {
       Italian: ["subtle connotations, formal/informal register, advanced collocations"],
       German: ["subtle connotations, formal/informal register, advanced collocations"],
+      English: ["subtle connotations, formal/informal register, advanced collocations"],
     },
     too_hard: ["trivial A2 vocabulary with no advanced angle"],
   },
@@ -155,6 +162,7 @@ export const LEVEL_GUIDANCE: Record<
     suitable: {
       Italian: ["stylistic nuance, implicit meaning, rare idioms and fixed expressions"],
       German: ["stylistic nuance, implicit meaning, rare idioms and fixed expressions"],
+      English: ["stylistic nuance, implicit meaning, rare idioms and fixed expressions"],
     },
     too_hard: ["everyday B1 vocabulary with no mastery-level angle"],
   },

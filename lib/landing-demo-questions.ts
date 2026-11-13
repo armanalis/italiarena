@@ -634,27 +634,143 @@ const GERMAN_POOL: PoolQuestion[] = [
   },
 ];
 
-/** Opponent names for the landing demo — five women, five men per language. English names arrive with the English questions. */
-const OPPONENT_NAMES: Partial<Record<TargetLanguage, readonly string[]>> = {
+/**
+ * English: the help line explains in plain English (a translation would be the
+ * sentence itself); meanings are short definitions. Turkish in landing-demo-questions-tr.ts.
+ */
+const ENGLISH_POOL: PoolQuestion[] = [
+  {
+    id: "en-g01",
+    category: "Grammar",
+    prompt: "Yesterday we ___ to the cinema.",
+    hint: "A finished action in the past.",
+    answer: "went",
+    trap: "gone",
+    distractors: ["go", "going"],
+  },
+  {
+    id: "en-g02",
+    category: "Grammar",
+    prompt: "She ___ in London since 2019.",
+    hint: "It started in 2019 and is still true.",
+    answer: "has lived",
+    trap: "lives",
+    distractors: ["is living", "lived"],
+  },
+  {
+    id: "en-g03",
+    category: "Grammar",
+    prompt: "There isn't ___ milk in the fridge.",
+    hint: "A negative sentence with something you cannot count.",
+    answer: "any",
+    trap: "some",
+    distractors: ["a", "many"],
+  },
+  {
+    id: "en-f01",
+    category: "Fill in the blank",
+    prompt: "I'm looking forward ___ you.",
+    hint: "I can't wait to see you.",
+    answer: "to seeing",
+    trap: "to see",
+    distractors: ["seeing", "for seeing"],
+  },
+  {
+    id: "en-f02",
+    category: "Fill in the blank",
+    prompt: "I've been learning English ___ six months.",
+    hint: "Six months is a length of time.",
+    answer: "for",
+    trap: "since",
+    distractors: ["from", "during"],
+  },
+  {
+    id: "en-f03",
+    category: "Fill in the blank",
+    prompt: "I'm not very good ___ maths.",
+    hint: "The little word that follows “good”.",
+    answer: "at",
+    trap: "in",
+    distractors: ["on", "with"],
+  },
+  {
+    id: "en-v01",
+    category: "Vocabulary",
+    prompt: "the library",
+    hint: MEANING,
+    answer: "a place to borrow books",
+    trap: "a shop that sells books",
+    distractors: ["a list of books", "a book cover"],
+  },
+  {
+    id: "en-v02",
+    category: "Vocabulary",
+    prompt: "actually",
+    hint: MEANING,
+    answer: "in fact, really",
+    trap: "at the moment",
+    distractors: ["quickly", "by chance"],
+  },
+  {
+    id: "en-v03",
+    category: "Vocabulary",
+    prompt: "sensible",
+    hint: MEANING,
+    answer: "showing good judgement",
+    trap: "easily hurt or upset",
+    distractors: ["able to feel pain", "full of meaning"],
+  },
+  {
+    id: "en-i01",
+    category: "Idioms",
+    prompt: "Break a leg!",
+    hint: "Said to an actor before a show. What does it mean?",
+    answer: "Good luck!",
+    trap: "Be careful!",
+    distractors: ["Hurry up!", "Sit down!"],
+  },
+  {
+    id: "en-i02",
+    category: "Idioms",
+    prompt: "It's a piece of cake.",
+    hint: "It is not about food. What does it mean?",
+    answer: "It's very easy.",
+    trap: "It tastes great.",
+    distractors: ["It's too small.", "It's my birthday."],
+  },
+  {
+    id: "en-i03",
+    category: "Idioms",
+    prompt: "I'm under the weather.",
+    hint: "It is not about rain. What does it mean?",
+    answer: "I feel a bit ill.",
+    trap: "I'm standing in the rain.",
+    distractors: ["I'm very busy.", "I love winter."],
+  },
+];
+
+/** Opponent names for the landing demo — five women, five men per language. */
+const OPPONENT_NAMES: Record<TargetLanguage, readonly string[]> = {
   Italian: ["Giulia", "Sofia", "Chiara", "Martina", "Francesca", "Marco", "Luca", "Matteo", "Lorenzo", "Davide"],
   German: ["Anna", "Lena", "Mia", "Hannah", "Lea", "Lukas", "Jonas", "Felix", "Paul", "Leon"],
+  English: ["Emma", "Olivia", "Sophie", "Chloe", "Lucy", "Jack", "Oliver", "Harry", "James", "Tom"],
 };
 
-const DEMO_POOLS: Partial<Record<TargetLanguage, readonly PoolQuestion[]>> = {
+const DEMO_POOLS: Record<TargetLanguage, readonly PoolQuestion[]> = {
   Italian: POOL,
   German: GERMAN_POOL,
+  English: ENGLISH_POOL,
 };
 
-/** False until that language's questions are in DEMO_POOLS. */
+/** True when this language has landing-demo questions. */
 export function hasDemoQuestions(language: TargetLanguage): boolean {
-  return Boolean(DEMO_POOLS[language]?.length);
+  return DEMO_POOLS[language].length > 0;
 }
 
 /** Random opponent, picked per request like the questions. */
 export function pickDemoOpponent(language: TargetLanguage = "Italian"): string {
   const names = OPPONENT_NAMES[language];
-  if (!names?.length) throw new Error(`No landing-demo names for ${language} yet.`);
-  return names[Math.floor(Math.random() * names.length)]!;
+  return names[Math.floor(Math.random() * names.length)];
 }
 
 function shuffle<T>(items: readonly T[]): T[] {
@@ -673,7 +789,7 @@ export function pickDemoQuestions(
   uiLanguage: UiLanguage = "en"
 ): DemoQuestion[] {
   const pool = DEMO_POOLS[language];
-  if (!pool?.length) return [];
+  if (pool.length === 0) return [];
   const lang = LANGUAGE_META[language].code;
   return shuffle(pool)
     .slice(0, count)
