@@ -16,10 +16,10 @@ export const SUPPORT_EMAIL = "support@italiarena.com";
 /** Privacy and data-protection requests (same inbox as general support). */
 export const PRIVACY_CONTACT_EMAIL = SUPPORT_EMAIL;
 
-export const PRIVACY_POLICY_LAST_UPDATED_ISO = "2026-11-08";
-export const PRIVACY_POLICY_LAST_UPDATED_IT = "8 novembre 2026";
-export const PRIVACY_POLICY_LAST_UPDATED_EN = "8 November 2026";
-export const PRIVACY_POLICY_LAST_UPDATED_TR = "8 Kasım 2026";
+export const PRIVACY_POLICY_LAST_UPDATED_ISO = "2026-11-14";
+export const PRIVACY_POLICY_LAST_UPDATED_IT = "14 novembre 2026";
+export const PRIVACY_POLICY_LAST_UPDATED_EN = "14 November 2026";
+export const PRIVACY_POLICY_LAST_UPDATED_TR = "14 Kasım 2026";
 
 /** The notice in each language; Italian is the official one. */
 export const PRIVACY_LOCALES = ["it", "en", "tr"] as const;
