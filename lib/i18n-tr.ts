@@ -738,6 +738,7 @@ export const TR: Record<string, string> = {
   "Show last seen": "Son görülmeyi göster",
   "Friends see when you were last online.": "Arkadaşların en son ne zaman çevrimiçi olduğunu görür.",
   "Show my daily results to friends": "Günlük sonuçlarımı arkadaşlarıma göster",
+  "Friends see your Wordle and Word Wheel scores for today, never your answers.": "Arkadaşların bugünkü Wordle ve Kelime Çarkı puanlarını görür, cevaplarını asla görmez.",
   "Friends see your Wordle, Word Wheel and Sprint scores for today, never your answers.": "Arkadaşların bugünkü Wordle, Kelime Çarkı ve Sprint puanlarını görür, cevaplarını asla görmez.",
   "Sound effects": "Ses efektleri",
   "Correct, wrong, and timer sounds in matches.": "Maçlardaki doğru, yanlış ve süre sesleri.",
