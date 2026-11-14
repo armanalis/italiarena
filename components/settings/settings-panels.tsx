@@ -49,6 +49,7 @@ import {
   type ProficiencyLevel,
   type TargetLanguage,
 } from "@/lib/constants";
+import { hasArticleGame } from "@/lib/articles";
 import { APP_NAME, SUPPORT_EMAIL } from "@/lib/legal";
 import { getSoundVolume, writeGameplayPreferences } from "@/lib/preferences";
 import { resetWelcomeTour } from "@/lib/welcome-tour";
@@ -371,7 +372,11 @@ export function SettingsPanels({
           />
           <PreferenceToggle
             label="Show my daily results to friends"
-            description="Friends see your Wordle, Word Wheel and Sprint scores for today, never your answers."
+            description={
+              hasArticleGame(profile.target_language ?? DEFAULT_LANGUAGE)
+                ? "Friends see your Wordle, Word Wheel and Sprint scores for today, never your answers."
+                : "Friends see your Wordle and Word Wheel scores for today, never your answers."
+            }
             checked={showDailyResults}
             disabled={isPending}
             onChange={(value) => saveFriendPrivacy("show_daily_results", value, setShowDailyResults)}
