@@ -1,10 +1,13 @@
 import { getSettingsData } from "@/app/(app)/settings/actions";
 import { SettingsPanels } from "@/components/settings/settings-panels";
+import { DEFAULT_LANGUAGE } from "@/lib/constants";
 import { getT } from "@/lib/i18n-server";
+import { hasPrepositionCards } from "@/lib/preposition-cards";
 
 export async function SettingsContent() {
   const { profile, recentMatches, showLastSeen, showDailyResults, languageLevels } = await getSettingsData();
   const t = await getT();
+  const prepositionSprint = await hasPrepositionCards(profile.target_language ?? DEFAULT_LANGUAGE);
 
   return (
     <main className="flex flex-1 flex-col gap-6 p-4 sm:p-8">
@@ -23,6 +26,7 @@ export async function SettingsContent() {
         showLastSeen={showLastSeen}
         showDailyResults={showDailyResults}
         languageLevels={languageLevels}
+        prepositionSprint={prepositionSprint}
       />
     </main>
   );

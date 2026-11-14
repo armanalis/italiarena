@@ -7,6 +7,7 @@ import { pickLocalized, translator, type Translate, type UiLanguage } from "@/li
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { LANGUAGE_META, type TargetLanguage } from "@/lib/constants";
 import { knownError, type Result } from "@/lib/errors";
+import { PREPOSITION_GAME_NAME } from "@/lib/prepositions";
 import type { CorrectAnswer, QuestionActive, QuestionLevel } from "@/types/database.types";
 
 /** KEEP IN SYNC with article_sprint_start / article_sprint_finish (supabase/migrations/*_article_game.sql). */
@@ -27,8 +28,22 @@ export function hasArticleGame(language: string): language is ArticleLanguage {
   return Object.prototype.hasOwnProperty.call(ARTICLE_GAME_NAME, language);
 }
 
-/** meaningTr: the meaning in Turkish, null where the bank has none yet. */
-export type ArticleCard = { id: number; noun: string; article: string; meaning: string; meaningTr?: string | null };
+export type SprintKind = "article" | "preposition";
+
+/**
+ * meaningTr: the meaning in Turkish, null where the bank has none yet.
+ * A preposition card has no meaning: noun is the sentence (___ is the blank),
+ * article is the right button, choices are its buttons, rule is a rule id.
+ */
+export type ArticleCard = {
+  id: number;
+  noun: string;
+  article: string;
+  meaning: string | null;
+  meaningTr?: string | null;
+  choices?: string[] | null;
+  rule?: string | null;
+};
 
 const GERMAN = ["der", "die", "das"];
 const ITALIAN = ["il", "lo", "la", "l'"];
@@ -49,6 +64,12 @@ export function articleChoices(language: ArticleLanguage, article: string): read
 /** "die Zeitung", "l'amico". */
 export function withArticle(article: string, noun: string): string {
   return article.endsWith("'") ? `${article}${noun}` : `${article} ${noun}`;
+}
+
+/** "Vado ___università" + "all'" → "Vado all'università". "in den" keeps the space around the blank. */
+export function fillPreposition(sentence: string, button: string): string {
+  const elided = /['’]$/.test(button);
+  return sentence.replace(elided ? /___\s*/ : /___/, button);
 }
 
 /** The clock's extra time after this answer: a second each time a streak of right answers reaches 5, 10, 15… */
@@ -122,8 +143,11 @@ export type ArticleNoun = {
   level: string;
   noun: string;
   article: string;
-  meaning: string;
+  meaning: string | null;
   meaning_tr?: string | null;
+  kind?: SprintKind;
+  choices?: string[] | null;
+  rule?: string | null;
 };
 
 /**
@@ -132,40 +156,62 @@ export type ArticleNoun = {
  * KEEP IN SYNC with the letters article_sprint_finish saves.
  */
 export function nounQuestion(noun: ArticleNoun, t: Translate = translator(null), language: UiLanguage = "en"): QuestionActive {
-  if (!hasArticleGame(noun.language)) throw new Error(`No article game for ${noun.language}.`);
-  const choices = articleChoices(noun.language, noun.article);
+  const choices =
+    noun.kind === "preposition"
+      ? (noun.choices ?? [])
+      : hasArticleGame(noun.language)
+        ? [...articleChoices(noun.language, noun.article)]
+        : [];
+  if (noun.kind !== "preposition" && !hasArticleGame(noun.language)) {
+    throw new Error(`No article game for ${noun.language}.`);
+  }
   const [a = "", b = "", c = "", d = ""] = choices;
   return {
     id: `${NOUN_QUESTION_PREFIX}${noun.id}`,
     language: noun.language,
     level: noun.level as QuestionLevel,
     category: "grammar",
-    question_text: t("Which article? {noun} ({meaning})", {
-      noun: noun.noun,
-      meaning: pickLocalized(language, noun.meaning, noun.meaning_tr),
-    }),
+    question_text:
+      noun.kind === "preposition"
+        ? noun.noun
+        : t("Which article? {noun} ({meaning})", {
+            noun: noun.noun,
+            meaning: pickLocalized(language, noun.meaning ?? "", noun.meaning_tr),
+          }),
     option_a: a,
     option_b: b,
     option_c: c,
     option_d: d,
     correct_answer: "ABCD"[choices.indexOf(noun.article)] as CorrectAnswer,
     random_float: 0,
+    rule: noun.kind === "preposition" ? noun.rule ?? null : null,
   };
 }
 
 export function articleShareText(
-  language: ArticleLanguage,
+  language: TargetLanguage,
   level: string,
   score: number,
-  origin: string
+  origin: string,
+  kind: SprintKind = "article"
 ): string {
+  const name = kind === "preposition" ? PREPOSITION_GAME_NAME[language] : ARTICLE_GAME_NAME[language as ArticleLanguage];
+  const path = kind === "preposition" ? "prepositions" : "articles";
   return [
-    `Italiarena ${ARTICLE_GAME_NAME[language]} ${score} · ${level}`,
-    `${origin}/articles?lang=${LANGUAGE_META[language].code}&level=${level}`,
+    `Italiarena ${name} ${score} · ${level}`,
+    `${origin}/${path}?lang=${LANGUAGE_META[language].code}&level=${level}`,
   ].join("\n");
 }
 
-export type SprintStart = { runId: number; scored: boolean; msLeft: number; cards: ArticleCard[] };
+export type SprintStart = {
+  runId: number;
+  scored: boolean;
+  msLeft: number;
+  /** The Sprint's full length. Older replies omit it; the article game is 60 s. */
+  ms?: number;
+  kind?: SprintKind;
+  cards: ArticleCard[];
+};
 export type SprintResult = { score: number; rejected: boolean; best: number | null };
 export type ArticleStats = {
   best: Record<string, number>;
@@ -184,11 +230,13 @@ const errorMessage = (message?: string) => knownError(ERRORS, message, "Could no
 export async function startSprint(
   supabase: SupabaseClient,
   language: TargetLanguage,
-  level: string
+  level: string,
+  kind: SprintKind = "article"
 ): Promise<Result<SprintStart>> {
   const { data, error } = await supabase.rpc("article_sprint_start", {
     p_language: language,
     p_level: level,
+    p_kind: kind,
   });
   return error || !data ? { ok: false, error: errorMessage(error?.message) } : { ok: true, value: data as SprintStart };
 }
@@ -208,8 +256,9 @@ export async function finishSprint(
 
 export async function loadArticleStats(
   supabase: SupabaseClient,
-  language: TargetLanguage
+  language: TargetLanguage,
+  kind: SprintKind = "article"
 ): Promise<ArticleStats | null> {
-  const { data, error } = await supabase.rpc("article_stats", { p_language: language });
+  const { data, error } = await supabase.rpc("article_stats", { p_language: language, p_kind: kind });
   return error || !data ? null : (data as ArticleStats);
 }

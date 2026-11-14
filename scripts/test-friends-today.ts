@@ -51,6 +51,10 @@ check("results read like the plan: Wordle 4/6 · Word Wheel 18/21 · Sprint 23",
     ["Wordle", "Word Wheel"],
     "English has no article sprint"
   );
+  assert.deepEqual(
+    todayResults({ ...bea, prepositions: { level: "B1", score: 12 } }, "English").at(-1),
+    { game: "in·on·at", score: "12", level: "B1" }
+  );
 });
 
 console.log(`\n${passed} friends-today checks passed`);

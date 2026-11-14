@@ -1,0 +1,78 @@
+import type { TargetLanguage } from "@/lib/constants";
+
+/** Named after the buttons. The same in every app language. */
+export const PREPOSITION_GAME_NAME = {
+  English: "in·on·at",
+  Italian: "di·a·da",
+  German: "in·an·auf",
+} as const satisfies Record<TargetLanguage, string>;
+
+/** KEEP IN SYNC with article_sprint_ms('preposition') in the database. */
+export const PREPOSITION_MS = 90_000;
+
+/**
+ * Rule id → one English sentence. Claude fills the sentences in.
+ * An id that is not here is shown as nothing.
+ */
+export const PREPOSITION_RULES: Record<string, string> = {
+  "en-time-in": "in: months, years, seasons, parts of the day, and time from now (in May, in 2020, in the morning, in ten minutes)",
+  "en-time-on": "on: days and dates (on Monday, on 5 May, on my birthday)",
+  "en-time-at": "at: clock times, night, the weekend, the moment (at six, at night)",
+  "en-place-in": "in: inside a space, a town or a country (in the box, in London, in Italy)",
+  "en-place-on": "on: a surface, a floor, a coast, a screen (on the table, on the wall, on TV)",
+  "en-place-at": "at: a point or a place where something happens (at the door, at school, at work)",
+  "en-move-to": "to: movement towards a place (go to school, fly to Paris)",
+  "en-move-into": "into / out of: movement in or out; onto / off: movement on or off a surface, a bus, a train",
+  "en-move-across": "across: from one side to the other; through: inside and out again; along: following a line; up / down",
+  "en-from": "from: where something starts or comes from (from Spain, from nine to five)",
+  "en-transport": "by + transport, with no article (by bus, by car); but on foot",
+  "en-with": "with: together with someone, or using a thing (with my parents, with a pen)",
+  "en-for": "for: who gets something, or the reason for thanks (for you, thank you for)",
+  "en-of": "of: a part, an amount or belonging (a cup of tea, the name of the dog)",
+  "en-about": "about: the subject of a book, a talk or a thought",
+  "en-position": "position words: under, over, behind, between, opposite, next to, in front of",
+  "en-for-since": "for + a length of time (for two years); since + the starting point (since 2019)",
+  "en-by-until": "by: not later than (finish by Friday); until: up to that time (open until ten)",
+  "en-during": "during + noun (during the film); for + how long; while + a clause",
+  "en-by-agent": "by: who did it, in the passive (written by Orwell)",
+  "en-adjective": "adjective + its own preposition: good at, afraid of, interested in, keen on, different from",
+  "en-verb": "verb + its own preposition: listen to, wait for, depend on, arrive at / in, look after",
+  "en-noun": "noun + its own preposition: reason for, solution to, increase in, damage to",
+  "en-phrase": "a fixed phrase: learn it whole (on holiday, by chance, in a hurry, under control)",
+  "en-formal": "a formal fixed phrase (on behalf of, in accordance with, with regard to)",
+  "it-a-in-place": "a + cities and small islands (a Roma, a Capri); in + countries and regions (in Italia, negli Stati Uniti)",
+  "it-di": "di: owner, material, content, subject, and home town with essere (di Marco, di cotone, sono di Roma)",
+  "it-da-origin": "da: the starting point in place or time; with the present = for / since (da Parigi, da due anni, dal 2019)",
+  "it-da-person": "da + a person: at or to their place (da Maria, dal dottore, dai nonni)",
+  "it-da-use": "da: what a thing is for, who did it, how someone is or was (occhiali da sole, scritto da Calvino, da bambino)",
+  "it-a-noarticle": "a with no article: a casa, a scuola, a letto, a teatro, a lezione",
+  "it-in-noarticle": "in with no article: rooms, shops, -ia places and areas (in cucina, in banca, in farmacia, in centro, in vacanza)",
+  "it-transport": "in + transport (in treno, in macchina); a piedi; con + one particular train or bus",
+  "it-con": "con: together with someone, or using something (con gli amici, con la penna)",
+  "it-per": "per: who it is for, the purpose, how long, the destination (per te, per lavoro, per due ore, il treno per Milano)",
+  "it-su": "su: on top of, or about a subject (sul tavolo, un libro su Roma)",
+  "it-tra": "tra / fra: between, among, or time from now (tra la posta e il bar, tra due ore)",
+  "it-time": "time: a + clock time (alle nove, a mezzogiorno); nel + year; a + month; in + season; di sera; il lunedì = every Monday",
+  "it-articulated": "preposition + article become one word: a + il = al, di + lo = dello, in + la = nella, su + l' = sull', da + gli = dagli",
+  "it-verb-a": "verb + a + infinitive: cominciare a, riuscire a, imparare a, continuare a, andare a",
+  "it-verb-di": "verb + di + infinitive: finire di, cercare di, decidere di, sperare di, smettere di",
+  "it-verb": "verb + its own preposition: pensare a, dipendere da, fidarsi di, contare su, partecipare a",
+  "it-adjective": "adjective + its own preposition: pronto a, capace di, diverso da, bravo in, gentile con",
+  "it-phrase": "a fixed phrase: learn it whole (in ritardo, per caso, di solito, a memoria, da solo)",
+  "it-formal": "a formal fixed phrase (a causa di, in base a, in merito a, ai sensi di, per conto di)",
+  "de-time": "time: um + clock time; am + day or part of the day; im + month or season; in der Nacht; an Weihnachten",
+  "de-place-wo": "where? takes the dative: im Kino, in der Stadt, auf dem Tisch, an der Wand, am Strand",
+  "de-place-wohin": "where to? takes the accusative: ins Kino, in die Stadt, auf den Tisch, an die Wand, an den Strand",
+  "de-nach-zu": "nach + cities and countries with no article, nach Hause; zu + people and places (zum Arzt, zur Post, zu Hause = at home); in die Schweiz, in die Türkei, in die USA",
+  "de-woher": "aus: out of a place or a country (aus Italien, aus der Tasche); von: from a person or a point (vom Arzt)",
+  "de-dative": "always with the dative: aus, bei, mit, nach, seit, von, zu, außer, gegenüber",
+  "de-accusative": "always with the accusative: durch, für, gegen, ohne, um, bis, entlang",
+  "de-genitive": "with the genitive: wegen, trotz, während, statt, innerhalb, außerhalb",
+  "de-transport": "mit + dative for transport (mit dem Bus, mit der Bahn); zu Fuß",
+  "de-seit-vor": "seit + dative: since or for, still going on; vor + dative: ago, before; in + dative: from now; bis: until; von ... bis",
+  "de-verb": "verb + its own preposition and case: warten auf + Akk, denken an + Akk, teilnehmen an + Dat, sprechen über + Akk",
+  "de-adjective": "adjective + its own preposition: stolz auf, zufrieden mit, abhängig von, interessiert an, nett zu",
+  "de-noun": "noun + its own preposition: Angst vor, Lust auf, Interesse an, Antwort auf, Mangel an",
+  "de-phrase": "a fixed phrase: learn it whole (zum Beispiel, auf jeden Fall, im Moment, in Kraft, außer Betrieb)",
+  "de-formal": "a formal preposition, mostly with the genitive: aufgrund, anhand, infolge, mangels, kraft, ungeachtet; with the dative: gemäß, entgegen, zufolge, dank",
+};

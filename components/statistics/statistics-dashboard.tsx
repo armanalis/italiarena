@@ -18,6 +18,7 @@ import {
 import Link from "next/link";
 import { ALL_ARTICLES, ARTICLE_GAME_NAME, hasArticleGame, type ArticleStats } from "@/lib/articles";
 import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
+import { PREPOSITION_GAME_NAME } from "@/lib/prepositions";
 import { categoryResults, overallAccuracy, pct } from "@/lib/player-stats";
 import { REVIEW_STEPS_DAYS, reviewMinutes, whenDue } from "@/lib/review";
 import { formatCategoryLabel } from "@/lib/scoring";
@@ -28,6 +29,8 @@ import { useT, useUiLanguage } from "@/components/ui-language-provider";
 type StatisticsDashboardProps = {
   language: TargetLanguage;
   articleStats: ArticleStats | null;
+  /** Null hides the card: this language has no preposition cards yet. */
+  prepositionStats: ArticleStats | null;
   stats: PlayerStats | null;
   mistakes: UserMistakeWithQuestion[];
   reportedQuestionIds: string[];
@@ -54,6 +57,7 @@ function mistakeMatchesCategory(
 export function StatisticsDashboard({
   language,
   articleStats,
+  prepositionStats,
   stats,
   mistakes: initialMistakes,
   reportedQuestionIds: initialReportedQuestionIds,
@@ -309,6 +313,51 @@ export function StatisticsDashboard({
           )}
         </CardContent>
       </Card>}
+
+      {prepositionStats && (
+        <Card className="border-border/60">
+          <CardHeader>
+            <CardTitle lang={LANGUAGE_META[language].code}>{PREPOSITION_GAME_NAME[language]}</CardTitle>
+            <CardDescription>
+              {t("Your best Sprint for each level. Missed sentences join your mistakes below.")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {Object.keys(prepositionStats.best).length > 0 ? (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  {PROFICIENCY_LEVELS.filter((level) => prepositionStats.best[level] !== undefined).map((level) => (
+                    <Badge key={level} variant="secondary" className="tabular-nums">
+                      {level} · {t("best {n}", { n: prepositionStats.best[level] })}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                  {Object.keys(prepositionStats.accuracy).map((button) => {
+                    const { answered, right } = prepositionStats.accuracy[button];
+                    return (
+                      <div key={button} className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+                        <p lang={LANGUAGE_META[language].code} className="text-sm font-medium">{button}</p>
+                        <p className="text-xl font-bold tabular-nums">{pct(right, answered)}</p>
+                        <p className="text-xs text-muted-foreground tabular-nums">
+                          {t("{n} of {total}", { n: right, total: answered })}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {t("No Sprints yet.")}{" "}
+                <Link href="/prepositions" className="font-medium text-primary underline-offset-2 hover:underline">
+                  {t("Play your first one")}
+                </Link>
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="border-border bg-card/50">
         <CardHeader>

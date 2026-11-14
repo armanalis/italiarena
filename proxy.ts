@@ -18,6 +18,7 @@ export const APP_ROUTES = [
   "/wordle",
   "/word-wheel",
   "/articles",
+  "/prepositions",
   "/picture-duel",
   "/stats",
   "/recent",
