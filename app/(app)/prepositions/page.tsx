@@ -1,0 +1,38 @@
+/** in·on·at / di·a·da / in·an·auf: a scored 90-second Sprint per level and day, then practice. */
+import { redirect } from "next/navigation";
+import { ArticleGame } from "@/components/articles/article-game";
+import { loadArticleStats } from "@/lib/articles";
+import { requireOnboardingComplete } from "@/lib/auth";
+import { DEFAULT_LANGUAGE, isProficiencyLevel, languageFromCode } from "@/lib/constants";
+import { hasPrepositionCards } from "@/lib/preposition-cards";
+import { createClient } from "@/utils/supabase/server";
+
+export default async function PrepositionsPage({
+  searchParams,
+}: {
+  // A shared result links to its language and level: /prepositions?lang=en&level=A2
+  searchParams: Promise<{ lang?: string; level?: string }>;
+}) {
+  const profile = await requireOnboardingComplete();
+  const { lang, level: sharedLevel } = await searchParams;
+  const language = languageFromCode(lang) ?? profile.target_language ?? DEFAULT_LANGUAGE;
+  if (!(await hasPrepositionCards(language))) redirect("/");
+  const level =
+    sharedLevel && isProficiencyLevel(sharedLevel)
+      ? sharedLevel
+      : profile.proficiency_level!;
+  const stats = await loadArticleStats(await createClient(), language, "preposition");
+
+  return (
+    <main className="w-full flex-1 p-4 sm:p-8 lg:px-10">
+      {/* key: a language switch from the header must start fresh, not keep the old game. */}
+      <ArticleGame
+        key={language}
+        kind="preposition"
+        language={language}
+        initialLevel={level}
+        initialStats={stats}
+      />
+    </main>
+  );
+}

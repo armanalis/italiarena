@@ -15,16 +15,20 @@ import {
   articleRule,
   articleShareText,
   bonusAfter,
+  fillPreposition,
   finishSprint,
+  hasArticleGame,
   loadArticleStats,
   startSprint,
   withArticle,
   type ArticleCard,
   type ArticleStats,
+  type SprintKind,
   type SprintResult,
   type SprintStart,
 } from "@/lib/articles";
-import { LANGUAGE_META, PROFICIENCY_LEVELS } from "@/lib/constants";
+import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
+import { PREPOSITION_GAME_NAME, PREPOSITION_MS, PREPOSITION_RULES } from "@/lib/prepositions";
 import { cn } from "@/lib/utils";
 import { fill, useT, useUiLanguage } from "@/components/ui-language-provider";
 import { pickLocalized } from "@/lib/i18n";
@@ -39,10 +43,12 @@ export function ArticleGame({
   language,
   initialLevel,
   initialStats,
+  kind = "article",
 }: {
-  language: ArticleLanguage;
+  language: TargetLanguage;
   initialLevel: string;
   initialStats: ArticleStats | null;
+  kind?: SprintKind;
 }) {
   const t = useT();
   const uiLanguage = useUiLanguage();
@@ -66,9 +72,11 @@ export function ArticleGame({
 
   const code = LANGUAGE_META[language].code;
   const card = phase === "playing" ? sprint?.cards[index] : undefined;
-  const choices = card ? articleChoices(language, card.article) : [];
+  const choices = cardButtons(card, kind, language);
   const today = stats.today[level];
   const best = stats.best[level];
+  const duration = sprint?.ms ?? (kind === "preposition" ? PREPOSITION_MS : SPRINT_MS);
+  const title = kind === "preposition" ? PREPOSITION_GAME_NAME[language] : ARTICLE_GAME_NAME[language as ArticleLanguage];
 
   const finish = useCallback(async (picked: string[]) => {
     if (!sprint || ended.current) {
@@ -90,17 +98,17 @@ export function ArticleGame({
     } else {
       setError(sent.error);
       // The answers may have arrived even though the reply did not: show what the server kept.
-      void loadArticleStats(supabase, language).then((fresh) => fresh && setStats(fresh));
+      void loadArticleStats(supabase, language, kind).then((fresh) => fresh && setStats(fresh));
     }
     setPhase("done");
-  }, [language, level, sprint, supabase]);
+  }, [kind, language, level, sprint, supabase]);
 
   async function start() {
     setPhase("starting");
     setError(null);
     setResult(null);
     setFeedback(null);
-    const started = await startSprint(supabase, language, level);
+    const started = await startSprint(supabase, language, level, kind);
     if (!started.ok) {
       setError(started.error);
       setPhase("ready");
@@ -174,7 +182,7 @@ export function ArticleGame({
     if (!card) {
       return;
     }
-    const keys = articleChoices(language, card.article);
+    const keys = cardButtons(card, kind, language);
     function onKey(event: KeyboardEvent) {
       const choice = keys[Number(event.key) - 1];
       if (choice && !event.metaKey && !event.ctrlKey && !event.altKey) {
@@ -184,7 +192,7 @@ export function ArticleGame({
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [card, language, pick]);
+  }, [card, kind, language, pick]);
 
   const played = sprint ? sprint.cards.slice(0, answers.length) : [];
   const rightCount = played.filter((played, i) => answers[i] === played.article).length;
@@ -210,9 +218,11 @@ export function ArticleGame({
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-5">
       <header className="space-y-1">
-        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{ARTICLE_GAME_NAME[language]}</h1>
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{title}</h1>
         <p className="text-sm text-muted-foreground">
-          {t("Pick the article of each {language} noun, as fast as you can. One scored Sprint a day for each level, then practice as much as you like.", { language: t(language) })}
+          {kind === "preposition"
+            ? t("Fill the blank in each {language} sentence. One scored Sprint a day for each level, then practice as much as you like.", { language: t(language) })
+            : t("Pick the article of each {language} noun, as fast as you can. One scored Sprint a day for each level, then practice as much as you like.", { language: t(language) })}
         </p>
       </header>
 
@@ -245,7 +255,9 @@ export function ArticleGame({
               {today === undefined ? t("Today's Sprint · {level}", { level }) : t("Today's Sprint: {score}", { score: today })}
             </p>
             <p className="text-sm text-muted-foreground">
-              {t("60 seconds · every {n} right in a row add a second", { n: BONUS_EVERY })}
+              {kind === "preposition"
+                ? t("90 seconds · every {n} right in a row add a second", { n: BONUS_EVERY })
+                : t("60 seconds · every {n} right in a row add a second", { n: BONUS_EVERY })}
               {best !== undefined && ` · ${t("best {n}", { n: best })}`}
             </p>
           </div>
@@ -286,7 +298,7 @@ export function ArticleGame({
             <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
               <div
                 className="h-full rounded-full bg-primary transition-[width] duration-100"
-                style={{ width: `${Math.min(100, (msLeft / SPRINT_MS) * 100)}%` }}
+                style={{ width: `${Math.min(100, (msLeft / duration) * 100)}%` }}
               />
             </div>
           </div>
@@ -297,15 +309,17 @@ export function ArticleGame({
                 <p lang={code} className="text-3xl font-bold tracking-tight sm:text-4xl">
                   {card.noun}
                 </p>
-                <p className="text-sm text-muted-foreground">{pickLocalized(uiLanguage, card.meaning, card.meaningTr)}</p>
+                {card.meaning && (
+                  <p className="text-sm text-muted-foreground">{pickLocalized(uiLanguage, card.meaning, card.meaningTr)}</p>
+                )}
               </>
             ) : (
               <Loader2 className="size-6 animate-spin text-muted-foreground" aria-label={t("Sending your answers")} />
             )}
           </div>
 
-          <div className={cn("grid gap-2", choices.length === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3")}>
-            {(choices.length ? choices : articleChoices(language, "")).map((choice, i) => (
+          <div className={cn("grid gap-2", choices.length === 4 ? "grid-cols-2 md:grid-cols-4" : "grid-cols-2 sm:grid-cols-3")}>
+            {choices.map((choice, i) => (
               <Button
                 key={choice}
                 type="button"
@@ -313,7 +327,7 @@ export function ArticleGame({
                 lang={code}
                 disabled={!card}
                 onClick={() => pick(choice)}
-                className="relative min-h-16 text-xl font-bold"
+                className="relative h-auto min-h-16 min-w-0 whitespace-normal px-2 text-center text-lg font-bold leading-tight sm:text-xl"
               >
                 {choice}
                 <span className="absolute top-1 right-2 hidden text-[10px] font-normal text-muted-foreground sm:inline" aria-hidden>
@@ -328,7 +342,7 @@ export function ArticleGame({
               (feedback.right ? (
                 <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
                   <Check className="size-4" aria-hidden />
-                  <span lang={code}>{withArticle(feedback.card.article, feedback.card.noun)}</span>
+                  <span lang={code}>{shownAnswer(feedback.card, kind)}</span>
                   {streak > 0 && streak % BONUS_EVERY !== 0 && (
                     <span className="text-muted-foreground"> · {t("{n}/{total} to +1s", { n: streak % BONUS_EVERY, total: BONUS_EVERY })}</span>
                   )}
@@ -337,11 +351,11 @@ export function ArticleGame({
                 <span className="text-red-600 dark:text-red-400">
                   <X className="mr-1 inline size-4 align-text-bottom" aria-hidden />
                   <span lang={code} className="font-semibold">
-                    {withArticle(feedback.card.article, feedback.card.noun)}
+                    {shownAnswer(feedback.card, kind)}
                   </span>
-                  {articleRule(language, feedback.card.noun, feedback.card.article) && (
+                  {ruleLine(feedback.card, kind, language) && (
                     <span className="block text-xs text-muted-foreground">
-                      {t(articleRule(language, feedback.card.noun, feedback.card.article)!)}
+                      {t(ruleLine(feedback.card, kind, language)!)}
                     </span>
                   )}
                 </span>
@@ -390,7 +404,7 @@ export function ArticleGame({
                 <ShareButton
                   className="min-h-11"
                   description={t("Just your score: the link opens the same game for your friends.")}
-                  text={() => articleShareText(language, level, result.score, window.location.origin)}
+                  text={() => articleShareText(language, level, result.score, window.location.origin, kind)}
                 />
               )}
               <Button type="button" variant="outline" className="min-h-11" onClick={() => void start()}>
@@ -406,7 +420,7 @@ export function ArticleGame({
               </h2>
               <ul className="space-y-1.5">
                 {missed.map(({ card: miss, picked }) => (
-                  <WordRow key={miss.id} card={miss} language={language} picked={picked} />
+                  <WordRow key={miss.id} card={miss} language={language} kind={kind} picked={picked} />
                 ))}
               </ul>
             </section>
@@ -420,7 +434,7 @@ export function ArticleGame({
               </h2>
               <ul className="space-y-1.5">
                 {knew.map((right) => (
-                  <WordRow key={right.id} card={right} language={language} />
+                  <WordRow key={right.id} card={right} language={language} kind={kind} />
                 ))}
               </ul>
             </section>
@@ -428,24 +442,37 @@ export function ArticleGame({
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground">
-        {fill(t("Every article is checked against {source} (CC BY-SA 4.0)."), {
-          source: (
-            <a className="underline underline-offset-2" href="https://www.wiktionary.org/" target="_blank" rel="noreferrer">
-              Wiktionary
-            </a>
-          ),
-        })}
-      </p>
+      {kind === "article" && (
+        <p className="text-xs text-muted-foreground">
+          {fill(t("Every article is checked against {source} (CC BY-SA 4.0)."), {
+            source: (
+              <a className="underline underline-offset-2" href="https://www.wiktionary.org/" target="_blank" rel="noreferrer">
+                Wiktionary
+              </a>
+            ),
+          })}
+        </p>
+      )}
     </div>
   );
 }
 
 /** One noun of the results: article, noun and meaning, what was picked if it was wrong, and its sound. */
-function WordRow({ card, language, picked }: { card: ArticleCard; language: ArticleLanguage; picked?: string }) {
+function WordRow({
+  card,
+  language,
+  kind,
+  picked,
+}: {
+  card: ArticleCard;
+  language: TargetLanguage;
+  kind: SprintKind;
+  picked?: string;
+}) {
   const t = useT();
   const uiLanguage = useUiLanguage();
   const code = LANGUAGE_META[language].code;
+  const rule = ruleLine(card, kind, language);
   return (
     <li className="flex items-center gap-3 rounded-lg border border-border px-3 py-1.5 text-sm">
       {picked === undefined && (
@@ -453,16 +480,35 @@ function WordRow({ card, language, picked }: { card: ArticleCard; language: Arti
       )}
       <span className="min-w-0 flex-1">
         <span lang={code} className="font-semibold">
-          {withArticle(card.article, card.noun)}
+          {shownAnswer(card, kind)}
         </span>
-        <span className="text-muted-foreground"> · {pickLocalized(uiLanguage, card.meaning, card.meaningTr)}</span>
+        {card.meaning && (
+          <span className="text-muted-foreground"> · {pickLocalized(uiLanguage, card.meaning, card.meaningTr)}</span>
+        )}
         {picked !== undefined && (
           <span className="block text-xs text-red-600 dark:text-red-400">
             {fill(t("You: {answer}"), { answer: <span lang={code}>{picked}</span> })}
           </span>
         )}
+        {rule && <span className="block text-xs text-muted-foreground">{t(rule)}</span>}
       </span>
-      <SpeakButton className="-my-1.5" text={withArticle(card.article, card.noun)} language={language} />
+      <SpeakButton className="-my-1.5" text={shownAnswer(card, kind)} language={language} />
     </li>
   );
+}
+
+function cardButtons(card: ArticleCard | undefined, kind: SprintKind, language: TargetLanguage): string[] {
+  if (!card) return [];
+  if (card.choices?.length) return card.choices;
+  return kind === "article" && hasArticleGame(language) ? [...articleChoices(language, card.article)] : [];
+}
+
+function shownAnswer(card: ArticleCard, kind: SprintKind): string {
+  return kind === "preposition" ? fillPreposition(card.noun, card.article) : withArticle(card.article, card.noun);
+}
+
+/** English rule sentence, or null when this card has no known rule. */
+function ruleLine(card: ArticleCard, kind: SprintKind, language: TargetLanguage): string | null {
+  if (kind === "preposition") return (card.rule && PREPOSITION_RULES[card.rule]) || null;
+  return hasArticleGame(language) ? articleRule(language, card.noun, card.article) : null;
 }

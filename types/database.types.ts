@@ -65,6 +65,8 @@ export type QuestionActive = {
   random_float: number;
   /** Turkish texts, keyed like the English columns; a missing key (or none) stays English. */
   text_tr?: QuestionTextTr | null;
+  /** Preposition-card rule id. Absent on quiz questions and article nouns. */
+  rule?: string | null;
 };
 
 export type QuestionTextTr = {
@@ -487,7 +489,7 @@ export interface Database {
       game_streaks: {
         Args: { p_user_id: string };
         Returns: Array<{
-          game: "arena" | "wordle" | "passaparola" | "articles";
+          game: "arena" | "wordle" | "passaparola" | "articles" | "prepositions";
           streak: number;
           played_today: boolean;
         }>;
