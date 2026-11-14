@@ -71,6 +71,8 @@ type SettingsPanelsProps = {
   showLastSeen: boolean;
   showDailyResults: boolean;
   languageLevels: Partial<Record<TargetLanguage, ProficiencyLevel>>;
+  /** This language has preposition cards, so friends see a Sprint score too. */
+  prepositionSprint?: boolean;
 };
 
 function PreferenceToggle({
@@ -128,6 +130,7 @@ export function SettingsPanels({
   showLastSeen: initialShowLastSeen,
   showDailyResults: initialShowDailyResults,
   languageLevels,
+  prepositionSprint = false,
 }: SettingsPanelsProps) {
   const t = useT();
   const uiLanguage = useUiLanguage();
@@ -373,7 +376,7 @@ export function SettingsPanels({
           <PreferenceToggle
             label="Show my daily results to friends"
             description={
-              hasArticleGame(profile.target_language ?? DEFAULT_LANGUAGE)
+              hasArticleGame(profile.target_language ?? DEFAULT_LANGUAGE) || prepositionSprint
                 ? "Friends see your Wordle, Word Wheel and Sprint scores for today, never your answers."
                 : "Friends see your Wordle and Word Wheel scores for today, never your answers."
             }
