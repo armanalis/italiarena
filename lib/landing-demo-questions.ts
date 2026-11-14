@@ -9,6 +9,7 @@
 
 import { LANGUAGE_META, type TargetLanguage } from "@/lib/constants";
 import type { UiLanguage } from "@/lib/i18n";
+import { DEMO_IT } from "@/lib/landing-demo-questions-it";
 import { DEMO_TR } from "@/lib/landing-demo-questions-tr";
 
 export type DemoCategory = "Grammar" | "Fill in the blank" | "Vocabulary" | "Idioms";
@@ -636,7 +637,8 @@ const GERMAN_POOL: PoolQuestion[] = [
 
 /**
  * English: the help line explains in plain English (a translation would be the
- * sentence itself); meanings are short definitions. Turkish in landing-demo-questions-tr.ts.
+ * sentence itself); meanings are short definitions. Turkish in landing-demo-questions-tr.ts,
+ * Italian in landing-demo-questions-it.ts (English until that file is filled).
  */
 const ENGLISH_POOL: PoolQuestion[] = [
   {
@@ -782,6 +784,14 @@ function shuffle<T>(items: readonly T[]): T[] {
   return copy;
 }
 
+/** Italian demo row when it is filled; a missing or half-empty row stays English. */
+function demoItalian(id: string, category: DemoCategory) {
+  const row = DEMO_IT[id];
+  if (!row?.hint) return undefined;
+  if ((category === "Vocabulary" || category === "Idioms") && (!row.answer || !row.trap || !row.distractors)) return undefined;
+  return row;
+}
+
 /** Random questions without repeats, each with its options shuffled; help lines and meanings in `uiLanguage`. */
 export function pickDemoQuestions(
   count = 3,
@@ -793,17 +803,24 @@ export function pickDemoQuestions(
   const lang = LANGUAGE_META[language].code;
   return shuffle(pool)
     .slice(0, count)
-    .map((pooled) => uiLanguage === "tr" ? { ...pooled, ...DEMO_TR[pooled.id] } : pooled)
+    .map((pooled) => {
+      if (uiLanguage === "tr") return { ...pooled, ...DEMO_TR[pooled.id] };
+      if (uiLanguage === "it") {
+        const row = demoItalian(pooled.id, pooled.category);
+        if (row) return { ...pooled, ...row };
+      }
+      return pooled;
+    })
     .map(({ answer, trap, distractors, ...question }) => {
       const options = shuffle([answer, trap, ...distractors]);
+      const meaning = question.category === "Vocabulary" || question.category === "Idioms";
+      const optionLanguage: UiLanguage =
+        uiLanguage === "it" && !demoItalian(question.id, question.category) ? "en" : uiLanguage;
       return {
         ...question,
         lang,
         options,
-        optionsLang:
-          question.category === "Vocabulary" || question.category === "Idioms"
-            ? uiLanguage
-            : lang,
+        optionsLang: meaning ? optionLanguage : lang,
         correct: options.indexOf(answer),
         trap: options.indexOf(trap),
       };

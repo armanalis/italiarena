@@ -65,6 +65,8 @@ export type QuestionActive = {
   random_float: number;
   /** Turkish texts, keyed like the English columns; a missing key (or none) stays English. */
   text_tr?: QuestionTextTr | null;
+  /** Italian texts, same shape as text_tr; a missing key (or none) stays English. */
+  text_it?: QuestionTextTr | null;
   /** Preposition-card rule id. Absent on quiz questions and article nouns. */
   rule?: string | null;
 };

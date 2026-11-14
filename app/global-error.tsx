@@ -46,10 +46,24 @@ const TEXT = {
     tryAgain: "Tekrar dene",
     back: "Arena'ya dön",
   },
+  it: {
+    updatingTitle: "Aggiornamento dell'app...",
+    updatingBody: "È stata pubblicata una nuova versione mentre questa scheda era aperta. Ricaricamento per scaricare i file più recenti.",
+    reconnectingTitle: "Riconnessione all'Arena...",
+    reconnectingBody: "La connessione è caduta a metà partita. Cancellazione dello stato locale e ripristino della sessione.",
+    retry: "Tentativo",
+    errorTitle: "Qualcosa è andato storto",
+    errorBody:
+      "Si è verificato un errore imprevisto. La revisione della partita resta salvata in questa scheda finché non esci — usa Torna all'Arena quando vuoi ricominciare da capo.",
+    reloadNow: "Ricarica ora",
+    tryAgain: "Riprova",
+    back: "Torna all'Arena",
+  },
 } as const;
 
 function cookieLanguage(): keyof typeof TEXT {
-  return new RegExp(`(?:^|; )${UI_LANGUAGE_COOKIE}=tr(?:;|$)`).test(document.cookie) ? "tr" : "en";
+  const match = document.cookie.match(new RegExp(`(?:^|; )${UI_LANGUAGE_COOKIE}=(it|tr)(?:;|$)`));
+  return match?.[1] === "it" ? "it" : match?.[1] === "tr" ? "tr" : "en";
 }
 
 type GlobalErrorProps = {

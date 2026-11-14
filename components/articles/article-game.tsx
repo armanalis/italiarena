@@ -310,7 +310,7 @@ export function ArticleGame({
                   {card.noun}
                 </p>
                 {card.meaning && (
-                  <p className="text-sm text-muted-foreground">{pickLocalized(uiLanguage, card.meaning, card.meaningTr)}</p>
+                  <p className="text-sm text-muted-foreground">{pickLocalized(uiLanguage, card.meaning, { tr: card.meaningTr, it: card.meaningIt })}</p>
                 )}
               </>
             ) : (
@@ -483,7 +483,7 @@ function WordRow({
           {shownAnswer(card, kind)}
         </span>
         {card.meaning && (
-          <span className="text-muted-foreground"> · {pickLocalized(uiLanguage, card.meaning, card.meaningTr)}</span>
+          <span className="text-muted-foreground"> · {pickLocalized(uiLanguage, card.meaning, { tr: card.meaningTr, it: card.meaningIt })}</span>
         )}
         {picked !== undefined && (
           <span className="block text-xs text-red-600 dark:text-red-400">

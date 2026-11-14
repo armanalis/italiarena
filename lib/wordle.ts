@@ -72,6 +72,8 @@ export type WordleView = {
   meaning: string | null;
   /** The meaning in Turkish (null before the meanings_tr migration, or for a word without one). */
   meaningTr: string | null;
+  /** The meaning in Italian (null before the ui_italian migration, or for a word without one). */
+  meaningIt: string | null;
 };
 
 export type WordleArchiveDay = {
@@ -90,6 +92,8 @@ type WordleTurn = {
   meaning: string | null;
   /** The meaning in Turkish (null before the meanings_tr migration, or for a word without one). */
   meaningTr: string | null;
+  /** The meaning in Italian (null before the ui_italian migration, or for a word without one). */
+  meaningIt?: string | null;
   history: Record<string, WordleStatus> | null;
 };
 
@@ -115,6 +119,7 @@ export function toWordleView(
     answer: turn.answer,
     meaning: turn.meaning,
     meaningTr: turn.meaningTr ?? null,
+    meaningIt: turn.meaningIt ?? null,
   };
 }
 

@@ -4,6 +4,7 @@
  * Run: npx tsx scripts/test-articles.ts
  */
 import { translator } from "../lib/i18n";
+import { IT } from "../lib/i18n-it";
 import { TR } from "../lib/i18n-tr";
 import assert from "node:assert/strict";
 import {
@@ -123,7 +124,7 @@ check("a missed noun becomes a Mistakes question with the letters the database s
   assert.equal(born.rule, "time-in");
 });
 
-check("the question reads in the app language, with the Turkish meaning when there is one", () => {
+check("the question reads in the app language, with the Turkish or Italian meaning when there is one", () => {
   const casa = { id: 10, language: "Italian" as const, level: "A1", noun: "casa", article: "la", meaning: "house, home", meaning_tr: "ev" };
   assert.equal(nounQuestion(casa).question_text, "Which article? casa (house, home)");
   assert.equal(nounQuestion(casa, translator(TR), "tr").question_text, "Hangi artikel? casa (ev)");
@@ -131,6 +132,20 @@ check("the question reads in the app language, with the Turkish meaning when the
     nounQuestion({ ...casa, meaning_tr: null }, translator(TR), "tr").question_text,
     "Hangi artikel? casa (house, home)",
     "no Turkish meaning yet: the English one"
+  );
+  assert.equal(
+    nounQuestion({ ...casa, meaning_it: "casa, abitazione" }, translator(IT), "it").question_text,
+    translator(IT)("Which article? {noun} ({meaning})", { noun: "casa", meaning: "casa, abitazione" })
+  );
+  assert.equal(
+    nounQuestion({ ...casa, meaning_it: null }, translator(IT), "it").question_text,
+    translator(IT)("Which article? {noun} ({meaning})", { noun: "casa", meaning: "house, home" }),
+    "no Italian meaning yet: the English one"
+  );
+  assert.equal(
+    nounQuestion({ ...casa, meaning_it: "casa, abitazione" }, translator(TR), "tr").question_text,
+    "Hangi artikel? casa (ev)",
+    "Italian meaning is not used in Turkish"
   );
 });
 
