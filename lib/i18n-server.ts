@@ -3,6 +3,7 @@ import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { getAuthUserId } from "@/lib/auth";
 import { isUiLanguage, translator, uiLanguageFromHeader, UI_LANGUAGE_COOKIE, type Dictionary, type UiLanguage } from "@/lib/i18n";
+import { IT } from "@/lib/i18n-it";
 import { TR } from "@/lib/i18n-tr";
 import { createClient } from "@/utils/supabase/server";
 
@@ -29,7 +30,9 @@ export const getUiLanguage = cache(async (): Promise<{ language: UiLanguage; fro
 
 /** The translations for `language`; null for English. */
 export function dictionaryFor(language: UiLanguage): Dictionary | null {
-  return language === "tr" ? TR : null;
+  if (language === "tr") return TR;
+  if (language === "it") return IT;
+  return null;
 }
 
 /** Server components: const t = await getT(); t("Enter the Arena"). */

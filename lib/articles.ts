@@ -31,7 +31,7 @@ export function hasArticleGame(language: string): language is ArticleLanguage {
 export type SprintKind = "article" | "preposition";
 
 /**
- * meaningTr: the meaning in Turkish, null where the bank has none yet.
+ * meaningTr / meaningIt: the meaning in that app language, null where the bank has none yet.
  * A preposition card has no meaning: noun is the sentence (___ is the blank),
  * article is the right button, choices are its buttons, rule is a rule id.
  */
@@ -41,6 +41,7 @@ export type ArticleCard = {
   article: string;
   meaning: string | null;
   meaningTr?: string | null;
+  meaningIt?: string | null;
   choices?: string[] | null;
   rule?: string | null;
 };
@@ -145,6 +146,7 @@ export type ArticleNoun = {
   article: string;
   meaning: string | null;
   meaning_tr?: string | null;
+  meaning_it?: string | null;
   kind?: SprintKind;
   choices?: string[] | null;
   rule?: string | null;
@@ -176,7 +178,7 @@ export function nounQuestion(noun: ArticleNoun, t: Translate = translator(null),
         ? noun.noun
         : t("Which article? {noun} ({meaning})", {
             noun: noun.noun,
-            meaning: pickLocalized(language, noun.meaning ?? "", noun.meaning_tr),
+            meaning: pickLocalized(language, noun.meaning ?? "", { tr: noun.meaning_tr, it: noun.meaning_it }),
           }),
     option_a: a,
     option_b: b,

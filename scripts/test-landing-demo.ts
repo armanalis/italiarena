@@ -4,6 +4,7 @@
  */
 import assert from "node:assert/strict";
 import { hasDemoQuestions, pickDemoOpponent, pickDemoQuestions } from "../lib/landing-demo-questions";
+import { DEMO_IT } from "../lib/landing-demo-questions-it";
 
 const ENGLISH_NAMES = ["Emma", "Olivia", "Sophie", "Chloe", "Lucy", "Jack", "Oliver", "Harry", "James", "Tom"];
 
@@ -56,4 +57,30 @@ console.log("ok - landing demo: German and English questions for those visitors,
     assert.ok(question.correct !== question.trap);
   }
   console.log("ok - landing demo in Turkish: every help line, and the options of every meaning question");
+}
+
+{
+  // Italian sentences are filled later. Until a question has them, the demo stays English.
+  const italian = [
+    ...pickDemoQuestions(100, "Italian", "it"),
+    ...pickDemoQuestions(100, "German", "it"),
+    ...pickDemoQuestions(100, "English", "it"),
+  ];
+  const english = [
+    ...pickDemoQuestions(100, "Italian"),
+    ...pickDemoQuestions(100, "German"),
+    ...pickDemoQuestions(100, "English"),
+  ];
+  assert.equal(italian.length, english.length);
+  for (const question of italian) {
+    const original = english.find((q) => q.id === question.id)!;
+    const meaning = question.category === "Vocabulary" || question.category === "Idioms";
+    const row = DEMO_IT[question.id];
+    const filled = Boolean(row?.hint) && (!meaning || Boolean(row?.answer && row.trap && row.distractors));
+    if (filled) continue;
+    assert.equal(question.hint, original.hint, `${question.id}: empty Italian stays English`);
+    assert.equal(question.optionsLang, meaning ? "en" : question.lang);
+    assert.deepEqual([...question.options].sort(), [...original.options].sort(), question.id);
+  }
+  console.log("ok - landing demo in Italian: English until that question is filled");
 }

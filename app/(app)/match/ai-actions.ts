@@ -40,6 +40,7 @@ type ExplainableQuestion = {
   option_d: string;
   correct_answer: CorrectAnswer;
   text_tr: QuestionTextTr | null;
+  text_it: QuestionTextTr | null;
 };
 
 const ANSWER_LETTERS: readonly CorrectAnswer[] = ["A", "B", "C", "D"];
@@ -75,7 +76,7 @@ async function loadExplainableQuestion(
   questionId: string
 ): Promise<ExplainableQuestion | null> {
   const columns =
-    "id, language, category, question_text, option_a, option_b, option_c, option_d, correct_answer, text_tr";
+    "id, language, category, question_text, option_a, option_b, option_c, option_d, correct_answer, text_tr, text_it";
 
   for (const table of ["questions_active", "questions_flagged"]) {
     const { data } = await supabase

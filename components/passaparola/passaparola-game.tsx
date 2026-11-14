@@ -210,8 +210,8 @@ export function PassaparolaGame({
     : [...passed].filter((letter) => !view?.marks[letter]).length;
   // The clue in the app language when the bank has it; lang picks the uppercase rules (Turkish "i" → "İ").
   const shown = (item: PassaparolaView["clues"][number]) => ({
-    text: pickLocalized(uiLanguage, item.clue, item.clueTr),
-    lang: uiLanguage === "tr" && item.clueTr ? "tr" : "en",
+    text: pickLocalized(uiLanguage, item.clue, { tr: item.clueTr, it: item.clueIt }),
+    lang: uiLanguage === "tr" && item.clueTr ? "tr" : uiLanguage === "it" && item.clueIt ? "it" : "en",
   });
   const currentClue = view?.clues.find((item) => item.letter === current);
   const clue = currentClue && shown(currentClue);

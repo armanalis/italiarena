@@ -37,8 +37,9 @@ function useLocalizedRounds(rounds: MatchRoundReview[]) {
     const questions = new Map([...playlist, ...(tiebreaker ? [tiebreaker] : [])].map((q) => [q.id, q]));
     return rounds.map((round) => {
       const question = questions.get(round.questionId);
-      if (!question?.text_tr) return round;
+      if (!question) return round;
       const shown = localizeQuestion(question, uiLanguage);
+      if (shown === question) return round;
       return {
         ...round,
         questionText: shown.question_text,

@@ -1,20 +1,20 @@
 /**
  * The app's own language (menus, buttons, messages), not the language being
  * learned. Texts are written in English in the code and looked up in the
- * Turkish dictionary; a text missing there shows in English.
+ * Turkish or Italian dictionary; a text missing there shows in English.
  * Server: getT() in lib/i18n-server.ts. Client: useT() in components/ui-language-provider.tsx.
- * The dictionary (lib/i18n-tr.ts) is not imported here: browsers get it from
- * the layout only when they use Turkish.
+ * The dictionaries are not imported here: browsers get one from the layout
+ * only when they use that language.
  */
 
-export const UI_LANGUAGES = ["en", "tr"] as const;
+export const UI_LANGUAGES = ["en", "tr", "it"] as const;
 export type UiLanguage = (typeof UI_LANGUAGES)[number];
 export const DEFAULT_UI_LANGUAGE: UiLanguage = "en";
 /** The device's choice; the account keeps a copy for new devices and reminders. */
 export const UI_LANGUAGE_COOKIE = "ui_lang";
 export const UI_LANGUAGE_MAX_AGE = 60 * 60 * 24 * 365;
 /** Each language's name in itself, for the switch in Settings. */
-export const UI_LANGUAGE_NAMES: Record<UiLanguage, string> = { en: "English", tr: "Türkçe" };
+export const UI_LANGUAGE_NAMES: Record<UiLanguage, string> = { en: "English", tr: "Türkçe", it: "Italiano" };
 
 export function isUiLanguage(value: unknown): value is UiLanguage {
   return UI_LANGUAGES.includes(value as UiLanguage);
@@ -47,7 +47,12 @@ export function translator(dictionary: Dictionary | null): Translate {
   };
 }
 
-/** A text the database keeps in both languages (word meanings): Turkish when the app is Turkish and it exists. */
-export function pickLocalized(language: UiLanguage, english: string, turkish: string | null | undefined): string {
-  return language === "tr" && turkish ? turkish : english;
+/** A text the database keeps in English, Turkish and Italian. The app language's text when it exists. */
+export function pickLocalized(
+  language: UiLanguage,
+  english: string,
+  localized: { tr?: string | null; it?: string | null }
+): string {
+  const text = language === "tr" ? localized.tr : language === "it" ? localized.it : null;
+  return text ? text : english;
 }

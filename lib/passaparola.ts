@@ -33,7 +33,7 @@ export type PassaparolaView = {
   finished: boolean;
   msLeft: number;
   /** Empty until the clock starts. */
-  clues: { letter: string; clue: string; clueTr?: string | null }[];
+  clues: { letter: string; clue: string; clueTr?: string | null; clueIt?: string | null }[];
   /** Letters not here are still to play. */
   marks: Record<string, PassaparolaMark>;
   /** What the player typed for each answered letter (games before 2026-10-13 have none). */

@@ -7,7 +7,7 @@ import type { AskAiExplanationPayload } from "@/lib/ai-explanations";
 import type { UiLanguage } from "@/lib/i18n";
 
 /** The app language's name in English, for the prompt. */
-const EXPLAIN_IN: Record<UiLanguage, string> = { en: "English", tr: "Turkish" };
+const EXPLAIN_IN: Record<UiLanguage, string> = { en: "English", tr: "Turkish", it: "Italian" };
 
 function formatAnswerLine(
   letter: string | null,

@@ -208,6 +208,7 @@ export async function dismissReportedQuestion(
         correct_answer: flagged.correct_answer,
         random_float: flagged.random_float,
         text_tr: flagged.text_tr ?? null,
+        text_it: flagged.text_it ?? null,
       });
 
     if (insertError) {
@@ -281,8 +282,9 @@ export async function approveReportedQuestion(
     option_d: updates.option_d.trim(),
     correct_answer: updates.correct_answer,
     random_float: source.random_float,
-    // Its Turkish was made for the old texts: English until it is translated again.
+    // Its Turkish and Italian were made for the old texts: English until they are translated again.
     text_tr: null,
+    text_it: null,
   };
 
   if (active) {

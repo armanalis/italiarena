@@ -343,7 +343,7 @@ export function WordleGame({
           <p className="flex flex-wrap items-center justify-center gap-x-1.5 text-sm">
             <span lang={LANGUAGE_META[language].code} className="font-bold uppercase tracking-wider">{view.answer}</span>
             {view.answer && <SpeakButton className="-my-2" text={view.answer} language={language} />}
-            {view.meaning && <span className="text-muted-foreground">· {pickLocalized(uiLanguage, view.meaning, view.meaningTr)}</span>}
+            {view.meaning && <span className="text-muted-foreground">· {pickLocalized(uiLanguage, view.meaning, { tr: view.meaningTr, it: view.meaningIt })}</span>}
           </p>
           <p className="text-xs text-muted-foreground">
             {view.isToday
