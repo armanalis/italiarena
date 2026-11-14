@@ -66,6 +66,12 @@ export function withArticle(article: string, noun: string): string {
   return article.endsWith("'") ? `${article}${noun}` : `${article} ${noun}`;
 }
 
+/** "Vado ___università" + "all'" → "Vado all'università". "in den" keeps the space around the blank. */
+export function fillPreposition(sentence: string, button: string): string {
+  const elided = /['’]$/.test(button);
+  return sentence.replace(elided ? /___\s*/ : /___/, button);
+}
+
 /** The clock's extra time after this answer: a second each time a streak of right answers reaches 5, 10, 15… */
 export function bonusAfter(streak: number): number {
   return streak > 0 && streak % BONUS_EVERY === 0 ? BONUS_MS : 0;

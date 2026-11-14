@@ -15,6 +15,7 @@ import {
   articleRule,
   articleShareText,
   bonusAfter,
+  fillPreposition,
   finishSprint,
   hasArticleGame,
   loadArticleStats,
@@ -317,7 +318,7 @@ export function ArticleGame({
             )}
           </div>
 
-          <div className={cn("grid gap-2", choices.length === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3")}>
+          <div className={cn("grid gap-2", choices.length === 4 ? "grid-cols-2 md:grid-cols-4" : "grid-cols-2 sm:grid-cols-3")}>
             {choices.map((choice, i) => (
               <Button
                 key={choice}
@@ -326,7 +327,7 @@ export function ArticleGame({
                 lang={code}
                 disabled={!card}
                 onClick={() => pick(choice)}
-                className="relative min-h-16 text-xl font-bold"
+                className="relative h-auto min-h-16 min-w-0 whitespace-normal px-2 text-center text-lg font-bold leading-tight sm:text-xl"
               >
                 {choice}
                 <span className="absolute top-1 right-2 hidden text-[10px] font-normal text-muted-foreground sm:inline" aria-hidden>
@@ -503,7 +504,7 @@ function cardButtons(card: ArticleCard | undefined, kind: SprintKind, language: 
 }
 
 function shownAnswer(card: ArticleCard, kind: SprintKind): string {
-  return kind === "preposition" ? card.noun.replace("___", card.article) : withArticle(card.article, card.noun);
+  return kind === "preposition" ? fillPreposition(card.noun, card.article) : withArticle(card.article, card.noun);
 }
 
 /** English rule sentence, or null when this card has no known rule. */

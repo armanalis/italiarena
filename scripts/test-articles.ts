@@ -13,6 +13,7 @@ import {
   bonusAfter,
   italianArticle,
   nounQuestion,
+  fillPreposition,
   withArticle,
 } from "../lib/articles";
 
@@ -27,6 +28,14 @@ check("buttons: der·die·das, il·lo·la·l', and i·gli·le for Italian plural
   assert.deepEqual(articleChoices("German", "das"), ["der", "die", "das"]);
   assert.deepEqual(articleChoices("Italian", "l'"), ["il", "lo", "la", "l'"]);
   assert.deepEqual(articleChoices("Italian", "gli"), ["i", "gli", "le"]);
+});
+
+check("a preposition button joins the blank, and an apostrophe eats the space", () => {
+  assert.equal(fillPreposition("Vado ___università", "all'"), "Vado all'università");
+  assert.equal(fillPreposition("Vado ___ università", "all'"), "Vado all'università");
+  assert.equal(fillPreposition("Wir gehen ___ Park.", "in den"), "Wir gehen in den Park.");
+  assert.equal(fillPreposition("___ Morgen fahre ich.", "Am"), "Am Morgen fahre ich.");
+  assert.equal(fillPreposition("È ___ casa.", "per la"), "È per la casa.");
 });
 
 check("the Italian article follows gender and first sound", () => {
