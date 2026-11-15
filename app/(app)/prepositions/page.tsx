@@ -1,10 +1,8 @@
 /** in·on·at / di·a·da / in·an·auf: a scored 90-second Sprint per level and day, then practice. */
-import { redirect } from "next/navigation";
 import { ArticleGame } from "@/components/articles/article-game";
 import { loadArticleStats } from "@/lib/articles";
 import { requireOnboardingComplete } from "@/lib/auth";
 import { DEFAULT_LANGUAGE, isProficiencyLevel, languageFromCode } from "@/lib/constants";
-import { hasPrepositionCards } from "@/lib/preposition-cards";
 import { createClient } from "@/utils/supabase/server";
 
 export default async function PrepositionsPage({
@@ -16,7 +14,6 @@ export default async function PrepositionsPage({
   const profile = await requireOnboardingComplete();
   const { lang, level: sharedLevel } = await searchParams;
   const language = languageFromCode(lang) ?? profile.target_language ?? DEFAULT_LANGUAGE;
-  if (!(await hasPrepositionCards(language))) redirect("/");
   const level =
     sharedLevel && isProficiencyLevel(sharedLevel)
       ? sharedLevel
