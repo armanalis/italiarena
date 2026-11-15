@@ -1,9 +1,11 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { isGuestAuthUser } from "@/lib/guest-auth";
 import { isPushServiceEndpoint, MAX_SUBSCRIPTIONS_PER_USER } from "@/lib/push";
 import { DEFAULT_TIMEZONE } from "@/lib/constants";
+import { isUiLanguage, UI_LANGUAGE_COOKIE } from "@/lib/i18n";
 
 type SubscribeBody = {
   endpoint?: string;
@@ -112,12 +114,16 @@ export async function POST(request: Request) {
     await supabase.from("push_subscriptions").delete().in("id", oldDeviceIds);
   }
 
+  // Reminders are written in the account's app language. A language that came from
+  // the browser is only in this device's cookie, so keep it with the subscription.
+  const uiLanguage = (await cookies()).get(UI_LANGUAGE_COOKIE)?.value;
   const { error: profileError } = await supabase
     .from("users")
     .update({
       daily_reminder_enabled: body.dailyReminderEnabled !== false,
       daily_reminder_hour: hour,
       timezone,
+      ...(isUiLanguage(uiLanguage) ? { ui_language: uiLanguage } : {}),
     })
     .eq("id", user.id);
 
