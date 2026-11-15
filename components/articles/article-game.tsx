@@ -306,7 +306,7 @@ export function ArticleGame({
           <div className="glass-panel flex min-h-36 flex-col items-center justify-center gap-1 p-6 text-center">
             {card ? (
               <>
-                <p lang={code} className="text-3xl font-bold tracking-tight sm:text-4xl">
+                <p lang={code} className={kind === "preposition" ? "flex min-h-32 items-center justify-center text-xl font-bold leading-snug tracking-tight sm:text-2xl" : "text-3xl font-bold tracking-tight sm:text-4xl"}>
                   {card.noun}
                 </p>
                 {card.meaning && (
