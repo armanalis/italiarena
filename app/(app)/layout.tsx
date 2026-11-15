@@ -4,7 +4,6 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { OnlineHeartbeat } from "@/components/dashboard/online-players";
 import { getAuthUserId, getCurrentUserProfile, isGuestUser } from "@/lib/auth";
 import { DEFAULT_LANGUAGE } from "@/lib/constants";
-import { hasPrepositionCards } from "@/lib/preposition-cards";
 
 export default async function AppLayout({
   children,
@@ -26,7 +25,6 @@ export default async function AppLayout({
       <DashboardShell
         language={profile?.target_language ?? DEFAULT_LANGUAGE}
         guest={profile ? isGuestUser(profile) : false}
-        prepositions={await hasPrepositionCards(profile?.target_language ?? DEFAULT_LANGUAGE)}
       >
         {children}
       </DashboardShell>

@@ -60,7 +60,6 @@ type DashboardShellProps = {
   /** Guests can't add questions to the pool. */
   guest: boolean;
   /** False while this language has no preposition cards (no_nouns). */
-  prepositions?: boolean;
 };
 
 /** Game screens: on phones the Friends button would sit on the game, so it shows everywhere else. */
@@ -77,18 +76,18 @@ function isImmersiveRoute(pathname: string) {
   );
 }
 
-export function DashboardShell({ children, language, guest, prepositions = false }: DashboardShellProps) {
+export function DashboardShell({ children, language, guest }: DashboardShellProps) {
   const pathname = usePathname();
   const t = useT();
   const articles = hasArticleGame(language);
   const items = [
     ...gameItems
-      .filter((item) => (articles || item.href !== "/articles") && (prepositions || item.href !== "/prepositions"))
+      .filter((item) => articles || item.href !== "/articles")
       .map((item) =>
         // The names are the buttons, the same in every app language.
         item.href === "/articles" && articles
           ? { ...item, label: ARTICLE_GAME_NAME[language] }
-          : item.href === "/prepositions" && prepositions
+          : item.href === "/prepositions"
             ? { ...item, label: PREPOSITION_GAME_NAME[language] }
             : { ...item, label: t(item.label) }
       ),
