@@ -5,6 +5,7 @@ import { getEffectiveSoundVolume } from "@/lib/preferences";
 
 export type GameSound = "reveal" | "click" | "correct" | "incorrect";
 
+// Browsers keep these files for a year (vercel.json): a changed sound needs a new file name.
 const SOUND_PATHS: Record<GameSound, string> = {
   reveal: "/sounds/reveal.mp3",
   click: "/sounds/click.mp3",

@@ -12,6 +12,7 @@ import {
   emptyCategoryProgress,
   normalizeCategoryProgress,
 } from "@/lib/category-progress";
+import { QUESTION_CATEGORIES } from "@/lib/question-contribution";
 import { determineWinner, type MatchWinner } from "@/lib/scoring";
 import type { CategoryProgress } from "@/lib/types";
 import type { CorrectAnswer, QuestionCategory } from "@/types/database.types";
@@ -112,13 +113,6 @@ export function scoreStateForRole(
         : score.categoryProgress,
   };
 }
-
-const QUESTION_CATEGORIES: QuestionCategory[] = [
-  "grammar",
-  "vocabulary",
-  "fill-in-the-blank",
-  "idioms",
-];
 
 function isCorrectAnswer(value: unknown): value is CorrectAnswer {
   return value === "A" || value === "B" || value === "C" || value === "D";

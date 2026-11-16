@@ -1,37 +1,16 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getProductionSiteUrl } from "@/lib/site-url";
-
-function hostnamesMatch(a: string, b: string) {
-  const stripWww = (host: string) => host.replace(/^www\./, "");
-  return stripWww(a) === stripWww(b);
-}
-
+/** Same site: the same origin, or the same host with or without "www.". */
 function originsMatch(requestOrigin: string, targetOrigin: string) {
   if (requestOrigin === targetOrigin) {
     return true;
   }
 
-  try {
-    const requestUrl = new URL(requestOrigin);
-    const targetUrl = new URL(targetOrigin);
-
-    if (requestUrl.origin === targetUrl.origin) {
-      return true;
-    }
-
-    if (hostnamesMatch(requestUrl.hostname, targetUrl.hostname)) {
-      return true;
-    }
-
-    const productionOrigin = getProductionSiteUrl();
-    return (
-      requestUrl.origin === productionOrigin ||
-      targetUrl.origin === productionOrigin
-    );
-  } catch {
-    return false;
-  }
+  const stripWww = (host: string) => host.replace(/^www\./, "");
+  return (
+    stripWww(new URL(requestOrigin).hostname) ===
+    stripWww(new URL(targetOrigin).hostname)
+  );
 }
 
 /** Resolve a safe in-app path from a `next` query param or redirect URL. */
@@ -43,7 +22,9 @@ export function resolveAuthNextPath(next: string | null, origin: string) {
   try {
     // Parsed the way a browser reads it: "/\evil.example" and "//evil.example" are other sites.
     const url = new URL(next, origin);
-    if (originsMatch(origin, url.origin)) {
+    // A path that starts with "//" is another site once it is used as a
+    // redirect target: "https://this.site//evil.example" → "//evil.example".
+    if (originsMatch(origin, url.origin) && !url.pathname.startsWith("//")) {
       return `${url.pathname}${url.search}${url.hash}`;
     }
   } catch {

@@ -1,3 +1,4 @@
+import { QUESTION_CATEGORIES } from "@/lib/question-contribution";
 import type { PublicQuestion, QuestionCategory } from "@/types/database.types";
 
 export const REGULAR_MATCH_QUESTIONS = 10;
@@ -15,13 +16,6 @@ export function shouldStartTiebreaker(state: {
     !state.tiebreakerUsed
   );
 }
-
-const QUESTION_CATEGORIES: QuestionCategory[] = [
-  "grammar",
-  "vocabulary",
-  "fill-in-the-blank",
-  "idioms",
-];
 
 const MATCH_CATEGORY_QUOTA: ReadonlyArray<{
   category: QuestionCategory;
@@ -142,10 +136,4 @@ export function buildMatchPlaylist(
   }
 
   return shuffleArray(selected);
-}
-
-export function splitSessionQuestions<T extends { id: string }>(questions: T[]) {
-  return {
-    regular: questions.slice(0, REGULAR_MATCH_QUESTIONS),
-  };
 }

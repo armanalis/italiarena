@@ -608,7 +608,7 @@ export const TR: Record<string, string> = {
   "Sorted by total points earned, then win rate, then matches played.": "Toplam puana, sonra galibiyet oranına, sonra oynanan maça göre sıralı.",
   "Statistics": "İstatistikler",
   "Statistics reset.": "İstatistikler sıfırlandı.",
-  "This clears your wins, losses, accuracy by category, match history, leaderboard standing, and seen-question memory in every language you play. You cannot undo this.": "Bu işlem oynadığın her dildeki galibiyetlerini, yenilgilerini, kategori isabetini, maç geçmişini, sıralamadaki yerini ve görülen soru hafızasını siler. Geri alınamaz.",
+  "This clears your wins, losses, accuracy by category, match history, leaderboard standing, seen-question memory, and your saved mistakes with their review schedule, in every language you play. You cannot undo this.": "Bu işlem oynadığın her dildeki galibiyetlerini, yenilgilerini, kategori isabetini, maç geçmişini, sıralamadaki yerini, görülen soru hafızasını ve kayıtlı hatalarını tekrar takvimleriyle birlikte siler. Geri alınamaz.",
   "Today's review": "Bugünün tekrarı",
   "Top players": "En iyi oyuncular",
   "Total points": "Toplam puan",

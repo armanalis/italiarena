@@ -1,10 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { UiLanguage } from "@/lib/i18n";
-import type {
-  CorrectAnswer,
-  PublicQuestion,
-  QuestionCategory,
-} from "@/types/database.types";
+import type { CorrectAnswer, PublicQuestion } from "@/types/database.types";
 
 /**
  * Columns players may read from questions_active / questions_flagged. Every
@@ -65,17 +61,4 @@ export function getOptionText(
     | "option_c"
     | "option_d";
   return question[key];
-}
-
-export function normalizeQuestionCategory(value: string): QuestionCategory {
-  const categories: QuestionCategory[] = [
-    "grammar",
-    "vocabulary",
-    "fill-in-the-blank",
-    "idioms",
-  ];
-  if (categories.includes(value as QuestionCategory)) {
-    return value as QuestionCategory;
-  }
-  return "grammar";
 }

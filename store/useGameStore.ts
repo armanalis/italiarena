@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { REGULAR_MATCH_QUESTIONS } from "@/lib/match";
+import { normalizeQuestionCategory, REGULAR_MATCH_QUESTIONS } from "@/lib/match";
 import {
   emptyCategoryProgress,
   normalizeCategoryProgress,
@@ -20,7 +20,7 @@ import {
 import type { BotDifficulty } from "@/lib/bot";
 import type { ProficiencyLevel } from "@/lib/constants";
 import type { CategoryProgress } from "@/lib/types";
-import type { CorrectAnswer, PublicQuestion, QuestionCategory } from "@/types/database.types";
+import type { CorrectAnswer, PublicQuestion } from "@/types/database.types";
 
 export type { MatchRoundReview };
 
@@ -107,31 +107,6 @@ type GameStoreActions = {
   markMatchSaved: () => void;
   reset: () => void;
 };
-
-const QUESTION_CATEGORIES: QuestionCategory[] = [
-  "grammar",
-  "vocabulary",
-  "fill-in-the-blank",
-  "idioms",
-];
-
-function normalizeQuestionCategory(value: string): QuestionCategory {
-  const trimmed = value.trim();
-  if (QUESTION_CATEGORIES.includes(trimmed as QuestionCategory)) {
-    return trimmed as QuestionCategory;
-  }
-
-  const lower = trimmed.toLowerCase();
-  if (lower === "fill in the blank" || lower === "fill_in_the_blank") {
-    return "fill-in-the-blank";
-  }
-
-  if (QUESTION_CATEGORIES.includes(lower as QuestionCategory)) {
-    return lower as QuestionCategory;
-  }
-
-  return "grammar";
-}
 
 function normalizeRoundReviews(
   reviews: MatchRoundReview[] | undefined | null
