@@ -3,6 +3,7 @@ import { getT } from "@/lib/i18n-server";
 import { redirect } from "next/navigation";
 import { MatchResultRecorder } from "@/components/match/match-result-recorder";
 import { GameLoop } from "@/components/match/game-loop";
+import { HowToPlay } from "@/components/how-to-play";
 import { MatchHydrator } from "@/components/match/match-hydrator";
 import { getMatchSession } from "@/app/(app)/matchmaking/actions";
 import { requireOnboardingComplete } from "@/lib/auth";
@@ -44,7 +45,8 @@ export default async function MatchPage({ params }: MatchPageProps) {
     localPlayerRole === "a" ? [localName, opponentName] : [opponentName, localName];
 
   return (
-    <>
+    // seen: a live match is never interrupted and its clock never waits. The Arena home opens it the first time.
+    <HowToPlay game="arena" seen buttonClassName="px-4 pt-4 sm:px-8">
       <MatchHydrator
         sessionId={sessionId}
         opponent={opponent}
@@ -61,6 +63,6 @@ export default async function MatchPage({ params }: MatchPageProps) {
         playerBName={playerBName}
         serverPlaylist={playlist}
       />
-    </>
+    </HowToPlay>
   );
 }

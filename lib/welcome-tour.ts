@@ -1,6 +1,8 @@
 /** Remembers whether this browser has seen the first-visit welcome tour. */
 
 export const WELCOME_TOUR_STORAGE_KEY = "lq-welcome-tour";
+/** Same-tab notice that the tour was dismissed, so the Arena how-to-play can open next. */
+export const WELCOME_TOUR_EVENT = "italiarena-welcome-tour";
 
 /** Bump when the tour content changes enough that everyone should see it again. */
 export const WELCOME_TOUR_VERSION = 1;
@@ -31,6 +33,8 @@ export function markWelcomeTourSeen() {
       WELCOME_TOUR_STORAGE_KEY,
       String(WELCOME_TOUR_VERSION)
     );
+    // Same-tab listeners (the Arena how-to-play waits for this tour).
+    window.dispatchEvent(new Event(WELCOME_TOUR_EVENT));
   } catch {
     // Private mode or a full quota: the tour may show again next visit.
   }

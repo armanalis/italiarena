@@ -9,12 +9,13 @@ import { Button } from "@/components/ui/button";
 import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useT, useUiLanguage } from "@/components/ui-language-provider";
-import { pickLocalized, type UiLanguage } from "@/lib/i18n";
+import { pickLocalized } from "@/lib/i18n";
 import {
   keyboardMarks,
   playWordle,
   WORDLE_LENGTH,
   WORDLE_MAX_GUESSES,
+  formatPuzzleDay,
   wordleShareText,
   type WordleArchiveDay,
   type WordleMark,
@@ -49,11 +50,6 @@ const MARK_WORDS: Record<WordleMark, string> = {
   present: "wrong place",
   absent: "not in the word",
 };
-
-/** "6 Nov" / "6 Kas": the puzzle's own day, whatever the device's time zone. */
-function formatDay(date: string, language: UiLanguage) {
-  return new Intl.DateTimeFormat(language, { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
-}
 
 function prefersMotion() {
   return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -280,7 +276,7 @@ export function WordleGame({
       {view && (
         <div className="flex items-center justify-between gap-3 text-sm">
           <span className="font-medium">
-            #{view.number} · {view.level} · {view.isToday ? t("Today") : formatDay(view.date, uiLanguage)}
+            #{view.number} · {view.level} · {view.isToday ? t("Today") : formatPuzzleDay(view.date, uiLanguage)}
           </span>
           {!view.isToday && (
             <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => void open(level, null)}>
@@ -432,7 +428,7 @@ export function WordleGame({
                   )}
                 >
                   <span>
-                    #{day.number} · {formatDay(day.date, uiLanguage)}
+                    #{day.number} · {formatPuzzleDay(day.date, uiLanguage)}
                   </span>
                   <span
                     className={cn(

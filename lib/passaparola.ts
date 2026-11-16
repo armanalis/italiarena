@@ -1,7 +1,8 @@
 /** Word Wheel (Passaparola in the code and database): a clue for every letter, 5 minutes on the clock. */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { TargetLanguage } from "@/lib/constants";
+import { LANGUAGE_META, type TargetLanguage } from "@/lib/constants";
 import { knownError } from "@/lib/errors";
+import { addDays } from "@/lib/wordle";
 
 /**
  * The wheel's letters. Italian: J, K, W, X and Y only appear in foreign words.
@@ -25,25 +26,91 @@ export const PASSAPAROLA_FINISH_WORD = "stop";
 
 export type PassaparolaMark = "right" | "wrong";
 
+/** Normal counts one wrong letter as right. Hard wants the exact word. Read by the server only when the clock starts. */
+export type WheelMode = "normal" | "hard";
+
 export type PassaparolaView = {
   /** One of PROFICIENCY_LEVELS: each level has its own board and clues. */
   level: string;
   date: string;
+  /** The archive's "today". Older replies omit it. */
+  today?: string;
   started: boolean;
   finished: boolean;
   msLeft: number;
+  /** Empty until the clock starts. Older replies omit it. */
+  mode?: WheelMode;
   /** Empty until the clock starts. */
   clues: { letter: string; clue: string; clueTr?: string | null; clueIt?: string | null }[];
   /** Letters not here are still to play. */
   marks: Record<string, PassaparolaMark>;
   /** What the player typed for each answered letter (games before 2026-10-13 have none). */
   given: Record<string, string>;
+  /** Letters counted right with one letter off. Older replies omit it. */
+  near: string[];
+  /** The accepted spelling of a near letter ("G" → "guida"). Older replies omit it. */
+  spelling: Record<string, string>;
   /** Only once the game is over. */
   answers: Record<string, string[]> | null;
 };
 
+/** How many past days the archive lists. Same window as Wordle. */
+export const WHEEL_ARCHIVE_DAYS = 30;
+
+export type WheelArchiveDay = {
+  date: string;
+  right: number | null;
+  total: number | null;
+  finished: boolean;
+  mode: WheelMode | null;
+};
+
+type WheelHistoryDay = { right?: number; total?: number; finished?: boolean; mode?: string };
+
+function asMode(value: unknown): WheelMode | undefined {
+  return value === "normal" || value === "hard" ? value : undefined;
+}
+
+/** The last WHEEL_ARCHIVE_DAYS days before today, newest first. A day missing from `history` was not played. */
+export function toWheelArchive(today: string, history: Record<string, WheelHistoryDay>): WheelArchiveDay[] {
+  const archive: WheelArchiveDay[] = [];
+  for (let ago = 1; ago <= WHEEL_ARCHIVE_DAYS; ago += 1) {
+    const date = addDays(today, -ago);
+    const row = history[date];
+    archive.push(
+      row && typeof row.right === "number"
+        ? {
+            date,
+            right: row.right,
+            total: typeof row.total === "number" ? row.total : row.right,
+            finished: row.finished === true,
+            mode: asMode(row.mode) ?? null,
+          }
+        : { date, right: null, total: null, finished: false, mode: null }
+    );
+  }
+  return archive;
+}
+
+/** Score, mode and day, plus a link that opens the same board. */
+export function wheelShareText(
+  language: TargetLanguage,
+  level: string,
+  date: string,
+  mode: WheelMode | undefined,
+  right: number,
+  total: number,
+  origin: string
+): string {
+  const modeLabel = mode === "hard" ? "Hard" : mode === "normal" ? "Normal" : null;
+  return [
+    ["Italiarena Word Wheel " + `${right}/${total}`, language, level, modeLabel, date].filter(Boolean).join(" · "),
+    `${origin}/word-wheel?lang=${LANGUAGE_META[language].code}&level=${level}&day=${date}`,
+  ].join("\n");
+}
+
 export type PassaparolaTurnResult =
-  | { ok: true; view: PassaparolaView }
+  | { ok: true; view: PassaparolaView; archive: WheelArchiveDay[] | null }
   | { ok: false; error: string };
 
 /**
@@ -95,7 +162,7 @@ export async function playPassaparola(
   supabase: SupabaseClient,
   language: TargetLanguage,
   level: string,
-  move: { date?: string; start?: boolean; letter?: string; answer?: string; finish?: boolean } = {}
+  move: { date?: string; start?: boolean; letter?: string; answer?: string; finish?: boolean; mode?: WheelMode } = {}
 ): Promise<PassaparolaTurnResult> {
   const { data, error } = await supabase.rpc("passaparola_turn", {
     p_tier: level,
@@ -105,11 +172,35 @@ export async function playPassaparola(
     p_answer: move.answer ?? null,
     p_finish: move.finish ?? false,
     p_language: language,
+    // The server reads the mode only when the clock starts. Always send it then.
+    p_mode: move.start ? (move.mode ?? "normal") : null,
   });
   if (error || !data) {
     return { ok: false, error: knownError(ERRORS, error?.message, "Could not reach the board. Try again.") };
   }
-  const view = data as Omit<PassaparolaView, "level" | "given"> & Partial<Pick<PassaparolaView, "given">>;
-  // `given` is missing until the SQL that adds it has run.
-  return { ok: true, view: { level, ...view, given: view.given ?? {} } };
+  const row = data as Omit<PassaparolaView, "level" | "given" | "near" | "spelling" | "mode"> &
+    Partial<Pick<PassaparolaView, "given" | "near" | "spelling" | "mode" | "today">> & {
+      history?: Record<string, WheelHistoryDay> | null;
+    };
+  const spelling =
+    row.spelling && typeof row.spelling === "object"
+      ? Object.fromEntries(Object.entries(row.spelling).filter((entry): entry is [string, string] => typeof entry[1] === "string"))
+      : {};
+  const view: PassaparolaView = {
+    level,
+    date: row.date,
+    today: row.today,
+    started: row.started,
+    finished: row.finished,
+    msLeft: row.msLeft,
+    mode: asMode(row.mode),
+    clues: row.clues ?? [],
+    marks: row.marks ?? {},
+    given: row.given ?? {},
+    near: Array.isArray(row.near) ? row.near.filter((letter): letter is string => typeof letter === "string") : [],
+    spelling,
+    answers: row.answers ?? null,
+  };
+  // history arrives on a load only. A move keeps the archive the screen already has.
+  return { ok: true, view, archive: row.today && row.history ? toWheelArchive(row.today, row.history) : null };
 }

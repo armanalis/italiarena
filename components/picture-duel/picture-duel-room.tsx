@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Copy, Loader2, RotateCcw, Share2, Trophy, X } from "lucide-react";
 import { toast } from "sonner";
+import { useHowToPlayOpen } from "@/components/how-to-play";
 import { SpeakButton } from "@/components/speak-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +62,7 @@ export function PictureDuelRoom({
 }) {
   const router = useRouter();
   const t = useT();
+  const helpOpen = useHowToPlayOpen();
   const [supabase] = useState(() => createClient());
   const [duel, setDuel] = useState(initial);
   // localClock + offset ≈ the database's clock, which runs the chess clock.
@@ -120,12 +122,12 @@ export function PictureDuelRoom({
   // The chess clock, or (slower) how fresh a rematch offer still is.
   const offerOpen = status === "finished" && Boolean(duel?.rematch_by) && !duel?.rematch_id;
   useEffect(() => {
-    if (status !== "active" && !offerOpen) {
+    if (helpOpen || (status !== "active" && !offerOpen)) {
       return;
     }
     const tick = window.setInterval(() => setNow(Date.now()), status === "active" ? 100 : 1_000);
     return () => window.clearInterval(tick);
-  }, [offerOpen, status]);
+  }, [helpOpen, offerOpen, status]);
 
   const serverNow = now + offset;
   const started = Boolean(duel?.turn_started_at && serverNow >= Date.parse(duel.turn_started_at));
@@ -214,7 +216,7 @@ export function PictureDuelRoom({
   }, [goTo, offered, rematchId]);
 
   async function join() {
-    if (!invite) return;
+    if (!invite || helpOpen) return;
     setBusy(true);
     const result = await joinDuel(supabase, invite.id);
     setBusy(false);
@@ -262,7 +264,7 @@ export function PictureDuelRoom({
             <p className="text-sm text-muted-foreground">
               {t("Name each picture to stop your clock and start theirs. Pass shows the answer, but your clock keeps running.")}
             </p>
-            <Button type="button" className="min-h-11 w-full" onClick={() => void join()} disabled={busy}>
+            <Button type="button" className="min-h-11 w-full" onClick={() => void join()} disabled={busy || helpOpen}>
               {busy && <Loader2 className="size-4 animate-spin" />}
               {t("Play")}
             </Button>

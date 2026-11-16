@@ -15,6 +15,7 @@ import {
   italianArticle,
   nounQuestion,
   fillPreposition,
+  toSprintArchive,
   withArticle,
 } from "../lib/articles";
 
@@ -75,17 +76,21 @@ check("German rules are only shown for nouns that follow them", () => {
   assert.equal(articleRule("Italian", "studente", "lo"), "lo: masculine, before s + consonant, z, gn, ps (lo studente, lo zaino)");
 });
 
-check("a second for every 5 right in a row, like article_sprint_finish", () => {
-  // 12 right, 1 wrong, 7 right: 2 + 1 bonus seconds.
+check("a second for every 5 right in a row, or the server's bonus", () => {
+  // 12 right, 1 wrong, 7 right: bonuses at 5, 10 and 5.
   const results = [...Array(12).fill(true), false, ...Array(7).fill(true)];
   let streak = 0;
   let bonus = 0;
+  let preposition = 0;
   for (const right of results) {
     streak = right ? streak + 1 : 0;
     bonus += bonusAfter(streak);
+    preposition += bonusAfter(streak, 10_000);
   }
   assert.equal(bonus, 3_000);
+  assert.equal(preposition, 30_000);
   assert.equal(bonusAfter(0), 0);
+  assert.equal(bonusAfter(5, 10_000), 10_000);
 });
 
 check("written with the article, and shared without spoilers", () => {
@@ -95,6 +100,18 @@ check("written with the article, and shared without spoilers", () => {
     articleShareText("German", "A2", 23, "https://italiarena.com"),
     "Italiarena der·die·das 23 · A2\nhttps://italiarena.com/articles?lang=de&level=A2"
   );
+  assert.equal(
+    articleShareText("English", "B1", 12, "https://italiarena.com", "preposition", "2026-11-14"),
+    "Italiarena in·on·at 12 · B1 · 2026-11-14\nhttps://italiarena.com/prepositions?lang=en&level=B1&day=2026-11-14"
+  );
+});
+
+check("the sprint archive is the 30 days before today, newest first", () => {
+  const archive = toSprintArchive("2026-11-15", { "2026-11-14": 23 });
+  assert.equal(archive.length, 30);
+  assert.deepEqual(archive[0], { date: "2026-11-14", score: 23 });
+  assert.deepEqual(archive[1], { date: "2026-11-13", score: null });
+  assert.equal(archive.at(-1)?.date, "2026-10-16");
 });
 
 check("a missed noun becomes a Mistakes question with the letters the database saves", () => {

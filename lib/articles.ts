@@ -8,13 +8,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { LANGUAGE_META, type TargetLanguage } from "@/lib/constants";
 import { knownError, type Result } from "@/lib/errors";
 import { PREPOSITION_GAME_NAME } from "@/lib/prepositions";
+import { addDays } from "@/lib/wordle";
 import type { CorrectAnswer, QuestionActive, QuestionLevel } from "@/types/database.types";
 
 /** KEEP IN SYNC with article_sprint_start / article_sprint_finish (supabase/migrations/*_article_game.sql). */
 export const SPRINT_MS = 60_000;
-/** Every BONUS_EVERY right answers in a row add BONUS_MS to the clock. */
+/** Every BONUS_EVERY right answers in a row add the sprint's bonusMs (1 s for articles when the server omits it). */
 export const BONUS_EVERY = 5;
-export const BONUS_MS = 1_000;
+/** How many past days the archive lists. Same window as Wordle. */
+export const SPRINT_ARCHIVE_DAYS = 30;
+const DEFAULT_BONUS_MS = 1_000;
 
 /** The game is named after its buttons. English has none: hide it with hasArticleGame. */
 export const ARTICLE_GAME_NAME = {
@@ -73,9 +76,9 @@ export function fillPreposition(sentence: string, button: string): string {
   return sentence.replace(elided ? /___\s*/ : /___/, button);
 }
 
-/** The clock's extra time after this answer: a second each time a streak of right answers reaches 5, 10, 15… */
-export function bonusAfter(streak: number): number {
-  return streak > 0 && streak % BONUS_EVERY === 0 ? BONUS_MS : 0;
+/** The clock's extra time after this answer: bonusMs each time a streak of right answers reaches 5, 10, 15… */
+export function bonusAfter(streak: number, bonusMs = DEFAULT_BONUS_MS): number {
+  return streak > 0 && streak % BONUS_EVERY === 0 ? bonusMs : 0;
 }
 
 const VOWEL = /^[aeiouàèéìíòóùú]/i;
@@ -195,13 +198,15 @@ export function articleShareText(
   level: string,
   score: number,
   origin: string,
-  kind: SprintKind = "article"
+  kind: SprintKind = "article",
+  date?: string
 ): string {
   const name = kind === "preposition" ? PREPOSITION_GAME_NAME[language] : ARTICLE_GAME_NAME[language as ArticleLanguage];
   const path = kind === "preposition" ? "prepositions" : "articles";
+  const day = date ? `&day=${date}` : "";
   return [
-    `Italiarena ${name} ${score} · ${level}`,
-    `${origin}/${path}?lang=${LANGUAGE_META[language].code}&level=${level}`,
+    date ? `Italiarena ${name} ${score} · ${level} · ${date}` : `Italiarena ${name} ${score} · ${level}`,
+    `${origin}/${path}?lang=${LANGUAGE_META[language].code}&level=${level}${day}`,
   ].join("\n");
 }
 
@@ -211,9 +216,28 @@ export type SprintStart = {
   msLeft: number;
   /** The Sprint's full length. Older replies omit it; the article game is 60 s. */
   ms?: number;
+  /** Added to the clock every 5 right in a row. Older replies omit it; articles are 1 s. */
+  bonusMs?: number;
+  /** The day this Sprint belongs to. Older replies omit it. */
+  date?: string;
   kind?: SprintKind;
   cards: ArticleCard[];
 };
+
+export type SprintHistory = { today: string; days: Record<string, number> };
+
+export type SprintArchiveDay = { date: string; score: number | null };
+
+/** The last SPRINT_ARCHIVE_DAYS days before today, newest first. A day missing from `days` was not played. */
+export function toSprintArchive(today: string, days: Record<string, number>): SprintArchiveDay[] {
+  const archive: SprintArchiveDay[] = [];
+  for (let ago = 1; ago <= SPRINT_ARCHIVE_DAYS; ago += 1) {
+    const date = addDays(today, -ago);
+    const score = days[date];
+    archive.push({ date, score: typeof score === "number" ? score : null });
+  }
+  return archive;
+}
 export type SprintResult = { score: number; rejected: boolean; best: number | null };
 export type ArticleStats = {
   best: Record<string, number>;
@@ -225,6 +249,8 @@ const ERRORS: Record<string, string> = {
   no_nouns: "No nouns for this level yet.",
   no_such_run: "This Sprint already ended.",
   no_such_level: "This level does not exist.",
+  no_such_day: "That day is not in the archive.",
+  already_played: "You already played this Sprint.",
 };
 
 const errorMessage = (message?: string) => knownError(ERRORS, message, "Could not reach the game. Try again.");
@@ -233,14 +259,38 @@ export async function startSprint(
   supabase: SupabaseClient,
   language: TargetLanguage,
   level: string,
-  kind: SprintKind = "article"
+  kind: SprintKind = "article",
+  date: string | null = null
 ): Promise<Result<SprintStart>> {
   const { data, error } = await supabase.rpc("article_sprint_start", {
     p_language: language,
     p_level: level,
     p_kind: kind,
+    p_date: date,
   });
   return error || !data ? { ok: false, error: errorMessage(error?.message) } : { ok: true, value: data as SprintStart };
+}
+
+/** Scores for the archive. Null when the call fails (the game still plays today). */
+export async function loadSprintHistory(
+  supabase: SupabaseClient,
+  language: TargetLanguage,
+  level: string,
+  kind: SprintKind = "article"
+): Promise<SprintHistory | null> {
+  const { data, error } = await supabase.rpc("article_history", {
+    p_language: language,
+    p_level: level,
+    p_kind: kind,
+  });
+  if (error || !data || typeof data !== "object") return null;
+  const row = data as { today?: unknown; days?: unknown };
+  if (typeof row.today !== "string" || !row.days || typeof row.days !== "object") return null;
+  const days: Record<string, number> = {};
+  for (const [date, score] of Object.entries(row.days)) {
+    if (typeof score === "number") days[date] = score;
+  }
+  return { today: row.today, days };
 }
 
 /** `answers[i]` is the article picked for card i. */
