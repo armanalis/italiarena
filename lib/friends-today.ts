@@ -14,7 +14,7 @@ export type FriendToday = {
   display_name: string;
   is_me: boolean;
   wordle: { level: string; guesses: number; won: boolean } | null;
-  word_wheel: { level: string; right: number; total: number } | null;
+  word_wheel: { level: string; right: number; total: number; mode?: "normal" | "hard" } | null;
   sprint: { level: string; score: number } | null;
   prepositions?: { level: string; score: number } | null;
 };
@@ -32,14 +32,22 @@ export function sortFriendsToday(rows: readonly FriendToday[]): FriendToday[] {
 }
 
 /** Wordle 4/6, Word Wheel 18/23, der·die·das 23, each with its level; the screen translates the game. */
-export function todayResults(row: FriendToday, language: TargetLanguage): { game: string; score: string; level: string }[] {
-  const results: { game: string; score: string; level: string }[] = [];
+export function todayResults(
+  row: FriendToday,
+  language: TargetLanguage
+): { game: string; score: string; level: string; mode?: "normal" | "hard" }[] {
+  const results: { game: string; score: string; level: string; mode?: "normal" | "hard" }[] = [];
   if (row.wordle) {
     const score = row.wordle.won ? row.wordle.guesses : "X";
     results.push({ game: "Wordle", score: `${score}/${WORDLE_MAX_GUESSES}`, level: row.wordle.level });
   }
   if (row.word_wheel) {
-    results.push({ game: "Word Wheel", score: `${row.word_wheel.right}/${row.word_wheel.total}`, level: row.word_wheel.level });
+    results.push({
+      game: "Word Wheel",
+      score: `${row.word_wheel.right}/${row.word_wheel.total}`,
+      level: row.word_wheel.level,
+      ...(row.word_wheel.mode ? { mode: row.word_wheel.mode } : {}),
+    });
   }
   if (row.sprint && hasArticleGame(language)) {
     results.push({ game: ARTICLE_GAME_NAME[language], score: String(row.sprint.score), level: row.sprint.level });

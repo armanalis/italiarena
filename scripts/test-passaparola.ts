@@ -4,7 +4,7 @@
  * Run: npx tsx scripts/test-passaparola.ts
  */
 import assert from "node:assert/strict";
-import { fitsLetter, nextLetter, PASSAPAROLA_LETTERS } from "../lib/passaparola";
+import { fitsLetter, nextLetter, PASSAPAROLA_LETTERS, toWheelArchive, wheelShareText } from "../lib/passaparola";
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -58,6 +58,21 @@ check("the wheel has the 21 letters of the Italian alphabet, 23 for German", () 
   // A German word starting with an umlaut fits its plain letter.
   assert.equal(fitsLetter("Übung", "U"), true);
   assert.equal(fitsLetter("Äpfel", "A"), true);
+});
+
+check("the archive is the 30 days before today, and a share names the mode and the day", () => {
+  const archive = toWheelArchive("2026-11-15", {
+    "2026-11-14": { right: 14, total: 21, finished: true, mode: "normal" },
+    "2026-11-13": { right: 3, total: 21, finished: false, mode: "hard" },
+  });
+  assert.equal(archive.length, 30);
+  assert.deepEqual(archive[0], { date: "2026-11-14", right: 14, total: 21, finished: true, mode: "normal" });
+  assert.deepEqual(archive[1], { date: "2026-11-13", right: 3, total: 21, finished: false, mode: "hard" });
+  assert.equal(archive[2].right, null);
+  assert.equal(
+    wheelShareText("Italian", "A2", "2026-11-14", "hard", 14, 21, "https://italiarena.com"),
+    "Italiarena Word Wheel 14/21 · Italian · A2 · Hard · 2026-11-14\nhttps://italiarena.com/word-wheel?lang=it&level=A2&day=2026-11-14"
+  );
 });
 
 console.log(`\n${passed} checks passed`);

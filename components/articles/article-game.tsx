@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Loader2, X } from "lucide-react";
 import { refreshDashboardAfterMatch } from "@/app/(app)/settings/actions";
+import { useHowToPlayOpen } from "@/components/how-to-play";
 import { ShareButton } from "@/components/share-button";
 import { SpeakButton } from "@/components/speak-button";
 import { Button } from "@/components/ui/button";
@@ -19,16 +20,21 @@ import {
   finishSprint,
   hasArticleGame,
   loadArticleStats,
+  loadSprintHistory,
   startSprint,
+  toSprintArchive,
   withArticle,
   type ArticleCard,
   type ArticleStats,
+  type SprintArchiveDay,
+  type SprintHistory,
   type SprintKind,
   type SprintResult,
   type SprintStart,
 } from "@/lib/articles";
 import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
 import { PREPOSITION_GAME_NAME, PREPOSITION_MS, PREPOSITION_RULES } from "@/lib/prepositions";
+import { formatPuzzleDay } from "@/lib/wordle";
 import { cn } from "@/lib/utils";
 import { fill, useT, useUiLanguage } from "@/components/ui-language-provider";
 import { pickLocalized } from "@/lib/i18n";
@@ -43,18 +49,28 @@ export function ArticleGame({
   language,
   initialLevel,
   initialStats,
+  initialHistory,
+  initialDay,
   kind = "article",
 }: {
   language: TargetLanguage;
   initialLevel: string;
   initialStats: ArticleStats | null;
+  initialHistory: SprintHistory | null;
+  initialDay: string | null;
   kind?: SprintKind;
 }) {
   const t = useT();
   const uiLanguage = useUiLanguage();
+  const helpOpen = useHowToPlayOpen();
   const [supabase] = useState(() => createClient());
   const [level, setLevel] = useState(initialLevel);
   const [stats, setStats] = useState(initialStats ?? NO_STATS);
+  const [archiveToday, setArchiveToday] = useState(initialHistory?.today ?? null);
+  const [archive, setArchive] = useState<SprintArchiveDay[]>(() =>
+    initialHistory ? toSprintArchive(initialHistory.today, initialHistory.days) : []
+  );
+  const [selectedDay, setSelectedDay] = useState<string | null>(initialDay);
   const [phase, setPhase] = useState<Phase>("ready");
   const [sprint, setSprint] = useState<SprintStart | null>(null);
   const [index, setIndex] = useState(0);
@@ -90,25 +106,42 @@ export function ArticleGame({
       // Missed nouns are new mistakes: the Stats page must not show its cached list.
       void refreshDashboardAfterMatch();
       setResult(sent.value);
+      const playedToday = !sprint.date || !archiveToday || sprint.date === archiveToday;
       setStats((old) => ({
         ...old,
         best: { ...old.best, [level]: Math.max(sent.value.best ?? 0, old.best[level] ?? 0) },
-        today: sprint.scored ? { ...old.today, [level]: sent.value.score } : old.today,
+        today: sprint.scored && playedToday ? { ...old.today, [level]: sent.value.score } : old.today,
       }));
+      if (sprint.date) {
+        setArchive((days) => days.map((day) => (day.date === sprint.date ? { ...day, score: sent.value.score } : day)));
+      }
     } else {
       setError(sent.error);
       // The answers may have arrived even though the reply did not: show what the server kept.
       void loadArticleStats(supabase, language, kind).then((fresh) => fresh && setStats(fresh));
     }
     setPhase("done");
-  }, [kind, language, level, sprint, supabase]);
+  }, [archiveToday, kind, language, level, sprint, supabase]);
 
-  async function start() {
+  useEffect(() => {
+    let cancel = false;
+    void loadSprintHistory(supabase, language, level, kind).then((history) => {
+      if (cancel || !history) return;
+      setArchiveToday(history.today);
+      setArchive(toSprintArchive(history.today, history.days));
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [kind, language, level, supabase]);
+
+  async function start(date: string | null = null) {
+    if (helpOpen) return;
     setPhase("starting");
     setError(null);
     setResult(null);
     setFeedback(null);
-    const started = await startSprint(supabase, language, level, kind);
+    const started = await startSprint(supabase, language, level, kind, date);
     if (!started.ok) {
       setError(started.error);
       setPhase("ready");
@@ -127,7 +160,7 @@ export function ArticleGame({
 
   const pick = useCallback(
     (article: string) => {
-      if (phase !== "playing" || !sprint || ended.current) {
+      if (phase !== "playing" || !sprint || ended.current || helpOpen) {
         return;
       }
       const current = sprint.cards[index];
@@ -135,7 +168,7 @@ export function ArticleGame({
       const picked = [...answers, article];
       setAnswers(picked);
       const nextStreak = right ? streak + 1 : 0;
-      const bonus = bonusAfter(nextStreak);
+      const bonus = bonusAfter(nextStreak, sprint.bonusMs ?? 1_000);
       if (bonus) {
         deadline.current += bonus;
         setBonusShown((shown) => shown + 1);
@@ -148,11 +181,26 @@ export function ArticleGame({
         setIndex(index + 1);
       }
     },
-    [answers, finish, index, phase, sprint, streak]
+    [answers, finish, helpOpen, index, phase, sprint, streak]
   );
 
   useEffect(() => {
     if (phase !== "playing") {
+      return;
+    }
+    // A phone call or app switch pauses the page, and answers sent after the
+    // clock count as 0 on the server: send what is answered as soon as it hides.
+    function onHide() {
+      if (document.visibilityState === "hidden") {
+        void finish(answers);
+      }
+    }
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+  }, [answers, finish, phase]);
+
+  useEffect(() => {
+    if (phase !== "playing" || helpOpen) {
       return;
     }
     const tick = window.setInterval(() => {
@@ -163,23 +211,12 @@ export function ArticleGame({
         setMsLeft(left);
       }
     }, 100);
-    // A phone call or app switch pauses the page, and answers sent after the
-    // clock count as 0 on the server: send what is answered as soon as it hides.
-    function onHide() {
-      if (document.visibilityState === "hidden") {
-        void finish(answers);
-      }
-    }
-    document.addEventListener("visibilitychange", onHide);
-    return () => {
-      window.clearInterval(tick);
-      document.removeEventListener("visibilitychange", onHide);
-    };
-  }, [answers, finish, phase]);
+    return () => window.clearInterval(tick);
+  }, [answers, finish, helpOpen, phase]);
 
   // Keys 1–4 on computers.
   useEffect(() => {
-    if (!card) {
+    if (!card || helpOpen) {
       return;
     }
     const keys = cardButtons(card, kind, language);
@@ -192,7 +229,7 @@ export function ArticleGame({
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [card, kind, language, pick]);
+  }, [card, helpOpen, kind, language, pick]);
 
   const played = sprint ? sprint.cards.slice(0, answers.length) : [];
   const rightCount = played.filter((played, i) => answers[i] === played.article).length;
@@ -210,10 +247,25 @@ export function ArticleGame({
 
   function chooseLevel(option: string) {
     setLevel(option);
+    setSelectedDay(null);
     setPhase("ready");
     setResult(null);
     setError(null);
   }
+
+  function backToToday() {
+    setSelectedDay(null);
+    setPhase("ready");
+    setSprint(null);
+    setResult(null);
+    setError(null);
+    setFeedback(null);
+  }
+
+  const viewingPast = Boolean(selectedDay && archiveToday && selectedDay !== archiveToday);
+  const pastDay = viewingPast ? (archive.find((day) => day.date === selectedDay) ?? { date: selectedDay!, score: null }) : null;
+  const sprintPast = Boolean(sprint?.date && archiveToday && sprint.date !== archiveToday);
+  const bonusSeconds = Math.round((sprint?.bonusMs ?? 1_000) / 1000);
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-5">
@@ -250,26 +302,42 @@ export function ArticleGame({
 
       {(phase === "ready" || phase === "starting") && (
         <div className="glass-panel space-y-4 p-5 text-center">
-          <div className="space-y-1">
-            <p className="font-semibold">
-              {today === undefined ? t("Today's Sprint · {level}", { level }) : t("Today's Sprint: {score}", { score: today })}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {kind === "preposition"
-                ? t("90 seconds · every {n} right in a row add a second", { n: BONUS_EVERY })
-                : t("60 seconds · every {n} right in a row add a second", { n: BONUS_EVERY })}
-              {best !== undefined && ` · ${t("best {n}", { n: best })}`}
-            </p>
-          </div>
-          <Button
-            type="button"
-            className="min-h-12 w-full text-base"
-            disabled={phase === "starting"}
-            onClick={() => void start()}
-          >
-            {phase === "starting" && <Loader2 className="size-4 animate-spin" />}
-            {today === undefined ? t("Start today's Sprint") : t("Practice")}
-          </Button>
+          {pastDay ? (
+            <div className="space-y-1">
+              <p className="font-semibold">
+                {formatPuzzleDay(pastDay.date, uiLanguage)} · {level}
+              </p>
+              {pastDay.score !== null && <p className="text-4xl font-bold tabular-nums">{pastDay.score}</p>}
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <p className="font-semibold">
+                {today === undefined ? t("Today's Sprint · {level}", { level }) : t("Today's Sprint: {score}", { score: today })}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {kind === "preposition"
+                  ? t("90 seconds · every {n} right in a row add 10 seconds", { n: BONUS_EVERY })
+                  : t("60 seconds · every {n} right in a row add a second", { n: BONUS_EVERY })}
+                {best !== undefined && ` · ${t("best {n}", { n: best })}`}
+              </p>
+            </div>
+          )}
+          {(!pastDay || pastDay.score === null) && (
+            <Button
+              type="button"
+              className="min-h-12 w-full text-base"
+              disabled={phase === "starting" || helpOpen}
+              onClick={() => void start(pastDay ? pastDay.date : null)}
+            >
+              {phase === "starting" && <Loader2 className="size-4 animate-spin" />}
+              {pastDay ? t("Start") : today === undefined ? t("Start today's Sprint") : t("Practice")}
+            </Button>
+          )}
+          {pastDay && (
+            <Button type="button" variant="outline" className="min-h-11" onClick={backToToday}>
+              {t("Back to today")}
+            </Button>
+          )}
           {error && (
             <p role="alert" className="text-sm font-medium text-destructive">
               {t(error)}
@@ -286,12 +354,12 @@ export function ArticleGame({
                 {Math.ceil(msLeft / 1000)}s
                 {bonusShown > 0 && (
                   <span key={bonusShown} className="ml-1.5 text-emerald-600 animate-out fade-out duration-1000 fill-mode-forwards dark:text-emerald-400">
-                    +1s
+                    +{bonusSeconds}s
                   </span>
                 )}
               </span>
               <span className="text-muted-foreground">
-                {sprint.scored ? t("Today's Sprint") : t("Practice")} · {level}
+                {sprintPast && sprint.date ? `${formatPuzzleDay(sprint.date, uiLanguage)} · ${level}` : `${sprint.scored ? t("Today's Sprint") : t("Practice")} · ${level}`}
               </span>
               <span className="font-semibold tabular-nums">{t("{n} right", { n: rightCount })}</span>
             </div>
@@ -344,7 +412,7 @@ export function ArticleGame({
                   <Check className="size-4" aria-hidden />
                   <span lang={code}>{shownAnswer(feedback.card, kind)}</span>
                   {streak > 0 && streak % BONUS_EVERY !== 0 && (
-                    <span className="text-muted-foreground"> · {t("{n}/{total} to +1s", { n: streak % BONUS_EVERY, total: BONUS_EVERY })}</span>
+                    <span className="text-muted-foreground"> · {t("{n}/{total} to +{seconds}s", { n: streak % BONUS_EVERY, total: BONUS_EVERY, seconds: bonusSeconds })}</span>
                   )}
                 </span>
               ) : (
@@ -368,7 +436,7 @@ export function ArticleGame({
         <div className="space-y-4">
           <div className="glass-panel space-y-2 p-5 text-center">
             <p className="text-sm font-medium text-muted-foreground">
-              {sprint.scored ? t("Today's Sprint") : t("Practice")} · {level}
+              {sprintPast && sprint.date ? `${formatPuzzleDay(sprint.date, uiLanguage)} · ${level}` : `${sprint.scored ? t("Today's Sprint") : t("Practice")} · ${level}`}
             </p>
             {result ? (
               <>
@@ -379,7 +447,7 @@ export function ArticleGame({
                     : `${t("right out of {n}", { n: answers.length })}${result.best !== null ? ` · ${t("best {n}", { n: result.best })}` : ""}`}
                 </p>
               </>
-            ) : sprint.scored && today !== undefined ? (
+            ) : sprint.scored && !sprintPast && today !== undefined ? (
               // A retry after a lost reply: the server had the answers all along.
               <p className="text-4xl font-bold tabular-nums">{today}</p>
             ) : (
@@ -399,17 +467,26 @@ export function ArticleGame({
                 </Button>
               </>
             )}
+            {sprintPast && (
+              <p className="text-xs text-muted-foreground">{t("Pick another day from the archive below.")}</p>
+            )}
             <div className="flex flex-wrap justify-center gap-2 pt-2">
               {sprint.scored && result && !result.rejected && (
                 <ShareButton
                   className="min-h-11"
                   description={t("Just your score: the link opens the same game for your friends.")}
-                  text={() => articleShareText(language, level, result.score, window.location.origin, kind)}
+                  text={() => articleShareText(language, level, result.score, window.location.origin, kind, sprint.date ?? archiveToday ?? undefined)}
                 />
               )}
-              <Button type="button" variant="outline" className="min-h-11" onClick={() => void start()}>
-                {t("Practice")}
-              </Button>
+              {sprintPast ? (
+                <Button type="button" variant="outline" className="min-h-11" onClick={backToToday}>
+                  {t("Back to today")}
+                </Button>
+              ) : (
+                <Button type="button" variant="outline" className="min-h-11" disabled={helpOpen} onClick={() => void start(null)}>
+                  {t("Practice")}
+                </Button>
+              )}
             </div>
           </div>
 
@@ -440,6 +517,40 @@ export function ArticleGame({
             </section>
           )}
         </div>
+      )}
+
+      {phase !== "playing" && phase !== "sending" && archive.length > 0 && (
+        <section className="space-y-2" aria-label={t("Archive")}>
+          <h2 className="text-sm font-semibold">{t("Archive · {level}", { level })}</h2>
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {archive.map((day) => (
+              <li key={day.date}>
+                <button
+                  type="button"
+                  disabled={phase === "starting"}
+                  onClick={() => {
+                    setSelectedDay(day.date);
+                    setPhase("ready");
+                    setSprint(null);
+                    setResult(null);
+                    setError(null);
+                    setFeedback(null);
+                  }}
+                  aria-current={selectedDay === day.date ? "true" : undefined}
+                  className={cn(
+                    "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted",
+                    selectedDay === day.date ? "border-primary" : "border-border"
+                  )}
+                >
+                  <span>{formatPuzzleDay(day.date, uiLanguage)}</span>
+                  <span className={cn("text-xs", day.score === null ? "font-medium text-primary" : "text-muted-foreground")}>
+                    {day.score === null ? t("Play") : day.score}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {kind === "article" && (

@@ -47,6 +47,10 @@ check("results read like the plan: Wordle 4/6 · Word Wheel 18/21 · Sprint 23",
   assert.deepEqual(todayResults(dario, "Italian"), []);
   assert.deepEqual(todayResults(you, "Italian")[1], { game: "il·lo·la", score: "30", level: "B1" });
   assert.deepEqual(
+    todayResults({ ...bea, word_wheel: { level: "A2", right: 18, total: 21, mode: "hard" } }, "German")[1],
+    { game: "Word Wheel", score: "18/21", level: "A2", mode: "hard" }
+  );
+  assert.deepEqual(
     todayResults(bea, "English").map((result) => result.game),
     ["Wordle", "Word Wheel"],
     "English has no article sprint"

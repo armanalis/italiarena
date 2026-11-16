@@ -1,7 +1,9 @@
 /** Daily Wordle: one puzzle per language, level and day, plus the archive. */
 import { WordleGame } from "@/components/wordle/wordle-game";
+import { HowToPlay } from "@/components/how-to-play";
 import { requireOnboardingComplete } from "@/lib/auth";
 import { DEFAULT_LANGUAGE, isProficiencyLevel, languageFromCode } from "@/lib/constants";
+import { tutorialSeen } from "@/lib/tutorial-progress";
 import { italyToday, playWordle } from "@/lib/wordle";
 import { createClient } from "@/utils/supabase/server";
 
@@ -16,6 +18,7 @@ export default async function WordlePage({
   const { lang, level: sharedLevel, day: sharedDay } = await searchParams;
   const supabase = await createClient();
   const sharedLanguage = lang ? languageFromCode(lang) : DEFAULT_LANGUAGE;
+  const seen = tutorialSeen(supabase, "wordle");
 
   const shared =
     sharedLanguage && sharedLevel && sharedDay && isProficiencyLevel(sharedLevel)
@@ -25,11 +28,14 @@ export default async function WordlePage({
   const language = shared?.ok ? sharedLanguage! : profile.target_language ?? DEFAULT_LANGUAGE;
   const level = shared?.ok ? sharedLevel! : profile.proficiency_level!;
   const initial = shared?.ok ? shared : await playWordle(supabase, language, level, italyToday(), null);
+  const wordleSeen = await seen;
 
   return (
     <main className="w-full flex-1 p-4 sm:p-8 lg:px-10">
-      {/* key: a language switch from the header must start a fresh game, not keep the old board. */}
-      <WordleGame key={language} language={language} initialLevel={level} initial={initial} />
+      <HowToPlay game="wordle" seen={wordleSeen} buttonClassName="mx-auto w-full max-w-lg">
+        {/* key: a language switch from the header must start a fresh game, not keep the old board. */}
+        <WordleGame key={language} language={language} initialLevel={level} initial={initial} />
+      </HowToPlay>
     </main>
   );
 }

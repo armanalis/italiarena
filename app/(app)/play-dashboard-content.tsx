@@ -19,6 +19,7 @@ import { FriendsTodayList } from "@/components/dashboard/friends-today";
 import { TodayRow } from "@/components/dashboard/today-row";
 import { OnlineLevelBadge } from "@/components/dashboard/online-players";
 import { WelcomeTour } from "@/components/dashboard/welcome-tour";
+import { HowToPlay } from "@/components/how-to-play";
 import { MatchmakingStartLink } from "@/components/matchmaking/matchmaking-start-link";
 import { getAdminQueueCounts } from "@/lib/admin-queue-counts";
 import { getT } from "@/lib/i18n-server";
@@ -28,6 +29,7 @@ import { loadFriendsToday } from "@/lib/friends-today";
 import { playPassaparola } from "@/lib/passaparola";
 import type { GameStreak } from "@/lib/push";
 import { italyToday, playWordle } from "@/lib/wordle";
+import { tutorialSeen } from "@/lib/tutorial-progress";
 import { ArrowRight, ShieldAlert, Swords, UserRound } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 
@@ -57,7 +59,7 @@ export async function PlayDashboardContent({
   const level = profile.proficiency_level;
   const language = profile.target_language;
   // Loads only: today's puzzles are not started or played from here.
-  const [{ data: streakRows }, { data: reviewDue }, stats, wordle, passaparola, articles, prepositions, friendsToday] = await Promise.all([
+  const [{ data: streakRows }, { data: reviewDue }, stats, wordle, passaparola, articles, prepositions, friendsToday, arenaSeen] = await Promise.all([
     supabase.rpc("get_my_streaks"),
     supabase.rpc("get_my_review_due_count", { p_language: language }),
     getPlayerStatistics(),
@@ -66,12 +68,14 @@ export async function PlayDashboardContent({
     hasArticleGame(language) ? loadArticleStats(supabase, language) : Promise.resolve(null),
     loadArticleStats(supabase, language, "preposition"),
     loadFriendsToday(supabase, language),
+    tutorialSeen(supabase, "arena"),
   ]);
   const streaks = Object.fromEntries(
     ((streakRows as GameStreak[] | null) ?? []).map((row) => [row.game, row])
   );
 
   return (
+    <HowToPlay game="arena" seen={arenaSeen} waitForWelcomeTour buttonClassName="px-4 pt-4 sm:px-8 lg:px-10 xl:px-12">
     <main className="flex w-full min-w-0 flex-1 flex-col">
       <WelcomeTour />
       <header className="page-intro w-full px-4 pt-5 sm:px-8 sm:pt-6 lg:px-10 xl:px-12">
@@ -178,5 +182,6 @@ export async function PlayDashboardContent({
         )}
       </div>
     </main>
+    </HowToPlay>
   );
 }

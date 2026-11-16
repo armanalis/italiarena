@@ -31,6 +31,18 @@ export function addDays(date: string, days: number): string {
     .slice(0, 10);
 }
 
+/** "YYYY-MM-DD" from a shared link. Anything else is ignored. */
+export function isIsoDate(value: string | undefined): value is string {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+}
+
+/** "6 Nov": the puzzle's own day, whatever the device's time zone. */
+export function formatPuzzleDay(date: string, language: string): string {
+  return new Intl.DateTimeFormat(language, { day: "numeric", month: "short", timeZone: "UTC" }).format(
+    new Date(`${date}T00:00:00Z`)
+  );
+}
+
 export function puzzleNumber(date: string): number {
   return (
     Math.round(

@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronRight, Clock, Loader2, SkipForward, X } from "lucide-react";
+import { useHowToPlayOpen } from "@/components/how-to-play";
 import { SpeakButton } from "@/components/speak-button";
+import { ShareButton } from "@/components/share-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
@@ -16,10 +18,14 @@ import {
   PASSAPAROLA_LETTERS,
   PASSAPAROLA_PASS_WORD,
   playPassaparola,
+  wheelShareText,
   type PassaparolaMark,
   type PassaparolaTurnResult,
   type PassaparolaView,
+  type WheelArchiveDay,
+  type WheelMode,
 } from "@/lib/passaparola";
+import { formatPuzzleDay } from "@/lib/wordle";
 import { createClient } from "@/utils/supabase/client";
 
 type Move = Parameters<typeof playPassaparola>[3];
@@ -47,6 +53,16 @@ function lettersOf(view: PassaparolaView) {
   return view.clues.map((clue) => clue.letter);
 }
 
+function patchWheelArchive(days: WheelArchiveDay[], view: PassaparolaView): WheelArchiveDay[] {
+  const letters = lettersOf(view);
+  const right = letters.filter((letter) => view.marks[letter] === "right").length;
+  return days.map((day) =>
+    day.date === view.date
+      ? { date: day.date, right, total: letters.length, finished: view.finished, mode: view.mode ?? day.mode }
+      : day
+  );
+}
+
 // The answer field is found through its form, so no ref has to be passed around.
 function focusAnswer(form: HTMLFormElement | null) {
   (form?.elements.namedItem("answer") as HTMLInputElement | null)?.focus();
@@ -67,9 +83,12 @@ export function PassaparolaGame({
 }) {
   const t = useT();
   const uiLanguage = useUiLanguage();
+  const helpOpen = useHowToPlayOpen();
   const [supabase] = useState(createClient);
   const [level, setLevel] = useState(initialLevel);
+  const [mode, setMode] = useState<WheelMode>("normal");
   const [view, setView] = useState<PassaparolaView | null>(initial.ok ? initial.view : null);
+  const [archive, setArchive] = useState<WheelArchiveDay[]>(initial.ok ? initial.archive ?? [] : []);
   const [current, setCurrent] = useState(() =>
     initial.ok ? nextLetter(lettersOf(initial.view), initial.view.marks, null) : null
   );
@@ -93,6 +112,11 @@ export function PassaparolaGame({
   const locked = playing || countdown !== null;
   // Leaving during the 3-2-1 must not start today's only clock in the background.
   const leftRef = useRef(false);
+  const helpRef = useRef(false);
+  const endRef = useRef(0);
+  useEffect(() => {
+    helpRef.current = helpOpen;
+  }, [helpOpen]);
   useEffect(() => {
     leftRef.current = false;
     return () => {
@@ -110,6 +134,7 @@ export function PassaparolaGame({
       return result;
     }
     setView(result.view);
+    setArchive(result.archive ?? ((days) => patchWheelArchive(days, result.view)));
     setLevel(result.view.level);
     setMsLeft(result.view.msLeft);
     setCurrent(nextLetter(lettersOf(result.view), result.view.marks, after));
@@ -117,15 +142,21 @@ export function PassaparolaGame({
     return result;
   }
 
-  // Counts down from the server's figure. At zero the server has ended the
-  // game too, so one more load brings the answers.
   useEffect(() => {
-    if (!view?.started || view.finished) {
+    if (view?.started && !view.finished) {
+      endRef.current = Date.now() + view.msLeft;
+    }
+  }, [view]);
+
+  // Counts down from the server's figure. While how-to-play is open the numbers
+  // stay put; closing catches up to the same deadline, so no time is added.
+  // At zero the server has ended the game too, so one more load brings the answers.
+  useEffect(() => {
+    if (helpOpen || !view?.started || view.finished) {
       return;
     }
-    const end = Date.now() + view.msLeft;
     const timer = setInterval(() => {
-      const left = Math.max(0, end - Date.now());
+      const left = Math.max(0, endRef.current - Date.now());
       setMsLeft(left);
       if (left === 0) {
         clearInterval(timer);
@@ -133,6 +164,7 @@ export function PassaparolaGame({
           if (result.ok) {
             setView(result.view);
             setMsLeft(result.view.msLeft);
+            if (result.archive) setArchive(result.archive);
           } else {
             setMessage({ text: t(result.error), tone: "wrong" });
           }
@@ -140,19 +172,25 @@ export function PassaparolaGame({
       }
     }, 250);
     return () => clearInterval(timer);
-  }, [language, supabase, t, view]);
+  }, [helpOpen, language, supabase, t, view]);
 
   async function begin() {
+    if (helpRef.current || !view) return;
     setPassed(new Set());
     for (const second of [3, 2, 1]) {
+      if (helpRef.current) {
+        setCountdown(null);
+        return;
+      }
       setCountdown(second);
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
-    if (leftRef.current) {
+    if (leftRef.current || helpRef.current) {
+      setCountdown(null);
       return;
     }
     // The clock starts only now, so the countdown costs no playing time.
-    await send(level, { start: true }, null);
+    await send(level, { date: view.date, start: true, mode }, null);
     setCountdown(null);
   }
 
@@ -191,9 +229,15 @@ export function PassaparolaGame({
       setInput("");
       const mark = result.view.marks[letter];
       if (mark) {
+        const spelling = result.view.near.includes(letter) ? result.view.spelling[letter] : undefined;
         setMessage(
           mark === "right"
-            ? { text: t("{letter}: correct!", { letter }), tone: "right" }
+            ? {
+                text: spelling
+                  ? `${t("{letter}: correct!", { letter })} ${t("The right spelling is {word}.", { word: spelling })}`
+                  : t("{letter}: correct!", { letter }),
+                tone: "right",
+              }
             : { text: t("{letter}: wrong. You will see the answer at the end.", { letter }), tone: "wrong" }
         );
       }
@@ -271,6 +315,18 @@ export function PassaparolaGame({
           ))}
       </div>
 
+      {view?.today && view.date !== view.today && (
+        <div className="flex items-center justify-between gap-3 text-sm">
+          <span className="font-medium">
+            {formatPuzzleDay(view.date, uiLanguage)} · {view.level}
+            {view.mode ? ` · ${t(view.mode === "hard" ? "Hard" : "Normal")}` : ""}
+          </span>
+          <Button type="button" size="sm" variant="ghost" disabled={pending || locked} onClick={() => void send(level, {}, null)}>
+            {t("Back to today")}
+          </Button>
+        </div>
+      )}
+
       {/*
         Wide screens: wheel left, play area right; once the game is over, score
         and wheel left, every answer right. The wheel never grows taller than the
@@ -296,8 +352,30 @@ export function PassaparolaGame({
                   ? t("Perfetto! Every letter right.")
                   : t("{right} of {total} right.", { right, total: letters.length })}
               </p>
-              <p className="text-xs text-muted-foreground">{t("A new board comes tomorrow. Try another level above.")}</p>
+              {view.mode && (
+                <p className="text-xs font-medium text-muted-foreground">{t(view.mode === "hard" ? "Hard" : "Normal")}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {view.today && view.date !== view.today
+                  ? t("Pick another day from the archive below.")
+                  : t("A new board comes tomorrow. Try another level above.")}
+              </p>
               {counts}
+              <ShareButton
+                className="min-h-11"
+                description={t("Just your score: the link opens the same game for your friends.")}
+                text={() =>
+                  wheelShareText(
+                    language,
+                    view.level,
+                    view.date,
+                    view.mode,
+                    right,
+                    letters.length,
+                    window.location.origin
+                  )
+                }
+              />
             </div>
           )}
 
@@ -376,7 +454,29 @@ export function PassaparolaGame({
                 </li>
                 <li>{t("A wrong answer turns red; you see the right answers at the end.")}</li>
               </ul>
-              <Button type="button" size="lg" disabled={pending || countdown !== null} onClick={() => void begin()}>
+              <div className="flex justify-center gap-2" role="group" aria-label={t("Mode")}>
+                {(["normal", "hard"] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={mode === option}
+                    disabled={pending || countdown !== null}
+                    onClick={() => setMode(option)}
+                    className={cn(
+                      "min-h-11 rounded-full border px-4 text-sm font-medium transition-colors",
+                      mode === option
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-transparent text-foreground hover:bg-muted"
+                    )}
+                  >
+                    {t(option === "hard" ? "Hard" : "Normal")}
+                  </button>
+                ))}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {t("Normal mode forgives one wrong letter in a word. Hard mode wants the exact word.")}
+              </p>
+              <Button type="button" size="lg" disabled={pending || countdown !== null || helpOpen} onClick={() => void begin()}>
                 {t("Start")}
               </Button>
             </div>
@@ -485,6 +585,11 @@ export function PassaparolaGame({
                       ) : (
                         <span className="block text-xs text-muted-foreground">{t("Not answered")}</span>
                       )}
+                      {view.near.includes(item.letter) && view.spelling[item.letter] && (
+                        <span className="block text-xs text-muted-foreground">
+                          {t("The right spelling is {word}.", { word: view.spelling[item.letter] })}
+                        </span>
+                      )}
                     </span>
                     {view.answers?.[item.letter] && (
                       <SpeakButton
@@ -511,6 +616,45 @@ export function PassaparolaGame({
           {playing && counts}
         </div>
       </div>
+
+      {archive.length > 0 && !playing && (
+        <section className="space-y-2" aria-label={t("Archive")}>
+          <h2 className="text-sm font-semibold">{t("Archive · {level}", { level })}</h2>
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {archive.map((day) => (
+              <li key={day.date}>
+                <button
+                  type="button"
+                  disabled={pending || locked}
+                  onClick={() => {
+                    setPassed(new Set());
+                    void send(level, { date: day.date }, null);
+                  }}
+                  aria-current={view?.date === day.date ? "true" : undefined}
+                  className={cn(
+                    "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted",
+                    view?.date === day.date ? "border-primary" : "border-border"
+                  )}
+                >
+                  <span>{formatPuzzleDay(day.date, uiLanguage)}</span>
+                  <span
+                    className={cn(
+                      "text-xs",
+                      day.right === null ? "font-medium text-primary" : "text-muted-foreground"
+                    )}
+                  >
+                    {day.right === null
+                      ? t("Play")
+                      : day.finished
+                        ? `${day.right}/${day.total}${day.mode ? ` · ${t(day.mode === "hard" ? "Hard" : "Normal")}` : ""}`
+                        : t("In progress")}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {countdown !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm">

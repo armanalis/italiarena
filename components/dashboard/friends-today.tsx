@@ -24,10 +24,11 @@ export function FriendsTodayList({ rows, language }: { rows: FriendToday[]; lang
           <span className="min-w-0 flex-1">
             <span className="block truncate font-medium">{row.display_name}</span>
             <span className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-              {todayResults(row, language).map(({ game, score, level }) => (
+              {todayResults(row, language).map(({ game, score, level, mode }) => (
                 <span key={game}>
                   <span className="font-medium text-foreground">
                     {t(game)} {score}
+                    {mode ? ` · ${t(mode === "hard" ? "Hard" : "Normal")}` : ""}
                   </span>{" "}
                   {level}
                 </span>

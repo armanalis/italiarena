@@ -1,9 +1,12 @@
 /** One Picture Duel: the host's lobby with the link, the friend's invitation, then the game and its results. */
 import { PictureDuelRoom } from "@/components/picture-duel/picture-duel-room";
+import { HowToPlay } from "@/components/how-to-play";
 import { requireOnboardingComplete } from "@/lib/auth";
 import type { PictureDuel } from "@/lib/picture-duel";
+import { tutorialSeen } from "@/lib/tutorial-progress";
 import { getServerSiteUrl } from "@/lib/site-url-server";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { createClient } from "@/utils/supabase/server";
 
 export default async function PictureDuelRoomPage({ params }: { params: Promise<{ id: string }> }) {
   const profile = await requireOnboardingComplete();
@@ -14,9 +17,12 @@ export default async function PictureDuelRoomPage({ params }: { params: Promise<
   const duel = data as PictureDuel | null;
   const isPlayer = Boolean(duel && (duel.host_id === profile.id || duel.guest_id === profile.id));
 
+  const seen = await tutorialSeen(await createClient(), "picture_duel");
+
   return (
     <main className="w-full flex-1 p-4 sm:p-8 lg:px-10">
-      <PictureDuelRoom
+      <HowToPlay game="picture_duel" seen={seen} buttonClassName="mx-auto w-full max-w-lg">
+        <PictureDuelRoom
         // A rematch opens another duel on this same page: start its screen fresh.
         key={id}
         me={profile.id}
@@ -37,6 +43,7 @@ export default async function PictureDuelRoomPage({ params }: { params: Promise<
         }
         link={`${await getServerSiteUrl()}/picture-duel/${id}`}
       />
+      </HowToPlay>
     </main>
   );
 }
