@@ -23,4 +23,25 @@ for (const [next, expected] of cases) {
   assert.equal(resolveAuthNextPath(next, origin), expected, JSON.stringify(next));
 }
 
+// The live origin too: it once had its own, looser rule.
+const live = "https://italiarena.com";
+const liveCases: [string, string | null][] = [
+  ["/stats", "/stats"],
+  ["https://www.italiarena.com/stats", "/stats"],
+  // Same site, but the path "//evil.example/login" is another site as a redirect target.
+  ["https://italiarena.com//evil.example/login", null],
+  ["https://evil.example/login", null],
+  ["//evil.example/x", null],
+  ["/\\evil.example", null],
+];
+
+for (const [next, expected] of liveCases) {
+  const path = resolveAuthNextPath(next, live);
+  assert.equal(path, expected, JSON.stringify(next));
+  if (path) {
+    // What /auth/sign-out does with it.
+    assert.equal(new URL(path, live).origin, live, JSON.stringify(next));
+  }
+}
+
 console.log("auth next path OK");

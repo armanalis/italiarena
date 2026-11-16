@@ -163,186 +163,69 @@ export async function getAdminReviewQueue(): Promise<AdminReviewQuestion[]> {
   return queue;
 }
 
-async function clearQuestionReports(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  questionId: string
-) {
-  const { error } = await supabase
-    .from("reports")
-    .delete()
-    .eq("question_id", questionId);
-
-  if (error) {
-    return { success: false as const, error: error.message };
-  }
-
-  return { success: true as const };
-}
-
-export async function dismissReportedQuestion(
-  questionId: string
+/**
+ * Each move of a reported question is one database function (admin_*), so it
+ * happens whole or not at all: the question, its quarantine copy and its
+ * reports can never disagree.
+ */
+async function runQuestionMove(
+  fn:
+    | "admin_dismiss_reported_question"
+    | "admin_approve_reported_question"
+    | "admin_delete_reported_question",
+  args: Record<string, string>
 ): Promise<AdminActionResult> {
   await requireAdmin();
 
-  const supabase = await getPrivilegedSupabase();
-  const { data: flaggedRow } = await supabase
-    .from("questions_flagged")
-    .select("*")
-    .eq("id", questionId)
-    .maybeSingle();
-  const flagged = flaggedRow as QuestionFlagged | null;
+  // Loosely typed: these functions are not in the hand-written database types.
+  const supabase: Awaited<ReturnType<typeof createClient>> = await getPrivilegedSupabase();
+  const { error } = await supabase.rpc(fn, args);
 
-  if (flagged) {
-    const { error: insertError } = await supabase
-      .from("questions_active")
-      .insert({
-        id: flagged.id,
-        language: flagged.language,
-        level: flagged.level,
-        category: flagged.category,
-        question_text: flagged.question_text,
-        option_a: flagged.option_a,
-        option_b: flagged.option_b,
-        option_c: flagged.option_c,
-        option_d: flagged.option_d,
-        correct_answer: flagged.correct_answer,
-        random_float: flagged.random_float,
-        text_tr: flagged.text_tr ?? null,
-        text_it: flagged.text_it ?? null,
-      });
-
-    if (insertError) {
-      return { success: false, error: insertError.message };
-    }
-
-    const { error: deleteFlaggedError } = await supabase
-      .from("questions_flagged")
-      .delete()
-      .eq("id", questionId);
-
-    if (deleteFlaggedError) {
-      return { success: false, error: deleteFlaggedError.message };
-    }
-  } else {
-    const { data: active } = await supabase
-      .from("questions_active")
-      .select("id")
-      .eq("id", questionId)
-      .maybeSingle();
-
-    if (!active) {
-      return { success: false, error: "Reported question not found." };
-    }
-  }
-
-  const cleared = await clearQuestionReports(supabase, questionId);
-  if (!cleared.success) {
-    return cleared;
+  if (error) {
+    return {
+      success: false,
+      error: error.message.includes("QUESTION_NOT_FOUND")
+        ? "Reported question not found."
+        : error.message,
+    };
   }
 
   revalidatePath("/admin");
   return { success: true };
 }
 
+/** Back into play as it is; its reports are closed. */
+export async function dismissReportedQuestion(
+  questionId: string
+): Promise<AdminActionResult> {
+  return runQuestionMove("admin_dismiss_reported_question", {
+    p_question_id: questionId,
+  });
+}
+
+/** Back into play with the admin's corrections; clears its cached AI explanations. */
 export async function approveReportedQuestion(
   questionId: string,
   updates: FlaggedQuestionUpdate
 ): Promise<AdminActionResult> {
-  await requireAdmin();
-
-  const supabase = await getPrivilegedSupabase();
-  const { data: flaggedRow } = await supabase
-    .from("questions_flagged")
-    .select("*")
-    .eq("id", questionId)
-    .maybeSingle();
-  const { data: activeRow } = await supabase
-    .from("questions_active")
-    .select("*")
-    .eq("id", questionId)
-    .maybeSingle();
-  const flagged = flaggedRow as QuestionFlagged | null;
-  const active = activeRow as QuestionFlagged | null;
-
-  const source = flagged ?? active;
-
-  if (!source) {
-    return { success: false, error: "Reported question not found." };
-  }
-
-  const payload = {
-    id: source.id,
-    language: source.language,
-    level: source.level,
-    category: source.category as QuestionCategory,
-    question_text: updates.question_text.trim(),
-    option_a: updates.option_a.trim(),
-    option_b: updates.option_b.trim(),
-    option_c: updates.option_c.trim(),
-    option_d: updates.option_d.trim(),
-    correct_answer: updates.correct_answer,
-    random_float: source.random_float,
-    // Its Turkish and Italian were made for the old texts: English until they are translated again.
-    text_tr: null,
-    text_it: null,
-  };
-
-  if (active) {
-    const { error: updateError } = await supabase
-      .from("questions_active")
-      .update(payload)
-      .eq("id", questionId);
-
-    if (updateError) {
-      return { success: false, error: updateError.message };
-    }
-  } else {
-    const { error: insertError } = await supabase
-      .from("questions_active")
-      .insert(payload);
-
-    if (insertError) {
-      return { success: false, error: insertError.message };
-    }
-  }
-
-  if (flagged) {
-    const { error: deleteFlaggedError } = await supabase
-      .from("questions_flagged")
-      .delete()
-      .eq("id", questionId);
-
-    if (deleteFlaggedError) {
-      return { success: false, error: deleteFlaggedError.message };
-    }
-  }
-
-  const cleared = await clearQuestionReports(supabase, questionId);
-  if (!cleared.success) {
-    return cleared;
-  }
-
-  revalidatePath("/admin");
-  return { success: true };
+  return runQuestionMove("admin_approve_reported_question", {
+    p_question_id: questionId,
+    p_question_text: updates.question_text,
+    p_option_a: updates.option_a,
+    p_option_b: updates.option_b,
+    p_option_c: updates.option_c,
+    p_option_d: updates.option_d,
+    p_correct_answer: updates.correct_answer,
+  });
 }
 
+/** Removed for good, from play and from quarantine. */
 export async function deleteReportedQuestion(
   questionId: string
 ): Promise<AdminActionResult> {
-  await requireAdmin();
-
-  const supabase = await getPrivilegedSupabase();
-
-  const cleared = await clearQuestionReports(supabase, questionId);
-  if (!cleared.success) {
-    return cleared;
-  }
-
-  await supabase.from("questions_flagged").delete().eq("id", questionId);
-  await supabase.from("questions_active").delete().eq("id", questionId);
-
-  revalidatePath("/admin");
-  return { success: true };
+  return runQuestionMove("admin_delete_reported_question", {
+    p_question_id: questionId,
+  });
 }
 
 export type AdminSubmissionReview = QuestionSubmission & {

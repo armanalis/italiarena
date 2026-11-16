@@ -9,12 +9,8 @@ import {
   type MatchRoundReview,
 } from "@/lib/match-score-state";
 import { extractQuestionIds } from "@/lib/session-playlist";
-import { REGULAR_MATCH_QUESTIONS } from "@/lib/match";
-import {
-  getOptionText,
-  localizeQuestion,
-  normalizeQuestionCategory,
-} from "@/lib/resolve-match-questions";
+import { normalizeQuestionCategory, REGULAR_MATCH_QUESTIONS } from "@/lib/match";
+import { getOptionText, localizeQuestion } from "@/lib/resolve-match-questions";
 import { resolveQuestionsWithAnswers } from "@/lib/questions-with-answers";
 import { getUiLanguage } from "@/lib/i18n-server";
 import type { UiLanguage } from "@/lib/i18n";

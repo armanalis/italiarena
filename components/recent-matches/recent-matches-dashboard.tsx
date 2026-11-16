@@ -14,7 +14,7 @@ import { ReportQuestionButton } from "@/components/match/report-question-button"
 import { SpeakButton } from "@/components/speak-button";
 import { isTargetLanguage, type TargetLanguage } from "@/lib/constants";
 import { MAX_AI_ASKS_PER_MATCH } from "@/lib/ai-explanations";
-import { normalizeQuestionCategory } from "@/lib/resolve-match-questions";
+import { normalizeQuestionCategory } from "@/lib/match";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

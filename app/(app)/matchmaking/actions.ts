@@ -12,7 +12,6 @@ import { GHOST_PLAYER_ID, GHOST_PLAYER_NAME } from "@/lib/ghost";
 import {
   REGULAR_MATCH_QUESTIONS,
   buildMatchPlaylist,
-  splitSessionQuestions,
 } from "@/lib/match";
 import {
   buildQuestionPlaylistPayload,
@@ -97,9 +96,8 @@ async function fetchQuestionsByIds(ids: string[]): Promise<PublicQuestion[]> {
 }
 
 async function resolveSessionQuestions(questionIds: string[]) {
-  const allQuestions = await fetchQuestionsByIds(questionIds);
-  const { regular } = splitSessionQuestions(allQuestions);
-  return regular;
+  // Without a sudden-death question appended as an 11th entry.
+  return (await fetchQuestionsByIds(questionIds)).slice(0, REGULAR_MATCH_QUESTIONS);
 }
 
 async function markQuestionsSeen(userId: string, questionIds: string[]) {
@@ -519,6 +517,15 @@ export async function createChallenge(
   const { profile } = auth;
   const language = profile.target_language!;
   const level = profile.proficiency_level!;
+
+  // One open challenge per player: a new one closes the one before, so
+  // calling this in a loop cannot pile up rows (as for bot matches).
+  await (await createClient())
+    .from("game_sessions")
+    .update({ status: "abandoned" })
+    .eq("player_a_id", profile.id)
+    .eq("status", "waiting")
+    .eq("is_private", true);
 
   let matchQuestions;
   try {

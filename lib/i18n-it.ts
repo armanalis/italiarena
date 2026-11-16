@@ -584,7 +584,7 @@ export const IT: Record<string, string> = {
   "Sorted by total points earned, then win rate, then matches played.": "Ordinati per punti totali, poi per percentuale di vittorie, poi per partite giocate.",
   "Statistics": "Statistiche",
   "Statistics reset.": "Statistiche azzerate.",
-  "This clears your wins, losses, accuracy by category, match history, leaderboard standing, and seen-question memory in every language you play. You cannot undo this.": "Questo cancella vittorie, sconfitte, precisione per categoria, cronologia delle partite, posizione in classifica e memoria delle domande viste in ogni lingua che giochi. Non si può annullare.",
+  "This clears your wins, losses, accuracy by category, match history, leaderboard standing, seen-question memory, and your saved mistakes with their review schedule, in every language you play. You cannot undo this.": "Questo cancella vittorie, sconfitte, precisione per categoria, cronologia delle partite, posizione in classifica, memoria delle domande viste e i tuoi errori salvati con il loro calendario di ripasso, in ogni lingua che giochi. Non si può annullare.",
   "Today's review": "Ripasso di oggi",
   "Top players": "Migliori giocatori",
   "Total points": "Punti totali",

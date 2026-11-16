@@ -24,19 +24,6 @@
   ],
   "headers": [
     {
-      "source": "/sounds/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        },
-        {
-          "key": "CDN-Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
       "source": "/(.*\\.(?:mp3|wav|ogg|webp|ico|svg|png|jpg|jpeg|gif|woff2?))",
       "headers": [
         {
