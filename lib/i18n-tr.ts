@@ -1115,5 +1115,9 @@ export const TR: Record<string, string> = {
   "Whoever runs out of time first loses. In hard mode you must type the article too.": "Süresi önce biten kaybeder. Zor modda artikeli de yazman gerekir.",
   "90 seconds · every {n} right in a row add 10 seconds": "90 saniye · art arda her {n} doğru 10 saniye ekler",
   "{n}/{total} to +{seconds}s": "+{seconds} sn için {n}/{total}",
+  "That day is not in the archive.": "O gün arşivde yok.",
+  "You already played this Sprint.": "Bu Sprint'i zaten oynadın.",
+  "Mode": "Mod",
+  "The right spelling is {word}.": "Doğru yazılışı: {word}.",
   // End of the how-to-play texts.
 };
