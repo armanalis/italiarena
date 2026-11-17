@@ -293,17 +293,37 @@ export async function loadSprintHistory(
   return { today: row.today, days };
 }
 
+/** A finish that has not answered by then is a failure the player can retry. */
+const FINISH_TIMEOUT_MS = 20_000;
+
+/**
+ * Checkpoint of in-progress answers. A finish that arrives after the clock
+ * scores the last save instead of 0. Late or failed saves are ignored.
+ */
+export function saveSprint(supabase: SupabaseClient, runId: number, answers: string[]): void {
+  void Promise.resolve(supabase.rpc("article_sprint_save", { p_run_id: runId, p_answers: answers })).then(
+    () => undefined,
+    () => undefined
+  );
+}
+
 /** `answers[i]` is the article picked for card i. */
 export async function finishSprint(
   supabase: SupabaseClient,
   runId: number,
   answers: string[]
 ): Promise<Result<SprintResult>> {
-  const { data, error } = await supabase.rpc("article_sprint_finish", {
-    p_run_id: runId,
-    p_answers: answers,
-  });
-  return error || !data ? { ok: false, error: errorMessage(error?.message) } : { ok: true, value: data as SprintResult };
+  try {
+    const { data, error } = await supabase
+      .rpc("article_sprint_finish", {
+        p_run_id: runId,
+        p_answers: answers,
+      })
+      .abortSignal(AbortSignal.timeout(FINISH_TIMEOUT_MS));
+    return error || !data ? { ok: false, error: errorMessage(error?.message) } : { ok: true, value: data as SprintResult };
+  } catch {
+    return { ok: false, error: errorMessage() };
+  }
 }
 
 export async function loadArticleStats(
