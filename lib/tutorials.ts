@@ -29,7 +29,7 @@ export const TUTORIALS: Record<TutorialGame, { title: string; steps: string[] }>
     title: "How the Word Wheel works",
     steps: [
       "You get one clue for every letter and 5 minutes for the whole wheel. The answer starts with that letter.",
-      "Type the word and press Enter. You can skip a letter: it comes back when the others are done.",
+      "Type the word and press Enter. Type {pass} to skip a letter; it comes back when the others are done. Type {finish} to finish early.",
       "Normal mode forgives one wrong letter in a word. Hard mode wants the exact word.",
       "There is one wheel a day for each level. Past days are in the list under the game.",
     ],

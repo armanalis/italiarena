@@ -12,11 +12,13 @@ import { cn } from "@/lib/utils";
 import { fill, useT, useUiLanguage } from "@/components/ui-language-provider";
 import { pickLocalized } from "@/lib/i18n";
 import {
+  finishWord,
   fitsLetter,
+  isFinishCommand,
+  isPassCommand,
   nextLetter,
-  PASSAPAROLA_FINISH_WORD,
   PASSAPAROLA_LETTERS,
-  PASSAPAROLA_PASS_WORD,
+  passWord,
   playPassaparola,
   wheelShareText,
   type PassaparolaMark,
@@ -214,11 +216,11 @@ export function PassaparolaGame({
     if (!view || !letter || pending || !typed) {
       return;
     }
-    if (typed.toLowerCase() === PASSAPAROLA_PASS_WORD) {
+    if (isPassCommand(typed, language)) {
       pass(form);
       return;
     }
-    if (typed.toLowerCase() === PASSAPAROLA_FINISH_WORD) {
+    if (isFinishCommand(typed, language)) {
       if ((await send(view.level, { date: view.date, finish: true }, null)).ok) {
         setInput("");
       }
@@ -443,13 +445,13 @@ export function PassaparolaGame({
               <ul className="space-y-1.5 text-left text-sm">
                 <li>{t("Type the {language} word starting with the letter and press Enter.", { language: t(language) })}</li>
                 <li>
-                  {fill(t("Type {word} or press Skip to skip a letter; it comes back once the others are done."), {
-                    word: <Keyword word={PASSAPAROLA_PASS_WORD} className="text-amber-500" />,
+                  {fill(t("Type {word} or press {word} to skip a letter; it comes back once the others are done."), {
+                    word: <Keyword word={passWord(language)} className="text-amber-500" />,
                   })}
                 </li>
                 <li>
                   {fill(t("Type {word} to finish early."), {
-                    word: <Keyword word={PASSAPAROLA_FINISH_WORD} className="text-red-500" />,
+                    word: <Keyword word={finishWord(language)} className="text-red-500" />,
                   })}
                 </li>
                 <li>{t("A wrong answer turns red; you see the right answers at the end.")}</li>
@@ -516,7 +518,7 @@ export function PassaparolaGame({
                     if (pending) {
                       return;
                     }
-                    if (!fitsLetter(event.target.value, current)) {
+                    if (!fitsLetter(event.target.value, current, language)) {
                       setMessage({ text: t("Type a word starting with {letter}.", { letter: current }), tone: "wrong" });
                       return;
                     }
@@ -533,7 +535,7 @@ export function PassaparolaGame({
                   className="flex h-11 shrink-0 items-center gap-1 rounded-xl bg-amber-400 px-4 text-sm font-bold uppercase tracking-wide text-black transition-colors hover:bg-amber-300 disabled:opacity-60"
                 >
                   <ChevronRight className="size-4" aria-hidden />
-                  {t("Skip")}
+                  <span lang={LANGUAGE_META[language].code}>{passWord(language)}</span>
                 </button>
               </form>
             </>
@@ -664,12 +666,12 @@ export function PassaparolaGame({
             <ul className="space-y-1 text-left text-sm">
               <li>
                 {fill(t("Stuck? Type {word} to skip a letter."), {
-                  word: <Keyword word={PASSAPAROLA_PASS_WORD} className="text-amber-500" />,
+                  word: <Keyword word={passWord(language)} className="text-amber-500" />,
                 })}
               </li>
               <li>
                 {fill(t("Done? Type {word} to finish early."), {
-                  word: <Keyword word={PASSAPAROLA_FINISH_WORD} className="text-red-500" />,
+                  word: <Keyword word={finishWord(language)} className="text-red-500" />,
                 })}
               </li>
             </ul>
