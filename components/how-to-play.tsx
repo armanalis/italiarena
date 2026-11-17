@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useT } from "@/components/ui-language-provider";
+import type { Vars } from "@/lib/i18n";
 import { markTutorialSeen } from "@/lib/tutorial-progress";
 import { TUTORIALS, type TutorialGame } from "@/lib/tutorials";
 import { hasSeenWelcomeTour, WELCOME_TOUR_EVENT } from "@/lib/welcome-tour";
@@ -44,6 +45,7 @@ export function HowToPlay({
   children,
   buttonClassName,
   waitForWelcomeTour = false,
+  vars,
 }: {
   game: TutorialGame;
   /** From get_my_tutorials(). True also when that call failed, so play is not blocked. */
@@ -52,6 +54,8 @@ export function HowToPlay({
   buttonClassName?: string;
   /** The Arena home waits until the welcome tour has closed. */
   waitForWelcomeTour?: boolean;
+  /** Filled into a step, such as the Word Wheel's skip and stop words. */
+  vars?: Vars;
 }) {
   const t = useT();
   const tourSeen = useWelcomeTourSeen();
@@ -87,7 +91,7 @@ export function HowToPlay({
                 {t("Step {n} of {total}", { n: step + 1, total: tutorial.steps.length })}
               </p>
               <DialogTitle className="text-lg font-semibold">{t(tutorial.title)}</DialogTitle>
-              <DialogDescription className="leading-relaxed">{t(tutorial.steps[step])}</DialogDescription>
+              <DialogDescription className="leading-relaxed">{t(tutorial.steps[step], vars)}</DialogDescription>
             </DialogHeader>
             <DialogFooter>
               {step === 0 ? (

@@ -18,11 +18,46 @@ export const PASSAPAROLA_LETTERS: Record<TargetLanguage, string[]> = {
 
 /**
  * Typed instead of an answer: pass the letter, or end the game early.
- * KEEP IN SYNC with the check in the clue loaders (tmp/passaparola/build.py)
- * (no clue may have these as answers).
+ * The words are the language being played. skip and stop stay accepted too.
+ * KEEP IN SYNC with the clue banks (tmp/passaparola/clues*.tsv): none of these
+ * may be an answer in that language.
  */
 export const PASSAPAROLA_PASS_WORD = "skip";
 export const PASSAPAROLA_FINISH_WORD = "stop";
+
+const PASS_WORD: Record<TargetLanguage, string> = {
+  Italian: "salta",
+  German: "weiter",
+  English: "skip",
+};
+
+const FINISH_WORD: Record<TargetLanguage, string> = {
+  Italian: "ferma",
+  German: "stopp",
+  English: "stop",
+};
+
+export function passWord(language: TargetLanguage): string {
+  return PASS_WORD[language];
+}
+
+export function finishWord(language: TargetLanguage): string {
+  return FINISH_WORD[language];
+}
+
+function commandWords(language: TargetLanguage): string[] {
+  return [...new Set([passWord(language), finishWord(language), PASSAPAROLA_PASS_WORD, PASSAPAROLA_FINISH_WORD])];
+}
+
+export function isPassCommand(typed: string, language: TargetLanguage): boolean {
+  const word = typed.trim().toLowerCase();
+  return word === passWord(language) || word === PASSAPAROLA_PASS_WORD;
+}
+
+export function isFinishCommand(typed: string, language: TargetLanguage): boolean {
+  const word = typed.trim().toLowerCase();
+  return word === finishWord(language) || word === PASSAPAROLA_FINISH_WORD;
+}
 
 export type PassaparolaMark = "right" | "wrong";
 
@@ -137,12 +172,11 @@ export function nextLetter(
  * Whether what is typed can still become an answer for `letter` (every answer
  * starts with its letter, accents aside) or one of the two command words.
  */
-export function fitsLetter(typed: string, letter: string): boolean {
+export function fitsLetter(typed: string, letter: string, language: TargetLanguage = "English"): boolean {
   const word = typed.trimStart().toLowerCase();
   return (
     word.normalize("NFD").startsWith(letter.toLowerCase()) ||
-    PASSAPAROLA_PASS_WORD.startsWith(word) ||
-    PASSAPAROLA_FINISH_WORD.startsWith(word)
+    commandWords(language).some((command) => command.startsWith(word))
   );
 }
 

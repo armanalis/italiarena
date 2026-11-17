@@ -4,7 +4,7 @@
  * Run: npx tsx scripts/test-passaparola.ts
  */
 import assert from "node:assert/strict";
-import { fitsLetter, nextLetter, PASSAPAROLA_LETTERS, toWheelArchive, wheelShareText } from "../lib/passaparola";
+import { finishWord, fitsLetter, isFinishCommand, isPassCommand, nextLetter, PASSAPAROLA_LETTERS, passWord, toWheelArchive, wheelShareText } from "../lib/passaparola";
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -48,6 +48,22 @@ check("only words starting with the letter, or skip/stop, can be typed", () => {
   assert.equal(fitsLetter("skip", "G"), true);
   assert.equal(fitsLetter("stop", "G"), true);
   assert.equal(fitsLetter("sun", "G"), false);
+  assert.equal(fitsLetter("salta", "G", "Italian"), true);
+  assert.equal(fitsLetter("sa", "Z", "Italian"), true);
+  assert.equal(fitsLetter("ferma", "G", "Italian"), true);
+  assert.equal(fitsLetter("skip", "G", "Italian"), true);
+  assert.equal(fitsLetter("stop", "G", "Italian"), true);
+  assert.equal(fitsLetter("weiter", "G", "German"), true);
+  assert.equal(fitsLetter("stopp", "G", "German"), true);
+  assert.equal(fitsLetter("cane", "G", "Italian"), false);
+  assert.equal(passWord("Italian"), "salta");
+  assert.equal(finishWord("Italian"), "ferma");
+  assert.equal(passWord("German"), "weiter");
+  assert.equal(finishWord("German"), "stopp");
+  assert.equal(isPassCommand("Skip", "German"), true);
+  assert.equal(isFinishCommand("STOPP", "German"), true);
+  assert.equal(isPassCommand("salta", "Italian"), true);
+  assert.equal(isFinishCommand("stop", "Italian"), true);
 });
 
 check("the wheel has the 21 letters of the Italian alphabet, 23 for German", () => {
