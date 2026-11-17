@@ -21,6 +21,7 @@ import {
   hasArticleGame,
   loadArticleStats,
   loadSprintHistory,
+  saveSprint,
   startSprint,
   toSprintArchive,
   withArticle,
@@ -175,29 +176,33 @@ export function ArticleGame({
       }
       setStreak(nextStreak);
       setFeedback({ card: current, picked: article, right });
+      if (picked.length % BONUS_EVERY === 0) {
+        saveSprint(supabase, sprint.runId, picked);
+      }
       if (index + 1 >= sprint.cards.length) {
         void finish(picked);
       } else {
         setIndex(index + 1);
       }
     },
-    [answers, finish, helpOpen, index, phase, sprint, streak]
+    [answers, finish, helpOpen, index, phase, sprint, streak, supabase]
   );
 
   useEffect(() => {
-    if (phase !== "playing") {
+    if (phase !== "playing" || !sprint || answers.length === 0) {
       return;
     }
-    // A phone call or app switch pauses the page, and answers sent after the
-    // clock count as 0 on the server: send what is answered as soon as it hides.
+    // A phone call or app switch pauses the page. The finish may then arrive
+    // after the clock; the server scores the last save, so write one now.
+    const runId = sprint.runId;
     function onHide() {
       if (document.visibilityState === "hidden") {
-        void finish(answers);
+        saveSprint(supabase, runId, answers);
       }
     }
     document.addEventListener("visibilitychange", onHide);
     return () => document.removeEventListener("visibilitychange", onHide);
-  }, [answers, finish, phase]);
+  }, [answers, phase, sprint, supabase]);
 
   useEffect(() => {
     if (phase !== "playing" || helpOpen) {
