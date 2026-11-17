@@ -1,7 +1,7 @@
 /** The Arena's "Games" grid: every game with today's progress. On phones it is the only way into them. */
 import Link from "next/link";
-import { BookOpen, Check, ChevronRight, CircleDashed, Flame, Grid3x3, Images, Timer, WholeWord, type LucideIcon } from "lucide-react";
-import { ARTICLE_GAME_NAME, hasArticleGame, type ArticleLanguage, type ArticleStats } from "@/lib/articles";
+import { BookOpen, CaseSensitive, Check, ChevronRight, CircleDashed, Flame, Grid3x3, Images, Timer, WholeWord, type LucideIcon } from "lucide-react";
+import { ARTICLE_GAME_NAME, hasArticleGame, hasIndefiniteGame, INDEFINITE_GAME_NAME, type ArticleLanguage, type ArticleStats } from "@/lib/articles";
 import type { TargetLanguage } from "@/lib/constants";
 import { PREPOSITION_GAME_NAME } from "@/lib/prepositions";
 import { reviewMinutes } from "@/lib/review";
@@ -91,6 +91,32 @@ function articlesTile(
   };
 }
 
+function indefiniteTile(
+  t: Translate,
+  level: string,
+  stats: ArticleStats | null,
+  streak: GameStreak | undefined
+): Tile {
+  const today = stats?.today[level];
+  const best = stats?.best[level];
+  return {
+    title: INDEFINITE_GAME_NAME,
+    status:
+      today !== undefined
+        ? best
+          ? t("Sprint {score} · best {best}", { score: today, best })
+          : t("Sprint {score}", { score: today })
+        : best
+          ? t("Not played yet · best {best}", { best })
+          : t("Not played yet · 60 s"),
+    done: today !== undefined,
+    icon: CaseSensitive,
+    accent: "text-fuchsia-500",
+    href: "/indefinite-articles",
+    streak: streak?.streak,
+  };
+}
+
 function prepositionTile(
   t: Translate,
   language: TargetLanguage,
@@ -148,6 +174,7 @@ export async function TodayRow({
   wordle,
   passaparola,
   articles,
+  indefinite,
   prepositions,
   reviewDue,
   language,
@@ -157,6 +184,8 @@ export async function TodayRow({
   wordle: WordleTurnResult;
   passaparola: PassaparolaTurnResult;
   articles: ArticleStats | null;
+  /** Null hides the game: only Italian has un·uno·una. */
+  indefinite: ArticleStats | null;
   /** Null hides the game: this language has no cards yet. */
   prepositions: ArticleStats | null;
   /** Mistakes due for review today, in this language. */
@@ -170,6 +199,7 @@ export async function TodayRow({
     wordleTile(t, wordle, streaks.wordle),
     passaparolaTile(t, passaparola, streaks.passaparola),
     ...(hasArticleGame(language) ? [articlesTile(t, language, level, articles, streaks.articles)] : []),
+    ...(hasIndefiniteGame(language) && indefinite ? [indefiniteTile(t, level, indefinite, streaks.indefinite)] : []),
     ...(prepositions ? [prepositionTile(t, language, level, prepositions, streaks.prepositions)] : []),
     pictureDuelTile(t),
     arenaStreakTile(t, streaks.arena),

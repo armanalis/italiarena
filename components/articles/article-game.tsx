@@ -11,6 +11,9 @@ import {
   ARTICLE_GAME_NAME,
   type ArticleLanguage,
   BONUS_EVERY,
+  INDEFINITE_CHOICES,
+  INDEFINITE_GAME_NAME,
+  INDEFINITE_RULES,
   SPRINT_MS,
   articleChoices,
   articleRule,
@@ -93,7 +96,12 @@ export function ArticleGame({
   const today = stats.today[level];
   const best = stats.best[level];
   const duration = sprint?.ms ?? (kind === "preposition" ? PREPOSITION_MS : SPRINT_MS);
-  const title = kind === "preposition" ? PREPOSITION_GAME_NAME[language] : ARTICLE_GAME_NAME[language as ArticleLanguage];
+  const title =
+    kind === "preposition"
+      ? PREPOSITION_GAME_NAME[language]
+      : kind === "indefinite"
+        ? INDEFINITE_GAME_NAME
+        : ARTICLE_GAME_NAME[language as ArticleLanguage];
 
   const finish = useCallback(async (picked: string[]) => {
     if (!sprint || ended.current) {
@@ -279,7 +287,9 @@ export function ArticleGame({
         <p className="text-sm text-muted-foreground">
           {kind === "preposition"
             ? t("Fill the blank in each {language} sentence. One scored Sprint a day for each level, then practice as much as you like.", { language: t(language) })
-            : t("Pick the article of each {language} noun, as fast as you can. One scored Sprint a day for each level, then practice as much as you like.", { language: t(language) })}
+            : kind === "indefinite"
+              ? t("Pick un, uno, una or un' for each {language} noun, as fast as you can. One scored Sprint a day for each level, then practice as much as you like.", { language: t(language) })
+              : t("Pick the article of each {language} noun, as fast as you can. One scored Sprint a day for each level, then practice as much as you like.", { language: t(language) })}
         </p>
       </header>
 
@@ -558,7 +568,7 @@ export function ArticleGame({
         </section>
       )}
 
-      {kind === "article" && (
+      {(kind === "article" || kind === "indefinite") && (
         <p className="text-xs text-muted-foreground">
           {fill(t("Every article is checked against {source} (CC BY-SA 4.0)."), {
             source: (
@@ -616,6 +626,7 @@ function WordRow({
 function cardButtons(card: ArticleCard | undefined, kind: SprintKind, language: TargetLanguage): string[] {
   if (!card) return [];
   if (card.choices?.length) return card.choices;
+  if (kind === "indefinite") return [...INDEFINITE_CHOICES];
   return kind === "article" && hasArticleGame(language) ? [...articleChoices(language, card.article)] : [];
 }
 
@@ -626,5 +637,6 @@ function shownAnswer(card: ArticleCard, kind: SprintKind): string {
 /** English rule sentence, or null when this card has no known rule. */
 function ruleLine(card: ArticleCard, kind: SprintKind, language: TargetLanguage): string | null {
   if (kind === "preposition") return (card.rule && PREPOSITION_RULES[card.rule]) || null;
+  if (kind === "indefinite") return INDEFINITE_RULES[card.article] ?? null;
   return hasArticleGame(language) ? articleRule(language, card.noun, card.article) : null;
 }

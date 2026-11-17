@@ -4,7 +4,7 @@
  * Tested by scripts/test-friends-today.ts.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ARTICLE_GAME_NAME, hasArticleGame } from "@/lib/articles";
+import { ARTICLE_GAME_NAME, hasArticleGame, INDEFINITE_GAME_NAME } from "@/lib/articles";
 import type { TargetLanguage } from "@/lib/constants";
 import { PREPOSITION_GAME_NAME } from "@/lib/prepositions";
 import { WORDLE_MAX_GUESSES } from "@/lib/wordle";
@@ -17,12 +17,13 @@ export type FriendToday = {
   word_wheel: { level: string; right: number; total: number; mode?: "normal" | "hard" } | null;
   sprint: { level: string; score: number } | null;
   prepositions?: { level: string; score: number } | null;
+  indefinite?: { level: string; score: number } | null;
 };
 
 /** Sorting score: Wordle 1–6 (fewer guesses, more), Word Wheel letters right, the Sprint score. */
 export function todayPoints(row: FriendToday): number {
   const wordle = row.wordle?.won ? WORDLE_MAX_GUESSES + 1 - row.wordle.guesses : 0;
-  return wordle + (row.word_wheel?.right ?? 0) + (row.sprint?.score ?? 0) + (row.prepositions?.score ?? 0);
+  return wordle + (row.word_wheel?.right ?? 0) + (row.sprint?.score ?? 0) + (row.prepositions?.score ?? 0) + (row.indefinite?.score ?? 0);
 }
 
 export function sortFriendsToday(rows: readonly FriendToday[]): FriendToday[] {
@@ -54,6 +55,9 @@ export function todayResults(
   }
   if (row.prepositions) {
     results.push({ game: PREPOSITION_GAME_NAME[language], score: String(row.prepositions.score), level: row.prepositions.level });
+  }
+  if (row.indefinite) {
+    results.push({ game: INDEFINITE_GAME_NAME, score: String(row.indefinite.score), level: row.indefinite.level });
   }
   return results;
 }

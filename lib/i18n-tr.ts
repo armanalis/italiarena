@@ -924,6 +924,7 @@ export const TR: Record<string, string> = {
   "Keep your {n}-day Word Wheel streak alive: five minutes is enough.": "{n} günlük Kelime Çarkı serini sürdür: beş dakika yeter.",
   "Keep your {n}-day articles streak alive: one 60-second Sprint is enough.": "{n} günlük artikel serini sürdür: tek bir 60 saniyelik Sprint yeter.",
   "Keep your {n}-day prepositions streak alive: one 90-second Sprint is enough.": "{n} günlük edat serini sürdür: tek bir 90 saniyelik Sprint yeter.",
+  "Keep your {n}-day un·uno·una streak alive: one 60-second Sprint is enough.": "{n} günlük un·uno·una serini sürdür: tek bir 60 saniyelik Sprint yeter.",
   "1 mistake is waiting for review: about {min} min.": "1 hata tekrar edilmeyi bekliyor: yaklaşık {min} dk.",
   "{n} mistakes are waiting for review: about {min} min.": "{n} hata tekrar edilmeyi bekliyor: yaklaşık {min} dk.",
   "Could not deliver a test notification. Try enabling the reminder again.": "Deneme bildirimi iletilemedi. Hatırlatmayı tekrar açmayı dene.",
@@ -1120,4 +1121,13 @@ export const TR: Record<string, string> = {
   "Mode": "Mod",
   "The right spelling is {word}.": "Doğru yazılışı: {word}.",
   // End of the how-to-play texts.
+  "How un·uno·una works": "un·uno·una nasıl oynanır",
+  "A noun appears. Press un, uno, una or un'. Only one of them is right. Keys 1, 2, 3 and 4 work too.": "Bir isim çıkar. un, uno, una ya da un' seçeneklerinden birine bas. Yalnız biri doğrudur. 1, 2, 3 ve 4 tuşları da çalışır.",
+  "un is masculine before a consonant or a vowel. uno is masculine before s + consonant, z, gn, ps, x or y. una is feminine before a consonant. un' is feminine before a vowel.": "un eril isimlerde ünsüz ya da ünlüden önce gelir. uno eril isimlerde s + ünsüz, z, gn, ps, x ya da y önünde gelir. una dişil isimlerde ünsüzden önce gelir. un' dişil isimlerde ünlüden önce gelir.",
+  "After a wrong answer you see the right word and the rule behind it.": "Yanlış cevaptan sonra doğru sözcüğü ve kuralını görürsün.",
+  "Pick un, uno, una or un' for each {language} noun, as fast as you can. One scored Sprint a day for each level, then practice as much as you like.": "Her {language} isim için un, uno, una ya da un' seç, olabildiğince hızlı. Her seviye için günde bir puanlı Sprint, sonra istediğin kadar pratik.",
+  "un: masculine, before a consonant or a vowel (un libro, un amico)": "un: eril, ünsüz ya da ünlüden önce (un libro, un amico)",
+  "uno: masculine, before s + consonant, z, gn, ps, x, y (uno studente, uno zaino, uno yogurt)": "uno: eril, s + ünsüz, z, gn, ps, x, y önünde (uno studente, uno zaino, uno yogurt)",
+  "una: feminine, before a consonant (una casa, una stazione)": "una: dişil, ünsüzden önce (una casa, una stazione)",
+  "un': feminine, before a vowel (un'amica, un'ora)": "un': dişil, ünlüden önce (un'amica, un'ora)",
 };

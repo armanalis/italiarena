@@ -3,7 +3,7 @@
  * Show every text through t(); Turkish and Italian are in the dictionaries.
  * The names are the ones get_my_tutorials() and mark_tutorial_seen() use.
  */
-export const TUTORIAL_GAMES = ["arena", "wordle", "word_wheel", "articles", "prepositions", "picture_duel"] as const;
+export const TUTORIAL_GAMES = ["arena", "wordle", "word_wheel", "articles", "indefinite", "prepositions", "picture_duel"] as const;
 export type TutorialGame = (typeof TUTORIAL_GAMES)[number];
 
 export const TUTORIALS: Record<TutorialGame, { title: string; steps: string[] }> = {
@@ -40,6 +40,16 @@ export const TUTORIALS: Record<TutorialGame, { title: string; steps: string[] }>
       "A noun appears. Press its article as fast as you can. Keys 1, 2, 3 and 4 work too.",
       "You have 60 seconds. Every 5 right answers in a row add 1 second.",
       "After a wrong answer you see the right article and, when there is one, the rule behind it.",
+      "The first Sprint of the day for each level counts. After that you can practise as much as you like.",
+    ],
+  },
+  indefinite: {
+    title: "How un·uno·una works",
+    steps: [
+      "A noun appears. Press un, uno, una or un'. Only one of them is right. Keys 1, 2, 3 and 4 work too.",
+      "You have 60 seconds. Every 5 right answers in a row add 1 second.",
+      "un is masculine before a consonant or a vowel. uno is masculine before s + consonant, z, gn, ps, x or y. una is feminine before a consonant. un' is feminine before a vowel.",
+      "After a wrong answer you see the right word and the rule behind it.",
       "The first Sprint of the day for each level counts. After that you can practise as much as you like.",
     ],
   },

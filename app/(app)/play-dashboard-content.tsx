@@ -24,7 +24,7 @@ import { MatchmakingStartLink } from "@/components/matchmaking/matchmaking-start
 import { getAdminQueueCounts } from "@/lib/admin-queue-counts";
 import { getT } from "@/lib/i18n-server";
 import { getCurrentUserProfile, isGuestUser } from "@/lib/auth";
-import { hasArticleGame, loadArticleStats } from "@/lib/articles";
+import { hasArticleGame, hasIndefiniteGame, loadArticleStats } from "@/lib/articles";
 import { loadFriendsToday } from "@/lib/friends-today";
 import { playPassaparola } from "@/lib/passaparola";
 import type { GameStreak } from "@/lib/push";
@@ -59,13 +59,14 @@ export async function PlayDashboardContent({
   const level = profile.proficiency_level;
   const language = profile.target_language;
   // Loads only: today's puzzles are not started or played from here.
-  const [{ data: streakRows }, { data: reviewDue }, stats, wordle, passaparola, articles, prepositions, friendsToday, arenaSeen] = await Promise.all([
+  const [{ data: streakRows }, { data: reviewDue }, stats, wordle, passaparola, articles, indefinite, prepositions, friendsToday, arenaSeen] = await Promise.all([
     supabase.rpc("get_my_streaks"),
     supabase.rpc("get_my_review_due_count", { p_language: language }),
     getPlayerStatistics(),
     playWordle(supabase, language, level, italyToday(), null),
     playPassaparola(supabase, language, level),
     hasArticleGame(language) ? loadArticleStats(supabase, language) : Promise.resolve(null),
+    hasIndefiniteGame(language) ? loadArticleStats(supabase, language, "indefinite") : Promise.resolve(null),
     loadArticleStats(supabase, language, "preposition"),
     loadFriendsToday(supabase, language),
     tutorialSeen(supabase, "arena"),
@@ -165,6 +166,7 @@ export async function PlayDashboardContent({
           wordle={wordle}
           passaparola={passaparola}
           articles={articles}
+          indefinite={hasIndefiniteGame(language) ? (indefinite ?? { best: {}, today: {}, accuracy: {} }) : null}
           prepositions={prepositions ?? { best: {}, today: {}, accuracy: {} }}
           reviewDue={(reviewDue as number | null) ?? 0}
           language={language}

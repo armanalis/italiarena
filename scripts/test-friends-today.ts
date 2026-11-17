@@ -59,6 +59,10 @@ check("results read like the plan: Wordle 4/6 · Word Wheel 18/21 · Sprint 23",
     todayResults({ ...bea, prepositions: { level: "B1", score: 12 } }, "English").at(-1),
     { game: "in·on·at", score: "12", level: "B1" }
   );
+  assert.deepEqual(
+    todayResults({ ...you, indefinite: { level: "A1", score: 9 } }, "Italian").at(-1),
+    { game: "un·uno·una", score: "9", level: "A1" }
+  );
 });
 
 console.log(`\n${passed} friends-today checks passed`);

@@ -21,11 +21,12 @@ import {
   PenLine,
   Settings,
   Swords,
+  CaseSensitive,
   Timer,
   Trophy,
   WholeWord,
 } from "lucide-react";
-import { ARTICLE_GAME_NAME, hasArticleGame } from "@/lib/articles";
+import { ARTICLE_GAME_NAME, hasArticleGame, hasIndefiniteGame, INDEFINITE_GAME_NAME } from "@/lib/articles";
 import { PREPOSITION_GAME_NAME } from "@/lib/prepositions";
 import { useT } from "@/components/ui-language-provider";
 import type { TargetLanguage } from "@/lib/constants";
@@ -39,6 +40,8 @@ const gameItems = [
   { href: "/word-wheel", label: "Word Wheel", icon: CircleDashed, exact: false },
   // Named after its buttons in the language being played: der·die·das, il·lo·la.
   { href: "/articles", label: "Articles", icon: Timer, exact: false },
+  // un·uno·una. Italian only.
+  { href: "/indefinite-articles", label: INDEFINITE_GAME_NAME, icon: CaseSensitive, exact: false },
   // in·on·at / di·a·da / in·an·auf. Hidden until that language has cards.
   { href: "/prepositions", label: "Prepositions", icon: WholeWord, exact: false },
   { href: "/picture-duel", label: "Picture Duel", icon: Images, exact: false },
@@ -63,7 +66,7 @@ type DashboardShellProps = {
 };
 
 /** Game screens: on phones the Friends button would sit on the game, so it shows everywhere else. */
-const GAME_ROUTES = ["/wordle", "/word-wheel", "/articles", "/prepositions", "/picture-duel"];
+const GAME_ROUTES = ["/wordle", "/word-wheel", "/articles", "/indefinite-articles", "/prepositions", "/picture-duel"];
 
 function isGameRoute(pathname: string) {
   return GAME_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
@@ -80,16 +83,19 @@ export function DashboardShell({ children, language, guest }: DashboardShellProp
   const pathname = usePathname();
   const t = useT();
   const articles = hasArticleGame(language);
+  const indefinite = hasIndefiniteGame(language);
   const items = [
     ...gameItems
-      .filter((item) => articles || item.href !== "/articles")
+      .filter((item) => (articles || item.href !== "/articles") && (indefinite || item.href !== "/indefinite-articles"))
       .map((item) =>
         // The names are the buttons, the same in every app language.
         item.href === "/articles" && articles
           ? { ...item, label: ARTICLE_GAME_NAME[language] }
-          : item.href === "/prepositions"
-            ? { ...item, label: PREPOSITION_GAME_NAME[language] }
-            : { ...item, label: t(item.label) }
+          : item.href === "/indefinite-articles"
+            ? { ...item, label: INDEFINITE_GAME_NAME }
+            : item.href === "/prepositions"
+              ? { ...item, label: PREPOSITION_GAME_NAME[language] }
+              : { ...item, label: t(item.label) }
       ),
     ...pageItems.map((item) => ({ ...item, label: t(item.label) })),
   ];
