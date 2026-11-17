@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronRight, Clock, Loader2, SkipForward, X } from "lucide-react";
+import { DayArchive } from "@/components/day-archive";
 import { useHowToPlayOpen } from "@/components/how-to-play";
 import { SpeakButton } from "@/components/speak-button";
 import { ShareButton } from "@/components/share-button";
@@ -620,42 +621,34 @@ export function PassaparolaGame({
       </div>
 
       {archive.length > 0 && !playing && (
-        <section className="space-y-2" aria-label={t("Archive")}>
-          <h2 className="text-sm font-semibold">{t("Archive · {level}", { level })}</h2>
-          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {archive.map((day) => (
-              <li key={day.date}>
-                <button
-                  type="button"
-                  disabled={pending || locked}
-                  onClick={() => {
-                    setPassed(new Set());
-                    void send(level, { date: day.date }, null);
-                  }}
-                  aria-current={view?.date === day.date ? "true" : undefined}
-                  className={cn(
-                    "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm hover:bg-muted",
-                    view?.date === day.date ? "border-primary" : "border-border"
-                  )}
-                >
-                  <span>{formatPuzzleDay(day.date, uiLanguage)}</span>
-                  <span
-                    className={cn(
-                      "text-xs",
-                      day.right === null ? "font-medium text-primary" : "text-muted-foreground"
-                    )}
-                  >
-                    {day.right === null
-                      ? t("Play")
-                      : day.finished
-                        ? `${day.right}/${day.total}${day.mode ? ` · ${t(day.mode === "hard" ? "Hard" : "Normal")}` : ""}`
-                        : t("In progress")}
+        <DayArchive
+          level={level}
+          selectedDate={view?.date}
+          disabled={pending || locked}
+          onSelect={(date) => {
+            setPassed(new Set());
+            void send(level, { date }, null);
+          }}
+          days={archive.map((day) => ({
+            date: day.date,
+            played: day.right !== null,
+            status:
+              day.right === null ? undefined : day.finished ? (
+                <span className="flex flex-col items-start gap-0.5">
+                  <span className="text-2xl font-bold tabular-nums leading-none text-primary">
+                    {day.right}/{day.total}
                   </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
+                  {day.mode && (
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {t(day.mode === "hard" ? "Hard" : "Normal")}
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span className="text-sm font-semibold text-primary">{t("In progress")}</span>
+              ),
+          }))}
+        />
       )}
 
       {countdown !== null && (

@@ -6,6 +6,7 @@ import { refreshDashboardAfterMatch } from "@/app/(app)/settings/actions";
 import { useHowToPlayOpen } from "@/components/how-to-play";
 import { ShareButton } from "@/components/share-button";
 import { SpeakButton } from "@/components/speak-button";
+import { DayArchive } from "@/components/day-archive";
 import { Button } from "@/components/ui/button";
 import {
   ARTICLE_GAME_NAME,
@@ -550,52 +551,24 @@ export function ArticleGame({
       )}
 
       {phase !== "playing" && phase !== "sending" && archive.length > 0 && (
-        <section className="space-y-4" aria-label={t("Archive")}>
-          <h2 className="text-sm font-semibold">{t("Archive · {level}", { level })}</h2>
-          {monthGroups(archive).map((group) => (
-            <div key={group.month} className="space-y-2">
-              <h3 className="text-sm font-semibold tracking-tight">
-                {archiveDate(group.days[0].date, uiLanguage, { month: "long", year: "numeric" })}
-              </h3>
-              <ul className="grid grid-cols-2 gap-3">
-                {group.days.map((day) => (
-                  <li key={day.date}>
-                    <button
-                      type="button"
-                      disabled={phase === "starting"}
-                      onClick={() => {
-                        setSelectedDay(day.date);
-                        setPhase("ready");
-                        setSprint(null);
-                        setResult(null);
-                        setError(null);
-                        setFeedback(null);
-                      }}
-                      aria-current={selectedDay === day.date ? "date" : undefined}
-                      className={cn(
-                        "flex min-h-24 w-full flex-col items-start justify-between rounded-xl border px-3.5 py-3 text-left transition-colors hover:bg-muted",
-                        day.score === null ? "border-dashed border-border" : "border-border bg-card",
-                        selectedDay === day.date && "border-solid border-primary ring-2 ring-primary/25"
-                      )}
-                    >
-                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {archiveDate(day.date, uiLanguage, { weekday: "short" })}
-                      </span>
-                      <span className="text-lg font-semibold leading-none tracking-tight">
-                        {archiveDate(day.date, uiLanguage, { day: "numeric" })}
-                      </span>
-                      {day.score === null ? (
-                        <span className="text-sm font-semibold text-primary">{t("Play")}</span>
-                      ) : (
-                        <span className="text-2xl font-bold tabular-nums leading-none text-primary">{day.score}</span>
-                      )}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </section>
+        <DayArchive
+          level={level}
+          selectedDate={selectedDay}
+          disabled={phase === "starting"}
+          onSelect={(date) => {
+            setSelectedDay(date);
+            setPhase("ready");
+            setSprint(null);
+            setResult(null);
+            setError(null);
+            setFeedback(null);
+          }}
+          days={archive.map((day) => ({
+            date: day.date,
+            played: day.score !== null,
+            status: day.score === null ? undefined : day.score,
+          }))}
+        />
       )}
 
       {(kind === "article" || kind === "indefinite") && (
@@ -651,21 +624,6 @@ function WordRow({
       <SpeakButton className="-my-1.5" text={shownAnswer(card, kind)} language={language} />
     </li>
   );
-}
-
-function monthGroups(days: SprintArchiveDay[]): { month: string; days: SprintArchiveDay[] }[] {
-  const groups: { month: string; days: SprintArchiveDay[] }[] = [];
-  for (const day of days) {
-    const month = day.date.slice(0, 7);
-    const last = groups.at(-1);
-    if (last?.month === month) last.days.push(day);
-    else groups.push({ month, days: [day] });
-  }
-  return groups;
-}
-
-function archiveDate(date: string, language: string, options: Intl.DateTimeFormatOptions): string {
-  return new Intl.DateTimeFormat(language, { ...options, timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
 }
 
 function cardButtons(card: ArticleCard | undefined, kind: SprintKind, language: TargetLanguage): string[] {
