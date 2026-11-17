@@ -279,6 +279,7 @@ export function ArticleGame({
   const pastDay = viewingPast ? (archive.find((day) => day.date === selectedDay) ?? { date: selectedDay!, score: null }) : null;
   const sprintPast = Boolean(sprint?.date && archiveToday && sprint.date !== archiveToday);
   const bonusSeconds = Math.round((sprint?.bonusMs ?? 1_000) / 1000);
+  const streakStep = streak > 0 && streak % BONUS_EVERY === 0 ? BONUS_EVERY : streak % BONUS_EVERY;
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-5">
@@ -386,6 +387,20 @@ export function ArticleGame({
             </div>
           </div>
 
+          {kind === "preposition" && (
+            <p className="flex items-center justify-center gap-2 text-sm font-semibold">
+              <span className="flex gap-1" aria-hidden>
+                {Array.from({ length: BONUS_EVERY }, (_, dot) => (
+                  <span
+                    key={dot}
+                    className={cn("size-2.5 rounded-full", dot < streakStep ? "bg-emerald-500" : "bg-muted")}
+                  />
+                ))}
+              </span>
+              {t("{n}/{total} to +{seconds}s", { n: streakStep, total: BONUS_EVERY, seconds: bonusSeconds })}
+            </p>
+          )}
+
           <div className="glass-panel flex min-h-36 flex-col items-center justify-center gap-1 p-6 text-center">
             {card ? (
               <>
@@ -426,7 +441,7 @@ export function ArticleGame({
                 <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
                   <Check className="size-4" aria-hidden />
                   <span lang={code}>{shownAnswer(feedback.card, kind)}</span>
-                  {streak > 0 && streak % BONUS_EVERY !== 0 && (
+                  {kind !== "preposition" && streak > 0 && streak % BONUS_EVERY !== 0 && (
                     <span className="text-muted-foreground"> · {t("{n}/{total} to +{seconds}s", { n: streak % BONUS_EVERY, total: BONUS_EVERY, seconds: bonusSeconds })}</span>
                   )}
                 </span>
