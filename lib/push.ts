@@ -2,7 +2,7 @@
 
 import webpush from "web-push";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { hasArticleGame } from "@/lib/articles";
+import { hasArticleGame, hasIndefiniteGame } from "@/lib/articles";
 import { DEFAULT_TIMEZONE } from "@/lib/constants";
 import { APP_NAME, SUPPORT_EMAIL } from "@/lib/legal";
 import { reviewMinutes } from "@/lib/review";
@@ -46,7 +46,7 @@ export function buildDailyReminderPayload(t: Translate = translator(null)): Push
 
 /** One row of get_my_streaks / game_streaks. */
 export type GameStreak = {
-  game: "arena" | "wordle" | "passaparola" | "articles" | "prepositions";
+  game: "arena" | "wordle" | "passaparola" | "articles" | "prepositions" | "indefinite";
   streak: number;
   played_today: boolean;
 };
@@ -58,6 +58,7 @@ const STREAK_REMINDERS: Record<GameStreak["game"], { url: string; body: string }
   passaparola: { url: "/word-wheel", body: "Keep your {n}-day Word Wheel streak alive: five minutes is enough." },
   articles: { url: "/articles", body: "Keep your {n}-day articles streak alive: one 60-second Sprint is enough." },
   prepositions: { url: "/prepositions", body: "Keep your {n}-day prepositions streak alive: one 90-second Sprint is enough." },
+  indefinite: { url: "/indefinite-articles", body: "Keep your {n}-day un·uno·una streak alive: one 60-second Sprint is enough." },
 };
 
 /**
@@ -73,6 +74,7 @@ export function buildDailyReminderPayloads(
 ): PushPayload[] {
   const atRisk = streaks.filter(({ game, streak, played_today }) => {
     if (game === "articles" && language && !hasArticleGame(language)) return false;
+    if (game === "indefinite" && language && !hasIndefiniteGame(language)) return false;
     return streak > 0 && !played_today && game in STREAK_REMINDERS;
   });
   if (atRisk.length === 0) {

@@ -16,7 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
-import { ALL_ARTICLES, ARTICLE_GAME_NAME, hasArticleGame, type ArticleStats } from "@/lib/articles";
+import { ALL_ARTICLES, ARTICLE_GAME_NAME, hasArticleGame, INDEFINITE_CHOICES, INDEFINITE_GAME_NAME, type ArticleStats } from "@/lib/articles";
 import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
 import { PREPOSITION_GAME_NAME } from "@/lib/prepositions";
 import { categoryResults, overallAccuracy, pct } from "@/lib/player-stats";
@@ -29,6 +29,8 @@ import { useT, useUiLanguage } from "@/components/ui-language-provider";
 type StatisticsDashboardProps = {
   language: TargetLanguage;
   articleStats: ArticleStats | null;
+  /** Null hides the card: only Italian has un·uno·una. */
+  indefiniteStats: ArticleStats | null;
   /** Null hides the card: this language has no preposition cards yet. */
   prepositionStats: ArticleStats | null;
   stats: PlayerStats | null;
@@ -57,6 +59,7 @@ function mistakeMatchesCategory(
 export function StatisticsDashboard({
   language,
   articleStats,
+  indefiniteStats,
   prepositionStats,
   stats,
   mistakes: initialMistakes,
@@ -313,6 +316,51 @@ export function StatisticsDashboard({
           )}
         </CardContent>
       </Card>}
+
+      {indefiniteStats && (
+        <Card className="border-border/60">
+          <CardHeader>
+            <CardTitle lang={LANGUAGE_META[language].code}>{INDEFINITE_GAME_NAME}</CardTitle>
+            <CardDescription>
+              {t("Your best Sprint for each level, and how often you pick each article right. Missed nouns join your mistakes below.")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {Object.keys(indefiniteStats.best).length > 0 ? (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  {PROFICIENCY_LEVELS.filter((level) => indefiniteStats.best[level] !== undefined).map((level) => (
+                    <Badge key={level} variant="secondary" className="tabular-nums">
+                      {level} · {t("best {n}", { n: indefiniteStats.best[level] })}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {INDEFINITE_CHOICES.filter((article) => indefiniteStats.accuracy[article]).map((article) => {
+                    const { answered, right } = indefiniteStats.accuracy[article];
+                    return (
+                      <div key={article} className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+                        <p lang={LANGUAGE_META[language].code} className="text-sm font-medium">{article}</p>
+                        <p className="text-xl font-bold tabular-nums">{pct(right, answered)}</p>
+                        <p className="text-xs text-muted-foreground tabular-nums">
+                          {t("{n} of {total}", { n: right, total: answered })}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {t("No Sprints yet.")}{" "}
+                <Link href="/indefinite-articles" className="font-medium text-primary underline-offset-2 hover:underline">
+                  {t("Play your first one")}
+                </Link>
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {prepositionStats && (
         <Card className="border-border/60">

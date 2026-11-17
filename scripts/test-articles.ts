@@ -12,7 +12,9 @@ import {
   articleRule,
   articleShareText,
   bonusAfter,
+  INDEFINITE_RULES,
   italianArticle,
+  italianIndefinite,
   nounQuestion,
   fillPreposition,
   toSprintArchive,
@@ -67,6 +69,33 @@ check("the Italian article follows gender and first sound", () => {
   }
 });
 
+check("the indefinite article: un, uno, una, un'", () => {
+  const cases: [string, "m" | "f", string | null][] = [
+    ["libro", "m", "un"],
+    ["amico", "m", "un"],
+    ["uomo", "m", "un"],
+    ["studente", "m", "uno"],
+    ["zaino", "m", "uno"],
+    ["gnomo", "m", "uno"],
+    ["psicologo", "m", "uno"],
+    ["xilofono", "m", "uno"],
+    ["yogurt", "m", "uno"],
+    ["specchio", "m", "uno"],
+    ["casa", "f", "una"],
+    ["stazione", "f", "una"],
+    ["zia", "f", "una"],
+    ["amica", "f", "un'"],
+    ["ora", "f", "un'"],
+    ["hotel", "m", null],
+    ["whisky", "m", null],
+    ["iato", "m", null],
+  ];
+  for (const [noun, gender, article] of cases) {
+    assert.equal(italianIndefinite(noun, gender), article, noun);
+  }
+  assert.equal(INDEFINITE_RULES.uno.includes("yogurt"), true);
+});
+
 check("German rules are only shown for nouns that follow them", () => {
   assert.equal(articleRule("German", "Zeitung", "die"), "-ung words are always die");
   assert.equal(articleRule("German", "Mädchen", "das"), "-chen and -lein (little things) are always das");
@@ -104,6 +133,10 @@ check("written with the article, and shared without spoilers", () => {
     articleShareText("English", "B1", 12, "https://italiarena.com", "preposition", "2026-11-14"),
     "Italiarena in·on·at 12 · B1 · 2026-11-14\nhttps://italiarena.com/prepositions?lang=en&level=B1&day=2026-11-14"
   );
+  assert.equal(
+    articleShareText("Italian", "A2", 18, "https://italiarena.com", "indefinite", "2026-11-14"),
+    "Italiarena un·uno·una 18 · A2 · 2026-11-14\nhttps://italiarena.com/indefinite-articles?lang=it&level=A2&day=2026-11-14"
+  );
 });
 
 check("the sprint archive is the 30 days before today, newest first", () => {
@@ -139,6 +172,19 @@ check("a missed noun becomes a Mistakes question with the letters the database s
   assert.deepEqual([born.option_a, born.option_b, born.option_c, born.option_d], ["in", "on", "at", "to"]);
   assert.equal(born.correct_answer, "A");
   assert.equal(born.rule, "time-in");
+  const libro = nounQuestion({
+    id: 12,
+    language: "Italian",
+    level: "A1",
+    kind: "indefinite",
+    noun: "libro",
+    article: "un",
+    meaning: "book",
+  });
+  assert.equal(libro.question_text, "Which article? libro (book)");
+  assert.deepEqual([libro.option_a, libro.option_b, libro.option_c, libro.option_d], ["un", "uno", "una", "un'"]);
+  assert.equal(libro.correct_answer, "A");
+  assert.equal(libro.rule, "un");
 });
 
 check("the question reads in the app language, with the Turkish or Italian meaning when there is one", () => {

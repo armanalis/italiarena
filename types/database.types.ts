@@ -491,7 +491,7 @@ export interface Database {
       game_streaks: {
         Args: { p_user_id: string };
         Returns: Array<{
-          game: "arena" | "wordle" | "passaparola" | "articles" | "prepositions";
+          game: "arena" | "wordle" | "passaparola" | "articles" | "prepositions" | "indefinite";
           streak: number;
           played_today: boolean;
         }>;

@@ -31,7 +31,16 @@ export function hasArticleGame(language: string): language is ArticleLanguage {
   return Object.prototype.hasOwnProperty.call(ARTICLE_GAME_NAME, language);
 }
 
-export type SprintKind = "article" | "preposition";
+export type SprintKind = "article" | "preposition" | "indefinite";
+
+/** un·uno·una. Italian only. The name is the buttons, in every app language. */
+export const INDEFINITE_GAME_NAME = "un·uno·una";
+
+export const INDEFINITE_CHOICES = ["un", "uno", "una", "un'"] as const;
+
+export function hasIndefiniteGame(language: string): boolean {
+  return language === "Italian";
+}
 
 /**
  * meaningTr / meaningIt: the meaning in that app language, null where the bank has none yet.
@@ -84,8 +93,12 @@ export function bonusAfter(streak: number, bonusMs = DEFAULT_BONUS_MS): number {
 const VOWEL = /^[aeiouàèéìíòóùú]/i;
 // lo/gli: s + consonant, z, gn, ps, x (lo studente, lo zaino, lo gnomo, lo psicologo, lo xilofono).
 const LO_SOUND = /^(s[^aeiouàèéìíòóùú]|z|gn|ps|x)/i;
+// uno: the same sounds as lo, plus y (uno yogurt). uno studente, uno zaino, uno gnomo, uno psicologo, uno xilofono.
+const UNO_SOUND = /^(s[^aeiouàèéìíòóùú]|z|gn|ps|x|y)/i;
 // Usage is split or the sound is hidden (il/lo pneumatico, l'hotel, lo/il whisky, lo iato): left out of the game.
 const UNCLEAR_SOUND = /^(h|w|y|j|k|pn|i[aeiou])/i;
+// y takes uno, so it stays in the indefinite game. The rest match UNCLEAR_SOUND.
+const INDEFINITE_UNCLEAR = /^(h|w|j|k|pn|i[aeiou])/i;
 
 /**
  * The Italian article a noun takes, from its gender and first letters; null
@@ -97,6 +110,23 @@ export function italianArticle(noun: string, gender: "m" | "f", plural: boolean)
   if (plural) return VOWEL.test(noun) || LO_SOUND.test(noun) ? "gli" : "i";
   return VOWEL.test(noun) ? "l'" : LO_SOUND.test(noun) ? "lo" : "il";
 }
+
+/**
+ * The Italian indefinite article, from gender and first letters; null when the
+ * first sound makes usage unclear. un libro, un amico, uno studente, una casa, un'amica.
+ */
+export function italianIndefinite(noun: string, gender: "m" | "f"): string | null {
+  if (INDEFINITE_UNCLEAR.test(noun)) return null;
+  if (gender === "f") return VOWEL.test(noun) ? "un'" : "una";
+  return UNO_SOUND.test(noun) ? "uno" : "un";
+}
+
+export const INDEFINITE_RULES: Record<string, string> = {
+  un: "un: masculine, before a consonant or a vowel (un libro, un amico)",
+  uno: "uno: masculine, before s + consonant, z, gn, ps, x, y (uno studente, uno zaino, uno yogurt)",
+  una: "una: feminine, before a consonant (una casa, una stazione)",
+  "un'": "un': feminine, before a vowel (un'amica, un'ora)",
+};
 
 const ITALIAN_RULES: Record<string, string> = {
   il: "il: masculine, before most consonants (il libro)",
@@ -164,10 +194,12 @@ export function nounQuestion(noun: ArticleNoun, t: Translate = translator(null),
   const choices =
     noun.kind === "preposition"
       ? (noun.choices ?? [])
-      : hasArticleGame(noun.language)
-        ? [...articleChoices(noun.language, noun.article)]
-        : [];
-  if (noun.kind !== "preposition" && !hasArticleGame(noun.language)) {
+      : noun.kind === "indefinite"
+        ? [...(noun.choices?.length ? noun.choices : INDEFINITE_CHOICES)]
+        : hasArticleGame(noun.language)
+          ? [...articleChoices(noun.language, noun.article)]
+          : [];
+  if (noun.kind !== "preposition" && noun.kind !== "indefinite" && !hasArticleGame(noun.language)) {
     throw new Error(`No article game for ${noun.language}.`);
   }
   const [a = "", b = "", c = "", d = ""] = choices;
@@ -189,7 +221,7 @@ export function nounQuestion(noun: ArticleNoun, t: Translate = translator(null),
     option_d: d,
     correct_answer: "ABCD"[choices.indexOf(noun.article)] as CorrectAnswer,
     random_float: 0,
-    rule: noun.kind === "preposition" ? noun.rule ?? null : null,
+    rule: noun.kind === "preposition" ? noun.rule ?? null : noun.kind === "indefinite" ? noun.article : null,
   };
 }
 
@@ -201,8 +233,13 @@ export function articleShareText(
   kind: SprintKind = "article",
   date?: string
 ): string {
-  const name = kind === "preposition" ? PREPOSITION_GAME_NAME[language] : ARTICLE_GAME_NAME[language as ArticleLanguage];
-  const path = kind === "preposition" ? "prepositions" : "articles";
+  const name =
+    kind === "preposition"
+      ? PREPOSITION_GAME_NAME[language]
+      : kind === "indefinite"
+        ? INDEFINITE_GAME_NAME
+        : ARTICLE_GAME_NAME[language as ArticleLanguage];
+  const path = kind === "preposition" ? "prepositions" : kind === "indefinite" ? "indefinite-articles" : "articles";
   const day = date ? `&day=${date}` : "";
   return [
     date ? `Italiarena ${name} ${score} · ${level} · ${date}` : `Italiarena ${name} ${score} · ${level}`,

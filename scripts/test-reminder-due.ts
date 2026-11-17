@@ -70,6 +70,16 @@ assert.deepEqual(
   ["daily-reminder-arena"],
   "English has no article sprint to remind"
 );
+assert.deepEqual(
+  buildDailyReminderPayloads([{ game: "indefinite", streak: 4, played_today: false }], 0, translator(null), "Italian").map((p) => [p.url, p.body]),
+  [["/indefinite-articles", "Keep your 4-day un·uno·una streak alive: one 60-second Sprint is enough."]],
+  "Italian un·uno·una streak opens its Sprint"
+);
+assert.deepEqual(
+  buildDailyReminderPayloads([{ game: "indefinite", streak: 4, played_today: false }], 0, translator(null), "German").map((p) => p.tag),
+  ["daily-reminder"],
+  "only Italian is reminded about un·uno·una"
+);
 assert.deepEqual(buildDailyReminderPayloads([]).map((p) => p.tag), ["daily-reminder"], "streaks not loaded");
 assert.deepEqual(
   buildDailyReminderPayloads([{ game: "wordle", streak: 4, played_today: true }], 5).map((p) => [p.url, p.body]),
