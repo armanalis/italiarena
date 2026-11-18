@@ -54,7 +54,8 @@ const REQUEST_MESSAGES: Record<string, string> = {
 };
 
 /** Bottom-right friends button and panel (the shell leaves it out of matches and game screens). */
-export function FriendsPanel({ language }: { language: TargetLanguage }) {
+/** desktopOnly: game pages need the phone screen for the game, so the button shows from md up. */
+export function FriendsPanel({ language, desktopOnly = false }: { language: TargetLanguage; desktopOnly?: boolean }) {
   const router = useRouter();
   const t = useT();
   const uiLanguage = useUiLanguage();
@@ -148,7 +149,7 @@ export function FriendsPanel({ language }: { language: TargetLanguage }) {
         <Button
           type="button"
           variant="secondary"
-          className="hide-while-typing fixed right-4 bottom-[calc(var(--app-mobile-nav-height)+env(safe-area-inset-bottom,0px)+0.75rem)] z-40 min-h-11 gap-2 rounded-full px-4 shadow-md md:bottom-6"
+          className={`${desktopOnly ? "max-md:hidden " : ""}hide-while-typing fixed right-4 bottom-[calc(var(--app-mobile-nav-height)+env(safe-area-inset-bottom,0px)+0.75rem)] z-40 min-h-11 gap-2 rounded-full px-4 shadow-md md:bottom-6`}
         >
           <Users className="size-4" />
           {t("Friends")}

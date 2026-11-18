@@ -168,7 +168,7 @@ export function DashboardShell({ children, language, guest }: DashboardShellProp
         {children}
       </div>
 
-      {showFriends && <FriendsPanel language={language} />}
+      <FriendsPanel language={language} desktopOnly={!showFriends} />
       <BotPickerDialog open={botsOpen} onOpenChange={setBotsOpen} />
 
       <nav
