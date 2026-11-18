@@ -48,25 +48,51 @@ export function speakableQuestion(questionText: string, correctOptionText: strin
   return sentence.replace(elided ? /_{2,}\s*/ : /_{2,}/, answer).replace(/\s+/g, " ");
 }
 
+/**
+ * How to speak this language on this device: a voice, or only a lang tag while the device has
+ * not listed its voices yet (iPhone often lists none at first; the lang tag still picks one).
+ * Null when the voices are listed and none speaks the language.
+ */
+export function voiceFor<V extends { lang: string }>(
+  voices: readonly V[],
+  language: TargetLanguage
+): { voice?: V; lang: string } | null {
+  if (voices.length === 0) {
+    const [code, region] = HOME_VOICE[language].split("-");
+    return { lang: `${code}-${region.toUpperCase()}` };
+  }
+  const voice = pickVoice(voices, language);
+  return voice ? { voice, lang: voice.lang.replace("_", "-") } : null;
+}
+
 export function subscribeToVoices(onChange: () => void) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return () => {};
-  // Chrome loads its voices after the page; this event says they arrived.
-  window.speechSynthesis.addEventListener("voiceschanged", onChange);
-  return () => window.speechSynthesis.removeEventListener("voiceschanged", onChange);
+  // Chrome loads its voices after the page; this event says they arrived. Safari on iPhone
+  // may never send it, so look again a little later too.
+  window.speechSynthesis.addEventListener?.("voiceschanged", onChange);
+  const timers = [500, 2000].map((ms) => window.setTimeout(onChange, ms));
+  return () => {
+    window.speechSynthesis.removeEventListener?.("voiceschanged", onChange);
+    timers.forEach((timer) => window.clearTimeout(timer));
+  };
 }
 
 export function hasVoice(language: TargetLanguage) {
-  return "speechSynthesis" in window && Boolean(pickVoice(window.speechSynthesis.getVoices(), language));
+  return "speechSynthesis" in window && voiceFor(window.speechSynthesis.getVoices(), language) !== null;
 }
 
 export function speak(text: string, language: TargetLanguage) {
-  const voice = pickVoice(window.speechSynthesis.getVoices(), language);
-  if (!voice) return;
-  // A second tap restarts the word instead of queueing it.
-  window.speechSynthesis.cancel();
+  const synth = window.speechSynthesis;
+  const how = voiceFor(synth.getVoices(), language);
+  if (!how) return;
+  // A second tap restarts the word instead of queueing it. Only when something is playing:
+  // Safari on iPhone and some Android browsers drop a speak() that comes right after cancel().
+  if (synth.speaking || synth.pending) synth.cancel();
+  // Chrome on Android can stay paused after the page was in the background.
+  if (synth.paused) synth.resume();
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.voice = voice;
-  utterance.lang = voice.lang;
+  if (how.voice) utterance.voice = how.voice as unknown as SpeechSynthesisVoice;
+  utterance.lang = how.lang;
   utterance.rate = 0.9; // a touch slower than normal speech, for learners
-  window.speechSynthesis.speak(utterance);
+  synth.speak(utterance);
 }

@@ -3,7 +3,7 @@
  * Run: npx tsx scripts/test-speech.ts
  */
 import assert from "node:assert/strict";
-import { pickVoice, speakableQuestion } from "../lib/speech";
+import { pickVoice, speakableQuestion, voiceFor } from "../lib/speech";
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -18,6 +18,13 @@ const voices = [
   { lang: "de-DE", name: "Anna" },
   { lang: "it_IT", name: "Android Italian" },
 ];
+
+check("no voices listed yet (iPhone): speak by lang tag; listed but none for the language: no audio", () => {
+  assert.deepEqual(voiceFor([], "Italian"), { lang: "it-IT" });
+  assert.deepEqual(voiceFor([], "English"), { lang: "en-US" });
+  assert.equal(voiceFor([{ lang: "en-US", name: "Samantha" }], "German"), null);
+  assert.deepEqual(voiceFor(voices, "Italian"), { voice: voices[3], lang: "it-IT" });
+});
 
 check("the home-region voice wins, any region is the fallback", () => {
   assert.equal(pickVoice(voices, "German")?.name, "Anna");
