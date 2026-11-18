@@ -105,7 +105,7 @@ check("German rules are only shown for nouns that follow them", () => {
   assert.equal(articleRule("Italian", "studente", "lo"), "lo: masculine, before s + consonant, z, gn, ps (lo studente, lo zaino)");
 });
 
-check("a second for every 5 right in a row, or the server's bonus", () => {
+check("5 seconds for every 5 right in a row, or the server's bonus", () => {
   // 12 right, 1 wrong, 7 right: bonuses at 5, 10 and 5.
   const results = [...Array(12).fill(true), false, ...Array(7).fill(true)];
   let streak = 0;
@@ -116,7 +116,7 @@ check("a second for every 5 right in a row, or the server's bonus", () => {
     bonus += bonusAfter(streak);
     preposition += bonusAfter(streak, 10_000);
   }
-  assert.equal(bonus, 3_000);
+  assert.equal(bonus, 15_000);
   assert.equal(preposition, 30_000);
   assert.equal(bonusAfter(0), 0);
   assert.equal(bonusAfter(5, 10_000), 10_000);
