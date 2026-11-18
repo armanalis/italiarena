@@ -634,18 +634,18 @@ export function PassaparolaGame({
             played: day.right !== null,
             status:
               day.right === null ? undefined : day.finished ? (
-                <span className="flex flex-col items-start gap-0.5">
-                  <span className="text-2xl font-bold tabular-nums leading-none text-primary">
+                <span className="flex flex-col items-end gap-0.5">
+                  <span className="text-lg font-bold tabular-nums leading-none text-primary">
                     {day.right}/{day.total}
                   </span>
                   {day.mode && (
-                    <span className="text-xs font-medium text-muted-foreground">
+                    <span className="text-[0.65rem] font-medium text-muted-foreground">
                       {t(day.mode === "hard" ? "Hard" : "Normal")}
                     </span>
                   )}
                 </span>
               ) : (
-                <span className="text-sm font-semibold text-primary">{t("In progress")}</span>
+                <span className="text-xs font-semibold text-primary">{t("In progress")}</span>
               ),
           }))}
         />

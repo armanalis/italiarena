@@ -32,14 +32,14 @@ export function DayArchive({
   const t = useT();
   const uiLanguage = useUiLanguage();
   return (
-    <section className="space-y-4" aria-label={t("Archive")}>
+    <section className="w-full !max-w-none space-y-4" aria-label={t("Archive")}>
       <h2 className="text-sm font-semibold">{t("Archive · {level}", { level })}</h2>
       {monthGroups(days).map((group) => (
         <div key={group.month} className="space-y-2">
           <h3 className="text-sm font-semibold tracking-tight">
             {archiveDate(group.days[0].date, uiLanguage, { month: "long", year: "numeric" })}
           </h3>
-          <ul className="grid grid-cols-2 gap-3">
+          <ul className="grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2">
             {group.days.map((day) => (
               <li key={day.date}>
                 <button
@@ -48,25 +48,27 @@ export function DayArchive({
                   onClick={() => onSelect(day.date)}
                   aria-current={selectedDate === day.date ? "date" : undefined}
                   className={cn(
-                    "flex min-h-24 w-full flex-col items-start justify-between gap-2 rounded-xl border px-3.5 py-3 text-left transition-colors hover:bg-muted",
+                    "flex min-h-14 w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition-colors hover:bg-muted",
                     day.played ? "border-border bg-card" : "border-dashed border-border",
                     selectedDate === day.date && "border-solid border-primary ring-2 ring-primary/25"
                   )}
                 >
-                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {archiveDate(day.date, uiLanguage, { weekday: "short" })}
-                  </span>
-                  <span className="text-lg font-semibold leading-none tracking-tight">
-                    {archiveDate(day.date, uiLanguage, { day: "numeric" })}
+                  <span className="flex flex-col">
+                    <span className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
+                      {archiveDate(day.date, uiLanguage, { weekday: "short" })}
+                    </span>
+                    <span className="text-base font-semibold leading-tight tabular-nums">
+                      {archiveDate(day.date, uiLanguage, { day: "numeric" })}
+                    </span>
                   </span>
                   {day.played ? (
                     typeof day.status === "string" || typeof day.status === "number" ? (
-                      <span className="text-2xl font-bold tabular-nums leading-none text-primary">{day.status}</span>
+                      <span className="text-lg font-bold tabular-nums leading-none text-primary">{day.status}</span>
                     ) : (
                       day.status
                     )
                   ) : (
-                    <span className="text-sm font-semibold text-primary">{t("Play")}</span>
+                    <span className="text-xs font-semibold text-primary">{t("Play")}</span>
                   )}
                 </button>
               </li>

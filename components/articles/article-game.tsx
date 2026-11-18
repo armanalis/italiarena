@@ -24,6 +24,8 @@ import {
   finishSprint,
   hasArticleGame,
   loadArticleStats,
+  loadSprintReview,
+  type SprintReview,
   loadSprintHistory,
   saveSprint,
   startSprint,
@@ -278,12 +280,38 @@ export function ArticleGame({
 
   const viewingPast = Boolean(selectedDay && archiveToday && selectedDay !== archiveToday);
   const pastDay = viewingPast ? (archive.find((day) => day.date === selectedDay) ?? { date: selectedDay!, score: null }) : null;
+  const pastDate = pastDay?.date ?? null;
+  // A played day's answers, so its card can say "right out of n" and open every question again.
+  const reviewKey =
+    phase === "ready" && (pastDay ? pastDay.score !== null : today !== undefined) ? `${language}:${kind}:${level}:${pastDate ?? "today"}` : null;
+  const [review, setReview] = useState<{ key: string; value: SprintReview } | null>(null);
+  const shownReview = review && review.key === reviewKey ? review.value : null;
+  useEffect(() => {
+    if (!reviewKey) return;
+    let cancel = false;
+    void loadSprintReview(supabase, language, level, kind, pastDate).then((value) => {
+      if (!cancel && value) setReview({ key: reviewKey, value });
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [kind, language, level, pastDate, reviewKey, supabase]);
+
+  function openReview(loaded: SprintReview) {
+    ended.current = true;
+    setSprint(loaded.sprint);
+    setAnswers(loaded.answers);
+    setFeedback(null);
+    setError(null);
+    setResult({ score: loaded.score, rejected: false, best: best ?? null });
+    setPhase("done");
+  }
   const sprintPast = Boolean(sprint?.date && archiveToday && sprint.date !== archiveToday);
   const bonusSeconds = Math.round((sprint?.bonusMs ?? 5_000) / 1000);
   const streakStep = streak > 0 && streak % BONUS_EVERY === 0 ? BONUS_EVERY : streak % BONUS_EVERY;
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 *:mx-auto *:w-full *:max-w-lg">
       <header className="space-y-1">
         <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{title}</h1>
         <p className="text-sm text-muted-foreground">
@@ -325,11 +353,13 @@ export function ArticleGame({
                 {formatPuzzleDay(pastDay.date, uiLanguage)} · {level}
               </p>
               {pastDay.score !== null && <p className="text-4xl font-bold tabular-nums">{pastDay.score}</p>}
+              {shownReview && <p className="text-sm text-muted-foreground">{t("right out of {n}", { n: shownReview.answers.length })}</p>}
             </div>
           ) : (
             <div className="space-y-1">
               <p className="font-semibold">
                 {today === undefined ? t("Today's Sprint · {level}", { level }) : t("Today's Sprint: {score}", { score: today })}
+                {shownReview && today !== undefined && ` ${t("right out of {n}", { n: shownReview.answers.length })}`}
               </p>
               <p className="text-sm text-muted-foreground">
                 {kind === "preposition"
@@ -348,6 +378,11 @@ export function ArticleGame({
             >
               {phase === "starting" && <Loader2 className="size-4 animate-spin" />}
               {pastDay ? t("Start") : today === undefined ? t("Start today's Sprint") : t("Practice")}
+            </Button>
+          )}
+          {shownReview && (
+            <Button type="button" variant="outline" className="min-h-11" onClick={() => openReview(shownReview)}>
+              {t("See your answers")}
             </Button>
           )}
           {pastDay && (
