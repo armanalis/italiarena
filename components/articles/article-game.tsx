@@ -178,7 +178,7 @@ export function ArticleGame({
       const picked = [...answers, article];
       setAnswers(picked);
       const nextStreak = right ? streak + 1 : 0;
-      const bonus = bonusAfter(nextStreak, sprint.bonusMs ?? 1_000);
+      const bonus = bonusAfter(nextStreak, sprint.bonusMs);
       if (bonus) {
         deadline.current += bonus;
         setBonusShown((shown) => shown + 1);
@@ -279,7 +279,7 @@ export function ArticleGame({
   const viewingPast = Boolean(selectedDay && archiveToday && selectedDay !== archiveToday);
   const pastDay = viewingPast ? (archive.find((day) => day.date === selectedDay) ?? { date: selectedDay!, score: null }) : null;
   const sprintPast = Boolean(sprint?.date && archiveToday && sprint.date !== archiveToday);
-  const bonusSeconds = Math.round((sprint?.bonusMs ?? 1_000) / 1000);
+  const bonusSeconds = Math.round((sprint?.bonusMs ?? 5_000) / 1000);
   const streakStep = streak > 0 && streak % BONUS_EVERY === 0 ? BONUS_EVERY : streak % BONUS_EVERY;
 
   return (
@@ -334,7 +334,7 @@ export function ArticleGame({
               <p className="text-sm text-muted-foreground">
                 {kind === "preposition"
                   ? t("90 seconds · every {n} right in a row add 10 seconds", { n: BONUS_EVERY })
-                  : t("60 seconds · every {n} right in a row add a second", { n: BONUS_EVERY })}
+                  : t("60 seconds · every {n} right in a row add 5 seconds", { n: BONUS_EVERY })}
                 {best !== undefined && ` · ${t("best {n}", { n: best })}`}
               </p>
             </div>

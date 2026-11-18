@@ -13,11 +13,11 @@ import type { CorrectAnswer, QuestionActive, QuestionLevel } from "@/types/datab
 
 /** KEEP IN SYNC with article_sprint_start / article_sprint_finish (supabase/migrations/*_article_game.sql). */
 export const SPRINT_MS = 60_000;
-/** Every BONUS_EVERY right answers in a row add the sprint's bonusMs (1 s for articles when the server omits it). */
+/** Every BONUS_EVERY right answers in a row add the sprint's bonusMs (5 s for articles when the server omits it). */
 export const BONUS_EVERY = 5;
 /** How many past days the archive lists. Same window as Wordle. */
 export const SPRINT_ARCHIVE_DAYS = 30;
-const DEFAULT_BONUS_MS = 1_000;
+const DEFAULT_BONUS_MS = 5_000;
 
 /** The game is named after its buttons. English has none: hide it with hasArticleGame. */
 export const ARTICLE_GAME_NAME = {
