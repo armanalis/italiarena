@@ -51,8 +51,8 @@ check("only words starting with the letter, or skip/stop, can be typed", () => {
   assert.equal(fitsLetter("salta", "G", "Italian"), true);
   assert.equal(fitsLetter("sa", "Z", "Italian"), true);
   assert.equal(fitsLetter("ferma", "G", "Italian"), true);
-  assert.equal(fitsLetter("skip", "G", "Italian"), true);
-  assert.equal(fitsLetter("stop", "G", "Italian"), true);
+  assert.equal(fitsLetter("skip", "G", "Italian"), false);
+  assert.equal(fitsLetter("stop", "G", "Italian"), false);
   assert.equal(fitsLetter("weiter", "G", "German"), true);
   assert.equal(fitsLetter("stopp", "G", "German"), true);
   assert.equal(fitsLetter("cane", "G", "Italian"), false);
@@ -60,10 +60,12 @@ check("only words starting with the letter, or skip/stop, can be typed", () => {
   assert.equal(finishWord("Italian"), "ferma");
   assert.equal(passWord("German"), "weiter");
   assert.equal(finishWord("German"), "stopp");
-  assert.equal(isPassCommand("Skip", "German"), true);
+  assert.equal(isPassCommand("Weiter", "German"), true);
+  assert.equal(isPassCommand("skip", "German"), false);
   assert.equal(isFinishCommand("STOPP", "German"), true);
   assert.equal(isPassCommand("salta", "Italian"), true);
-  assert.equal(isFinishCommand("stop", "Italian"), true);
+  assert.equal(isFinishCommand("stop", "Italian"), false);
+  assert.equal(isFinishCommand("Ferma", "Italian"), true);
 });
 
 check("the wheel has the 21 letters of the Italian alphabet, 23 for German", () => {

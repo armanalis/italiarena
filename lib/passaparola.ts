@@ -18,13 +18,10 @@ export const PASSAPAROLA_LETTERS: Record<TargetLanguage, string[]> = {
 
 /**
  * Typed instead of an answer: pass the letter, or end the game early.
- * The words are the language being played. skip and stop stay accepted too.
+ * The words are the language being played, and only those (salta in Italian, not skip).
  * KEEP IN SYNC with the clue banks (tmp/passaparola/clues*.tsv): none of these
  * may be an answer in that language.
  */
-export const PASSAPAROLA_PASS_WORD = "skip";
-export const PASSAPAROLA_FINISH_WORD = "stop";
-
 const PASS_WORD: Record<TargetLanguage, string> = {
   Italian: "salta",
   German: "weiter",
@@ -46,17 +43,17 @@ export function finishWord(language: TargetLanguage): string {
 }
 
 function commandWords(language: TargetLanguage): string[] {
-  return [...new Set([passWord(language), finishWord(language), PASSAPAROLA_PASS_WORD, PASSAPAROLA_FINISH_WORD])];
+  return [passWord(language), finishWord(language)];
 }
 
 export function isPassCommand(typed: string, language: TargetLanguage): boolean {
   const word = typed.trim().toLowerCase();
-  return word === passWord(language) || word === PASSAPAROLA_PASS_WORD;
+  return word === passWord(language);
 }
 
 export function isFinishCommand(typed: string, language: TargetLanguage): boolean {
   const word = typed.trim().toLowerCase();
-  return word === finishWord(language) || word === PASSAPAROLA_FINISH_WORD;
+  return word === finishWord(language);
 }
 
 export type PassaparolaMark = "right" | "wrong";
