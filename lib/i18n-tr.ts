@@ -230,6 +230,7 @@ export const TR: Record<string, string> = {
   "Sending your answers": "Cevapların gönderiliyor",
   "{n}/{total} to +1s": "+1 sn için {n}/{total}",
   "Your answers reached us too late, so this one counts as 0.": "Cevapların bize çok geç ulaştı, bu yüzden bu oyun 0 sayılıyor.",
+  "See your answers": "Cevaplarını gör",
   "right out of {n}": "{n} kelimeden doğru",
   "Try again": "Tekrar dene",
   "Just your score: the link opens the same game for your friends.": "Sadece puanın: bağlantı arkadaşlarına aynı oyunu açar.",

@@ -330,6 +330,28 @@ export async function loadSprintHistory(
   return { today: row.today, days };
 }
 
+export type SprintReview = { sprint: SprintStart; answers: string[]; score: number };
+
+/** A finished scored Sprint's cards and answers (date null = today). Null when not finished or the call fails. */
+export async function loadSprintReview(
+  supabase: SupabaseClient,
+  language: TargetLanguage,
+  level: string,
+  kind: SprintKind,
+  date: string | null
+): Promise<SprintReview | null> {
+  const { data, error } = await supabase.rpc("article_run_review", {
+    p_language: language,
+    p_level: level,
+    p_kind: kind,
+    p_date: date,
+  });
+  if (error || !data || typeof data !== "object") return null;
+  const row = data as SprintStart & { answers?: unknown; score?: unknown };
+  if (!Array.isArray(row.cards) || !Array.isArray(row.answers) || typeof row.score !== "number") return null;
+  return { sprint: row, answers: row.answers.map(String), score: row.score };
+}
+
 /** A finish that has not answered by then is a failure the player can retry. */
 const FINISH_TIMEOUT_MS = 20_000;
 

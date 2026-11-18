@@ -216,6 +216,7 @@ export const IT: Record<string, string> = {
   "Sending your answers": "Invio delle tue risposte",
   "{n}/{total} to +1s": "{n}/{total} per +1 s",
   "Your answers reached us too late, so this one counts as 0.": "Le tue risposte sono arrivate troppo tardi, quindi questo vale 0.",
+  "See your answers": "Vedi le tue risposte",
   "right out of {n}": "giuste su {n}",
   "Try again": "Riprova",
   "Just your score: the link opens the same game for your friends.": "Solo il tuo punteggio: il link apre lo stesso gioco per i tuoi amici.",
