@@ -51,3 +51,5 @@ supabase/archive/
 # Local agent tooling
 .claude/
 /node_modules.nosync
+/.git-content.nosync/
+/.git.nosync/

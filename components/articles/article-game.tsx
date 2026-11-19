@@ -345,6 +345,27 @@ export function ArticleGame({
         </div>
       )}
 
+      {phase !== "playing" && phase !== "sending" && archive.length > 0 && (
+        <DayArchive
+          level={level}
+          selectedDate={selectedDay}
+          disabled={phase === "starting"}
+          onSelect={(date) => {
+            setSelectedDay(date);
+            setPhase("ready");
+            setSprint(null);
+            setResult(null);
+            setError(null);
+            setFeedback(null);
+          }}
+          days={archive.map((day) => ({
+            date: day.date,
+            played: day.score !== null,
+            status: day.score === null ? undefined : day.score,
+          }))}
+        />
+      )}
+
       {(phase === "ready" || phase === "starting") && (
         <div className="glass-panel space-y-4 p-5 text-center">
           {pastDay ? (
@@ -588,26 +609,6 @@ export function ArticleGame({
         </div>
       )}
 
-      {phase !== "playing" && phase !== "sending" && archive.length > 0 && (
-        <DayArchive
-          level={level}
-          selectedDate={selectedDay}
-          disabled={phase === "starting"}
-          onSelect={(date) => {
-            setSelectedDay(date);
-            setPhase("ready");
-            setSprint(null);
-            setResult(null);
-            setError(null);
-            setFeedback(null);
-          }}
-          days={archive.map((day) => ({
-            date: day.date,
-            played: day.score !== null,
-            status: day.score === null ? undefined : day.score,
-          }))}
-        />
-      )}
 
       {(kind === "article" || kind === "indefinite") && (
         <p className="text-xs text-muted-foreground">
