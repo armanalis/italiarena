@@ -237,11 +237,16 @@ export function PassaparolaGame({
           mark === "right"
             ? {
                 text: spelling
-                  ? `${t("{letter}: correct!", { letter })} ${t("The right spelling is {word}.", { word: spelling })}`
+                  ? `${t("{letter}: almost right, it counts!", { letter })} ${t("The right spelling is {word}.", { word: spelling })}`
                   : t("{letter}: correct!", { letter }),
                 tone: "right",
               }
-            : { text: t("{letter}: wrong. You will see the answer at the end.", { letter }), tone: "wrong" }
+            : {
+                text: result.view.reveal[letter]?.length
+                  ? t("{letter}: wrong. The answer is {word}.", { letter, word: result.view.reveal[letter].join(" / ") })
+                  : t("{letter}: wrong. You will see the answer at the end.", { letter }),
+                tone: "wrong",
+              }
         );
       }
     }
@@ -455,7 +460,7 @@ export function PassaparolaGame({
                     word: <Keyword word={finishWord(language)} className="text-red-500" />,
                   })}
                 </li>
-                <li>{t("A wrong answer turns red; you see the right answers at the end.")}</li>
+                <li>{t("A wrong answer turns red and shows the right one. In normal mode one wrong, extra or missing letter still counts.")}</li>
               </ul>
               <div className="flex justify-center gap-2" role="group" aria-label={t("Mode")}>
                 {(["normal", "hard"] as const).map((option) => (

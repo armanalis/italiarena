@@ -84,6 +84,8 @@ export type PassaparolaView = {
   spelling: Record<string, string>;
   /** Only once the game is over. */
   answers: Record<string, string[]> | null;
+  /** The answers of letters marked wrong, shown at once. Older replies omit it. */
+  reveal: Record<string, string[]>;
 };
 
 /** How many past days the archive lists. Same window as Wordle. */
@@ -209,8 +211,8 @@ export async function playPassaparola(
   if (error || !data) {
     return { ok: false, error: knownError(ERRORS, error?.message, "Could not reach the board. Try again.") };
   }
-  const row = data as Omit<PassaparolaView, "level" | "given" | "near" | "spelling" | "mode"> &
-    Partial<Pick<PassaparolaView, "given" | "near" | "spelling" | "mode" | "today">> & {
+  const row = data as Omit<PassaparolaView, "level" | "given" | "near" | "spelling" | "mode" | "reveal"> &
+    Partial<Pick<PassaparolaView, "given" | "near" | "spelling" | "mode" | "today" | "reveal">> & {
       history?: Record<string, WheelHistoryDay> | null;
     };
   const spelling =
@@ -231,6 +233,7 @@ export async function playPassaparola(
     near: Array.isArray(row.near) ? row.near.filter((letter): letter is string => typeof letter === "string") : [],
     spelling,
     answers: row.answers ?? null,
+    reveal: row.reveal && typeof row.reveal === "object" ? row.reveal : {},
   };
   // history arrives on a load only. A move keeps the archive the screen already has.
   return { ok: true, view, archive: row.today && row.history ? toWheelArchive(row.today, row.history) : null };
