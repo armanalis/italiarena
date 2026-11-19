@@ -1,0 +1,91 @@
+/** Root layout — fonts, global styles, and page metadata. */
+import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { AppToaster } from "@/components/app-toaster";
+import { ClarityAnalytics } from "@/components/clarity-analytics";
+import { CookieConsentBanner } from "@/components/cookie-consent-banner";
+import { ServiceWorkerRegister } from "@/components/service-worker-register";
+import { StaleChunkRecovery } from "@/components/stale-chunk-recovery";
+import { ThemeProvider } from "@/components/theme-provider";
+import { SIDEBAR_WIDTH_BOOT_SCRIPT } from "@/lib/sidebar-width";
+import { SiteHeader } from "@/components/site-header";
+import { SiteHeaderSkeleton } from "@/components/site-header-skeleton";
+import { PRODUCTION_SITE_URL } from "@/lib/site-url";
+import { APP_NAME } from "@/lib/legal";
+import { cn } from "@/lib/utils";
+import { UiLanguageProvider } from "@/components/ui-language-provider";
+import { dictionaryFor, getT, getUiLanguage } from "@/lib/i18n-server";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
+
+// The description search engines and link previews show, in the visitor's language.
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return {
+    metadataBase: new URL(PRODUCTION_SITE_URL),
+    title: APP_NAME,
+    description: t("Learn English, Italian or German through quick, playful practice with others"),
+    applicationName: APP_NAME,
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "black-translucent",
+      title: APP_NAME,
+    },
+    formatDetection: {
+      telephone: false,
+    },
+  };
+}
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7f6f4" },
+    { media: "(prefers-color-scheme: dark)", color: "#14181c" },
+  ],
+};
+
+export default async function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const { language, fromCookie } = await getUiLanguage();
+  return (
+    // lang: screen readers, and Turkish upper case (i → İ) in uppercase text.
+    <html lang={language} suppressHydrationWarning className={cn("font-sans", inter.variable)}>
+      <body className="flex h-dvh min-h-dvh w-full min-w-[320px] flex-col antialiased">
+        {/* Saved sidebar width before first paint (no jump on load). */}
+        <script dangerouslySetInnerHTML={{ __html: SIDEBAR_WIDTH_BOOT_SCRIPT }} />
+        <UiLanguageProvider language={language} dictionary={dictionaryFor(language)} remember={!fromCookie}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <StaleChunkRecovery />
+            <ServiceWorkerRegister />
+            <Suspense fallback={<SiteHeaderSkeleton />}>
+              <SiteHeader />
+            </Suspense>
+            <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto touch-scroll">
+              {children}
+            </div>
+            <AppToaster />
+            <ClarityAnalytics />
+            <CookieConsentBanner />
+          </ThemeProvider>
+        </UiLanguageProvider>
+      </body>
+    </html>
+  );
+}

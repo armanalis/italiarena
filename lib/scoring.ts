@@ -1,0 +1,71 @@
+import type { CorrectAnswer } from "@/types/database.types";
+
+/** Speed bonus tiers — response time in milliseconds. */
+export function computePoints(
+  isCorrect: boolean,
+  responseTimeMs: number | null
+): number {
+  if (!isCorrect || responseTimeMs === null) {
+    return 0;
+  }
+
+  const seconds = responseTimeMs / 1000;
+
+  if (seconds < 5) {
+    return 140;
+  }
+  if (seconds < 10) {
+    return 130;
+  }
+  if (seconds < 15) {
+    return 120;
+  }
+  if (seconds <= 25) {
+    return 100;
+  }
+
+  return 0;
+}
+
+export type MatchWinner = "a" | "b" | "tie";
+
+/**
+ * Winner from total points only.
+ *
+ * Equal scores are a true tie. Speed already affects points during the round
+ * (faster correct answers earn more), so response-time averages must not
+ * silently overturn a tied scoreboard. Tied regular matches go to a
+ * sudden-death question instead; if that also ends even, the match is a tie.
+ */
+export function determineWinner(
+  playerAScore: number,
+  playerBScore: number
+): MatchWinner {
+  if (playerAScore > playerBScore) {
+    return "a";
+  }
+  if (playerBScore > playerAScore) {
+    return "b";
+  }
+
+  return "tie";
+}
+
+export function isAnswerCorrect(
+  selected: CorrectAnswer | null,
+  correct: CorrectAnswer
+): boolean {
+  return selected !== null && selected === correct;
+}
+
+export function formatCategoryLabel(category: string | null | undefined): string {
+  if (!category || typeof category !== "string") {
+    return "General";
+  }
+  // "Fill in the blank": screens translate it, and badges capitalise it in CSS
+  // (capitals in the text would turn Turkish İ into "i̇" when lowercased).
+  const words = category.replace(/-/g, " ").toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** Text for a multiple-choice option letter on a question row. */

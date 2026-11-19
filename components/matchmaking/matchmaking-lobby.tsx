@@ -1,0 +1,679 @@
+/** Client-side matchmaking lobby with presence, polling, and timeout handling. */
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Ghost, Loader2, Swords, Users } from "lucide-react";
+import {
+  cancelMatchSearch,
+  searchForMatch,
+  startBotMatch,
+} from "@/app/(app)/matchmaking/actions";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { createClient } from "@/utils/supabase/client";
+import { useGameStore } from "@/store/useGameStore";
+import {
+  BOT_DIFFICULTY_LABELS,
+  getBotDifficultyDescription,
+  type BotDifficulty,
+} from "@/lib/bot";
+import {
+  armMatchmakingAutosearch,
+  disarmMatchmakingAutosearch,
+  shouldAutosearchMatchmaking,
+} from "@/lib/matchmaking-intent";
+import type { UserProfile } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { useT } from "@/components/ui-language-provider";
+
+const SEARCH_INTERVAL_MS = 1500;
+const MATCH_SEARCH_SECONDS = 10;
+
+type MatchmakingLobbyProps = {
+  profile: UserProfile;
+  mode: "real" | "bot";
+  botDifficulty?: BotDifficulty;
+};
+
+type PresencePlayer = {
+  id: string;
+  target_language: string;
+  proficiency_level: string;
+};
+
+export function MatchmakingLobby({
+  profile,
+  mode,
+  botDifficulty = "medium",
+}: MatchmakingLobbyProps) {
+  const router = useRouter();
+  const supabase = createClient();
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const redirectingRef = useRef(false);
+  const cancelledRef = useRef(false);
+  const searchInFlightRef = useRef(false);
+  const searchIntervalRef = useRef<number | null>(null);
+  const timerIntervalRef = useRef<number | null>(null);
+  const noMatchHandledRef = useRef(false);
+  const handleActiveMatchRef = useRef<
+    (
+      sessionId: string,
+      playlist: Parameters<typeof startMatch>[0]["playlist"],
+      opponent: NonNullable<Parameters<typeof startMatch>[0]["opponent"]>
+    ) => void
+  >(() => {});
+
+  const gameSessionId = useGameStore((state) => state.gameSessionId);
+  const setSearching = useGameStore((state) => state.setSearching);
+  const setSessionId = useGameStore((state) => state.setSessionId);
+  const startMatch = useGameStore((state) => state.startMatch);
+  const reset = useGameStore((state) => state.reset);
+
+  // After a finished match, Back/swipe must not auto-search again. Intentional
+  // entries (Find opponent / Play again) arm auto-search before navigating.
+  const [searchArmed, setSearchArmed] = useState(
+    () => mode === "bot" || shouldAutosearchMatchmaking()
+  );
+  const [secondsLeft, setSecondsLeft] = useState(MATCH_SEARCH_SECONDS);
+  const [onlineCount, setOnlineCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [isExiting, setIsExiting] = useState(false);
+  const [showNoMatchDialog, setShowNoMatchDialog] = useState(false);
+  const [isStartingBot, setIsStartingBot] = useState(false);
+  const t = useT();
+  const [statusMessage, setStatusMessage] = useState(() =>
+    mode === "bot"
+      ? t("Summoning ghost opponent...")
+      : shouldAutosearchMatchmaking()
+        ? t("Searching for opponent...")
+        : t("Ready when you are")
+  );
+
+  const language = profile.target_language!;
+  const level = profile.proficiency_level!;
+  const isBotMode = mode === "bot";
+  const isSearching = isBotMode || searchArmed;
+
+  const clearTimers = useCallback(() => {
+    if (searchIntervalRef.current !== null) {
+      window.clearInterval(searchIntervalRef.current);
+      searchIntervalRef.current = null;
+    }
+
+    if (timerIntervalRef.current !== null) {
+      window.clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+  }, []);
+
+  const exitLobby = useCallback(async () => {
+    if (redirectingRef.current || cancelledRef.current) {
+      return;
+    }
+
+    cancelledRef.current = true;
+    redirectingRef.current = true;
+    setIsExiting(true);
+    clearTimers();
+
+    const sessionId = useGameStore.getState().gameSessionId;
+    await cancelMatchSearch(sessionId);
+    reset();
+
+    router.replace("/");
+  }, [clearTimers, reset, router]);
+
+  const goToMatch = useCallback(
+    (sessionId: string) => {
+      if (redirectingRef.current) {
+        return;
+      }
+
+      redirectingRef.current = true;
+      clearTimers();
+      // Replace (not push) so browser Back from the post-match review cannot
+      // return here and restart searching. Also disarm auto-search as a
+      // belt-and-suspenders guard for any residual history entry.
+      disarmMatchmakingAutosearch();
+      router.replace(`/match/${sessionId}`);
+    },
+    [clearTimers, router]
+  );
+
+  const beginSearch = useCallback(() => {
+    armMatchmakingAutosearch();
+    noMatchHandledRef.current = false;
+    cancelledRef.current = false;
+    setSecondsLeft(MATCH_SEARCH_SECONDS);
+    setShowNoMatchDialog(false);
+    setError(null);
+    setStatusMessage(t("Searching for opponent..."));
+    setSearchArmed(true);
+    setSearching();
+  }, [setSearching, t]);
+
+  const handleSearchTimeout = useCallback(async () => {
+    if (
+      noMatchHandledRef.current ||
+      cancelledRef.current ||
+      redirectingRef.current
+    ) {
+      return;
+    }
+
+    noMatchHandledRef.current = true;
+    clearTimers();
+    setStatusMessage(t("No matches found"));
+
+    const sessionId = useGameStore.getState().gameSessionId;
+    await cancelMatchSearch(sessionId);
+    setShowNoMatchDialog(true);
+  }, [clearTimers, t]);
+
+  const handlePlayVsBot = useCallback(async () => {
+    if (isStartingBot || redirectingRef.current) {
+      return;
+    }
+
+    setIsStartingBot(true);
+    setShowNoMatchDialog(false);
+    clearTimers();
+
+    const result = await startBotMatch(botDifficulty);
+
+    if (!result.success) {
+      setError(result.error);
+      setIsStartingBot(false);
+      setShowNoMatchDialog(true);
+      return;
+    }
+
+    if (result.data.status !== "active" || !result.data.opponent) {
+      setError("Could not start bot match.");
+      setIsStartingBot(false);
+      setShowNoMatchDialog(true);
+      return;
+    }
+
+    setSessionId(result.data.sessionId);
+    startMatch({
+      gameSessionId: result.data.sessionId,
+      opponent: result.data.opponent,
+      playlist: result.data.playlist,
+      botDifficulty,
+    });
+    setStatusMessage(t("{bot} ready — starting match...", { bot: t(BOT_DIFFICULTY_LABELS[botDifficulty]) }));
+    goToMatch(result.data.sessionId);
+  }, [botDifficulty, clearTimers, goToMatch, isStartingBot, setSessionId, startMatch, t]);
+
+  const handleReturnToDashboard = useCallback(async () => {
+    if (redirectingRef.current) {
+      return;
+    }
+
+    cancelledRef.current = true;
+    redirectingRef.current = true;
+    setShowNoMatchDialog(false);
+    setIsExiting(true);
+    clearTimers();
+    reset();
+    router.replace("/");
+  }, [clearTimers, reset, router]);
+
+  const handleActiveMatch = useCallback(
+    (
+      sessionId: string,
+      playlist: Parameters<typeof startMatch>[0]["playlist"],
+      opponent: NonNullable<Parameters<typeof startMatch>[0]["opponent"]>
+    ) => {
+      if (cancelledRef.current) {
+        return;
+      }
+
+      startMatch({
+        gameSessionId: sessionId,
+        opponent,
+        playlist,
+        botDifficulty: opponent.isGhost ? botDifficulty : null,
+      });
+      setStatusMessage(
+        opponent.isGhost
+          ? t("{bot} ready — starting match...", { bot: t(BOT_DIFFICULTY_LABELS[botDifficulty]) })
+          : t("Opponent found — starting match...")
+      );
+      goToMatch(sessionId);
+    },
+    [botDifficulty, goToMatch, startMatch, t]
+  );
+
+  // Before the effects below, so they always call the current handler.
+  useEffect(() => {
+    handleActiveMatchRef.current = handleActiveMatch;
+  }, [handleActiveMatch]);
+
+  const runSearch = useCallback(async () => {
+    if (
+      cancelledRef.current ||
+      redirectingRef.current ||
+      noMatchHandledRef.current
+    ) {
+      return;
+    }
+
+    // Never let two searches overlap: on slow connections a second in-flight
+    // call doesn't know about the session the first one just created, so it
+    // would create a duplicate lobby and split the two players across
+    // different sessions (different playlists = different questions).
+    if (searchInFlightRef.current) {
+      return;
+    }
+    searchInFlightRef.current = true;
+
+    try {
+      // Read the live value, not a stale closure capture.
+      const result = await searchForMatch(useGameStore.getState().gameSessionId);
+
+      if (cancelledRef.current || redirectingRef.current) {
+        return;
+      }
+
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+
+      setError(null);
+      setSessionId(result.data.sessionId);
+
+      if (result.data.status === "active" && result.data.opponent) {
+        handleActiveMatch(
+          result.data.sessionId,
+          result.data.playlist,
+          result.data.opponent
+        );
+      }
+    } finally {
+      searchInFlightRef.current = false;
+    }
+  }, [handleActiveMatch, setSessionId]);
+
+  useEffect(() => {
+    if (!isSearching) {
+      return;
+    }
+    setSearching();
+  }, [isSearching, setSearching]);
+
+  useEffect(() => {
+    if (!isSearching || isBotMode) {
+      return;
+    }
+
+    runSearch();
+    searchIntervalRef.current = window.setInterval(runSearch, SEARCH_INTERVAL_MS);
+
+    return () => {
+      if (searchIntervalRef.current !== null) {
+        window.clearInterval(searchIntervalRef.current);
+        searchIntervalRef.current = null;
+      }
+    };
+  }, [isBotMode, isSearching, runSearch]);
+
+  useEffect(() => {
+    if (!isSearching || isBotMode) {
+      return;
+    }
+
+    timerIntervalRef.current = window.setInterval(() => {
+      setSecondsLeft((current) => {
+        if (current <= 1) {
+          if (timerIntervalRef.current !== null) {
+            window.clearInterval(timerIntervalRef.current);
+            timerIntervalRef.current = null;
+          }
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (timerIntervalRef.current !== null) {
+        window.clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+    };
+  }, [isBotMode, isSearching]);
+
+  useEffect(() => {
+    if (
+      !isSearching ||
+      isBotMode ||
+      secondsLeft !== 0 ||
+      noMatchHandledRef.current
+    ) {
+      return;
+    }
+
+    void handleSearchTimeout();
+  }, [handleSearchTimeout, isBotMode, isSearching, secondsLeft]);
+
+  useEffect(() => {
+    if (!isBotMode || cancelledRef.current) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function startInstantGhostMatch() {
+      const result = await startBotMatch(botDifficulty);
+      if (cancelled || cancelledRef.current) {
+        return;
+      }
+
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+
+      if (result.data.status !== "active" || !result.data.opponent) {
+        setError("Could not start ghost match.");
+        return;
+      }
+
+      setSessionId(result.data.sessionId);
+      handleActiveMatchRef.current(
+        result.data.sessionId,
+        result.data.playlist,
+        result.data.opponent
+      );
+    }
+
+    void startInstantGhostMatch();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [botDifficulty, isBotMode, setSessionId]);
+
+  useEffect(() => {
+    if (!gameSessionId || cancelledRef.current) {
+      return;
+    }
+
+    const sessionChannel = supabase
+      .channel(`game-session-${gameSessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "game_sessions",
+          filter: `id=eq.${gameSessionId}`,
+        },
+        async (payload) => {
+          if (cancelledRef.current || redirectingRef.current) {
+            return;
+          }
+
+          const updated = payload.new as {
+            id: string;
+            status: string;
+            player_b_id: string | null;
+          };
+
+          if (updated.status !== "active") {
+            return;
+          }
+
+          const result = await searchForMatch(updated.id);
+          if (
+            result.success &&
+            result.data.status === "active" &&
+            result.data.opponent
+          ) {
+            handleActiveMatch(
+              result.data.sessionId,
+              result.data.playlist,
+              result.data.opponent
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(sessionChannel);
+    };
+  }, [gameSessionId, handleActiveMatch, supabase]);
+
+  useEffect(() => {
+    if (isBotMode) {
+      return;
+    }
+
+    const channel = supabase.channel("waiting_room", {
+      config: { presence: { key: profile.id } },
+    });
+
+    channel
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState<PresencePlayer>();
+        const players = Object.values(state).flat();
+        const relevant = players.filter(
+          (player) =>
+            player.id !== profile.id &&
+            player.target_language === language &&
+            player.proficiency_level === level
+        );
+        setOnlineCount(relevant.length);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({
+            id: profile.id,
+            target_language: language,
+            proficiency_level: level,
+          });
+        }
+      });
+
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+      }
+    };
+  }, [isBotMode, language, level, profile.id, supabase]);
+
+  if (!isSearching) {
+    return (
+      <main className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-6 touch-scroll sm:px-6 sm:py-12">
+        <div className="glass-panel w-full max-w-lg overflow-hidden p-5 sm:p-8">
+          <div className="space-y-6 text-center sm:space-y-8">
+            <div className="mx-auto flex size-16 items-center justify-center rounded-full border border-border bg-muted/60 sm:size-20">
+              <Swords className="size-8 text-accent sm:size-10" />
+            </div>
+
+            <div className="space-y-2">
+              <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
+                {t("Ready when you are")}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {t("Take your time reviewing the last match. Search only starts when you choose to play again.")}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Badge variant="secondary" className="gap-1.5">
+                <Users className="size-3.5" />
+                {t("{n} online in your bracket", { n: onlineCount })}
+              </Badge>
+            </div>
+
+            {error && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {t(error)}
+              </div>
+            )}
+
+            <div className="flex w-full flex-col items-center gap-3 sm:flex-row sm:justify-center">
+              <Button
+                type="button"
+                className="min-h-11 w-full sm:w-auto"
+                onClick={beginSearch}
+              >
+                {t("Find opponent")}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11 w-full sm:w-auto"
+                disabled={isExiting}
+                onClick={() => {
+                  void exitLobby();
+                }}
+              >
+                {isExiting ? t("Leaving...") : t("Back to the Arena")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-6 touch-scroll sm:px-6 sm:py-12">
+      <div className="glass-panel w-full max-w-lg overflow-hidden p-5 sm:p-8">
+        <div className="space-y-6 text-center sm:space-y-8">
+          <div className="mx-auto flex size-16 items-center justify-center rounded-full border border-border bg-muted/60 sm:size-20">
+            <Loader2 className="size-8 animate-spin text-accent sm:size-10" />
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{statusMessage}</h1>
+            <p className="text-sm text-muted-foreground">
+              {isBotMode
+                ? `${t(getBotDifficultyDescription(botDifficulty))} · ${t(language)} · ${level}`
+                : t("Matching {language} learners at level {level}", { language: t(language), level })}
+            </p>
+          </div>
+
+          {!isBotMode && (
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Badge variant="secondary" className="gap-1.5">
+                <Users className="size-3.5" />
+                {t("{n} online in your bracket", { n: onlineCount })}
+              </Badge>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {!isBotMode && (
+              <>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <Ghost className="size-4" />
+                    {t("Time remaining")}
+                  </span>
+                  <span
+                    className={cn(
+                      "font-mono text-lg font-semibold tabular-nums",
+                      secondsLeft <= 5 ? "text-amber-400" : "text-foreground"
+                    )}
+                  >
+                    {secondsLeft}s
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted dark:bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all duration-1000 ease-linear"
+                    style={{
+                      width: `${((MATCH_SEARCH_SECONDS - secondsLeft) / MATCH_SEARCH_SECONDS) * 100}%`,
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t("If no real player joins within {n} seconds, you can play vs bot or go back to the Arena.", { n: MATCH_SEARCH_SECONDS })}
+                </p>
+              </>
+            )}
+            {isBotMode && (
+              <p className="text-xs text-muted-foreground">
+                {t("Starting {bot} immediately — no waiting room.", { bot: t(BOT_DIFFICULTY_LABELS[botDifficulty]) })}
+              </p>
+            )}
+          </div>
+
+          {error && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {t(error)}
+            </div>
+          )}
+
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 w-full sm:w-auto"
+            disabled={isExiting}
+            onClick={() => {
+              void exitLobby();
+            }}
+          >
+            {isExiting ? t("Cancelling...") : isBotMode ? t("Cancel") : t("Cancel search")}
+          </Button>
+        </div>
+      </div>
+
+      <Dialog open={showNoMatchDialog} onOpenChange={() => {}}>
+        <DialogContent
+          showCloseButton={false}
+          onPointerDownOutside={(event) => event.preventDefault()}
+          onEscapeKeyDown={(event) => event.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>{t("No matches found")}</DialogTitle>
+            <DialogDescription>
+              {t("We couldn't find another player at your {language} level. Would you like to play vs bot or go back to the Arena?", { language: t(language) })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button
+              type="button"
+              className="w-full"
+              disabled={isStartingBot}
+              onClick={() => {
+                void handlePlayVsBot();
+              }}
+            >
+              {isStartingBot ? t("Starting bot match...") : t("Play vs bot")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={isStartingBot || isExiting}
+              onClick={() => {
+                void handleReturnToDashboard();
+              }}
+            >
+              {t("Back to the Arena")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </main>
+  );
+}

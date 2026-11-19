@@ -1,0 +1,681 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { Check, ChevronRight, Clock, Loader2, SkipForward, X } from "lucide-react";
+import { DayArchive } from "@/components/day-archive";
+import { useHowToPlayOpen } from "@/components/how-to-play";
+import { SpeakButton } from "@/components/speak-button";
+import { ShareButton } from "@/components/share-button";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+import { fill, useT, useUiLanguage } from "@/components/ui-language-provider";
+import { pickLocalized } from "@/lib/i18n";
+import {
+  finishWord,
+  fitsLetter,
+  isFinishCommand,
+  isPassCommand,
+  nextLetter,
+  PASSAPAROLA_LETTERS,
+  passWord,
+  playPassaparola,
+  wheelShareText,
+  type PassaparolaMark,
+  type PassaparolaTurnResult,
+  type PassaparolaView,
+  type WheelArchiveDay,
+  type WheelMode,
+} from "@/lib/passaparola";
+import { formatPuzzleDay } from "@/lib/wordle";
+import { createClient } from "@/utils/supabase/client";
+
+type Move = Parameters<typeof playPassaparola>[3];
+type Message = { text: string; tone: "right" | "wrong" };
+
+const MARK_COLOR: Record<PassaparolaMark, string> = {
+  right: "bg-emerald-600",
+  wrong: "bg-red-600",
+};
+
+// Not bg-muted-foreground/50: that color is a bare CSS variable, so Tailwind 3 cannot make it see-through.
+const UNANSWERED = "bg-zinc-500";
+
+const TONE: Record<Message["tone"], string> = {
+  right: "text-emerald-600 dark:text-emerald-400",
+  wrong: "text-red-600 dark:text-red-400",
+};
+
+function clock(ms: number) {
+  const seconds = Math.ceil(ms / 1000);
+  return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function lettersOf(view: PassaparolaView) {
+  return view.clues.map((clue) => clue.letter);
+}
+
+function patchWheelArchive(days: WheelArchiveDay[], view: PassaparolaView): WheelArchiveDay[] {
+  const letters = lettersOf(view);
+  const right = letters.filter((letter) => view.marks[letter] === "right").length;
+  return days.map((day) =>
+    day.date === view.date
+      ? { date: day.date, right, total: letters.length, finished: view.finished, mode: view.mode ?? day.mode }
+      : day
+  );
+}
+
+// The answer field is found through its form, so no ref has to be passed around.
+function focusAnswer(form: HTMLFormElement | null) {
+  (form?.elements.namedItem("answer") as HTMLInputElement | null)?.focus();
+}
+
+function Keyword({ word, className }: { word: string; className: string }) {
+  return <span className={cn("font-mono font-semibold", className)}>{word}</span>;
+}
+
+export function PassaparolaGame({
+  language,
+  initialLevel,
+  initial,
+}: {
+  language: TargetLanguage;
+  initialLevel: string;
+  initial: PassaparolaTurnResult;
+}) {
+  const t = useT();
+  const uiLanguage = useUiLanguage();
+  const helpOpen = useHowToPlayOpen();
+  const [supabase] = useState(createClient);
+  const [level, setLevel] = useState(initialLevel);
+  const [mode, setMode] = useState<WheelMode>("normal");
+  const [view, setView] = useState<PassaparolaView | null>(initial.ok ? initial.view : null);
+  const [archive, setArchive] = useState<WheelArchiveDay[]>(initial.ok ? initial.archive ?? [] : []);
+  const [current, setCurrent] = useState(() =>
+    initial.ok ? nextLetter(lettersOf(initial.view), initial.view.marks, null) : null
+  );
+  // shortcut: passes live in this tab only, so a reload mid-game forgets them
+  // and plays from A again; store them with the game if players complain.
+  const [passed, setPassed] = useState<ReadonlySet<string>>(() => new Set());
+  const [msLeft, setMsLeft] = useState(initial.ok ? initial.view.msLeft : 300_000);
+  const [input, setInput] = useState("");
+  const [message, setMessage] = useState<Message | null>(
+    initial.ok ? null : { text: t(initial.error), tone: "wrong" }
+  );
+  const [pending, setPending] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+
+  const playing = Boolean(view?.started && !view.finished);
+  // Phones: the keyboard covers half the screen, so while the answer has focus the
+  // wheel shrinks and the title and levels step aside; wheel, clue and answer stay in view.
+  const [typing, setTyping] = useState(false);
+  const compact = typing && playing;
+  // Today's clock is running: the level can't change, so only the one being played shows.
+  const locked = playing || countdown !== null;
+  // Leaving during the 3-2-1 must not start today's only clock in the background.
+  const leftRef = useRef(false);
+  const helpRef = useRef(false);
+  const endRef = useRef(0);
+  useEffect(() => {
+    helpRef.current = helpOpen;
+  }, [helpOpen]);
+  useEffect(() => {
+    leftRef.current = false;
+    return () => {
+      leftRef.current = true;
+    };
+  }, []);
+
+  /** Sends one move; the next letter is the first one still to play after `after`. */
+  async function send(nextLevel: string, move: Move, after: string | null) {
+    setPending(true);
+    const result = await playPassaparola(supabase, language, nextLevel, move);
+    setPending(false);
+    if (!result.ok) {
+      setMessage({ text: t(result.error), tone: "wrong" });
+      return result;
+    }
+    setView(result.view);
+    setArchive(result.archive ?? ((days) => patchWheelArchive(days, result.view)));
+    setLevel(result.view.level);
+    setMsLeft(result.view.msLeft);
+    setCurrent(nextLetter(lettersOf(result.view), result.view.marks, after));
+    setMessage(null);
+    return result;
+  }
+
+  useEffect(() => {
+    if (view?.started && !view.finished) {
+      endRef.current = Date.now() + view.msLeft;
+    }
+  }, [view]);
+
+  // Counts down from the server's figure. While how-to-play is open the numbers
+  // stay put; closing catches up to the same deadline, so no time is added.
+  // At zero the server has ended the game too, so one more load brings the answers.
+  useEffect(() => {
+    if (helpOpen || !view?.started || view.finished) {
+      return;
+    }
+    const timer = setInterval(() => {
+      const left = Math.max(0, endRef.current - Date.now());
+      setMsLeft(left);
+      if (left === 0) {
+        clearInterval(timer);
+        void playPassaparola(supabase, language, view.level, { date: view.date }).then((result) => {
+          if (result.ok) {
+            setView(result.view);
+            setMsLeft(result.view.msLeft);
+            if (result.archive) setArchive(result.archive);
+          } else {
+            setMessage({ text: t(result.error), tone: "wrong" });
+          }
+        });
+      }
+    }, 250);
+    return () => clearInterval(timer);
+  }, [helpOpen, language, supabase, t, view]);
+
+  async function begin() {
+    if (helpRef.current || !view) return;
+    setPassed(new Set());
+    for (const second of [3, 2, 1]) {
+      if (helpRef.current) {
+        setCountdown(null);
+        return;
+      }
+      setCountdown(second);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    if (leftRef.current || helpRef.current) {
+      setCountdown(null);
+      return;
+    }
+    // The clock starts only now, so the countdown costs no playing time.
+    await send(level, { date: view.date, start: true, mode }, null);
+    setCountdown(null);
+  }
+
+  function pass(form: HTMLFormElement | null) {
+    const letter = current;
+    if (!view || !letter) {
+      return;
+    }
+    setPassed((letters) => new Set(letters).add(letter));
+    setCurrent(nextLetter(lettersOf(view), view.marks, letter));
+    setInput("");
+    setMessage(null);
+    focusAnswer(form);
+  }
+
+  async function answer(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const typed = input.trim();
+    const letter = current;
+    if (!view || !letter || pending || !typed) {
+      return;
+    }
+    if (isPassCommand(typed, language)) {
+      pass(form);
+      return;
+    }
+    if (isFinishCommand(typed, language)) {
+      if ((await send(view.level, { date: view.date, finish: true }, null)).ok) {
+        setInput("");
+      }
+      return;
+    }
+    const result = await send(view.level, { date: view.date, letter, answer: typed }, letter);
+    if (result.ok) {
+      setInput("");
+      const mark = result.view.marks[letter];
+      if (mark) {
+        const spelling = result.view.near.includes(letter) ? result.view.spelling[letter] : undefined;
+        setMessage(
+          mark === "right"
+            ? {
+                text: spelling
+                  ? `${t("{letter}: almost right, it counts!", { letter })} ${t("The right spelling is {word}.", { word: spelling })}`
+                  : t("{letter}: correct!", { letter }),
+                tone: "right",
+              }
+            : {
+                text: result.view.reveal[letter]?.length
+                  ? t("{letter}: wrong. The answer is {word}.", { letter, word: result.view.reveal[letter].join(" / ") })
+                  : t("{letter}: wrong. You will see the answer at the end.", { letter }),
+                tone: "wrong",
+              }
+        );
+      }
+    }
+    focusAnswer(form);
+  }
+
+  const letters = view?.started ? lettersOf(view) : PASSAPAROLA_LETTERS[language];
+  const right = letters.filter((letter) => view?.marks[letter] === "right").length;
+  const wrong = letters.filter((letter) => view?.marks[letter] === "wrong").length;
+  // Once the game is over, every letter left unanswered counts as passed.
+  const skipped = view?.finished
+    ? letters.length - right - wrong
+    : [...passed].filter((letter) => !view?.marks[letter]).length;
+  // The clue in the app language when the bank has it; lang picks the uppercase rules (Turkish "i" → "İ").
+  const shown = (item: PassaparolaView["clues"][number]) => ({
+    text: pickLocalized(uiLanguage, item.clue, { tr: item.clueTr, it: item.clueIt }),
+    lang: uiLanguage === "tr" && item.clueTr ? "tr" : uiLanguage === "it" && item.clueIt ? "it" : "en",
+  });
+  const currentClue = view?.clues.find((item) => item.letter === current);
+  const clue = currentClue && shown(currentClue);
+
+  const skippedLabel = view?.finished ? t("Not answered") : t("Passed");
+  const counts = (
+    <p className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-sm text-muted-foreground">
+      <span className="flex items-center gap-1">
+        <Check className="size-4 text-emerald-600" aria-hidden />
+        <b className="text-emerald-600 dark:text-emerald-400">{right}</b> {t("Correct")}
+      </span>
+      <span className="flex items-center gap-1">
+        <X className="size-4 text-red-600" aria-hidden />
+        <b className="text-red-600 dark:text-red-400">{wrong}</b> {t("Wrong")}
+      </span>
+      <span className="flex items-center gap-1">
+        <SkipForward className="size-4 text-amber-500" aria-hidden />
+        <b className="text-amber-600 dark:text-amber-400">{skipped}</b> {skippedLabel}
+      </span>
+    </p>
+  );
+
+  return (
+    <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6">
+      {/* Same title and level chips as the Wordle page. */}
+      <header className={cn("space-y-1", compact && "max-md:hidden")}>
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{t("Word Wheel")}</h1>
+        <p className="text-sm text-muted-foreground">
+          {t("A clue for every letter from A to Z in 5 minutes. One board a day for each level.")}
+        </p>
+      </header>
+      <div
+        className={cn("-mx-1 -mt-3 flex gap-2 overflow-x-auto px-1 pb-1 touch-scroll", compact && "max-md:hidden")}
+        role="group"
+        aria-label={t("Level")}
+      >
+          {PROFICIENCY_LEVELS.filter((option) => !locked || option === level).map((option) => (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={option === level}
+              disabled={pending || locked}
+              onClick={() => {
+                setPassed(new Set());
+                void send(option, {}, null);
+              }}
+              className={cn(
+                "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
+                !locked && "disabled:opacity-60",
+                option === level
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-transparent text-foreground hover:bg-muted"
+              )}
+            >
+              {option}
+            </button>
+          ))}
+      </div>
+
+      {view?.today && view.date !== view.today && (
+        <div className="flex items-center justify-between gap-3 text-sm">
+          <span className="font-medium">
+            {formatPuzzleDay(view.date, uiLanguage)} · {view.level}
+            {view.mode ? ` · ${t(view.mode === "hard" ? "Hard" : "Normal")}` : ""}
+          </span>
+          <Button type="button" size="sm" variant="ghost" disabled={pending || locked} onClick={() => void send(level, {}, null)}>
+            {t("Back to today")}
+          </Button>
+        </div>
+      )}
+
+      {/*
+        Wide screens: wheel left, play area right; once the game is over, score
+        and wheel left, every answer right. The wheel never grows taller than the
+        screen allows.
+      */}
+      <div
+        className={cn(
+          "flex flex-col gap-6 md:flex-1 md:flex-row md:gap-10",
+          view?.finished ? "md:items-start" : "md:items-center",
+          compact && "max-md:gap-3"
+        )}
+      >
+        <div
+          className={cn(
+            "mx-auto flex w-full max-w-[20rem] shrink-0 flex-col gap-4 md:mx-0 md:w-[min(50%,calc(100dvh_-_12rem))] md:max-w-md",
+            compact && "max-md:max-w-[11rem]"
+          )}
+        >
+          {view?.finished && (
+            <div className="glass-panel space-y-2 p-4 text-center">
+              <p className="text-lg font-semibold">
+                {right === letters.length
+                  ? t("Perfetto! Every letter right.")
+                  : t("{right} of {total} right.", { right, total: letters.length })}
+              </p>
+              {view.mode && (
+                <p className="text-xs font-medium text-muted-foreground">{t(view.mode === "hard" ? "Hard" : "Normal")}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {view.today && view.date !== view.today
+                  ? t("Pick another day from the archive below.")
+                  : t("A new board comes tomorrow. Try another level above.")}
+              </p>
+              {counts}
+              <ShareButton
+                className="min-h-11"
+                description={t("Just your score: the link opens the same game for your friends.")}
+                text={() =>
+                  wheelShareText(
+                    language,
+                    view.level,
+                    view.date,
+                    view.mode,
+                    right,
+                    letters.length,
+                    window.location.origin
+                  )
+                }
+              />
+            </div>
+          )}
+
+          <div
+            role="img"
+            aria-label={
+              view?.finished
+                ? t("{right} correct, {wrong} wrong, {skipped} not answered", { right, wrong, skipped })
+                : t("{right} correct, {wrong} wrong, {skipped} passed", { right, wrong, skipped })
+            }
+            className="relative aspect-square w-full"
+          >
+            {letters.map((letter, index) => {
+              const angle = (index / letters.length) * 2 * Math.PI - Math.PI / 2;
+              const mark = view?.marks[letter];
+              return (
+                <span
+                  key={letter}
+                  aria-hidden
+                  // Rounded so the server and the browser print the same style.
+                  style={{
+                    left: `${(50 + 44 * Math.cos(angle)).toFixed(2)}%`,
+                    top: `${(50 + 44 * Math.sin(angle)).toFixed(2)}%`,
+                  }}
+                  className={cn(
+                    "absolute flex size-[11%] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-sm font-bold text-white shadow-sm transition-transform md:text-base",
+                    compact && "max-md:text-[11px]",
+                    mark
+                      ? MARK_COLOR[mark]
+                      : view?.finished
+                        ? UNANSWERED
+                        : passed.has(letter)
+                          ? "bg-amber-400 text-black"
+                          : "bg-sky-600",
+                    playing && letter === current && "z-10 scale-125 ring-[3px] ring-foreground ring-offset-2 ring-offset-background"
+                  )}
+                >
+                  {letter}
+                </span>
+              );
+            })}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+              <span
+                className={cn(
+                  "flex items-center gap-2 text-3xl font-bold tabular-nums md:text-4xl",
+                  compact && "max-md:gap-1 max-md:text-xl",
+                  playing && msLeft <= 30_000 && "text-red-600"
+                )}
+              >
+                <Clock className={cn("size-6 text-muted-foreground", compact && "max-md:size-4")} aria-hidden />
+                <span role="timer">{clock(msLeft)}</span>
+              </span>
+              {playing && current && (
+                <span className={cn("text-sm font-medium text-muted-foreground", compact && "max-md:text-xs")}>
+                  {t("Starts with {letter}", { letter: current })}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex w-full min-w-0 flex-1 flex-col gap-4">
+          {view && !view.started && (
+            <div className="glass-panel space-y-4 p-5 text-center">
+              <ul className="space-y-1.5 text-left text-sm">
+                <li>{t("Type the {language} word starting with the letter and press Enter.", { language: t(language) })}</li>
+                <li>
+                  {fill(t("Type {word} or press {word} to skip a letter; it comes back once the others are done."), {
+                    word: <Keyword word={passWord(language)} className="text-amber-500" />,
+                  })}
+                </li>
+                <li>
+                  {fill(t("Type {word} to finish early."), {
+                    word: <Keyword word={finishWord(language)} className="text-red-500" />,
+                  })}
+                </li>
+                <li>{t("A wrong answer turns red and shows the right one. In normal mode one wrong, extra or missing letter still counts.")}</li>
+              </ul>
+              <div className="flex justify-center gap-2" role="group" aria-label={t("Mode")}>
+                {(["normal", "hard"] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={mode === option}
+                    disabled={pending || countdown !== null}
+                    onClick={() => setMode(option)}
+                    className={cn(
+                      "min-h-11 rounded-full border px-4 text-sm font-medium transition-colors",
+                      mode === option
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-transparent text-foreground hover:bg-muted"
+                    )}
+                  >
+                    {t(option === "hard" ? "Hard" : "Normal")}
+                  </button>
+                ))}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {t("Normal mode forgives one wrong letter in a word. Hard mode wants the exact word.")}
+              </p>
+              <Button type="button" size="lg" disabled={pending || countdown !== null || helpOpen} onClick={() => void begin()}>
+                {t("Start")}
+              </Button>
+            </div>
+          )}
+
+          {playing && current && (
+            <>
+              <p
+                lang={clue?.lang}
+                className={cn(
+                  "flex min-h-24 items-center justify-center text-balance text-center text-2xl font-extrabold uppercase leading-tight tracking-tight md:text-3xl",
+                  compact && "max-md:min-h-0 max-md:text-xl"
+                )}
+              >
+                {clue?.text}
+              </p>
+
+              <form
+                onSubmit={answer}
+                className="flex items-center gap-2 rounded-2xl border border-border bg-muted/50 p-1.5 pl-4 focus-within:ring-2 focus-within:ring-ring/50"
+              >
+                <Input
+                  name="answer"
+                  autoFocus
+                  onFocus={() => setTyping(true)}
+                  onBlur={() => setTyping(false)}
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  lang={LANGUAGE_META[language].code}
+                  aria-label={t("{language} word starting with {letter}", { language: t(language), letter: current })}
+                  placeholder={t("{letter}… (type the answer)", { letter: current })}
+                  value={input}
+                  // Typing is ignored while checking. Not readOnly or disabled: on phones both close the keyboard.
+                  onChange={(event) => {
+                    if (pending) {
+                      return;
+                    }
+                    if (!fitsLetter(event.target.value, current, language)) {
+                      setMessage({ text: t("Type a word starting with {letter}.", { letter: current }), tone: "wrong" });
+                      return;
+                    }
+                    setInput(event.target.value);
+                  }}
+                  className="h-11 flex-1 border-0 bg-transparent px-0 text-base shadow-none focus-visible:ring-0 md:h-11 md:text-base dark:bg-transparent"
+                />
+                <button
+                  type="button"
+                  disabled={pending}
+                  // Keeps focus in the answer field, so the phone keyboard stays open.
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={(event) => pass(event.currentTarget.form)}
+                  className="flex h-11 shrink-0 items-center gap-1 rounded-xl bg-amber-400 px-4 text-sm font-bold uppercase tracking-wide text-black transition-colors hover:bg-amber-300 disabled:opacity-60"
+                >
+                  <ChevronRight className="size-4" aria-hidden />
+                  <span lang={LANGUAGE_META[language].code}>{passWord(language)}</span>
+                </button>
+              </form>
+            </>
+          )}
+
+          {view?.finished && (
+            <ul className="space-y-1.5" aria-label={t("Answers")}>
+              {view.clues.map((item) => {
+                const mark = view.marks[item.letter];
+                const given = view.given[item.letter];
+                return (
+                  <li
+                    key={item.letter}
+                    className="flex items-start gap-3 rounded-lg border border-border px-3 py-1.5 text-sm"
+                  >
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white",
+                        mark ? MARK_COLOR[mark] : UNANSWERED
+                      )}
+                    >
+                      {item.letter}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block">
+                        <span className="sr-only">{item.letter}: </span>
+                        <span className="font-semibold">{view.answers?.[item.letter]?.join(" / ")}</span>
+                        <span lang={shown(item).lang} className="text-muted-foreground"> · {shown(item).text}</span>
+                      </span>
+                      {mark ? (
+                        <span className={cn("flex items-center gap-1 text-xs", TONE[mark])}>
+                          {mark === "right" ? (
+                            <Check className="size-3.5 shrink-0" aria-hidden />
+                          ) : (
+                            <X className="size-3.5 shrink-0" aria-hidden />
+                          )}
+                          {given ? (
+                            <span className="min-w-0 truncate">
+                              {fill(t("You: {answer}"), { answer: <span className="font-medium">{given}</span> })}
+                            </span>
+                          ) : mark === "right" ? (
+                            t("Right")
+                          ) : (
+                            t("Wrong")
+                          )}
+                          {given && <span className="sr-only">({mark === "right" ? t("Right") : t("Wrong")})</span>}
+                        </span>
+                      ) : (
+                        <span className="block text-xs text-muted-foreground">{t("Not answered")}</span>
+                      )}
+                      {view.near.includes(item.letter) && view.spelling[item.letter] && (
+                        <span className="block text-xs text-muted-foreground">
+                          {t("The right spelling is {word}.", { word: view.spelling[item.letter] })}
+                        </span>
+                      )}
+                    </span>
+                    {view.answers?.[item.letter] && (
+                      <SpeakButton
+                        className="-my-1.5 ml-auto"
+                        text={view.answers[item.letter].join(", ")}
+                        language={language}
+                      />
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          <p
+            role="status"
+            aria-live="polite"
+            // While typing on a phone the keyboard covers what is below the answer, so this moves above the clue.
+            className={cn("min-h-5 text-center text-sm font-medium", message && TONE[message.tone], compact && "max-md:order-first")}
+          >
+            {message?.text}
+          </p>
+
+          {playing && counts}
+        </div>
+      </div>
+
+      {archive.length > 0 && !playing && (
+        <DayArchive
+          level={level}
+          selectedDate={view?.date}
+          disabled={pending || locked}
+          onSelect={(date) => {
+            setPassed(new Set());
+            void send(level, { date }, null);
+          }}
+          days={archive.map((day) => ({
+            date: day.date,
+            played: day.right !== null,
+            status:
+              day.right === null ? undefined : day.finished ? (
+                <span className="flex flex-col items-end gap-0.5">
+                  <span className="text-lg font-bold tabular-nums leading-none text-primary">
+                    {day.right}/{day.total}
+                  </span>
+                  {day.mode && (
+                    <span className="text-[0.65rem] font-medium text-muted-foreground">
+                      {t(day.mode === "hard" ? "Hard" : "Normal")}
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span className="text-xs font-semibold text-primary">{t("In progress")}</span>
+              ),
+          }))}
+        />
+      )}
+
+      {countdown !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-sm space-y-4 p-6 text-center" role="status" aria-live="assertive">
+            <p className="text-6xl font-extrabold tabular-nums">{countdown}</p>
+            <Loader2 className="mx-auto size-8 animate-spin text-muted-foreground" aria-hidden />
+            <ul className="space-y-1 text-left text-sm">
+              <li>
+                {fill(t("Stuck? Type {word} to skip a letter."), {
+                  word: <Keyword word={passWord(language)} className="text-amber-500" />,
+                })}
+              </li>
+              <li>
+                {fill(t("Done? Type {word} to finish early."), {
+                  word: <Keyword word={finishWord(language)} className="text-red-500" />,
+                })}
+              </li>
+            </ul>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,828 @@
+/**
+ * A2 sample questions for the landing-page demo match, in Italian or German
+ * (German for visitors who came through italiarena.com/german).
+ *
+ * Picked on the server per request, so the pool never ships to the browser
+ * and server and client render the same three questions (no hydration mismatch).
+ * 52 Italian questions → 22,100 possible sets of three; 12 German → 220.
+ */
+
+import { LANGUAGE_META, type TargetLanguage } from "@/lib/constants";
+import type { UiLanguage } from "@/lib/i18n";
+import { DEMO_IT } from "@/lib/landing-demo-questions-it";
+import { DEMO_TR } from "@/lib/landing-demo-questions-tr";
+
+export type DemoCategory = "Grammar" | "Fill in the blank" | "Vocabulary" | "Idioms";
+
+type PoolQuestion = {
+  id: string;
+  category: DemoCategory;
+  /** In the language being learned. "___" marks the blank. */
+  prompt: string;
+  /** English help line shown under the prompt. */
+  hint: string;
+  answer: string;
+  /** Most tempting wrong option — the demo player picks it on its wrong turn. */
+  trap: string;
+  distractors: [string, string];
+};
+
+export type DemoQuestion = {
+  id: string;
+  category: DemoCategory;
+  prompt: string;
+  hint: string;
+  /** lang attribute of the prompt. */
+  lang: string;
+  options: string[];
+  optionsLang: string;
+  correct: number;
+  trap: number;
+};
+
+const MEANING = "What does it mean?";
+
+const POOL: PoolQuestion[] = [
+  // Grammar
+  {
+    id: "g01",
+    category: "Grammar",
+    prompt: "Ieri noi ___ al cinema.",
+    hint: "Yesterday we went to the cinema.",
+    answer: "siamo andati",
+    trap: "abbiamo andato",
+    distractors: ["siamo andato", "andiamo"],
+  },
+  {
+    id: "g02",
+    category: "Grammar",
+    prompt: "Maria ___ alle sette ogni mattina.",
+    hint: "Maria gets up at seven every morning.",
+    answer: "si alza",
+    trap: "alza",
+    distractors: ["si alzano", "ti alzi"],
+  },
+  {
+    id: "g03",
+    category: "Grammar",
+    prompt: "Questo è ___ libro di Paolo.",
+    hint: "This is Paolo's book.",
+    answer: "il",
+    trap: "lo",
+    distractors: ["la", "l'"],
+  },
+  {
+    id: "g04",
+    category: "Grammar",
+    prompt: "Ho comprato ___ zaino nuovo.",
+    hint: "I bought a new backpack.",
+    answer: "uno",
+    trap: "un",
+    distractors: ["una", "un'"],
+  },
+  {
+    id: "g05",
+    category: "Grammar",
+    prompt: "Vedi Luca stasera? Sì, ___ vedo alle otto.",
+    hint: "Are you seeing Luca tonight? Yes, I'm seeing him at eight.",
+    answer: "lo",
+    trap: "gli",
+    distractors: ["la", "li"],
+  },
+  {
+    id: "g06",
+    category: "Grammar",
+    prompt: "Telefono a Giulia e ___ dico la verità.",
+    hint: "I call Giulia and tell her the truth.",
+    answer: "le",
+    trap: "la",
+    distractors: ["gli", "lo"],
+  },
+  {
+    id: "g07",
+    category: "Grammar",
+    prompt: "Roma è ___ grande di Firenze.",
+    hint: "Rome is bigger than Florence.",
+    answer: "più",
+    trap: "molto",
+    distractors: ["tanto", "così"],
+  },
+  {
+    id: "g08",
+    category: "Grammar",
+    prompt: "Quando ero bambino, ___ sempre al parco.",
+    hint: "When I was a child, I always played in the park.",
+    answer: "giocavo",
+    trap: "ho giocato",
+    distractors: ["gioco", "giocherò"],
+  },
+  {
+    id: "g09",
+    category: "Grammar",
+    prompt: "Questa è ___ madre.",
+    hint: "This is my mother.",
+    answer: "mia",
+    trap: "la mia",
+    distractors: ["mio", "il mio"],
+  },
+  {
+    id: "g10",
+    category: "Grammar",
+    prompt: "Ti presento ___ sorelle.",
+    hint: "Let me introduce my sisters.",
+    answer: "le mie",
+    trap: "mie",
+    distractors: ["i miei", "la mia"],
+  },
+  {
+    id: "g11",
+    category: "Grammar",
+    prompt: "Stamattina Anna ___ colazione alle otto.",
+    hint: "This morning Anna had breakfast at eight.",
+    answer: "ha fatto",
+    trap: "è fatta",
+    distractors: ["ha fatta", "è fatto"],
+  },
+  {
+    id: "g12",
+    category: "Grammar",
+    prompt: "C'è ___ latte in frigo?",
+    hint: "Is there any milk in the fridge?",
+    answer: "del",
+    trap: "dello",
+    distractors: ["della", "dei"],
+  },
+  {
+    id: "g13",
+    category: "Grammar",
+    prompt: "Luisa e Marta ___ partite ieri sera.",
+    hint: "Luisa and Marta left last night.",
+    answer: "sono",
+    trap: "hanno",
+    distractors: ["è", "ha"],
+  },
+
+  // Fill in the blank
+  {
+    id: "f01",
+    category: "Fill in the blank",
+    prompt: "Non vedo l'ora ___ vederti.",
+    hint: "I can't wait to see you.",
+    answer: "di",
+    trap: "a",
+    distractors: ["da", "per"],
+  },
+  {
+    id: "f02",
+    category: "Fill in the blank",
+    prompt: "Abito ___ Torino da due anni.",
+    hint: "I've lived in Turin for two years.",
+    answer: "a",
+    trap: "in",
+    distractors: ["da", "su"],
+  },
+  {
+    id: "f03",
+    category: "Fill in the blank",
+    prompt: "Quest'estate vado ___ Italia.",
+    hint: "This summer I'm going to Italy.",
+    answer: "in",
+    trap: "a",
+    distractors: ["da", "per"],
+  },
+  {
+    id: "f04",
+    category: "Fill in the blank",
+    prompt: "Stasera vado ___ Marco per cena.",
+    hint: "Tonight I'm going to Marco's place for dinner.",
+    answer: "da",
+    trap: "a",
+    distractors: ["in", "di"],
+  },
+  {
+    id: "f05",
+    category: "Fill in the blank",
+    prompt: "Il treno parte ___ binario 3.",
+    hint: "The train leaves from platform 3.",
+    answer: "dal",
+    trap: "al",
+    distractors: ["nel", "sul"],
+  },
+  {
+    id: "f06",
+    category: "Fill in the blank",
+    prompt: "Studio italiano ___ sei mesi.",
+    hint: "I've been studying Italian for six months (and still am).",
+    answer: "da",
+    trap: "per",
+    distractors: ["fa", "tra"],
+  },
+  {
+    id: "f07",
+    category: "Fill in the blank",
+    prompt: "Sono arrivato in Italia due anni ___.",
+    hint: "I arrived in Italy two years ago.",
+    answer: "fa",
+    trap: "da",
+    distractors: ["tra", "dopo"],
+  },
+  {
+    id: "f08",
+    category: "Fill in the blank",
+    prompt: "Ci vediamo ___ una settimana.",
+    hint: "See you in a week.",
+    answer: "tra",
+    trap: "fa",
+    distractors: ["da", "per"],
+  },
+  {
+    id: "f09",
+    category: "Fill in the blank",
+    prompt: "Mi piace ___ pizza napoletana.",
+    hint: "I like Neapolitan pizza.",
+    answer: "la",
+    trap: "il",
+    distractors: ["lo", "i"],
+  },
+  {
+    id: "f10",
+    category: "Fill in the blank",
+    prompt: "A che ora ___ il negozio?",
+    hint: "What time does the shop open?",
+    answer: "apre",
+    trap: "aprono",
+    distractors: ["aperto", "apri"],
+  },
+  {
+    id: "f11",
+    category: "Fill in the blank",
+    prompt: "Scusi, dov'è ___ fermata dell'autobus?",
+    hint: "Excuse me, where is the bus stop?",
+    answer: "la",
+    trap: "il",
+    distractors: ["lo", "l'"],
+  },
+  {
+    id: "f12",
+    category: "Fill in the blank",
+    prompt: "Ho bisogno ___ aiuto.",
+    hint: "I need help.",
+    answer: "di",
+    trap: "per",
+    distractors: ["a", "da"],
+  },
+  {
+    id: "f13",
+    category: "Fill in the blank",
+    prompt: "Il caffè ___ piace molto.",
+    hint: "I really like coffee.",
+    answer: "mi",
+    trap: "io",
+    distractors: ["me", "ti"],
+  },
+
+  // Vocabulary
+  {
+    id: "v01",
+    category: "Vocabulary",
+    prompt: "la fermata",
+    hint: MEANING,
+    answer: "the stop",
+    trap: "the farm",
+    distractors: ["the signature", "the station"],
+  },
+  {
+    id: "v02",
+    category: "Vocabulary",
+    prompt: "la camera",
+    hint: MEANING,
+    answer: "the bedroom",
+    trap: "the camera",
+    distractors: ["the waitress", "the car"],
+  },
+  {
+    id: "v03",
+    category: "Vocabulary",
+    prompt: "la libreria",
+    hint: MEANING,
+    answer: "the bookshop",
+    trap: "the library",
+    distractors: ["the freedom", "the scale"],
+  },
+  {
+    id: "v04",
+    category: "Vocabulary",
+    prompt: "il parente",
+    hint: MEANING,
+    answer: "the relative",
+    trap: "the parent",
+    distractors: ["the wall", "the flat"],
+  },
+  {
+    id: "v05",
+    category: "Vocabulary",
+    prompt: "morbido",
+    hint: MEANING,
+    answer: "soft",
+    trap: "morbid",
+    distractors: ["heavy", "sad"],
+  },
+  {
+    id: "v06",
+    category: "Vocabulary",
+    prompt: "annoiato",
+    hint: MEANING,
+    answer: "bored",
+    trap: "annoyed",
+    distractors: ["anxious", "tired"],
+  },
+  {
+    id: "v07",
+    category: "Vocabulary",
+    prompt: "il bicchiere",
+    hint: MEANING,
+    answer: "the glass",
+    trap: "the bicycle",
+    distractors: ["the bottle", "the cup"],
+  },
+  {
+    id: "v08",
+    category: "Vocabulary",
+    prompt: "lo scontrino",
+    hint: MEANING,
+    answer: "the receipt",
+    trap: "the discount",
+    distractors: ["the meeting", "the change"],
+  },
+  {
+    id: "v09",
+    category: "Vocabulary",
+    prompt: "il cappello",
+    hint: MEANING,
+    answer: "the hat",
+    trap: "the hair",
+    distractors: ["the coat", "the chapel"],
+  },
+  {
+    id: "v10",
+    category: "Vocabulary",
+    prompt: "la tasca",
+    hint: MEANING,
+    answer: "the pocket",
+    trap: "the task",
+    distractors: ["the bag", "the cup"],
+  },
+  {
+    id: "v11",
+    category: "Vocabulary",
+    prompt: "il cameriere",
+    hint: MEANING,
+    answer: "the waiter",
+    trap: "the cameraman",
+    distractors: ["the roommate", "the cook"],
+  },
+  {
+    id: "v12",
+    category: "Vocabulary",
+    prompt: "affittare",
+    hint: MEANING,
+    answer: "to rent",
+    trap: "to fit",
+    distractors: ["to sell", "to borrow"],
+  },
+  {
+    id: "v13",
+    category: "Vocabulary",
+    prompt: "il biglietto",
+    hint: MEANING,
+    answer: "the ticket",
+    trap: "the bill",
+    distractors: ["the wallet", "the envelope"],
+  },
+
+  // Idioms
+  {
+    id: "i01",
+    category: "Idioms",
+    prompt: "In bocca al lupo!",
+    hint: "Literally “into the wolf's mouth.” What does it mean?",
+    answer: "Good luck!",
+    trap: "Be careful!",
+    distractors: ["Enjoy your meal!", "Hurry up!"],
+  },
+  {
+    id: "i02",
+    category: "Idioms",
+    prompt: "Costa un occhio della testa.",
+    hint: "Literally “it costs an eye from the head.” What does it mean?",
+    answer: "It's very expensive.",
+    trap: "It's hard to see.",
+    distractors: ["It's a bargain.", "It gives me a headache."],
+  },
+  {
+    id: "i03",
+    category: "Idioms",
+    prompt: "Acqua in bocca!",
+    hint: "Literally “water in the mouth.” What does it mean?",
+    answer: "Keep it secret!",
+    trap: "I'm thirsty!",
+    distractors: ["Drink slowly!", "Speak up!"],
+  },
+  {
+    id: "i04",
+    category: "Idioms",
+    prompt: "Sono al verde.",
+    hint: "Literally “I'm at the green.” What does it mean?",
+    answer: "I'm broke.",
+    trap: "I'm inexperienced.",
+    distractors: ["I'm jealous.", "I feel sick."],
+  },
+  {
+    id: "i05",
+    category: "Idioms",
+    prompt: "Che barba!",
+    hint: "Literally “what a beard!” What does it mean?",
+    answer: "How boring!",
+    trap: "How old!",
+    distractors: ["How strange!", "How lucky!"],
+  },
+  {
+    id: "i06",
+    category: "Idioms",
+    prompt: "Facciamo due passi?",
+    hint: "Literally “shall we make two steps?” What does it mean?",
+    answer: "Shall we go for a short walk?",
+    trap: "Shall we dance?",
+    distractors: ["Shall we take the stairs?", "Shall we hurry?"],
+  },
+  {
+    id: "i07",
+    category: "Idioms",
+    prompt: "Ho una fame da lupi.",
+    hint: "Literally “I have a wolves' hunger.” What does it mean?",
+    answer: "I'm starving.",
+    trap: "I'm angry.",
+    distractors: ["I'm scared.", "I'm lonely."],
+  },
+  {
+    id: "i08",
+    category: "Idioms",
+    prompt: "Piove a catinelle.",
+    hint: "Literally “it's raining by the basinful.” What does it mean?",
+    answer: "It's pouring.",
+    trap: "It's drizzling.",
+    distractors: ["It's snowing.", "It's getting cold."],
+  },
+  {
+    id: "i09",
+    category: "Idioms",
+    prompt: "Dorme come un ghiro.",
+    hint: "Literally “he sleeps like a dormouse.” What does it mean?",
+    answer: "He sleeps very deeply.",
+    trap: "He sleeps badly.",
+    distractors: ["He takes short naps.", "He snores loudly."],
+  },
+  {
+    id: "i10",
+    category: "Idioms",
+    prompt: "Giulia è in gamba.",
+    hint: "Literally “Giulia is in leg.” What does it mean?",
+    answer: "Giulia is smart and capable.",
+    trap: "Giulia is in a hurry.",
+    distractors: ["Giulia is injured.", "Giulia is standing up."],
+  },
+  {
+    id: "i11",
+    category: "Idioms",
+    prompt: "Devo fare la spesa.",
+    hint: "Literally “I have to do the expense.” What does it mean?",
+    answer: "I have to buy groceries.",
+    trap: "I have to pay the bill.",
+    distractors: ["I have to save money.", "I have to go on holiday."],
+  },
+  {
+    id: "i12",
+    category: "Idioms",
+    prompt: "Ho sonno.",
+    hint: "Literally “I have sleep.” What does it mean?",
+    answer: "I'm sleepy.",
+    trap: "I'm dreaming.",
+    distractors: ["I'm bored.", "I'm lazy."],
+  },
+  {
+    id: "i13",
+    category: "Idioms",
+    prompt: "Meno male!",
+    hint: "Literally “less bad!” What does it mean?",
+    answer: "Thank goodness!",
+    trap: "Too bad!",
+    distractors: ["Not bad at all!", "Get well soon!"],
+  },
+];
+
+const GERMAN_POOL: PoolQuestion[] = [
+  // Grammar
+  {
+    id: "de-g01",
+    category: "Grammar",
+    prompt: "Gestern ___ wir ins Kino gegangen.",
+    hint: "Yesterday we went to the cinema.",
+    answer: "sind",
+    trap: "haben",
+    distractors: ["seid", "ist"],
+  },
+  {
+    id: "de-g02",
+    category: "Grammar",
+    prompt: "Ich warte ___ den Bus.",
+    hint: "I'm waiting for the bus.",
+    answer: "auf",
+    trap: "für",
+    distractors: ["an", "mit"],
+  },
+  {
+    id: "de-g03",
+    category: "Grammar",
+    prompt: "Das ist ___ Auto von meinem Bruder.",
+    hint: "That is my brother's car.",
+    answer: "das",
+    trap: "der",
+    distractors: ["die", "den"],
+  },
+  // Fill in the blank
+  {
+    id: "de-f01",
+    category: "Fill in the blank",
+    prompt: "Ich habe keine Lust, heute ___.",
+    hint: "I don't feel like cooking today.",
+    answer: "zu kochen",
+    trap: "kochen",
+    distractors: ["kocht", "gekocht"],
+  },
+  {
+    id: "de-f02",
+    category: "Fill in the blank",
+    prompt: "Wenn ich Zeit ___, komme ich mit.",
+    hint: "If I have time, I'll come along.",
+    answer: "habe",
+    trap: "hätte",
+    distractors: ["hat", "haben"],
+  },
+  {
+    id: "de-f03",
+    category: "Fill in the blank",
+    prompt: "Wir treffen uns ___ dem Bahnhof.",
+    hint: "We're meeting in front of the station.",
+    answer: "vor",
+    trap: "für",
+    distractors: ["durch", "ohne"],
+  },
+  // Vocabulary
+  {
+    id: "de-v01",
+    category: "Vocabulary",
+    prompt: "die Haltestelle",
+    hint: MEANING,
+    answer: "the stop",
+    trap: "the station hall",
+    distractors: ["the car park", "the crossroads"],
+  },
+  {
+    id: "de-v02",
+    category: "Vocabulary",
+    prompt: "bekommen",
+    hint: MEANING,
+    answer: "to receive, to get",
+    trap: "to become",
+    distractors: ["to come back", "to welcome"],
+  },
+  {
+    id: "de-v03",
+    category: "Vocabulary",
+    prompt: "der Schlüssel",
+    hint: MEANING,
+    answer: "the key",
+    trap: "the lock",
+    distractors: ["the door", "the window"],
+  },
+  // Idioms
+  {
+    id: "de-i01",
+    category: "Idioms",
+    prompt: "Ich drücke dir die Daumen!",
+    hint: "Literally “I'm pressing my thumbs for you.” What does it mean?",
+    answer: "Fingers crossed for you!",
+    trap: "Thumbs up, well done!",
+    distractors: ["I'll call you later!", "Hold on tight!"],
+  },
+  {
+    id: "de-i02",
+    category: "Idioms",
+    prompt: "Das ist mir Wurst.",
+    hint: "Literally “That is sausage to me.” What does it mean?",
+    answer: "I don't care.",
+    trap: "That tastes great.",
+    distractors: ["That's the worst.", "I'm hungry."],
+  },
+  {
+    id: "de-i03",
+    category: "Idioms",
+    prompt: "Ich verstehe nur Bahnhof.",
+    hint: "Literally “I only understand train station.” What does it mean?",
+    answer: "I don't understand a thing.",
+    trap: "I'm at the station.",
+    distractors: ["I need a train.", "I only speak a little."],
+  },
+];
+
+/**
+ * English: the help line explains in plain English (a translation would be the
+ * sentence itself); meanings are short definitions. Turkish in landing-demo-questions-tr.ts,
+ * Italian in landing-demo-questions-it.ts (English until that file is filled).
+ */
+const ENGLISH_POOL: PoolQuestion[] = [
+  {
+    id: "en-g01",
+    category: "Grammar",
+    prompt: "Yesterday we ___ to the cinema.",
+    hint: "A finished action in the past.",
+    answer: "went",
+    trap: "gone",
+    distractors: ["go", "going"],
+  },
+  {
+    id: "en-g02",
+    category: "Grammar",
+    prompt: "She ___ in London since 2019.",
+    hint: "It started in 2019 and is still true.",
+    answer: "has lived",
+    trap: "lives",
+    distractors: ["is living", "lived"],
+  },
+  {
+    id: "en-g03",
+    category: "Grammar",
+    prompt: "There isn't ___ milk in the fridge.",
+    hint: "A negative sentence with something you cannot count.",
+    answer: "any",
+    trap: "some",
+    distractors: ["a", "many"],
+  },
+  {
+    id: "en-f01",
+    category: "Fill in the blank",
+    prompt: "I'm looking forward ___ you.",
+    hint: "I can't wait to see you.",
+    answer: "to seeing",
+    trap: "to see",
+    distractors: ["seeing", "for seeing"],
+  },
+  {
+    id: "en-f02",
+    category: "Fill in the blank",
+    prompt: "I've been learning English ___ six months.",
+    hint: "Six months is a length of time.",
+    answer: "for",
+    trap: "since",
+    distractors: ["from", "during"],
+  },
+  {
+    id: "en-f03",
+    category: "Fill in the blank",
+    prompt: "I'm not very good ___ maths.",
+    hint: "The little word that follows “good”.",
+    answer: "at",
+    trap: "in",
+    distractors: ["on", "with"],
+  },
+  {
+    id: "en-v01",
+    category: "Vocabulary",
+    prompt: "the library",
+    hint: MEANING,
+    answer: "a place to borrow books",
+    trap: "a shop that sells books",
+    distractors: ["a list of books", "a book cover"],
+  },
+  {
+    id: "en-v02",
+    category: "Vocabulary",
+    prompt: "actually",
+    hint: MEANING,
+    answer: "in fact, really",
+    trap: "at the moment",
+    distractors: ["quickly", "by chance"],
+  },
+  {
+    id: "en-v03",
+    category: "Vocabulary",
+    prompt: "sensible",
+    hint: MEANING,
+    answer: "showing good judgement",
+    trap: "easily hurt or upset",
+    distractors: ["able to feel pain", "full of meaning"],
+  },
+  {
+    id: "en-i01",
+    category: "Idioms",
+    prompt: "Break a leg!",
+    hint: "Said to an actor before a show. What does it mean?",
+    answer: "Good luck!",
+    trap: "Be careful!",
+    distractors: ["Hurry up!", "Sit down!"],
+  },
+  {
+    id: "en-i02",
+    category: "Idioms",
+    prompt: "It's a piece of cake.",
+    hint: "It is not about food. What does it mean?",
+    answer: "It's very easy.",
+    trap: "It tastes great.",
+    distractors: ["It's too small.", "It's my birthday."],
+  },
+  {
+    id: "en-i03",
+    category: "Idioms",
+    prompt: "I'm under the weather.",
+    hint: "It is not about rain. What does it mean?",
+    answer: "I feel a bit ill.",
+    trap: "I'm standing in the rain.",
+    distractors: ["I'm very busy.", "I love winter."],
+  },
+];
+
+/** Opponent names for the landing demo — five women, five men per language. */
+const OPPONENT_NAMES: Record<TargetLanguage, readonly string[]> = {
+  Italian: ["Giulia", "Sofia", "Chiara", "Martina", "Francesca", "Marco", "Luca", "Matteo", "Lorenzo", "Davide"],
+  German: ["Anna", "Lena", "Mia", "Hannah", "Lea", "Lukas", "Jonas", "Felix", "Paul", "Leon"],
+  English: ["Emma", "Olivia", "Sophie", "Chloe", "Lucy", "Jack", "Oliver", "Harry", "James", "Tom"],
+};
+
+const DEMO_POOLS: Record<TargetLanguage, readonly PoolQuestion[]> = {
+  Italian: POOL,
+  German: GERMAN_POOL,
+  English: ENGLISH_POOL,
+};
+
+/** True when this language has landing-demo questions. */
+export function hasDemoQuestions(language: TargetLanguage): boolean {
+  return DEMO_POOLS[language].length > 0;
+}
+
+/** Random opponent, picked per request like the questions. */
+export function pickDemoOpponent(language: TargetLanguage = "Italian"): string {
+  const names = OPPONENT_NAMES[language];
+  return names[Math.floor(Math.random() * names.length)];
+}
+
+function shuffle<T>(items: readonly T[]): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+/** Italian demo row when it is filled; a missing or half-empty row stays English. */
+function demoItalian(id: string, category: DemoCategory) {
+  const row = DEMO_IT[id];
+  if (!row?.hint) return undefined;
+  if ((category === "Vocabulary" || category === "Idioms") && (!row.answer || !row.trap || !row.distractors)) return undefined;
+  return row;
+}
+
+/** Random questions without repeats, each with its options shuffled; help lines and meanings in `uiLanguage`. */
+export function pickDemoQuestions(
+  count = 3,
+  language: TargetLanguage = "Italian",
+  uiLanguage: UiLanguage = "en"
+): DemoQuestion[] {
+  const pool = DEMO_POOLS[language];
+  if (pool.length === 0) return [];
+  const lang = LANGUAGE_META[language].code;
+  return shuffle(pool)
+    .slice(0, count)
+    .map((pooled) => {
+      if (uiLanguage === "tr") return { ...pooled, ...DEMO_TR[pooled.id] };
+      if (uiLanguage === "it") {
+        const row = demoItalian(pooled.id, pooled.category);
+        if (row) return { ...pooled, ...row };
+      }
+      return pooled;
+    })
+    .map(({ answer, trap, distractors, ...question }) => {
+      const options = shuffle([answer, trap, ...distractors]);
+      const meaning = question.category === "Vocabulary" || question.category === "Idioms";
+      const optionLanguage: UiLanguage =
+        uiLanguage === "it" && !demoItalian(question.id, question.category) ? "en" : uiLanguage;
+      return {
+        ...question,
+        lang,
+        options,
+        optionsLang: meaning ? optionLanguage : lang,
+        correct: options.indexOf(answer),
+        trap: options.indexOf(trap),
+      };
+    });
+}

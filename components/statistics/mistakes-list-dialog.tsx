@@ -1,0 +1,170 @@
+"use client";
+
+import { useState } from "react";
+import { CheckCircle2, XCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import type { UserMistakeWithQuestion } from "@/app/(app)/stats/actions";
+import { ReportQuestionButton } from "@/components/match/report-question-button";
+import { INDEFINITE_RULES, NOUN_QUESTION_PREFIX } from "@/lib/articles";
+import { PREPOSITION_RULES } from "@/lib/prepositions";
+import { REVIEWS_TO_LEARN, whenDue } from "@/lib/review";
+import { formatCategoryLabel } from "@/lib/scoring";
+import { getOptionText } from "@/lib/resolve-match-questions";
+import { cn } from "@/lib/utils";
+import { useT, useUiLanguage } from "@/components/ui-language-provider";
+
+type MistakesListDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  mistakes: UserMistakeWithQuestion[];
+  reportedQuestionIds: string[];
+  /** Italy's date from the server. */
+  today: string;
+};
+
+export function MistakesListDialog({
+  open,
+  onOpenChange,
+  mistakes,
+  reportedQuestionIds: initialReportedQuestionIds,
+  today,
+}: MistakesListDialogProps) {
+  const t = useT();
+  const uiLanguage = useUiLanguage();
+  const [reportedQuestionIds, setReportedQuestionIds] = useState(
+    () => new Set(initialReportedQuestionIds)
+  );
+  // Fresh ids from the server replace the local copy (adjusted while rendering, not in an effect).
+  const [shownIds, setShownIds] = useState(initialReportedQuestionIds);
+  if (shownIds !== initialReportedQuestionIds) {
+    setShownIds(initialReportedQuestionIds);
+    setReportedQuestionIds(new Set(initialReportedQuestionIds));
+  }
+
+  function markReported(questionId: string) {
+    setReportedQuestionIds((ids) => new Set(ids).add(questionId));
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85dvh] overflow-y-auto touch-scroll sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{t("Your mistakes")}</DialogTitle>
+          <DialogDescription>
+            {t("Questions and nouns you got wrong. Each comes back for review on its day; right on 4 different days and it leaves this list. Report any question with a typo or wrong answer so admins can fix it.")}
+          </DialogDescription>
+        </DialogHeader>
+
+        {mistakes.length === 0 ? (
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-6 text-center">
+            <CheckCircle2 className="mx-auto size-8 text-emerald-400" />
+            <p className="mt-3 font-medium text-emerald-100">{t("No mistakes saved")}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("Wrong answers from your next match will appear here.")}
+            </p>
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {mistakes.map((mistake) => (
+              <li
+                key={mistake.id}
+                className="rounded-xl border border-border/60 bg-card/60 p-4"
+              >
+                <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" className="text-xs uppercase">
+                      {t(formatCategoryLabel(mistake.question.category))}
+                    </Badge>
+                    <Badge variant="outline" className="tabular-nums">
+                      {mistake.next_review_on <= today
+                        ? t("Due today")
+                        : t("Next {when}", { when: whenDue(mistake.next_review_on, today, t, uiLanguage) })}{" "}
+                      · {mistake.practice_streak}/{REVIEWS_TO_LEARN}
+                    </Badge>
+                  </div>
+                  {/* Missed article-game nouns are checked against Wiktionary, not reported. */}
+                  {!mistake.question_id.startsWith(NOUN_QUESTION_PREFIX) && (
+                    <ReportQuestionButton
+                      questionId={mistake.question_id}
+                      questionText={mistake.question.question_text}
+                      showLabel
+                      reported={reportedQuestionIds.has(mistake.question_id)}
+                      onReported={() => markReported(mistake.question_id)}
+                    />
+                  )}
+                </div>
+
+                <p className="text-sm font-medium leading-snug sm:text-base">
+                  {mistake.question.question_text}
+                </p>
+                {mistake.question.rule && (PREPOSITION_RULES[mistake.question.rule] || INDEFINITE_RULES[mistake.question.rule]) && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t(PREPOSITION_RULES[mistake.question.rule] || INDEFINITE_RULES[mistake.question.rule])}
+                  </p>
+                )}
+
+                <div className="mt-3 space-y-2 text-sm">
+                  <div className="flex gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2">
+                    <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-destructive/90">
+                        {t("Your last answer")}
+                      </p>
+                      <p className="text-foreground">
+                        {mistake.selected_answer ? (
+                          <>
+                            <span className="font-semibold text-destructive">
+                              {mistake.selected_answer}.
+                            </span>{" "}
+                            {getOptionText(
+                              mistake.question,
+                              mistake.selected_answer
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            {t("No answer / timed out")}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    className={cn(
+                      "flex gap-2 rounded-lg border px-3 py-2",
+                      "border-emerald-500/30 bg-emerald-500/10"
+                    )}
+                  >
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-400" />
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t("Correct answer")}
+                      </p>
+                      <p className="text-foreground">
+                        <span className="font-semibold text-emerald-400">
+                          {mistake.question.correct_answer}.
+                        </span>{" "}
+                        {getOptionText(
+                          mistake.question,
+                          mistake.question.correct_answer
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
