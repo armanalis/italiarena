@@ -51,3 +51,5 @@ supabase/archive/
 # Local Claude Code agent definitions
 .claude/
 /node_modules.nosync
+/.git-content.nosync/
+/.git.nosync/

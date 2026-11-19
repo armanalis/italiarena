@@ -323,6 +323,37 @@ export function PassaparolaGame({
           ))}
       </div>
 
+      {archive.length > 0 && !playing && (
+        <DayArchive
+          level={level}
+          selectedDate={view?.date}
+          disabled={pending || locked}
+          onSelect={(date) => {
+            setPassed(new Set());
+            void send(level, { date }, null);
+          }}
+          days={archive.map((day) => ({
+            date: day.date,
+            played: day.right !== null,
+            status:
+              day.right === null ? undefined : day.finished ? (
+                <span className="flex flex-col items-center gap-0.5">
+                  <span className="text-sm font-bold tabular-nums leading-none text-primary">
+                    {day.right}/{day.total}
+                  </span>
+                  {day.mode && (
+                    <span className="text-[0.6rem] font-medium text-muted-foreground">
+                      {t(day.mode === "hard" ? "Hard" : "Normal")}
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span className="text-[0.65rem] font-semibold text-primary">{t("In progress")}</span>
+              ),
+          }))}
+        />
+      )}
+
       {view?.today && view.date !== view.today && (
         <div className="flex items-center justify-between gap-3 text-sm">
           <span className="font-medium">
@@ -625,36 +656,6 @@ export function PassaparolaGame({
         </div>
       </div>
 
-      {archive.length > 0 && !playing && (
-        <DayArchive
-          level={level}
-          selectedDate={view?.date}
-          disabled={pending || locked}
-          onSelect={(date) => {
-            setPassed(new Set());
-            void send(level, { date }, null);
-          }}
-          days={archive.map((day) => ({
-            date: day.date,
-            played: day.right !== null,
-            status:
-              day.right === null ? undefined : day.finished ? (
-                <span className="flex flex-col items-end gap-0.5">
-                  <span className="text-lg font-bold tabular-nums leading-none text-primary">
-                    {day.right}/{day.total}
-                  </span>
-                  {day.mode && (
-                    <span className="text-[0.65rem] font-medium text-muted-foreground">
-                      {t(day.mode === "hard" ? "Hard" : "Normal")}
-                    </span>
-                  )}
-                </span>
-              ) : (
-                <span className="text-xs font-semibold text-primary">{t("In progress")}</span>
-              ),
-          }))}
-        />
-      )}
 
       {countdown !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm">
