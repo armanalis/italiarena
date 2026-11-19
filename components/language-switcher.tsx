@@ -66,13 +66,17 @@ export function LanguageSwitcher({ language }: { language: TargetLanguage }) {
           type="button"
           variant="outline"
           size="sm"
-          // lang: a code, not a word; a Turkish page would capitalise "it" as "İT".
-          lang="en"
-          className="min-h-10 gap-1.5 px-2 font-semibold uppercase sm:px-3"
+          // The language being learned, not the app's own: tinted, and named on wider screens.
+          className="min-h-10 gap-1.5 border-primary/50 bg-primary/10 px-2 text-primary hover:bg-primary/15 sm:px-3"
           aria-label={t("Learning {language}. Change language", { language: t(language) })}
         >
           <Languages className="size-3.5" aria-hidden />
-          {LANGUAGE_META[language].code}
+          <span className="hidden text-xs font-medium text-muted-foreground sm:inline">{t("Learning")}</span>
+          <span className="hidden font-semibold sm:inline">{t(language)}</span>
+          {/* lang: a code, not a word; a Turkish page would capitalise "it" as "İT". */}
+          <span lang="en" className="font-semibold uppercase sm:hidden">
+            {LANGUAGE_META[language].code}
+          </span>
         </Button>
       </Popover.Trigger>
       <Popover.Portal>
@@ -100,7 +104,11 @@ export function LanguageSwitcher({ language }: { language: TargetLanguage }) {
               </div>
             </div>
           ) : (
-            TARGET_LANGUAGES.map((option) => (
+            <>
+              <p className="px-3 pb-1 pt-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t("Language you are learning")}
+              </p>
+              {TARGET_LANGUAGES.map((option) => (
               <button
                 key={option}
                 type="button"
@@ -119,7 +127,11 @@ export function LanguageSwitcher({ language }: { language: TargetLanguage }) {
                 </span>
                 {option === language && <Check className="size-4" aria-hidden />}
               </button>
-            ))
+              ))}
+              <p className="border-t border-border px-3 pb-1 pt-2 text-xs text-muted-foreground">
+                {t("Menus and buttons stay in your app language (Settings).")}
+              </p>
+            </>
           )}
         </Popover.Content>
       </Popover.Portal>
