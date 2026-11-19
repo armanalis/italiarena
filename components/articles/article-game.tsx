@@ -358,8 +358,11 @@ export function ArticleGame({
           ) : (
             <div className="space-y-1">
               <p className="font-semibold">
-                {today === undefined ? t("Today's Sprint · {level}", { level }) : t("Today's Sprint: {score}", { score: today })}
-                {shownReview && today !== undefined && ` ${t("right out of {n}", { n: shownReview.answers.length })}`}
+                {today === undefined
+                  ? t("Today's Sprint · {level}", { level })
+                  : shownReview
+                    ? t("Today's Sprint: {score} right out of {n}", { score: today, n: shownReview.answers.length })
+                    : t("Today's Sprint: {score}", { score: today })}
               </p>
               <p className="text-sm text-muted-foreground">
                 {kind === "preposition"
