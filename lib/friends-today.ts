@@ -1,0 +1,71 @@
+/**
+ * "Today with friends": your and your friends' finished results for today in
+ * the language being played (get_friends_today: scores only, never answers).
+ * Tested by scripts/test-friends-today.ts.
+ */
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { ARTICLE_GAME_NAME, hasArticleGame, INDEFINITE_GAME_NAME } from "@/lib/articles";
+import type { TargetLanguage } from "@/lib/constants";
+import { PREPOSITION_GAME_NAME } from "@/lib/prepositions";
+import { WORDLE_MAX_GUESSES } from "@/lib/wordle";
+
+export type FriendToday = {
+  user_id: string;
+  display_name: string;
+  is_me: boolean;
+  wordle: { level: string; guesses: number; won: boolean } | null;
+  word_wheel: { level: string; right: number; total: number; mode?: "normal" | "hard" } | null;
+  sprint: { level: string; score: number } | null;
+  prepositions?: { level: string; score: number } | null;
+  indefinite?: { level: string; score: number } | null;
+};
+
+/** Sorting score: Wordle 1–6 (fewer guesses, more), Word Wheel letters right, the Sprint score. */
+export function todayPoints(row: FriendToday): number {
+  const wordle = row.wordle?.won ? WORDLE_MAX_GUESSES + 1 - row.wordle.guesses : 0;
+  return wordle + (row.word_wheel?.right ?? 0) + (row.sprint?.score ?? 0) + (row.prepositions?.score ?? 0) + (row.indefinite?.score ?? 0);
+}
+
+export function sortFriendsToday(rows: readonly FriendToday[]): FriendToday[] {
+  return [...rows].sort(
+    (a, b) => todayPoints(b) - todayPoints(a) || a.display_name.localeCompare(b.display_name)
+  );
+}
+
+/** Wordle 4/6, Word Wheel 18/23, der·die·das 23, each with its level; the screen translates the game. */
+export function todayResults(
+  row: FriendToday,
+  language: TargetLanguage
+): { game: string; score: string; level: string; mode?: "normal" | "hard" }[] {
+  const results: { game: string; score: string; level: string; mode?: "normal" | "hard" }[] = [];
+  if (row.wordle) {
+    const score = row.wordle.won ? row.wordle.guesses : "X";
+    results.push({ game: "Wordle", score: `${score}/${WORDLE_MAX_GUESSES}`, level: row.wordle.level });
+  }
+  if (row.word_wheel) {
+    results.push({
+      game: "Word Wheel",
+      score: `${row.word_wheel.right}/${row.word_wheel.total}`,
+      level: row.word_wheel.level,
+      ...(row.word_wheel.mode ? { mode: row.word_wheel.mode } : {}),
+    });
+  }
+  if (row.sprint && hasArticleGame(language)) {
+    results.push({ game: ARTICLE_GAME_NAME[language], score: String(row.sprint.score), level: row.sprint.level });
+  }
+  if (row.prepositions) {
+    results.push({ game: PREPOSITION_GAME_NAME[language], score: String(row.prepositions.score), level: row.prepositions.level });
+  }
+  if (row.indefinite) {
+    results.push({ game: INDEFINITE_GAME_NAME, score: String(row.indefinite.score), level: row.indefinite.level });
+  }
+  return results;
+}
+
+export async function loadFriendsToday(
+  supabase: SupabaseClient,
+  language: TargetLanguage
+): Promise<FriendToday[]> {
+  const { data, error } = await supabase.rpc("get_friends_today", { p_language: language });
+  return error || !Array.isArray(data) ? [] : sortFriendsToday(data as FriendToday[]);
+}

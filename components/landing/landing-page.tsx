@@ -1,0 +1,110 @@
+/** Public landing page with sign-in and sign-up entry points (shown at "/" to visitors). */
+import Link from "next/link";
+import { getT, getUiLanguage } from "@/lib/i18n-server";
+import { ArrowRight, Trophy, Users, Zap } from "lucide-react";
+import { AuroraCanvas } from "@/components/aurora-canvas";
+import { GlassPanel } from "@/components/glass-panel";
+import { DemoRound } from "@/components/landing/demo-round";
+import { Button } from "@/components/ui/button";
+import { LegalFooter } from "@/components/legal/privacy-policy";
+import type { TargetLanguage } from "@/lib/constants";
+import { pickDemoOpponent, pickDemoQuestions } from "@/lib/landing-demo-questions";
+
+const features = [
+  {
+    icon: Zap,
+    num: "01",
+    title: "Just a few minutes a day",
+    description:
+      "Short sessions that fit your schedule — learn English, Italian or German without blocking out hours of study time.",
+  },
+  {
+    icon: Users,
+    num: "02",
+    title: "Practice with real people",
+    description:
+      "Practice English, Italian or German with others at your level through live quiz rounds at your pace.",
+  },
+  {
+    icon: Trophy,
+    num: "03",
+    title: "Watch your skills grow",
+    description:
+      "Track vocabulary, accuracy, and match history as you improve over time.",
+  },
+];
+
+/** `language`: the demo round's language (German after a /german link). */
+export async function LandingPage({ language }: { language: TargetLanguage }) {
+  const [t, { language: uiLanguage }] = await Promise.all([getT(), getUiLanguage()]);
+  return (
+    <AuroraCanvas>
+      <main className="mx-auto w-full max-w-6xl px-4 pb-[max(3rem,env(safe-area-inset-bottom,0px))] pt-10 sm:px-6 sm:pt-14 lg:px-8 lg:pt-20">
+        <section className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end lg:gap-14">
+          <div className="space-y-8">
+            <p className="swiss-label">{t("English · Italian · German · live quiz matches")}</p>
+            <h1 className="hero-headline max-w-xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-[3.25rem]">
+              {t("Learn English, Italian or German through quick, real practice")}
+            </h1>
+            <p className="max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
+              {t("Play timed rounds against real people or a bot. Pick up new words and grammar naturally — without long lessons or heavy study blocks.")}
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <Button asChild size="lg" className="h-12 min-w-[9.5rem] px-6">
+                <Link href="/login">
+                  {t("Sign in")}
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="glass-panel h-12 min-w-[9.5rem] border bg-transparent px-6 shadow-none"
+              >
+                <Link href="/login?mode=signup">{t("Create account")}</Link>
+              </Button>
+              <Button asChild variant="secondary" size="lg" className="h-12 px-6">
+                <Link href="/guest">{t("Play as guest")}</Link>
+              </Button>
+            </div>
+            <p className="max-w-md text-sm text-muted-foreground">
+              {t("Guest mode works without signing up. You get an auto-generated name and won't appear on the leaderboard.")}
+            </p>
+          </div>
+
+          <DemoRound questions={pickDemoQuestions(3, language, uiLanguage)} opponent={pickDemoOpponent(language)} />
+        </section>
+
+        <section className="mt-16 sm:mt-20">
+          <div className="mb-8 flex items-end justify-between gap-4 border-b border-border pb-4">
+            <h2 className="text-lg font-semibold tracking-tight sm:text-xl">
+              {t("Built for daily practice")}
+            </h2>
+            <span className="swiss-label hidden sm:inline">{t("Features")}</span>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {features.map(({ icon: Icon, num, title, description }) => (
+              <GlassPanel key={title} className="p-5 sm:p-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="flex size-9 items-center justify-center rounded-md bg-muted/80 text-foreground">
+                    <Icon className="size-4" aria-hidden />
+                  </span>
+                  <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                    {num}
+                  </span>
+                </div>
+                <h3 className="font-semibold tracking-tight">{t(title)}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {t(description)}
+                </p>
+              </GlassPanel>
+            ))}
+          </div>
+        </section>
+
+        <LegalFooter locale={uiLanguage} className="mt-12 sm:mt-16" />
+      </main>
+    </AuroraCanvas>
+  );
+}

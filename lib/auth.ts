@@ -1,0 +1,164 @@
+/**
+ * Auth helpers used across server components.
+ * Loads the current user profile and handles redirects for protected routes.
+ */
+import { cache } from "react";
+import { redirect } from "next/navigation";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { createClient } from "@/utils/supabase/server";
+import type { UserProfile, UserRole } from "@/lib/types";
+import { isGuestAuthEmail, isGuestAuthUser } from "@/lib/guest-auth";
+import { DEFAULT_TIMEZONE } from "@/lib/constants";
+
+const fetchUserRow = cache(async (userId: string) => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("users")
+    .select(
+      "id, email, display_name, target_language, proficiency_level, role, is_guest, sound_enabled, haptics_enabled, daily_reminder_enabled, daily_reminder_hour, timezone"
+    )
+    .eq("id", userId)
+    .maybeSingle();
+
+  return error ? null : data;
+});
+
+export function isGuestUser(profile: UserProfile) {
+  return profile.is_guest || isGuestAuthEmail(profile.email);
+}
+
+const getAuthUser = cache(async () => {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user;
+});
+
+/** Cached per request — shared by header, layout, and pages. */
+export const getAuthUserId = cache(async (): Promise<string | null> => {
+  const user = await getAuthUser();
+  return user?.id ?? null;
+});
+
+export const getCurrentUserProfile = cache(async (): Promise<UserProfile | null> => {
+  const user = await getAuthUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const profile = await fetchUserRow(user.id);
+
+  if (profile) {
+    return {
+      ...(profile as UserProfile),
+      display_name: profile.display_name ?? null,
+      role: (profile.role as UserRole | undefined) ?? "user",
+      is_guest: profile.is_guest ?? false,
+      sound_enabled: profile.sound_enabled ?? true,
+      haptics_enabled: profile.haptics_enabled ?? true,
+      daily_reminder_enabled: profile.daily_reminder_enabled ?? false,
+      daily_reminder_hour: profile.daily_reminder_hour ?? 18,
+      timezone: profile.timezone ?? DEFAULT_TIMEZONE,
+    };
+  }
+
+  return {
+    id: user.id,
+    email: user.email ?? "",
+    display_name: null,
+    target_language: null,
+    proficiency_level: null,
+    role: "user",
+    is_guest: isGuestAuthUser(user),
+    sound_enabled: true,
+    haptics_enabled: true,
+    daily_reminder_enabled: false,
+    daily_reminder_hour: 18,
+    timezone: DEFAULT_TIMEZONE,
+  };
+});
+
+export function isOnboardingComplete(profile: UserProfile) {
+  return Boolean(profile.target_language && profile.proficiency_level);
+}
+
+/** Redirects to /login if the visitor is not signed in. */
+export const requireAuth = cache(async () => {
+  const profile = await getCurrentUserProfile();
+
+  if (!profile) {
+    redirect("/login");
+  }
+
+  return profile;
+});
+
+/** Where to send an authenticated user based on their profile row. */
+export async function getPostAuthPathForUser(
+  supabase: SupabaseClient,
+  user: User
+): Promise<"/" | "/onboarding" | "/guest"> {
+  const { data } = await supabase
+    .from("users")
+    .select("target_language, proficiency_level, is_guest, email")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (data?.target_language && data?.proficiency_level) {
+    return "/";
+  }
+
+  if (
+    data?.is_guest ||
+    isGuestAuthUser(user) ||
+    isGuestAuthEmail(data?.email ?? user.email)
+  ) {
+    return "/guest";
+  }
+
+  return "/onboarding";
+}
+
+/** Where to send someone right after they authenticate. */
+export async function getPostAuthPath(): Promise<
+  "/" | "/onboarding" | "/guest"
+> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return "/onboarding";
+  }
+
+  return getPostAuthPathForUser(supabase, user);
+}
+
+/** Redirects to /onboarding if the user has not picked a language and level yet. */
+export const requireOnboardingComplete = cache(async () => {
+  const profile = await requireAuth();
+
+  if (!isOnboardingComplete(profile)) {
+    const user = await getAuthUser();
+    if (isGuestUser(profile) || (user && isGuestAuthUser(user))) {
+      redirect("/guest");
+    }
+    redirect("/onboarding");
+  }
+
+  return profile;
+});
+
+/** Redirects non-admin users to the dashboard with an access-denied flag. */
+export async function requireAdmin() {
+  const profile = await requireOnboardingComplete();
+
+  if (profile.role !== "admin") {
+    redirect("/?error=admin_access_denied");
+  }
+
+  return profile;
+}
