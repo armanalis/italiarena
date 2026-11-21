@@ -2,10 +2,11 @@
 import { redirect } from "next/navigation";
 import { ArticleGame } from "@/components/articles/article-game";
 import { HowToPlay } from "@/components/how-to-play";
-import { hasArticleGame, loadArticleStats, loadSprintHistory } from "@/lib/articles";
+import { ALL_ARTICLES, hasArticleGame, loadArticleStats, loadSprintHistory } from "@/lib/articles";
 import { requireOnboardingComplete } from "@/lib/auth";
 import { DEFAULT_LANGUAGE, isProficiencyLevel, languageFromCode } from "@/lib/constants";
 import { tutorialSeen } from "@/lib/tutorial-progress";
+import { TUTORIALS } from "@/lib/tutorials";
 import { isIsoDate } from "@/lib/wordle";
 import { createClient } from "@/utils/supabase/server";
 
@@ -32,7 +33,19 @@ export default async function ArticlesPage({
 
   return (
     <main className="w-full flex-1 p-4 sm:p-8 lg:px-10">
-      <HowToPlay game="articles" seen={seen} buttonClassName="mx-auto w-full max-w-lg">
+      <HowToPlay
+        game="articles"
+        seen={seen}
+        buttonClassName="mx-auto w-full max-w-lg"
+        steps={
+          ALL_ARTICLES[language].length <= 2
+            ? [
+                "A noun appears. Press its article as fast as you can. Keys 1 and 2 work too.",
+                ...TUTORIALS.articles.steps.slice(1),
+              ]
+            : undefined
+        }
+      >
         {/* key: a language switch from the header must start fresh, not keep the old game. */}
         <ArticleGame
           key={language}

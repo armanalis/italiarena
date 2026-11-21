@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { useBrowserValue } from "@/hooks/use-browser-value";
 import { useCookieConsent } from "@/hooks/use-cookie-consent";
+import { hasArena } from "@/lib/constants";
 import { APP_NAME } from "@/lib/legal";
 import { hasSeenWelcomeTour, markWelcomeTourSeen } from "@/lib/welcome-tour";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,30 @@ type TourStep = {
   title: string;
   body: string;
 };
+
+/** No Arena yet: the tour only names the games Spanish can play. */
+const SPANISH_STEPS: TourStep[] = [
+  {
+    icon: Sparkles,
+    title: "Welcome to {app}",
+    body: "Practice Spanish with a daily Wordle, the el·la Sprint, a preposition Sprint, and Picture Duel with a friend.",
+  },
+  {
+    icon: Timer,
+    title: "Today's games",
+    body: "Wordle is one 5-letter puzzle a day at each level. el·la and prepositions are short timed Sprints: press the right button.",
+  },
+  {
+    icon: Swords,
+    title: "Picture Duel",
+    body: "You and a friend get 60 seconds each. Name the picture to stop your clock and start theirs.",
+  },
+  {
+    icon: BarChart3,
+    title: "Learn from mistakes",
+    body: "A wrong article or preposition is saved in Stats, so you can practise it again.",
+  },
+];
 
 const STEPS: TourStep[] = [
   {
@@ -54,12 +79,13 @@ const STEPS: TourStep[] = [
   },
 ];
 
-export function WelcomeTour() {
+export function WelcomeTour({ language }: { language: string }) {
   const t = useT();
   const consent = useCookieConsent();
   const seen = useBrowserValue(hasSeenWelcomeTour, true);
   const [closed, setClosed] = useState(false);
   const [step, setStep] = useState(0);
+  const steps = hasArena(language) ? STEPS : SPANISH_STEPS;
   // Wait for the cookie banner to be answered so the two don't stack.
   const open = consent !== null && !seen && !closed;
 
@@ -68,8 +94,8 @@ export function WelcomeTour() {
     setClosed(true);
   }
 
-  const isLast = step === STEPS.length - 1;
-  const { icon: Icon, title, body } = STEPS[step];
+  const isLast = step === steps.length - 1;
+  const { icon: Icon, title, body } = steps[step];
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && close()}>

@@ -29,7 +29,7 @@ import {
 import { ARTICLE_GAME_NAME, hasArticleGame, hasIndefiniteGame, INDEFINITE_GAME_NAME } from "@/lib/articles";
 import { PREPOSITION_GAME_NAME } from "@/lib/prepositions";
 import { useT } from "@/components/ui-language-provider";
-import type { TargetLanguage } from "@/lib/constants";
+import { hasArena, hasPrepositionGame, hasWordWheel, type TargetLanguage } from "@/lib/constants";
 
 /** Desktop sidebar only: phones play every game from Home. */
 const gameItems = [
@@ -86,7 +86,15 @@ export function DashboardShell({ children, language, guest }: DashboardShellProp
   const indefinite = hasIndefiniteGame(language);
   const items = [
     ...gameItems
-      .filter((item) => (articles || item.href !== "/articles") && (indefinite || item.href !== "/indefinite-articles"))
+      .filter((item) => {
+        if (!articles && item.href === "/articles") return false;
+        if (!indefinite && item.href === "/indefinite-articles") return false;
+        if (!hasWordWheel(language) && item.href === "/word-wheel") return false;
+        if (!hasPrepositionGame(language) && item.href === "/prepositions") return false;
+        // Arena and "Play with bots" (href null). Home stays reachable from the logo.
+        if (!hasArena(language) && (item.href === "/" || item.label === "Play with bots")) return false;
+        return true;
+      })
       .map((item) =>
         // The names are the buttons, the same in every app language.
         item.href === "/articles" && articles

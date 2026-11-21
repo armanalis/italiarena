@@ -46,6 +46,7 @@ export function HowToPlay({
   buttonClassName,
   waitForWelcomeTour = false,
   vars,
+  steps,
 }: {
   game: TutorialGame;
   /** From get_my_tutorials(). True also when that call failed, so play is not blocked. */
@@ -56,16 +57,19 @@ export function HowToPlay({
   waitForWelcomeTour?: boolean;
   /** Filled into a step, such as the Word Wheel's skip and stop words. */
   vars?: Vars;
+  /** Replaces the shared steps when this language's how-to differs (el·la uses keys 1 and 2). */
+  steps?: readonly string[];
 }) {
   const t = useT();
   const tourSeen = useWelcomeTourSeen();
   const [opened, setOpened] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const tutorial = TUTORIALS[game];
+  const lines = steps ?? tutorial.steps;
   const [step, setStep] = useState(0);
   const waitingForTour = waitForWelcomeTour && !tourSeen;
   const open = (opened || (!seen && !dismissed)) && !waitingForTour;
-  const isLast = step === tutorial.steps.length - 1;
+  const isLast = step === lines.length - 1;
 
   function dismiss() {
     setDismissed(true);
@@ -88,10 +92,10 @@ export function HowToPlay({
           <DialogContent className="gap-5 p-6 sm:max-w-md">
             <DialogHeader>
               <p className="text-xs font-medium text-muted-foreground">
-                {t("Step {n} of {total}", { n: step + 1, total: tutorial.steps.length })}
+                {t("Step {n} of {total}", { n: step + 1, total: lines.length })}
               </p>
               <DialogTitle className="text-lg font-semibold">{t(tutorial.title)}</DialogTitle>
-              <DialogDescription className="leading-relaxed">{t(tutorial.steps[step], vars)}</DialogDescription>
+              <DialogDescription className="leading-relaxed">{t(lines[step], vars)}</DialogDescription>
             </DialogHeader>
             <DialogFooter>
               {step === 0 ? (

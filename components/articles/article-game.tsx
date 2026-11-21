@@ -476,7 +476,7 @@ export function ArticleGame({
             )}
           </div>
 
-          <div className={cn("grid gap-2", choices.length === 4 ? "grid-cols-2 md:grid-cols-4" : "grid-cols-2 sm:grid-cols-3")}>
+          <div className={cn("grid gap-2", choices.length > 3 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3")}>
             {choices.map((choice, i) => (
               <Button
                 key={choice}

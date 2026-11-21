@@ -29,6 +29,23 @@ export function isKnownLanguage(value: unknown): value is KnownLanguage {
   return isTargetLanguage(value) || (UNLISTED_LANGUAGES as readonly string[]).includes(value as string);
 }
 
+/**
+ * Spanish has Picture Duel, Wordle, el·la, and the preposition Sprint.
+ * Word Wheel and Arena stay hidden until their content is live.
+ */
+export function hasWordWheel(language: string): boolean {
+  return language !== "Spanish";
+}
+
+export function hasArena(language: string): boolean {
+  return language !== "Spanish";
+}
+
+/** Danish has no preposition cards yet, and it is not offered. */
+export function hasPrepositionGame(language: string): boolean {
+  return language !== "Danish";
+}
+
 /** The language with this `code`, as in ?lang=de links. */
 export function languageFromCode(code: string | undefined): TargetLanguage | undefined {
   return TARGET_LANGUAGES.find((language) => LANGUAGE_META[language].code === code);

@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { TargetLanguage } from "@/lib/constants";
+import { hasArena, type TargetLanguage } from "@/lib/constants";
 import {
   exitCountsAsLoss,
   exitToDashboard,
@@ -100,7 +100,7 @@ export function SiteHeaderNav({
               {showDashboard && (
                 <Button asChild variant="ghost" size="sm" className="min-h-10 px-2 sm:px-3">
                   <Link href="/" onClick={handleDashboardExit}>
-                    <span className="hidden sm:inline">{t("Arena")}</span>
+                    <span className="hidden sm:inline">{language && hasArena(language) ? t("Arena") : t("Home")}</span>
                     <span className="sm:hidden">{t("Home")}</span>
                   </Link>
                 </Button>
