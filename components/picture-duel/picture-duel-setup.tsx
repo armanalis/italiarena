@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { JoinCodeForm } from "@/components/challenge/join-code-form";
 import { ALL_TOPICS, createDuel, findDuelByCode, PICTURE_LEVELS, type PictureTopic } from "@/lib/picture-duel";
-import { hasArticleGame } from "@/lib/articles";
+import { hasArticleGame, type ArticleLanguage } from "@/lib/articles";
 import { isTargetLanguage, LANGUAGE_META } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { fill, useT } from "@/components/ui-language-provider";
@@ -20,6 +20,14 @@ async function joinByCode(code: string) {
     ? { href: `/picture-duel/${found.value}` }
     : { error: "No open duel has this code. Check it, or ask for a new one." };
 }
+
+/** One hard-mode example. Spanish accepts el/la/los/las/un/una; Danish en/et. */
+const PICTURE_EXAMPLES: Record<ArticleLanguage, [string, string]> = {
+  German: ["das Brot", "Brot"],
+  Italian: ["il pane", "pane"],
+  Spanish: ["el pan", "pan"],
+  Danish: ["et æble", "æble"],
+};
 
 const chip = (active: boolean) =>
   cn(
@@ -44,7 +52,7 @@ export function PictureDuelSetup({
   const [opening, setOpening] = useState<string | null>(null);
   const shown = topics.filter((topic) => topic.level === level);
   const articles = hasArticleGame(language);
-  const [withArticle, bare] = language === "German" ? ["das Brot", "Brot"] : ["il pane", "pane"];
+  const [withArticle, bare] = hasArticleGame(language) ? PICTURE_EXAMPLES[language] : PICTURE_EXAMPLES.Italian;
   const code = isTargetLanguage(language) ? LANGUAGE_META[language].code : undefined;
 
   async function open(topic: string) {

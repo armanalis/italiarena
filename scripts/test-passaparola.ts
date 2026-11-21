@@ -66,13 +66,45 @@ check("only words starting with the letter, or skip/stop, can be typed", () => {
   assert.equal(isPassCommand("salta", "Italian"), true);
   assert.equal(isFinishCommand("stop", "Italian"), false);
   assert.equal(isFinishCommand("Ferma", "Italian"), true);
+  assert.equal(fitsLetter("paso", "G", "Spanish"), true);
+  assert.equal(fitsLetter("basta", "G", "Spanish"), true);
+  assert.equal(fitsLetter("skip", "G", "Spanish"), false);
+  assert.equal(fitsLetter("stop", "G", "Spanish"), false);
+  assert.equal(fitsLetter("niño", "N", "Spanish"), true);
+  assert.equal(fitsLetter("árbol", "A", "Spanish"), true);
+  assert.equal(fitsLetter("ñandú", "N", "Spanish"), true);
+  assert.equal(passWord("Spanish"), "paso");
+  assert.equal(finishWord("Spanish"), "basta");
+  assert.equal(fitsLetter("videre", "G", "Danish"), true);
+  assert.equal(fitsLetter("stop", "G", "Danish"), true);
+  assert.equal(fitsLetter("skip", "G", "Danish"), false);
+  assert.equal(fitsLetter("Øl", "Ø", "Danish"), true);
+  assert.equal(fitsLetter("oel", "Ø", "Danish"), true);
+  assert.equal(fitsLetter("o", "Ø", "Danish"), true);
+  assert.equal(fitsLetter("ol", "Ø", "Danish"), false);
+  assert.equal(fitsLetter("abe", "A", "Danish"), true);
+  assert.equal(fitsLetter("abe", "Æ", "Danish"), false);
+  assert.equal(fitsLetter("aeble", "Æ", "Danish"), true);
+  assert.equal(fitsLetter("æble", "Æ", "Danish"), true);
+  assert.equal(fitsLetter("aeble", "A", "Danish"), false);
+  assert.equal(fitsLetter("å", "Å", "Danish"), true);
+  assert.equal(fitsLetter("aa", "Å", "Danish"), true);
+  assert.equal(fitsLetter("aa", "A", "Danish"), false);
+  assert.equal(fitsLetter("a", "A", "Danish"), true);
+  assert.equal(fitsLetter("a", "Å", "Danish"), true);
+  assert.equal(passWord("Danish"), "videre");
+  assert.equal(finishWord("Danish"), "stop");
 });
 
 check("the wheel has the 21 letters of the Italian alphabet, 23 for German", () => {
   assert.equal(PASSAPAROLA_LETTERS.Italian.join(""), "ABCDEFGHILMNOPQRSTUVZ");
   assert.equal(PASSAPAROLA_LETTERS.German.join(""), "ABCDEFGHIJKLMNOPRSTUVWZ");
   assert.equal(PASSAPAROLA_LETTERS.English.join(""), "ABCDEFGHIJKLMNOPQRSTUVWYZ");
+  assert.equal(PASSAPAROLA_LETTERS.Spanish.join(""), "ABCDEFGHIJLMNOPQRSTUVYZ");
+  assert.equal(PASSAPAROLA_LETTERS.Danish.join(""), "ABDEFGHIJKLMNOPRSTUVÆØÅ");
   assert.equal(PASSAPAROLA_LETTERS.English.includes("X"), false);
+  assert.equal(PASSAPAROLA_LETTERS.Spanish.includes("K"), false);
+  assert.equal(PASSAPAROLA_LETTERS.Danish.includes("C"), false);
   // A German word starting with an umlaut fits its plain letter.
   assert.equal(fitsLetter("Übung", "U"), true);
   assert.equal(fitsLetter("Äpfel", "A"), true);

@@ -32,6 +32,10 @@ check("buttons: der·die·das, il·lo·la·l', and i·gli·le for Italian plural
   assert.deepEqual(articleChoices("German", "das"), ["der", "die", "das"]);
   assert.deepEqual(articleChoices("Italian", "l'"), ["il", "lo", "la", "l'"]);
   assert.deepEqual(articleChoices("Italian", "gli"), ["i", "gli", "le"]);
+  assert.deepEqual(articleChoices("Spanish", "la"), ["el", "la"]);
+  assert.deepEqual(articleChoices("Danish", "et"), ["en", "et"]);
+  assert.equal(articleRule("Spanish", "casa", "la"), null);
+  assert.equal(articleRule("Danish", "hus", "et"), null);
 });
 
 check("a preposition button joins the blank, and an apostrophe eats the space", () => {

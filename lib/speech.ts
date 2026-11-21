@@ -3,19 +3,21 @@
  * Italian and German voices ship on iPhone, Android, Mac and Windows.
  * Tested by scripts/test-speech.ts.
  */
-import { LANGUAGE_META, type TargetLanguage } from "@/lib/constants";
+import { LANGUAGE_META, type KnownLanguage, type TargetLanguage } from "@/lib/constants";
 
 /** Home-region tag. Italian and German match language-country; English does not (en-US, not en-EN). */
-const HOME_VOICE: Record<TargetLanguage, string> = {
+const HOME_VOICE: Record<KnownLanguage, string> = {
   Italian: "it-it",
   German: "de-de",
   English: "en-us",
+  Spanish: "es-es",
+  Danish: "da-dk",
 };
 
 /** The voice for this language: its home region first (it-IT, de-DE, en-US), then any other. */
 export function pickVoice<V extends { lang: string }>(
   voices: readonly V[],
-  language: TargetLanguage
+  language: KnownLanguage
 ): V | undefined {
   const code = LANGUAGE_META[language].code;
   // Some Android voices write it_IT.
@@ -55,7 +57,7 @@ export function speakableQuestion(questionText: string, correctOptionText: strin
  */
 export function voiceFor<V extends { lang: string }>(
   voices: readonly V[],
-  language: TargetLanguage
+  language: KnownLanguage
 ): { voice?: V; lang: string } | null {
   if (voices.length === 0) {
     const [code, region] = HOME_VOICE[language].split("-");

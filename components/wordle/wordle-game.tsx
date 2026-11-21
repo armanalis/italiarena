@@ -6,7 +6,7 @@ import { Delete } from "lucide-react";
 import { SpeakButton } from "@/components/speak-button";
 import { ShareButton } from "@/components/share-button";
 import { Button } from "@/components/ui/button";
-import { LANGUAGE_META, PROFICIENCY_LEVELS, type TargetLanguage } from "@/lib/constants";
+import { LANGUAGE_META, PROFICIENCY_LEVELS, type KnownLanguage, type TargetLanguage } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useT, useUiLanguage } from "@/components/ui-language-provider";
 import { pickLocalized } from "@/lib/i18n";
@@ -25,11 +25,13 @@ import {
 } from "@/lib/wordle";
 import { createClient } from "@/utils/supabase/client";
 
-/** On-screen keys, and the only letters a physical keyboard may type. German is QWERTZ with its umlauts; English is QWERTY. */
-const KEY_ROWS: Record<TargetLanguage, string[]> = {
+/** On-screen keys, and the only letters a physical keyboard may type. German is QWERTZ with its umlauts. Spanish and Danish are QWERTY plus ñ, or æ ø å. Words are stored without accents. */
+const KEY_ROWS: Record<KnownLanguage, string[]> = {
   Italian: ["qwertyuiop", "asdfghjkl", "zxcvbnm"],
   German: ["qwertzuiopü", "asdfghjklöä", "yxcvbnm"],
   English: ["qwertyuiop", "asdfghjkl", "zxcvbnm"],
+  Spanish: ["qwertyuiop", "asdfghjklñ", "zxcvbnm"],
+  Danish: ["qwertyuiopå", "asdfghjklæø", "zxcvbnm"],
 };
 
 function isLetter(language: TargetLanguage, key: string) {
