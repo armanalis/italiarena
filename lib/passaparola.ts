@@ -185,9 +185,29 @@ export function fitsLetter(typed: string, letter: string, language: KnownLanguag
   const word = typed.trimStart().toLowerCase();
   if (commandWords(language).some((command) => command.startsWith(word))) return true;
   const folded = foldForLetter(word, language);
+  // A leading article is optional ("el niño", "nino"). While it is still being typed, any letter fits.
+  const rest = leadingArticleRest(folded, language);
+  const body = rest ?? folded;
   const head = foldForLetter(letter.toLowerCase(), language);
-  if (!folded || head.startsWith(folded)) return true;
-  return folded.startsWith(head) && decidedLetter(folded, language) === letter.toLowerCase();
+  if (!body || head.startsWith(body)) return true;
+  return body.startsWith(head) && decidedLetter(body, language) === letter.toLowerCase();
+}
+
+/** The word after a finished leading article, "" while that article is still being typed, null when there is none. */
+function leadingArticleRest(folded: string, language: KnownLanguage): string | null {
+  const articles =
+    language === "Spanish"
+      ? ["el", "la", "los", "las", "un", "una"]
+      : language === "Danish"
+        ? ["en", "et", "at", "den", "det"]
+        : null;
+  if (!articles) return null;
+  for (const article of articles) {
+    const prefix = `${article} `;
+    if (prefix.startsWith(folded)) return "";
+    if (folded.startsWith(prefix)) return folded.slice(prefix.length);
+  }
+  return null;
 }
 
 /** Spanish accents and ñ, Danish æ/ø/å, and the NFD fold German and Italian already use. */

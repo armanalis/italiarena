@@ -71,6 +71,10 @@ check("only words starting with the letter, or skip/stop, can be typed", () => {
   assert.equal(fitsLetter("skip", "G", "Spanish"), false);
   assert.equal(fitsLetter("stop", "G", "Spanish"), false);
   assert.equal(fitsLetter("niño", "N", "Spanish"), true);
+  assert.equal(fitsLetter("nino", "N", "Spanish"), true);
+  assert.equal(fitsLetter("el niño", "N", "Spanish"), true);
+  assert.equal(fitsLetter("el cafe", "C", "Spanish"), true);
+  assert.equal(fitsLetter("el cafe", "E", "Spanish"), false);
   assert.equal(fitsLetter("árbol", "A", "Spanish"), true);
   assert.equal(fitsLetter("ñandú", "N", "Spanish"), true);
   assert.equal(passWord("Spanish"), "paso");

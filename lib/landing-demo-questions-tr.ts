@@ -85,4 +85,17 @@ export const DEMO_TR: Readonly<Record<string, DemoTurkish>> = {
   "en-i01": { hint: "Sahneye çıkmadan önce oyuncuya söylenir. Ne anlama gelir?", answer: "Bol şans!", trap: "Dikkatli ol!", distractors: ["Acele et!", "Otur!"] },
   "en-i02": { hint: "Kelimesi kelimesine “Bir dilim pasta.” Ne anlama gelir?", answer: "Çok kolay.", trap: "Tadı harika.", distractors: ["Çok küçük.", "Bugün doğum günüm."] },
   "en-i03": { hint: "Kelimesi kelimesine “Havanın altındayım.” Ne anlama gelir?", answer: "Biraz hastayım.", trap: "Yağmurun altındayım.", distractors: ["Çok meşgulüm.", "Kışı severim."] },
+  // Spanish
+  "es-g01": { hint: "Dün arkadaşlarımla sinemaya gittim." },
+  "es-g02": { hint: "Çorba soğuk: ısıt, lütfen." },
+  "es-g03": { hint: "Köpekleri çok severim." },
+  "es-f01": { hint: "Susadım: su içmek istiyorum." },
+  "es-f02": { hint: "Bu hediye senin için." },
+  "es-f03": { hint: "İki yıldır Madrid'de yaşıyorum." },
+  "es-v01": { hint: MEANING, answer: "başarı", trap: "çıkış", distractors: ["çaba", "başarısızlık"] },
+  "es-v02": { hint: MEANING, answer: "hamile", trap: "utanmış", distractors: ["nişanlı", "bitkin"] },
+  "es-v03": { hint: MEANING, answer: "dosya klasörü", trap: "halı", distractors: ["kutu", "raf"] },
+  "es-i01": { hint: "Kelimesi kelimesine “Yenmiş ekmek.” Ne anlama gelir?", answer: "Çocuk oyuncağı.", trap: "Hiç yiyecek kalmadı.", distractors: ["Öğle yemeği vakti.", "Artık çok geç."] },
+  "es-i02": { hint: "Kelimesi kelimesine “Saçımı alıyorsun.” Ne anlama gelir?", answer: "Bana işletme atıyorsun.", trap: "Saçımı kesiyorsun.", distractors: ["Beni kızdırıyorsun.", "Bana bakıyorsun."] },
+  "es-i03": { hint: "Kelimesi kelimesine “Toz olmuşum.” Ne anlama gelir?", answer: "Çok yorgunum.", trap: "Çok kirliyim.", distractors: ["Yaşlanıyorum.", "Çok kızgınım."] },
 };

@@ -78,7 +78,7 @@ export async function PlayDashboardContent({
 
   const page = (
     <main className="flex w-full min-w-0 flex-1 flex-col">
-      <WelcomeTour language={language} />
+      <WelcomeTour />
       <header className="page-intro w-full px-4 pt-5 sm:px-8 sm:pt-6 lg:px-10 xl:px-12">
         <div className="flex w-full flex-wrap items-start justify-between gap-3 sm:items-center sm:gap-4">
           <div className="min-w-0">
