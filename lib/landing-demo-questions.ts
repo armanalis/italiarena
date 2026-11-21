@@ -1,6 +1,6 @@
 /**
- * A2 sample questions for the landing-page demo match, in Italian or German
- * (German for visitors who came through italiarena.com/german).
+ * A2 sample questions for the landing-page demo match, in the language being learned
+ * (German for visitors who came through italiarena.com/german, Spanish through /spanish, and so on).
  *
  * Picked on the server per request, so the pool never ships to the browser
  * and server and client render the same three questions (no hydration mismatch).
@@ -635,6 +635,122 @@ const GERMAN_POOL: PoolQuestion[] = [
   },
 ];
 
+/** Spanish: the help line is the English meaning of the sentence, like German. */
+const SPANISH_POOL: PoolQuestion[] = [
+  // Grammar
+  {
+    id: "es-g01",
+    category: "Grammar",
+    prompt: "Ayer ___ al cine con mis amigos.",
+    hint: "Yesterday I went to the cinema with my friends.",
+    answer: "fui",
+    trap: "vaya",
+    distractors: ["voy", "iré"],
+  },
+  {
+    id: "es-g02",
+    category: "Grammar",
+    prompt: "La sopa ___ fría: caliéntala, por favor.",
+    hint: "The soup is cold: heat it up, please.",
+    answer: "está",
+    trap: "es",
+    distractors: ["hay", "son"],
+  },
+  {
+    id: "es-g03",
+    category: "Grammar",
+    prompt: "Me ___ mucho los perros.",
+    hint: "I really like dogs.",
+    answer: "gustan",
+    trap: "gusta",
+    distractors: ["gusto", "gustas"],
+  },
+  // Fill in the blank
+  {
+    id: "es-f01",
+    category: "Fill in the blank",
+    prompt: "Tengo ___: quiero beber agua.",
+    hint: "I'm thirsty: I want to drink water.",
+    answer: "sed",
+    trap: "hambre",
+    distractors: ["sueño", "frío"],
+  },
+  {
+    id: "es-f02",
+    category: "Fill in the blank",
+    prompt: "Este regalo es ___ ti.",
+    hint: "This present is for you.",
+    answer: "para",
+    trap: "por",
+    distractors: ["a", "de"],
+  },
+  {
+    id: "es-f03",
+    category: "Fill in the blank",
+    prompt: "Vivo en Madrid ___ hace dos años.",
+    hint: "I've been living in Madrid for two years.",
+    answer: "desde",
+    trap: "por",
+    distractors: ["en", "hasta"],
+  },
+  // Vocabulary
+  {
+    id: "es-v01",
+    category: "Vocabulary",
+    prompt: "el éxito",
+    hint: MEANING,
+    answer: "success",
+    trap: "the exit",
+    distractors: ["the effort", "the failure"],
+  },
+  {
+    id: "es-v02",
+    category: "Vocabulary",
+    prompt: "embarazada",
+    hint: MEANING,
+    answer: "pregnant",
+    trap: "embarrassed",
+    distractors: ["engaged", "exhausted"],
+  },
+  {
+    id: "es-v03",
+    category: "Vocabulary",
+    prompt: "la carpeta",
+    hint: MEANING,
+    answer: "the folder",
+    trap: "the carpet",
+    distractors: ["the box", "the shelf"],
+  },
+  // Idioms
+  {
+    id: "es-i01",
+    category: "Idioms",
+    prompt: "Es pan comido.",
+    hint: "Literally “It's eaten bread.” What does it mean?",
+    answer: "It's a piece of cake.",
+    trap: "There's no food left.",
+    distractors: ["It's lunchtime.", "It's too late now."],
+  },
+  {
+    id: "es-i02",
+    category: "Idioms",
+    prompt: "Me estás tomando el pelo.",
+    hint: "Literally “You're taking my hair.” What does it mean?",
+    answer: "You're pulling my leg.",
+    trap: "You're cutting my hair.",
+    distractors: ["You're making me angry.", "You're looking at me."],
+  },
+  {
+    id: "es-i03",
+    category: "Idioms",
+    prompt: "Estoy hecho polvo.",
+    hint: "Literally “I'm made dust.” What does it mean?",
+    answer: "I'm worn out.",
+    trap: "I'm very dirty.",
+    distractors: ["I'm getting old.", "I'm very angry."],
+  },
+];
+
 /**
  * English: the help line explains in plain English (a translation would be the
  * sentence itself); meanings are short definitions. Turkish in landing-demo-questions-tr.ts,
@@ -763,8 +879,7 @@ const DEMO_POOLS: Record<TargetLanguage, readonly PoolQuestion[]> = {
   Italian: POOL,
   German: GERMAN_POOL,
   English: ENGLISH_POOL,
-  // No Spanish bank yet: the landing page keeps the Italian demo.
-  Spanish: [],
+  Spanish: SPANISH_POOL,
 };
 
 /** True when this language has landing-demo questions. */

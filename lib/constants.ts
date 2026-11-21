@@ -30,15 +30,14 @@ export function isKnownLanguage(value: unknown): value is KnownLanguage {
 }
 
 /**
- * Spanish has Picture Duel, Wordle, el·la, and the preposition Sprint.
- * Word Wheel and Arena stay hidden until their content is live.
+ * Spanish has every game. Danish is implemented but not offered, and it has no content yet.
  */
 export function hasWordWheel(language: string): boolean {
-  return language !== "Spanish";
+  return language !== "Danish";
 }
 
 export function hasArena(language: string): boolean {
-  return language !== "Spanish";
+  return language !== "Danish";
 }
 
 /** Danish has no preposition cards yet, and it is not offered. */
