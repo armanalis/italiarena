@@ -120,6 +120,7 @@ export const TR: Record<string, string> = {
   "Italian": "İtalyanca",
   "German": "Almanca",
   "Spanish": "İspanyolca",
+  "English": "İngilizce",
   "Danish": "Danca",
   "Learning {language}. Change language": "Öğrenilen dil: {language}. Dili değiştir",
   "Your {language} level": "{language} seviyen",
