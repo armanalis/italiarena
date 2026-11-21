@@ -4,11 +4,11 @@ import { getT, getUiLanguage } from "@/lib/i18n-server";
 import { ArrowRight, Trophy, Users, Zap } from "lucide-react";
 import { AuroraCanvas } from "@/components/aurora-canvas";
 import { GlassPanel } from "@/components/glass-panel";
-import { DemoRound } from "@/components/landing/demo-round";
+import { DemoLanguages } from "@/components/landing/demo-languages";
 import { Button } from "@/components/ui/button";
 import { LegalFooter } from "@/components/legal/privacy-policy";
-import type { TargetLanguage } from "@/lib/constants";
-import { pickDemoOpponent, pickDemoQuestions } from "@/lib/landing-demo-questions";
+import { TARGET_LANGUAGES, type TargetLanguage } from "@/lib/constants";
+import { hasDemoQuestions, pickDemoOpponent, pickDemoQuestions } from "@/lib/landing-demo-questions";
 
 const features = [
   {
@@ -34,7 +34,7 @@ const features = [
   },
 ];
 
-/** `language`: the demo round's language (German after a /german link). */
+/** `language`: the demo language selected first (German after a /german link). */
 export async function LandingPage({ language }: { language: TargetLanguage }) {
   const [t, { language: uiLanguage }] = await Promise.all([getT(), getUiLanguage()]);
   return (
@@ -73,7 +73,14 @@ export async function LandingPage({ language }: { language: TargetLanguage }) {
             </p>
           </div>
 
-          <DemoRound questions={pickDemoQuestions(3, language, uiLanguage)} opponent={pickDemoOpponent(language)} />
+          <DemoLanguages
+            initial={language}
+            demos={TARGET_LANGUAGES.filter(hasDemoQuestions).map((demoLanguage) => ({
+              language: demoLanguage,
+              questions: pickDemoQuestions(3, demoLanguage, uiLanguage),
+              opponent: pickDemoOpponent(demoLanguage),
+            }))}
+          />
         </section>
 
         <section className="mt-16 sm:mt-20">
