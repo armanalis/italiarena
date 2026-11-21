@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { BookOpen, CaseSensitive, Check, ChevronRight, CircleDashed, Flame, Grid3x3, Images, Timer, WholeWord, type LucideIcon } from "lucide-react";
 import { ARTICLE_GAME_NAME, hasArticleGame, hasIndefiniteGame, INDEFINITE_GAME_NAME, type ArticleLanguage, type ArticleStats } from "@/lib/articles";
-import type { TargetLanguage } from "@/lib/constants";
+import { hasArena, hasPrepositionGame, hasWordWheel, type TargetLanguage } from "@/lib/constants";
 import { PREPOSITION_GAME_NAME } from "@/lib/prepositions";
 import { reviewMinutes } from "@/lib/review";
 import type { PassaparolaTurnResult } from "@/lib/passaparola";
@@ -197,12 +197,14 @@ export async function TodayRow({
   const t = await getT();
   const tiles = [
     wordleTile(t, wordle, streaks.wordle),
-    passaparolaTile(t, passaparola, streaks.passaparola),
+    ...(hasWordWheel(language) ? [passaparolaTile(t, passaparola, streaks.passaparola)] : []),
     ...(hasArticleGame(language) ? [articlesTile(t, language, level, articles, streaks.articles)] : []),
     ...(hasIndefiniteGame(language) && indefinite ? [indefiniteTile(t, level, indefinite, streaks.indefinite)] : []),
-    ...(prepositions ? [prepositionTile(t, language, level, prepositions, streaks.prepositions)] : []),
+    ...(hasPrepositionGame(language) && prepositions
+      ? [prepositionTile(t, language, level, prepositions, streaks.prepositions)]
+      : []),
     pictureDuelTile(t),
-    arenaStreakTile(t, streaks.arena),
+    ...(hasArena(language) ? [arenaStreakTile(t, streaks.arena)] : []),
   ];
 
   return (

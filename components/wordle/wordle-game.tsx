@@ -459,6 +459,18 @@ export function WordleGame({
           </a>{" "}
           · Thomas Enz (CC0).
         </p>
+      ) : language === "Spanish" ? (
+        <p className="text-xs text-muted-foreground">
+          {t("Word checks")}:{" "}
+          <a className="underline underline-offset-2" href="https://github.com/hermitdave/FrequencyWords/tree/master/content/2018/es" target="_blank" rel="noreferrer">
+            FrequencyWords
+          </a>{" "}
+          (es) · Hermit Dave (CC BY-SA 4.0),{" "}
+          <a className="underline underline-offset-2" href="https://github.com/LibreOffice/dictionaries/tree/master/es" target="_blank" rel="noreferrer">
+            LibreOffice Spanish dictionary
+          </a>{" "}
+          · RLA-ES.
+        </p>
       ) : (
         <p className="text-xs text-muted-foreground">
           {t("Word checks")}:{" "}
