@@ -23,6 +23,8 @@ const DEFAULT_BONUS_MS = 5_000;
 export const ARTICLE_GAME_NAME = {
   German: "der·die·das",
   Italian: "il·lo·la",
+  Spanish: "el·la",
+  Danish: "en·et",
 } as const;
 
 export type ArticleLanguage = keyof typeof ARTICLE_GAME_NAME;
@@ -61,16 +63,22 @@ export type ArticleCard = {
 const GERMAN = ["der", "die", "das"];
 const ITALIAN = ["il", "lo", "la", "l'"];
 const ITALIAN_PLURAL = ["i", "gli", "le"];
+const SPANISH = ["el", "la"];
+const DANISH = ["en", "et"];
 
 /** Every article of a language, in button order (Stats lists accuracy per article). */
 export const ALL_ARTICLES: Record<ArticleLanguage, readonly string[]> = {
   German: GERMAN,
   Italian: [...ITALIAN, ...ITALIAN_PLURAL],
+  Spanish: SPANISH,
+  Danish: DANISH,
 };
 
 /** A card's buttons, in order (A, B, C, D in Mistakes). KEEP IN SYNC with article_choices. */
 export function articleChoices(language: ArticleLanguage, article: string): readonly string[] {
   if (language === "German") return GERMAN;
+  if (language === "Spanish") return SPANISH;
+  if (language === "Danish") return DANISH;
   return ITALIAN_PLURAL.includes(article) ? ITALIAN_PLURAL : ITALIAN;
 }
 
@@ -163,6 +171,7 @@ const GERMAN_RULES: { endings: string[]; article: string; text: string }[] = [
 /** The one-line rule shown after a wrong answer; null when no rule explains this noun. */
 export function articleRule(language: ArticleLanguage, noun: string, article: string): string | null {
   if (language === "Italian") return ITALIAN_RULES[article] ?? null;
+  if (language !== "German") return null;
   const word = noun.toLowerCase();
   const rule = GERMAN_RULES.find(({ endings }) => endings.some((ending) => word.endsWith(ending)));
   return rule?.article === article ? rule.text : null;

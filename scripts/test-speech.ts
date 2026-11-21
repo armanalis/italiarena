@@ -22,6 +22,8 @@ const voices = [
 check("no voices listed yet (iPhone): speak by lang tag; listed but none for the language: no audio", () => {
   assert.deepEqual(voiceFor([], "Italian"), { lang: "it-IT" });
   assert.deepEqual(voiceFor([], "English"), { lang: "en-US" });
+  assert.deepEqual(voiceFor([], "Spanish"), { lang: "es-ES" });
+  assert.deepEqual(voiceFor([], "Danish"), { lang: "da-DK" });
   assert.equal(voiceFor([{ lang: "en-US", name: "Samantha" }], "German"), null);
   assert.deepEqual(voiceFor(voices, "Italian"), { voice: voices[3], lang: "it-IT" });
 });

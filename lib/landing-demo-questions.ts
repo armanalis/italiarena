@@ -756,12 +756,15 @@ const OPPONENT_NAMES: Record<TargetLanguage, readonly string[]> = {
   Italian: ["Giulia", "Sofia", "Chiara", "Martina", "Francesca", "Marco", "Luca", "Matteo", "Lorenzo", "Davide"],
   German: ["Anna", "Lena", "Mia", "Hannah", "Lea", "Lukas", "Jonas", "Felix", "Paul", "Leon"],
   English: ["Emma", "Olivia", "Sophie", "Chloe", "Lucy", "Jack", "Oliver", "Harry", "James", "Tom"],
+  Spanish: ["Lucía", "Sofía", "Martina", "Carmen", "Elena", "Hugo", "Mateo", "Leo", "Pablo", "Diego"],
 };
 
 const DEMO_POOLS: Record<TargetLanguage, readonly PoolQuestion[]> = {
   Italian: POOL,
   German: GERMAN_POOL,
   English: ENGLISH_POOL,
+  // No Spanish bank yet: the landing page keeps the Italian demo.
+  Spanish: [],
 };
 
 /** True when this language has landing-demo questions. */

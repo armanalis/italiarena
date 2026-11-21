@@ -1,6 +1,6 @@
 /** Word Wheel (Passaparola in the code and database): a clue for every letter, 5 minutes on the clock. */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { LANGUAGE_META, type TargetLanguage } from "@/lib/constants";
+import { LANGUAGE_META, type KnownLanguage, type TargetLanguage } from "@/lib/constants";
 import { knownError } from "@/lib/errors";
 import { addDays } from "@/lib/wordle";
 
@@ -8,12 +8,15 @@ import { addDays } from "@/lib/wordle";
  * The wheel's letters. Italian: J, K, W, X and Y only appear in foreign words.
  * German: too few words start with Q, X or Y; Ä, Ö and Ü count as A, O and U.
  * English: too few words start with X.
+ * Spanish: no K, W, X or Ñ (ñ counts as N). Danish: no C, Q, W, X, Y or Z.
  * KEEP IN SYNC with the letter check in the passaparola database functions.
  */
-export const PASSAPAROLA_LETTERS: Record<TargetLanguage, string[]> = {
+export const PASSAPAROLA_LETTERS: Record<KnownLanguage, string[]> = {
   Italian: [..."ABCDEFGHILMNOPQRSTUVZ"],
   German: [..."ABCDEFGHIJKLMNOPRSTUVWZ"],
   English: [..."ABCDEFGHIJKLMNOPQRSTUVWYZ"],
+  Spanish: [..."ABCDEFGHIJLMNOPQRSTUVYZ"],
+  Danish: [..."ABDEFGHIJKLMNOPRSTUVÆØÅ"],
 };
 
 /**
@@ -22,36 +25,40 @@ export const PASSAPAROLA_LETTERS: Record<TargetLanguage, string[]> = {
  * KEEP IN SYNC with the clue banks (tmp/passaparola/clues*.tsv): none of these
  * may be an answer in that language.
  */
-const PASS_WORD: Record<TargetLanguage, string> = {
+const PASS_WORD: Record<KnownLanguage, string> = {
   Italian: "salta",
   German: "weiter",
   English: "skip",
+  Spanish: "paso",
+  Danish: "videre",
 };
 
-const FINISH_WORD: Record<TargetLanguage, string> = {
+const FINISH_WORD: Record<KnownLanguage, string> = {
   Italian: "ferma",
   German: "stopp",
   English: "stop",
+  Spanish: "basta",
+  Danish: "stop",
 };
 
-export function passWord(language: TargetLanguage): string {
+export function passWord(language: KnownLanguage): string {
   return PASS_WORD[language];
 }
 
-export function finishWord(language: TargetLanguage): string {
+export function finishWord(language: KnownLanguage): string {
   return FINISH_WORD[language];
 }
 
-function commandWords(language: TargetLanguage): string[] {
+function commandWords(language: KnownLanguage): string[] {
   return [passWord(language), finishWord(language)];
 }
 
-export function isPassCommand(typed: string, language: TargetLanguage): boolean {
+export function isPassCommand(typed: string, language: KnownLanguage): boolean {
   const word = typed.trim().toLowerCase();
   return word === passWord(language);
 }
 
-export function isFinishCommand(typed: string, language: TargetLanguage): boolean {
+export function isFinishCommand(typed: string, language: KnownLanguage): boolean {
   const word = typed.trim().toLowerCase();
   return word === finishWord(language);
 }
@@ -169,14 +176,40 @@ export function nextLetter(
 
 /**
  * Whether what is typed can still become an answer for `letter` (every answer
- * starts with its letter, accents aside) or one of the two command words.
+ * starts with its letter) or one of the two command words.
+ * KEEP IN SYNC with passaparola_normalize: Spanish áéíóúüñ → aeiouun;
+ * Danish æ = ae, ø = oe, å = aa. A short prefix of a digraph still fits
+ * ("a" on A, Æ and Å) until the word decides ("abe" is A, "aeble" is Æ).
  */
-export function fitsLetter(typed: string, letter: string, language: TargetLanguage = "English"): boolean {
+export function fitsLetter(typed: string, letter: string, language: KnownLanguage = "English"): boolean {
   const word = typed.trimStart().toLowerCase();
-  return (
-    word.normalize("NFD").startsWith(letter.toLowerCase()) ||
-    commandWords(language).some((command) => command.startsWith(word))
-  );
+  if (commandWords(language).some((command) => command.startsWith(word))) return true;
+  const folded = foldForLetter(word, language);
+  const head = foldForLetter(letter.toLowerCase(), language);
+  if (!folded || head.startsWith(folded)) return true;
+  return folded.startsWith(head) && decidedLetter(folded, language) === letter.toLowerCase();
+}
+
+/** Spanish accents and ñ, Danish æ/ø/å, and the NFD fold German and Italian already use. */
+function foldForLetter(word: string, language: KnownLanguage): string {
+  if (language === "Spanish") {
+    const composed = word.normalize("NFC");
+    return [...composed].map((ch) => {
+      const at = "áéíóúüñ".indexOf(ch);
+      return at === -1 ? ch : "aeiouun"[at];
+    }).join("");
+  }
+  if (language === "Danish") return word.replace(/æ/g, "ae").replace(/ø/g, "oe").replace(/å/g, "aa");
+  return word.normalize("NFD").replace(/\p{M}/gu, "");
+}
+
+function decidedLetter(folded: string, language: KnownLanguage): string {
+  if (language === "Danish") {
+    if (folded.startsWith("ae")) return "æ";
+    if (folded.startsWith("oe")) return "ø";
+    if (folded.startsWith("aa")) return "å";
+  }
+  return folded[0] ?? "";
 }
 
 const ERRORS: Record<string, string> = {
