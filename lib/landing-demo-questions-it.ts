@@ -47,4 +47,17 @@ export const DEMO_IT: Readonly<Record<string, DemoItalian>> = {
   "es-i01": { hint: "Alla lettera: “È pane mangiato.” Che cosa significa?", answer: "È un gioco da ragazzi.", trap: "Non c'è più cibo.", distractors: ["È ora di pranzo.", "Ormai è troppo tardi."] },
   "es-i02": { hint: "Alla lettera: “Mi stai prendendo i capelli.” Che cosa significa?", answer: "Mi stai prendendo in giro.", trap: "Mi stai tagliando i capelli.", distractors: ["Mi stai facendo arrabbiare.", "Mi stai guardando."] },
   "es-i03": { hint: "Alla lettera: “Sono fatto polvere.” Che cosa significa?", answer: "Sono distrutto.", trap: "Sono sporchissimo.", distractors: ["Sto invecchiando.", "Sono arrabbiatissimo."] },
+  // Danish
+  "da-g01": { hint: "Ieri sono andato ad Aarhus in treno." },
+  "da-g02": { hint: "È una casa grande." },
+  "da-g03": { hint: "Peter lava la sua macchina." },
+  "da-f01": { hint: "Ho sete. Vorrei qualcosa da bere." },
+  "da-f02": { hint: "Abitiamo sull'isola di Fionia." },
+  "da-f03": { hint: "Abito in Danimarca da due anni." },
+  "da-v01": { hint: MEANING, answer: "promettere", trap: "amare", distractors: ["lodare", "permettere"] },
+  "da-v02": { hint: MEANING, answer: "lo stipendio", trap: "il prestito", distractors: ["la tassa", "l'affitto"] },
+  "da-v03": { hint: MEANING, answer: "un'ora", trap: "un tempo", distractors: ["un minuto", "una settimana"] },
+  "da-i01": { hint: "Alla lettera: “Piovono ragazzi del calzolaio.” Che cosa significa?", answer: "Piove a catinelle.", trap: "I calzolai sono in sciopero.", distractors: ["C'è un po' di vento.", "Splende il sole."] },
+  "da-i02": { hint: "Alla lettera: “Ha una volpe dietro l'orecchio.” Che cosa significa?", answer: "È furbo.", trap: "Ha una volpe come animale.", distractors: ["È sordo.", "Porta un cappello."] },
+  "da-i03": { hint: "Non è “hold on”. Che cosa significa?", answer: "Smettila!", trap: "Aspetta!", distractors: ["Sbrigati!", "Vieni qui!"] },
 };
