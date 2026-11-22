@@ -16,14 +16,14 @@ const features = [
     num: "01",
     title: "Just a few minutes a day",
     description:
-      "Short sessions that fit your schedule — learn English, Italian, German or Spanish without blocking out hours of study time.",
+      "Short sessions that fit your schedule — learn English, Italian, German, Spanish or Danish without blocking out hours of study time.",
   },
   {
     icon: Users,
     num: "02",
     title: "Practice with real people",
     description:
-      "Practice English, Italian, German or Spanish with others at your level through live quiz rounds at your pace.",
+      "Practice English, Italian, German, Spanish or Danish with others at your level through live quiz rounds at your pace.",
   },
   {
     icon: Trophy,
@@ -44,7 +44,7 @@ export async function LandingPage({ language }: { language: TargetLanguage }) {
           <div className="space-y-8">
             <p className="swiss-label">{t("English · Italian · German · Spanish · live quiz matches")}</p>
             <h1 className="hero-headline max-w-xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-[3.25rem]">
-              {t("Learn English, Italian, German or Spanish through quick, real practice")}
+              {t("Learn English, Italian, German, Spanish or Danish through quick, real practice")}
             </h1>
             <p className="max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
               {t("Play timed rounds against real people or a bot. Pick up new words and grammar naturally — without long lessons or heavy study blocks.")}

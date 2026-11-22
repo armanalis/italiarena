@@ -1,11 +1,10 @@
 /**
  * Languages the app teaches, stored by these names in users.target_language and
  * every `language` column. KEEP IN SYNC with the language checks in the database.
- * Danish is implemented (letters, articles, keyboard) but not offered until its content exists.
  */
-export const TARGET_LANGUAGES = ["Italian", "German", "English", "Spanish"] as const;
+export const TARGET_LANGUAGES = ["Italian", "German", "English", "Spanish", "Danish"] as const;
 /** Ready in code, hidden from every picker until its content is live. */
-export const UNLISTED_LANGUAGES = ["Danish"] as const;
+export const UNLISTED_LANGUAGES = [] as const;
 /** Rows and players from before German existed are Italian. */
 export const DEFAULT_LANGUAGE = "Italian" satisfies (typeof TARGET_LANGUAGES)[number];
 
@@ -30,19 +29,19 @@ export function isKnownLanguage(value: unknown): value is KnownLanguage {
 }
 
 /**
- * Spanish has every game. Danish is implemented but not offered, and it has no content yet.
+ * Every offered language has every game. Kept per game so a new language can open game by game:
+ * return false for it here until its content is live.
  */
-export function hasWordWheel(language: string): boolean {
-  return language !== "Danish";
+export function hasWordWheel(_language: string): boolean {
+  return true;
 }
 
-export function hasArena(language: string): boolean {
-  return language !== "Danish";
+export function hasArena(_language: string): boolean {
+  return true;
 }
 
-/** Danish has no preposition cards yet, and it is not offered. */
-export function hasPrepositionGame(language: string): boolean {
-  return language !== "Danish";
+export function hasPrepositionGame(_language: string): boolean {
+  return true;
 }
 
 /** The language with this `code`, as in ?lang=de links. */

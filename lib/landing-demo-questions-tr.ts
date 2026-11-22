@@ -98,4 +98,17 @@ export const DEMO_TR: Readonly<Record<string, DemoTurkish>> = {
   "es-i01": { hint: "Kelimesi kelimesine “Yenmiş ekmek.” Ne anlama gelir?", answer: "Çocuk oyuncağı.", trap: "Hiç yiyecek kalmadı.", distractors: ["Öğle yemeği vakti.", "Artık çok geç."] },
   "es-i02": { hint: "Kelimesi kelimesine “Saçımı alıyorsun.” Ne anlama gelir?", answer: "Bana işletme atıyorsun.", trap: "Saçımı kesiyorsun.", distractors: ["Beni kızdırıyorsun.", "Bana bakıyorsun."] },
   "es-i03": { hint: "Kelimesi kelimesine “Toz olmuşum.” Ne anlama gelir?", answer: "Çok yorgunum.", trap: "Çok kirliyim.", distractors: ["Yaşlanıyorum.", "Çok kızgınım."] },
+  // Danish
+  "da-g01": { hint: "Dün trenle Aarhus'a gittim." },
+  "da-g02": { hint: "Bu büyük bir ev." },
+  "da-g03": { hint: "Peter kendi arabasını yıkıyor." },
+  "da-f01": { hint: "Susadım. Bir şey içmek istiyorum." },
+  "da-f02": { hint: "Fyn adasında yaşıyoruz." },
+  "da-f03": { hint: "İki yıldır Danimarka'da yaşıyorum." },
+  "da-v01": { hint: MEANING, answer: "söz vermek", trap: "sevmek", distractors: ["övmek", "izin vermek"] },
+  "da-v02": { hint: MEANING, answer: "maaş", trap: "kredi", distractors: ["vergi", "kira"] },
+  "da-v03": { hint: MEANING, answer: "bir saat", trap: "bir zaman", distractors: ["bir dakika", "bir hafta"] },
+  "da-i01": { hint: "Kelimesi kelimesine “Ayakkabıcı çırakları yağıyor.” Ne anlama gelir?", answer: "Bardaktan boşanırcasına yağıyor.", trap: "Ayakkabıcılar grevde.", distractors: ["Biraz rüzgârlı.", "Güneş parlıyor."] },
+  "da-i02": { hint: "Kelimesi kelimesine “Kulağının arkasında bir tilki var.” Ne anlama gelir?", answer: "Çok kurnaz.", trap: "Evcil bir tilkisi var.", distractors: ["Sağır.", "Şapka takıyor."] },
+  "da-i03": { hint: "İngilizcedeki “hold on” değil. Ne anlama gelir?", answer: "Kes şunu!", trap: "Bekle!", distractors: ["Acele et!", "Buraya gel!"] },
 };

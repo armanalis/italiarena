@@ -751,6 +751,122 @@ const SPANISH_POOL: PoolQuestion[] = [
   },
 ];
 
+/** Danish: the help line is the English meaning of the sentence, like Spanish. */
+const DANISH_POOL: PoolQuestion[] = [
+  // Grammar
+  {
+    id: "da-g01",
+    category: "Grammar",
+    prompt: "I går ___ jeg til Aarhus med toget.",
+    hint: "Yesterday I went to Aarhus by train.",
+    answer: "kørte",
+    trap: "kører",
+    distractors: ["køre", "kørt"],
+  },
+  {
+    id: "da-g02",
+    category: "Grammar",
+    prompt: "Det er et ___ hus.",
+    hint: "It's a big house.",
+    answer: "stort",
+    trap: "stor",
+    distractors: ["store", "storen"],
+  },
+  {
+    id: "da-g03",
+    category: "Grammar",
+    prompt: "Peter vasker ___ egen bil.",
+    hint: "Peter washes his own car.",
+    answer: "sin",
+    trap: "hans",
+    distractors: ["sit", "sine"],
+  },
+  // Fill in the blank
+  {
+    id: "da-f01",
+    category: "Fill in the blank",
+    prompt: "Jeg er ___. Jeg vil gerne have noget at drikke.",
+    hint: "I'm thirsty. I'd like something to drink.",
+    answer: "tørstig",
+    trap: "sulten",
+    distractors: ["træt", "syg"],
+  },
+  {
+    id: "da-f02",
+    category: "Fill in the blank",
+    prompt: "Vi bor ___ Fyn.",
+    hint: "We live on Funen (an island).",
+    answer: "på",
+    trap: "i",
+    distractors: ["til", "af"],
+  },
+  {
+    id: "da-f03",
+    category: "Fill in the blank",
+    prompt: "Jeg har boet i Danmark ___ to år.",
+    hint: "I've lived in Denmark for two years.",
+    answer: "i",
+    trap: "for",
+    distractors: ["om", "på"],
+  },
+  // Vocabulary
+  {
+    id: "da-v01",
+    category: "Vocabulary",
+    prompt: "at love",
+    hint: MEANING,
+    answer: "to promise",
+    trap: "to love",
+    distractors: ["to praise", "to allow"],
+  },
+  {
+    id: "da-v02",
+    category: "Vocabulary",
+    prompt: "en løn",
+    hint: MEANING,
+    answer: "a salary",
+    trap: "a loan",
+    distractors: ["a tax", "the rent"],
+  },
+  {
+    id: "da-v03",
+    category: "Vocabulary",
+    prompt: "en time",
+    hint: MEANING,
+    answer: "an hour",
+    trap: "a time",
+    distractors: ["a minute", "a week"],
+  },
+  // Idioms
+  {
+    id: "da-i01",
+    category: "Idioms",
+    prompt: "Det regner skomagerdrenge.",
+    hint: "Literally “It's raining shoemaker boys.” What does it mean?",
+    answer: "It's raining cats and dogs.",
+    trap: "The shoemakers are on strike.",
+    distractors: ["It's a little windy.", "The sun is shining."],
+  },
+  {
+    id: "da-i02",
+    category: "Idioms",
+    prompt: "Han har en ræv bag øret.",
+    hint: "Literally “He has a fox behind his ear.” What does it mean?",
+    answer: "He's sly.",
+    trap: "He has a pet fox.",
+    distractors: ["He's deaf.", "He wears a hat."],
+  },
+  {
+    id: "da-i03",
+    category: "Idioms",
+    prompt: "Hold op!",
+    hint: "It is not “hold on”. What does it mean?",
+    answer: "Stop it!",
+    trap: "Hold on!",
+    distractors: ["Hurry up!", "Come here!"],
+  },
+];
+
 /**
  * English: the help line explains in plain English (a translation would be the
  * sentence itself); meanings are short definitions. Turkish in landing-demo-questions-tr.ts,
@@ -873,6 +989,7 @@ const OPPONENT_NAMES: Record<TargetLanguage, readonly string[]> = {
   German: ["Anna", "Lena", "Mia", "Hannah", "Lea", "Lukas", "Jonas", "Felix", "Paul", "Leon"],
   English: ["Emma", "Olivia", "Sophie", "Chloe", "Lucy", "Jack", "Oliver", "Harry", "James", "Tom"],
   Spanish: ["Lucía", "Sofía", "Martina", "Carmen", "Elena", "Hugo", "Mateo", "Leo", "Pablo", "Diego"],
+  Danish: ["Emma", "Ida", "Freja", "Clara", "Sofie", "William", "Noah", "Oscar", "Lucas", "Magnus"],
 };
 
 const DEMO_POOLS: Record<TargetLanguage, readonly PoolQuestion[]> = {
@@ -880,6 +997,7 @@ const DEMO_POOLS: Record<TargetLanguage, readonly PoolQuestion[]> = {
   German: GERMAN_POOL,
   English: ENGLISH_POOL,
   Spanish: SPANISH_POOL,
+  Danish: DANISH_POOL,
 };
 
 /** True when this language has landing-demo questions. */

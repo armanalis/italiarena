@@ -140,15 +140,15 @@ function VerticalVolumeSlider({
           }
         }}
       >
-        <div className="absolute inset-y-0 left-1/2 w-1.5 -translate-x-1/2 overflow-hidden rounded-full bg-white/20">
+        <div className="absolute inset-y-0 left-1/2 w-1.5 -translate-x-1/2 overflow-hidden rounded-full bg-foreground/15">
           <div
-            className="absolute inset-x-0 bottom-0 rounded-full bg-white transition-[height] duration-75"
+            className="absolute inset-x-0 bottom-0 rounded-full bg-primary transition-[height] duration-75"
             style={{ height: `${fillPercent}%` }}
             aria-hidden
           />
         </div>
         <div
-          className="pointer-events-none absolute left-1/2 z-10 size-2.5 -translate-x-1/2 rounded-full bg-white shadow-[0_1px_3px_rgb(0_0_0_/_0.35)] transition-[bottom] duration-75"
+          className="pointer-events-none absolute left-1/2 z-10 size-2.5 -translate-x-1/2 rounded-full border border-border bg-background shadow-[0_1px_3px_rgb(0_0_0_/_0.35)] transition-[bottom] duration-75"
           style={{ bottom: thumbOffset }}
           aria-hidden
         />
@@ -156,7 +156,7 @@ function VerticalVolumeSlider({
 
       <button
         type="button"
-        className="rounded-md p-0.5 text-foreground/60 transition-colors hover:bg-white/10 hover:text-foreground"
+        className="rounded-md p-0.5 text-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
         aria-label={t("Mute sound")}
         onClick={() => onChange(0)}
       >
@@ -273,7 +273,7 @@ export function SoundVolumeControl({
 
       {collapsible && open && (
         <div
-          className="absolute right-0 top-[calc(100%+0.5rem)] z-50 animate-in fade-in-0 zoom-in-95 rounded-lg border border-white/10 bg-[#2a3138]/95 px-1.5 py-1.5 shadow-[0_4px_20px_rgb(0_0_0_/_0.45)] backdrop-blur-sm duration-150"
+          className="absolute right-0 top-[calc(100%+0.5rem)] z-50 animate-in fade-in-0 zoom-in-95 rounded-lg border border-border bg-popover/95 px-1.5 py-1.5 text-popover-foreground shadow-lg backdrop-blur-sm duration-150"
           role="dialog"
           aria-label={t("Sound volume")}
         >
