@@ -1,10 +1,9 @@
 /** in·on·at / di·a·da / in·an·auf: a scored 90-second Sprint per level and day, then practice. */
-import { redirect } from "next/navigation";
 import { ArticleGame } from "@/components/articles/article-game";
 import { HowToPlay } from "@/components/how-to-play";
 import { loadArticleStats, loadSprintHistory } from "@/lib/articles";
 import { requireOnboardingComplete } from "@/lib/auth";
-import { DEFAULT_LANGUAGE, hasPrepositionGame, isProficiencyLevel, languageFromCode } from "@/lib/constants";
+import { DEFAULT_LANGUAGE, isProficiencyLevel, languageFromCode } from "@/lib/constants";
 import { tutorialSeen } from "@/lib/tutorial-progress";
 import { isIsoDate } from "@/lib/wordle";
 import { createClient } from "@/utils/supabase/server";
@@ -18,7 +17,6 @@ export default async function PrepositionsPage({
   const profile = await requireOnboardingComplete();
   const { lang, level: sharedLevel, day: sharedDay } = await searchParams;
   const language = languageFromCode(lang) ?? profile.target_language ?? DEFAULT_LANGUAGE;
-  if (!hasPrepositionGame(language)) redirect("/");
   const level =
     sharedLevel && isProficiencyLevel(sharedLevel)
       ? sharedLevel

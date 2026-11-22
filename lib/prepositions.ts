@@ -1,13 +1,13 @@
-import type { KnownLanguage } from "@/lib/constants";
+import type { TargetLanguage } from "@/lib/constants";
 
-/** Named after the buttons. The same in every app language. Danish is ready, not offered. */
+/** Named after the buttons. The same in every app language. */
 export const PREPOSITION_GAME_NAME = {
   English: "in·on·at",
   Italian: "di·a·da",
   German: "in·an·auf",
   Spanish: "a·de·en",
   Danish: "i·på·til",
-} as const satisfies Record<KnownLanguage, string>;
+} as const satisfies Record<TargetLanguage, string>;
 
 /** KEEP IN SYNC with article_sprint_ms('preposition') in the database. */
 export const PREPOSITION_MS = 90_000;

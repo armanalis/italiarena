@@ -2,7 +2,6 @@
 import { redirect } from "next/navigation";
 import { MatchmakingLobby } from "@/components/matchmaking/matchmaking-lobby";
 import { requireOnboardingComplete } from "@/lib/auth";
-import { hasArena } from "@/lib/constants";
 
 import { normalizeBotDifficulty, type BotDifficulty } from "@/lib/bot";
 
@@ -19,7 +18,6 @@ export default async function MatchmakingPage({ searchParams }: MatchmakingPageP
   if (!profile.target_language || !profile.proficiency_level) {
     redirect("/onboarding");
   }
-  if (!hasArena(profile.target_language)) redirect("/");
 
   const params = await searchParams;
   const mode = params.mode === "bot" ? "bot" : "real";
