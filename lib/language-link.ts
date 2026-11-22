@@ -1,4 +1,4 @@
-/** /spanish, /german, /italian and /english: open the site in that language, for links people share. */
+/** /italian, /german, /english, /spanish and /danish: open the site in that language, for links people share. */
 import { revalidateTag } from "next/cache";
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
@@ -6,7 +6,6 @@ import { dashboardTag } from "@/lib/dashboard-cache";
 import {
   isTargetLanguage,
   LANGUAGE_META,
-  type KnownLanguage,
   type ProficiencyLevel,
   type TargetLanguage,
 } from "@/lib/constants";
@@ -14,7 +13,7 @@ import { createClient } from "@/utils/supabase/server";
 
 const LANGUAGE_COOKIE = "preferred_language";
 
-/** The language of the last offered language link: sign-up and guest setup preselect it. Danish is not offered. */
+/** The language of the last language link: sign-up and guest setup preselect it. */
 export async function linkedLanguage(): Promise<TargetLanguage | null> {
   const value = (await cookies()).get(LANGUAGE_COOKIE)?.value;
   return isTargetLanguage(value) ? value : null;
@@ -25,10 +24,8 @@ export async function linkedLanguage(): Promise<TargetLanguage | null> {
  * with none yet, the header switcher opens to ask (?lang=de). Visitors land
  * on the home page, and sign-up starts with the language chosen.
  */
-export async function openLanguage(request: NextRequest, language: KnownLanguage) {
+export async function openLanguage(request: NextRequest, language: TargetLanguage) {
   const home = new URL("/", request.url);
-  // /danish exists, but a language stays unoffered until it is in TARGET_LANGUAGES.
-  if (!isTargetLanguage(language)) return NextResponse.redirect(home);
   const supabase = await createClient();
   const {
     data: { user },

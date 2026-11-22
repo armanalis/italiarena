@@ -4,6 +4,7 @@
  */
 import assert from "node:assert/strict";
 import { hasDemoQuestions, pickDemoOpponent, pickDemoQuestions } from "../lib/landing-demo-questions";
+import { TARGET_LANGUAGES } from "../lib/constants";
 
 const ENGLISH_NAMES = ["Emma", "Olivia", "Sophie", "Chloe", "Lucy", "Jack", "Oliver", "Harry", "James", "Tom"];
 
@@ -35,16 +36,8 @@ console.log("ok - landing demo: German and English questions for those visitors,
 
 {
   // Every question has its Turkish: the help line always, the options when they are meanings (four different ones).
-  const all = [
-    ...pickDemoQuestions(100, "Italian", "tr"),
-    ...pickDemoQuestions(100, "German", "tr"),
-    ...pickDemoQuestions(100, "English", "tr"),
-  ];
-  const english = [
-    ...pickDemoQuestions(100, "Italian"),
-    ...pickDemoQuestions(100, "German"),
-    ...pickDemoQuestions(100, "English"),
-  ];
+  const all = TARGET_LANGUAGES.flatMap((language) => pickDemoQuestions(100, language, "tr"));
+  const english = TARGET_LANGUAGES.flatMap((language) => pickDemoQuestions(100, language));
   assert.equal(all.length, english.length);
   for (const question of all) {
     const original = english.find((q) => q.id === question.id)!;
@@ -59,17 +52,12 @@ console.log("ok - landing demo: German and English questions for those visitors,
 }
 
 {
-  // German and English questions have an Italian help line. Meaning questions have four different Italian options.
+  // Every non-Italian question has an Italian help line. Meaning questions have four different Italian options.
   // Italian questions have no row yet, so that demo stays English.
-  const italian = [
-    ...pickDemoQuestions(100, "German", "it"),
-    ...pickDemoQuestions(100, "English", "it"),
-  ];
-  const english = [
-    ...pickDemoQuestions(100, "German"),
-    ...pickDemoQuestions(100, "English"),
-  ];
-  assert.equal(italian.length, 24);
+  const others = TARGET_LANGUAGES.filter((language) => language !== "Italian");
+  const italian = others.flatMap((language) => pickDemoQuestions(100, language, "it"));
+  const english = others.flatMap((language) => pickDemoQuestions(100, language));
+  assert.ok(italian.length >= 48, `${italian.length} questions`);
   assert.equal(italian.length, english.length);
   for (const question of italian) {
     const original = english.find((q) => q.id === question.id)!;
@@ -87,5 +75,5 @@ console.log("ok - landing demo: German and English questions for those visitors,
     assert.equal(question.hint, original.hint, `${question.id}: Italian questions stay English`);
     assert.deepEqual([...question.options].sort(), [...original.options].sort(), question.id);
   }
-  console.log("ok - landing demo in Italian: German and English help lines, four Italian options on meaning questions");
+  console.log("ok - landing demo in Italian: a help line for every language but Italian, four Italian options on meaning questions");
 }

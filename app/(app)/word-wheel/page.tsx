@@ -1,9 +1,8 @@
 /** Word Wheel (called Passaparola in the code): one board per language, level and day. */
-import { redirect } from "next/navigation";
 import { HowToPlay } from "@/components/how-to-play";
 import { PassaparolaGame } from "@/components/passaparola/passaparola-game";
 import { requireOnboardingComplete } from "@/lib/auth";
-import { DEFAULT_LANGUAGE, hasWordWheel, isProficiencyLevel, languageFromCode } from "@/lib/constants";
+import { DEFAULT_LANGUAGE, isProficiencyLevel, languageFromCode } from "@/lib/constants";
 import { finishWord, passWord, playPassaparola } from "@/lib/passaparola";
 import { tutorialSeen } from "@/lib/tutorial-progress";
 import { isIsoDate } from "@/lib/wordle";
@@ -17,8 +16,6 @@ export default async function PassaparolaPage({
 }) {
   const profile = await requireOnboardingComplete();
   const { lang, level: sharedLevel, day: sharedDay } = await searchParams;
-  const requested = (lang ? languageFromCode(lang) : undefined) ?? profile.target_language ?? DEFAULT_LANGUAGE;
-  if (!hasWordWheel(requested)) redirect("/");
   const supabase = await createClient();
   const sharedLanguage = lang ? languageFromCode(lang) : undefined;
   const seen = tutorialSeen(supabase, "word_wheel");

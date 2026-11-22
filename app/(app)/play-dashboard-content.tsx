@@ -24,7 +24,6 @@ import { MatchmakingStartLink } from "@/components/matchmaking/matchmaking-start
 import { getAdminQueueCounts } from "@/lib/admin-queue-counts";
 import { getT } from "@/lib/i18n-server";
 import { getCurrentUserProfile, isGuestUser } from "@/lib/auth";
-import { hasArena, hasPrepositionGame, hasWordWheel } from "@/lib/constants";
 import { hasArticleGame, hasIndefiniteGame, loadArticleStats } from "@/lib/articles";
 import { loadFriendsToday } from "@/lib/friends-today";
 import { playPassaparola } from "@/lib/passaparola";
@@ -65,10 +64,10 @@ export async function PlayDashboardContent({
     supabase.rpc("get_my_review_due_count", { p_language: language }),
     getPlayerStatistics(),
     playWordle(supabase, language, level, italyToday(), null),
-    hasWordWheel(language) ? playPassaparola(supabase, language, level) : Promise.resolve({ ok: false as const, error: "" }),
+    playPassaparola(supabase, language, level),
     hasArticleGame(language) ? loadArticleStats(supabase, language) : Promise.resolve(null),
     hasIndefiniteGame(language) ? loadArticleStats(supabase, language, "indefinite") : Promise.resolve(null),
-    hasPrepositionGame(language) ? loadArticleStats(supabase, language, "preposition") : Promise.resolve(null),
+    loadArticleStats(supabase, language, "preposition"),
     loadFriendsToday(supabase, language),
     tutorialSeen(supabase, "arena"),
   ]);
@@ -82,7 +81,7 @@ export async function PlayDashboardContent({
       <header className="page-intro w-full px-4 pt-5 sm:px-8 sm:pt-6 lg:px-10 xl:px-12">
         <div className="flex w-full flex-wrap items-start justify-between gap-3 sm:items-center sm:gap-4">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{hasArena(language) ? t("Arena") : t("Games")}</h1>
+            <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{t("Arena")}</h1>
             {guest && (
               <p className="text-sm text-muted-foreground">
                 {t("Playing as {name}", { name: profile.display_name ?? t("Guest") })}
@@ -128,8 +127,8 @@ export async function PlayDashboardContent({
           </div>
         )}
 
-        {/* Wide screens: play on the left, the player's summary on the right. Hidden for a language with no Arena questions yet. */}
-        {hasArena(language) && <section className="mx-auto grid w-full max-w-3xl gap-4 md:grid-cols-2">
+        {/* Wide screens: play on the left, the player's summary on the right. */}
+        <section className="mx-auto grid w-full max-w-3xl gap-4 md:grid-cols-2">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -160,14 +159,14 @@ export async function PlayDashboardContent({
           </Card>
 
           <ArenaSummary stats={stats} />
-        </section>}
+        </section>
 
         <TodayRow
           wordle={wordle}
           passaparola={passaparola}
           articles={articles}
           indefinite={hasIndefiniteGame(language) ? (indefinite ?? { best: {}, today: {}, accuracy: {} }) : null}
-          prepositions={hasPrepositionGame(language) ? (prepositions ?? { best: {}, today: {}, accuracy: {} }) : null}
+          prepositions={prepositions ?? { best: {}, today: {}, accuracy: {} }}
           reviewDue={(reviewDue as number | null) ?? 0}
           language={language}
           level={level}
@@ -185,9 +184,9 @@ export async function PlayDashboardContent({
       </div>
     </main>
   );
-  return hasArena(language) ? (
+  return (
     <HowToPlay game="arena" seen={arenaSeen} waitForWelcomeTour buttonClassName="px-4 pt-4 sm:px-8 lg:px-10 xl:px-12">
       {page}
     </HowToPlay>
-  ) : page;
+  );
 }

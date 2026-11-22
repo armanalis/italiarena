@@ -3,13 +3,10 @@
  * every `language` column. KEEP IN SYNC with the language checks in the database.
  */
 export const TARGET_LANGUAGES = ["Italian", "German", "English", "Spanish", "Danish"] as const;
-/** Ready in code, hidden from every picker until its content is live. */
-export const UNLISTED_LANGUAGES = [] as const;
 /** Rows and players from before German existed are Italian. */
 export const DEFAULT_LANGUAGE = "Italian" satisfies (typeof TARGET_LANGUAGES)[number];
 
 export type TargetLanguage = (typeof TARGET_LANGUAGES)[number];
-export type KnownLanguage = TargetLanguage | (typeof UNLISTED_LANGUAGES)[number];
 
 /** `code` is for lang attributes; `label` is the language's own name. */
 export const LANGUAGE_META = {
@@ -18,31 +15,12 @@ export const LANGUAGE_META = {
   English: { code: "en", label: "English" },
   Spanish: { code: "es", label: "Español" },
   Danish: { code: "da", label: "Dansk" },
-} as const satisfies Record<KnownLanguage, { code: string; label: string }>;
+} as const satisfies Record<TargetLanguage, { code: string; label: string }>;
 
 export function isTargetLanguage(value: unknown): value is TargetLanguage {
   return (TARGET_LANGUAGES as readonly string[]).includes(value as string);
 }
 
-export function isKnownLanguage(value: unknown): value is KnownLanguage {
-  return isTargetLanguage(value) || (UNLISTED_LANGUAGES as readonly string[]).includes(value as string);
-}
-
-/**
- * Every offered language has every game. Kept per game so a new language can open game by game:
- * return false for it here until its content is live.
- */
-export function hasWordWheel(_language: string): boolean {
-  return true;
-}
-
-export function hasArena(_language: string): boolean {
-  return true;
-}
-
-export function hasPrepositionGame(_language: string): boolean {
-  return true;
-}
 
 /** The language with this `code`, as in ?lang=de links. */
 export function languageFromCode(code: string | undefined): TargetLanguage | undefined {
