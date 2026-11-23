@@ -24,6 +24,7 @@ import {
   timeoutDuel,
   type PictureDuel,
 } from "@/lib/picture-duel";
+import { modeText } from "@/lib/mode-colors";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/ui-language-provider";
 import { createClient } from "@/utils/supabase/client";
@@ -280,7 +281,12 @@ export function PictureDuelRoom({
   const meIsHost = duel.host_id === me;
   const other = { id: meIsHost ? duel.guest_id : duel.host_id, name: (meIsHost ? duel.guest_name : duel.host_name) ?? t("Friend") };
   const nameOf = (player: string) => (player === me ? t("You") : other.name);
-  const heading = `${t(duel.language)} · ${duel.level} · ${t(duel.topic)}${duel.hard ? ` · ${t("Hard mode")}` : ""}`;
+  const heading = (
+    <>
+      {t(duel.language)} · {duel.level} · {t(duel.topic)}
+      {duel.hard && <span className={modeText.hard}> · {t("Hard mode")}</span>}
+    </>
+  );
   const isWrong = text !== "" && text === wrong?.text;
 
   // ---- The host waits for the friend. ----
@@ -533,7 +539,7 @@ function Panel({ children }: { children: React.ReactNode }) {
   return <div className="glass-panel mx-auto w-full max-w-md space-y-5 p-6 text-center sm:p-8">{children}</div>;
 }
 
-function Title({ children, sub }: { children: React.ReactNode; sub: string }) {
+function Title({ children, sub }: { children: React.ReactNode; sub: React.ReactNode }) {
   return (
     <div className="space-y-1">
       <h1 className="text-xl font-bold tracking-tight">{children}</h1>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronRight, Clock, Loader2, SkipForward, X } from "lucide-react";
 import { DayArchive } from "@/components/day-archive";
+import { modeChip, modeText } from "@/lib/mode-colors";
 import { useHowToPlayOpen } from "@/components/how-to-play";
 import { SpeakButton } from "@/components/speak-button";
 import { ShareButton } from "@/components/share-button";
@@ -335,14 +336,15 @@ export function PassaparolaGame({
           days={archive.map((day) => ({
             date: day.date,
             played: day.right !== null,
+            mode: day.mode ?? undefined,
             status:
               day.right === null ? undefined : day.finished ? (
                 <span className="flex flex-col items-center gap-0.5">
-                  <span className="text-sm font-bold tabular-nums leading-none text-primary">
+                  <span className={cn("text-sm font-bold tabular-nums leading-none", day.mode ? modeText[day.mode] : "text-primary")}>
                     {day.right}/{day.total}
                   </span>
                   {day.mode && (
-                    <span className="text-[0.6rem] font-medium text-muted-foreground">
+                    <span className={cn("text-[0.6rem] font-medium", modeText[day.mode])}>
                       {t(day.mode === "hard" ? "Hard" : "Normal")}
                     </span>
                   )}
@@ -358,7 +360,7 @@ export function PassaparolaGame({
         <div className="flex items-center justify-between gap-3 text-sm">
           <span className="font-medium">
             {formatPuzzleDay(view.date, uiLanguage)} · {view.level}
-            {view.mode ? ` · ${t(view.mode === "hard" ? "Hard" : "Normal")}` : ""}
+            {view.mode && <span className={modeText[view.mode]}> · {t(view.mode === "hard" ? "Hard" : "Normal")}</span>}
           </span>
           <Button type="button" size="sm" variant="ghost" disabled={pending || locked} onClick={() => void send(level, {}, null)}>
             {t("Back to today")}
@@ -392,7 +394,7 @@ export function PassaparolaGame({
                   : t("{right} of {total} right.", { right, total: letters.length })}
               </p>
               {view.mode && (
-                <p className="text-xs font-medium text-muted-foreground">{t(view.mode === "hard" ? "Hard" : "Normal")}</p>
+                <p className={cn("text-xs font-medium", modeText[view.mode])}>{t(view.mode === "hard" ? "Hard" : "Normal")}</p>
               )}
               <p className="text-xs text-muted-foreground">
                 {view.today && view.date !== view.today
@@ -504,7 +506,7 @@ export function PassaparolaGame({
                     className={cn(
                       "min-h-11 rounded-full border px-4 text-sm font-medium transition-colors",
                       mode === option
-                        ? "border-primary bg-primary text-primary-foreground"
+                        ? modeChip[option]
                         : "border-border bg-transparent text-foreground hover:bg-muted"
                     )}
                   >
