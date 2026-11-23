@@ -1,0 +1,30 @@
+# CI for every push to main and every pull request: lint, types, unit tests.
+# CD is Vercel's GitHub integration: main -> production, other branches -> previews.
+# Its build runs the same lint + unit tests (prebuild) and the type check (next build),
+# so a red check here is also a deploy that Vercel refuses.
+# SQL tests hold the answers, so they run in the PRIVATE content repo (content-sql.yml), never here.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm run test:unit

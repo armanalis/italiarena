@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run test:unit",
+    "prebuild": "npm run lint && npm run test:unit",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

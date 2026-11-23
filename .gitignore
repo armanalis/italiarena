@@ -53,3 +53,6 @@ supabase/archive/
 /node_modules.nosync
 /.git-content.nosync/
 /.git.nosync/
+
+# Private SQL-test workflow: runs in armanalis/italiarena-content only (tmp/backup.sh adds it there).
+.github/workflows/content-sql.yml
