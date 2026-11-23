@@ -15,7 +15,7 @@ const fetchUserRow = cache(async (userId: string) => {
   const { data, error } = await supabase
     .from("users")
     .select(
-      "id, email, display_name, target_language, proficiency_level, role, is_guest, sound_enabled, haptics_enabled, daily_reminder_enabled, daily_reminder_hour, timezone"
+      "id, email, display_name, target_language, proficiency_level, role, is_guest, sound_enabled, haptics_enabled, daily_reminder_enabled, daily_reminder_hour, timezone, language_levels"
     )
     .eq("id", userId)
     .maybeSingle();
@@ -61,6 +61,7 @@ export const getCurrentUserProfile = cache(async (): Promise<UserProfile | null>
       daily_reminder_enabled: profile.daily_reminder_enabled ?? false,
       daily_reminder_hour: profile.daily_reminder_hour ?? 18,
       timezone: profile.timezone ?? DEFAULT_TIMEZONE,
+      language_levels: (profile.language_levels as UserProfile["language_levels"]) ?? {},
     };
   }
 

@@ -18,7 +18,14 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/components/ui-language-provider";
 
 /** Header button: which language every game uses. A new language asks for a level first. */
-export function LanguageSwitcher({ language }: { language: TargetLanguage }) {
+export function LanguageSwitcher({
+  language,
+  levels,
+}: {
+  language: TargetLanguage;
+  /** Level per language already played; blank for the rest. */
+  levels: Partial<Record<TargetLanguage, string>>;
+}) {
   const router = useRouter();
   const t = useT();
   const pathname = usePathname();
@@ -84,7 +91,7 @@ export function LanguageSwitcher({ language }: { language: TargetLanguage }) {
           align="end"
           sideOffset={8}
           collisionPadding={16}
-          className="z-50 w-60 space-y-1 rounded-xl border border-border bg-popover p-2 text-sm text-popover-foreground shadow-md outline-none"
+          className="z-50 w-64 space-y-1 rounded-xl border border-border bg-popover p-2 text-sm text-popover-foreground shadow-md outline-none"
         >
           {askLevelFor ? (
             <div className="space-y-2 p-2">
@@ -125,11 +132,14 @@ export function LanguageSwitcher({ language }: { language: TargetLanguage }) {
                 <span className="flex-1">
                   {t(option)} <span lang={LANGUAGE_META[option].code} className="text-muted-foreground">· {LANGUAGE_META[option].label}</span>
                 </span>
-                {option === language && <Check className="size-4" aria-hidden />}
+                {levels[option] && (
+                  <span className="text-xs font-medium tabular-nums text-muted-foreground">{levels[option]}</span>
+                )}
+                <Check className={cn("size-4", option !== language && "invisible")} aria-hidden />
               </button>
               ))}
               <p className="border-t border-border px-3 pb-1 pt-2 text-xs text-muted-foreground">
-                {t("Menus and buttons stay in your app language (Settings).")}
+                {t("This changes only the language you practise. The language of menus is under Settings → App language.")}
               </p>
             </>
           )}

@@ -21,6 +21,12 @@ export async function SiteHeader() {
         profile?.target_language && profile?.proficiency_level
       )}
       language={profile?.target_language ?? null}
+      languageLevels={{
+        ...profile?.language_levels,
+        ...(profile?.target_language && profile.proficiency_level
+          ? { [profile.target_language]: profile.proficiency_level }
+          : {}),
+      }}
       isAdmin={isAdmin}
       adminQueueCount={adminQueueCount}
     />

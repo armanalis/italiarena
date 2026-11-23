@@ -16,6 +16,8 @@ export type UserProfile = {
   daily_reminder_enabled: boolean;
   daily_reminder_hour: number;
   timezone: string;
+  /** The level last used in each language; a language never played is missing. */
+  language_levels?: Partial<Record<TargetLanguage, ProficiencyLevel>>;
 };
 
 export type MatchHistoryEntry = {
