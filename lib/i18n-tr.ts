@@ -233,7 +233,8 @@ export const TR: Record<string, string> = {
   "See your answers": "Cevaplarını gör",
   "Learning": "Öğrenilen",
   "Language you are learning": "Öğrendiğin dil",
-  "Menus and buttons stay in your app language (Settings).": "Menüler ve düğmeler uygulama dilinde kalır (Ayarlar).",
+  "This changes only the language you practise. The language of menus is under Settings → App language.":
+    "Bu yalnızca çalıştığın dili değiştirir. Menülerin dili Ayarlar → Uygulama dili kısmında.",
   "{letter}: almost right, it counts!": "{letter}: neredeyse doğru, sayılır!",
   "{letter}: wrong. The answer is {word}.": "{letter}: yanlış. Doğrusu {word}.",
   "Today's Sprint: {score} right out of {n}": "Bugünün Sprinti: {n} sorudan {score} doğru",

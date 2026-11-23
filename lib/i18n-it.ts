@@ -218,7 +218,8 @@ export const IT: Record<string, string> = {
   "See your answers": "Vedi le tue risposte",
   "Learning": "Studi",
   "Language you are learning": "Lingua che stai imparando",
-  "Menus and buttons stay in your app language (Settings).": "Menu e pulsanti restano nella lingua dell'app (Impostazioni).",
+  "This changes only the language you practise. The language of menus is under Settings → App language.":
+    "Cambia solo la lingua che stai imparando. La lingua dei menu è in Impostazioni → Lingua dell'app.",
   "{letter}: almost right, it counts!": "{letter}: quasi giusto, vale!",
   "{letter}: wrong. The answer is {word}.": "{letter}: sbagliato. La risposta è {word}.",
   "Today's Sprint: {score} right out of {n}": "Sprint di oggi: {score} giuste su {n}",

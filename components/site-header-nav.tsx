@@ -29,6 +29,7 @@ type SiteHeaderNavProps = {
   displayName: string | null;
   showDashboard: boolean;
   language: TargetLanguage | null;
+  languageLevels: Partial<Record<TargetLanguage, string>>;
   isAdmin: boolean;
   adminQueueCount: number;
 };
@@ -38,6 +39,7 @@ export function SiteHeaderNav({
   displayName,
   showDashboard,
   language,
+  languageLevels,
   isAdmin,
   adminQueueCount,
 }: SiteHeaderNavProps) {
@@ -95,7 +97,7 @@ export function SiteHeaderNav({
               )}
               {/* Not mid-match: the match keeps the language it started with. */}
               {showDashboard && language && !leavingActiveMatch && (
-                <LanguageSwitcher language={language} />
+                <LanguageSwitcher language={language} levels={languageLevels} />
               )}
               {showDashboard && (
                 <Button asChild variant="ghost" size="sm" className="min-h-10 px-2 sm:px-3">
