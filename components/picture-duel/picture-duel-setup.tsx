@@ -8,6 +8,7 @@ import { JoinCodeForm } from "@/components/challenge/join-code-form";
 import { ALL_TOPICS, createDuel, findDuelByCode, PICTURE_LEVELS, type PictureTopic } from "@/lib/picture-duel";
 import { hasArticleGame, type ArticleLanguage } from "@/lib/articles";
 import { isTargetLanguage, LANGUAGE_META } from "@/lib/constants";
+import { modeChip } from "@/lib/mode-colors";
 import { cn } from "@/lib/utils";
 import { fill, useT } from "@/components/ui-language-provider";
 import { createClient } from "@/utils/supabase/client";
@@ -104,7 +105,7 @@ export function PictureDuelSetup({
               aria-pressed={option === hard}
               disabled={opening !== null}
               onClick={() => setHard(option)}
-              className={chip(option === hard)}
+              className={option === hard ? cn(chip(true), modeChip[option ? "hard" : "normal"]) : chip(false)}
             >
               {option ? t("Hard") : t("Normal")}
             </button>

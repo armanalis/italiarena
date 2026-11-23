@@ -4,6 +4,7 @@
 import { useT } from "@/components/ui-language-provider";
 import type { TargetLanguage } from "@/lib/constants";
 import { todayResults, type FriendToday } from "@/lib/friends-today";
+import { modeText } from "@/lib/mode-colors";
 import { cn } from "@/lib/utils";
 
 export function FriendsTodayList({ rows, language }: { rows: FriendToday[]; language: TargetLanguage }) {
@@ -28,7 +29,7 @@ export function FriendsTodayList({ rows, language }: { rows: FriendToday[]; lang
                 <span key={game}>
                   <span className="font-medium text-foreground">
                     {t(game)} {score}
-                    {mode ? ` · ${t(mode === "hard" ? "Hard" : "Normal")}` : ""}
+                    {mode && <span className={modeText[mode]}> · {t(mode === "hard" ? "Hard" : "Normal")}</span>}
                   </span>{" "}
                   {level}
                 </span>
