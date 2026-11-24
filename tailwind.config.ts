@@ -12,6 +12,8 @@ const themeColor = (name: string) =>
   `color-mix(in oklab, var(--${name}) calc(<alpha-value> * 100%), transparent)`;
 
 const config: Config = {
+  // Phones keep :hover on the last tapped button (sticky grey on the next question); hover only where a mouse exists.
+  future: { hoverOnlyWhenSupported: true },
   darkMode: ["class"],
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
