@@ -83,10 +83,32 @@ export function hasVoice(language: TargetLanguage) {
   return "speechSynthesis" in window && voiceFor(window.speechSynthesis.getVoices(), language) !== null;
 }
 
+/** 0.02 s of silence (8 kHz, 8-bit WAV). */
+const SILENT_WAV =
+  "data:audio/wav;base64,UklGRsQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YaAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA";
+let silentClip: HTMLAudioElement | undefined;
+
+/**
+ * iPhone and iPad keep speech silent while the ring/silent switch is on, because a page that has
+ * played no media gets the "ambient" audio category. Asking for "playback" and playing a silent
+ * clip inside the same tap moves it to the category the switch does not mute.
+ */
+function leaveSilentMode() {
+  const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
+  if (session) session.type = "playback"; // Safari 16.4+
+  // Every iOS browser is WebKit; iPadOS reports itself as a Mac with touch.
+  const ua = navigator.userAgent;
+  const ios = /iPhone|iPad|iPod/.test(ua) || (/Mac/.test(ua) && navigator.maxTouchPoints > 1);
+  if (!ios) return; // elsewhere the clip would only show up in Now Playing
+  silentClip ??= new Audio(SILENT_WAV);
+  silentClip.play().catch(() => {});
+}
+
 export function speak(text: string, language: TargetLanguage) {
   const synth = window.speechSynthesis;
   const how = voiceFor(synth.getVoices(), language);
   if (!how) return;
+  leaveSilentMode();
   // A second tap restarts the word instead of queueing it. Only when something is playing:
   // Safari on iPhone and some Android browsers drop a speak() that comes right after cancel().
   if (synth.speaking || synth.pending) synth.cancel();
