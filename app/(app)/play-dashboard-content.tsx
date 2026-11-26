@@ -42,15 +42,14 @@ type PlayDashboardContentProps = {
 export async function PlayDashboardContent({
   searchParams,
 }: PlayDashboardContentProps) {
-  const profile = await getCurrentUserProfile();
-  const params = await searchParams;
+  // In parallel: the translations may need their own query for the account's language.
+  const [profile, params, t] = await Promise.all([getCurrentUserProfile(), searchParams, getT()]);
   const accessDenied = params.error === "admin_access_denied";
 
   if (!profile?.target_language || !profile.proficiency_level) {
     return null;
   }
   const guest = isGuestUser(profile);
-  const t = await getT();
   const adminQueue =
     profile.role === "admin"
       ? await getAdminQueueCounts()

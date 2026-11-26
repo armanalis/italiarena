@@ -123,7 +123,7 @@ export function setup() {
   return { guests };
 }
 
-export default function (data) {
+export default function browse(data) {
   const guest = data.guests[(__VU - 1) % data.guests.length];
   const params = { headers: { Cookie: guest.cookie }, redirects: 0, tags: { kind: "page" } };
 
