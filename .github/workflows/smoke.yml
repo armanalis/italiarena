@@ -1,0 +1,24 @@
+# After Vercel finishes a production deploy: is the live site really up?
+# A failure here sends GitHub's usual failed-run email.
+name: Smoke test
+
+on: deployment_status
+
+jobs:
+  smoke:
+    if: github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Live pages answer
+        run: |
+          check() { # url, expected status
+            got=$(curl -s -o /dev/null -w '%{http_code}' --retry 3 --retry-all-errors "$1")
+            echo "$1 -> $got (want $2)"; [ "$got" = "$2" ]
+          }
+          check https://italiarena.com/ 200
+          check https://italiarena.com/login 200
+          # Signed-out visitors are sent to /login: the auth proxy is running.
+          check https://italiarena.com/wordle 307
+          # Supabase answers (401 = up, no key sent); 5xx or no answer = down.
+          check https://blezajuipfwxobevhamg.supabase.co/auth/v1/health 401
