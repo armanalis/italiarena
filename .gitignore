@@ -56,3 +56,8 @@ supabase/archive/
 
 # Private SQL-test workflow: runs in armanalis/italiarena-content only (tmp/backup.sh adds it there).
 .github/workflows/content-sql.yml
+
+# Local agent instructions (kept off the public repo)
+AGENTS.md
+.agents/
+docs/agents/
