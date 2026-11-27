@@ -20,6 +20,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      # iCloud syncs this folder and leaves copies like "page 2.tsx": none may be committed.
+      - name: No iCloud duplicate files
+        run: "! git ls-files | grep -E ' [0-9]+(\\.[^/]*)?$'"
       - uses: actions/setup-node@v4
         with:
           node-version: 22

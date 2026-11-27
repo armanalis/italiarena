@@ -1,6 +1,5 @@
 import { CONNECTION_ERROR_MESSAGE, errorFromUnknown, isConnectionError } from "@/lib/errors";
 import { createAdminClientOrNull } from "@/utils/supabase/admin";
-import { createClient } from "@/utils/supabase/server";
 
 export const USERNAME_MIN_LENGTH = 2;
 export const USERNAME_MAX_LENGTH = 24;
@@ -92,8 +91,13 @@ async function isUsernameTakenViaRpc(
   username: string,
   excludeUserId?: string
 ): Promise<boolean | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("is_display_name_taken", {
+  // Service role: sign-up asks before there is a session, and signed-out visitors
+  // may not call database functions (least-privilege migration, 2026-11-26).
+  const admin = createAdminClientOrNull();
+  if (!admin) {
+    return null;
+  }
+  const { data, error } = await admin.rpc("is_display_name_taken", {
     p_display_name: username,
     p_exclude_user_id: excludeUserId ?? undefined,
   });

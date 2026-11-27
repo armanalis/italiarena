@@ -61,6 +61,7 @@ supabase/archive/
 AGENTS.md
 .agents/
 docs/agents/
+skills-lock*.json
 
 # Migration runner: private like the migrations it applies.
 supabase/migrate.sh
