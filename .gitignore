@@ -48,7 +48,7 @@ supabase/real-schema.mjs
 supabase/migrations/
 supabase/archive/
 
-# Local Claude Code agent definitions
+# Local agent tooling
 .claude/
 /node_modules.nosync
 /.git-content.nosync/
@@ -56,3 +56,8 @@ supabase/archive/
 
 # Private SQL-test workflow: runs in armanalis/italiarena-content only (tmp/backup.sh adds it there).
 .github/workflows/content-sql.yml
+
+# Local agent instructions (kept off the public repo)
+AGENTS.md
+.agents/
+docs/agents/

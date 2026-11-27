@@ -37,6 +37,15 @@ Supported languages: **Italian** and **German** (switch from the header; one lev
 
 ---
 
+## How it's built
+
+- Idea, game design and every product decision are mine.
+- Every change runs through lint, type checks, unit tests and SQL tests before it can reach production, and a smoke test checks the live site after each deploy.
+- Data access is locked down in Postgres itself: row-level security, column-level grants, and game logic in server-side functions, so the browser never sees an answer before it is played.
+- Questions, answers and clues were created with the help of AI (Claude), then checked by build scripts for duplicates and answer leaks.
+
+---
+
 ## Architecture
 
 Next.js (App Router) on Vercel, backed by Supabase (Postgres + Auth + Realtime). No separate game server — a `game_sessions` row **is** the match state, and both players' browsers just stay in sync with that row.

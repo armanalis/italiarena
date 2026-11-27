@@ -13,7 +13,7 @@ export const PREPOSITION_GAME_NAME = {
 export const PREPOSITION_MS = 90_000;
 
 /**
- * Rule id → one English sentence. Claude fills the sentences in.
+ * Rule id → one English sentence, filled in by the content build.
  * An id that is not here is shown as nothing.
  */
 export const PREPOSITION_RULES: Record<string, string> = {

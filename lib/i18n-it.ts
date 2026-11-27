@@ -1,7 +1,7 @@
 /**
  * Italian for every English text the app shows through t(). Keys are the
  * English texts exactly as written in the code; {name} parts are filled in.
- * Written by Claude's tmp/it/build.py: new texts are added there, not here.
+ * Written by tmp/it/build.py: new texts are added there, not here.
  */
 export const IT: Record<string, string> = {
   "Arena": "Arena",
