@@ -27,12 +27,24 @@ export function isGuestUser(profile: UserProfile) {
   return profile.is_guest || isGuestAuthEmail(profile.email);
 }
 
+/**
+ * Who is signed in, from the access token's verified claims. The project signs
+ * tokens with an asymmetric key, so getClaims() checks the signature locally:
+ * no round trip to Supabase Auth on every page. proxy.ts still calls getUser()
+ * on each request, which catches signed-out or deleted sessions.
+ */
 const getAuthUser = cache(async () => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
+  const { data, error } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (error || !claims?.sub) {
+    return null;
+  }
+  return {
+    id: claims.sub,
+    email: claims.email ?? null,
+    is_anonymous: claims.is_anonymous ?? false,
+  };
 });
 
 /** Cached per request — shared by header, layout, and pages. */
