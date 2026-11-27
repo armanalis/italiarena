@@ -86,7 +86,6 @@ export async function submitQuestion(
       correct_answer: validated.data.correct_answer,
       rationale: validated.data.rationale,
       status: "pending",
-      ai_precheck_status: "pending",
     })
     .select("id")
     .single();
