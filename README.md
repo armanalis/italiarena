@@ -1,6 +1,6 @@
 # Italiarena
 
-Italiarena is a language-learning game: live 1v1 quiz matches plus daily word games, in Italian and German.
+Italiarena is a language-learning game: live 1v1 quiz matches plus daily word games, in Italian, German, English, Spanish and Danish.
 
 I moved to Turin as an international student and Italian was the hardest part — every app I tried felt like homework, so I stopped using them. Italiarena is the practice I actually wanted: quick, competitive matches instead of flashcards. It's for anyone landing in Italy and needing to pick up the language fast.
 
@@ -23,17 +23,20 @@ The **hosted backend and question database are not part of this repository**. Th
 | Idea | How it shows up in the app |
 | --- | --- |
 | **Short, focused matches** | Ten timed questions per round — grammar, vocabulary, fill-in-the-blank, and idioms |
-| **Real opponents** | Matchmaking pairs players by language and level (CEFR A1–C1) |
-| **No dead waiting** | Play vs bot for an instant ghost match, or search for a human opponent |
+| **Real opponents** | Matchmaking pairs players by language and level (CEFR A1–C2, with in-between steps like A2-B1) |
+| **No dead waiting** | Play an Easy, Medium or Hard bot for an instant match, or search for a human opponent; guests can play without an account |
 | **Speed matters** | Faster correct answers score more; a tie after 10 questions goes to one sudden-death round |
-| **Daily games** | Wordle, Word Wheel (a clue for every letter) and a 60-second article Sprint (der·die·das / il·lo·la), one scored round a day per level |
+| **Daily games** | Wordle, Word Wheel (a clue for every letter, Normal or Hard mode) and timed Sprints: articles (der·die·das, il·lo·la …), Italian un·uno·una, and prepositions. One scored round a day per level, with past days in an archive |
+| **Picture Duel** | A chess-clock duel against a friend: name the picture to pass the clock; hard mode wants the article too |
+| **Streaks** | A daily streak for the Arena, Wordle and Word Wheel |
 | **Learn from mistakes** | Post-match review, mistakes that come back on spaced review days until they stick, 🔊 pronunciation, and optional AI-generated explanations (Groq) |
-| **Friends** | Friend requests, challenges, and today's scores side by side (scores only, never answers) |
+| **Friends** | Friend requests, challenge links and codes, rematches, last seen, and today's scores side by side (scores only, never answers) |
 | **Community quality control** | Players can report bad questions; admins review a flagged/submission queue |
 | **Push reminders** | Opt-in web push at the player's chosen hour: a streak at risk, reviews due, or a daily match (cron + service worker) |
 | **Works like an app on your phone** | Add to home screen on iOS and Android for a full-screen experience |
 
-Supported languages: **Italian** and **German** (switch from the header; one level per language).
+Learning languages: **Italian, German, English, Spanish** and **Danish** (switch from the header; each language keeps its own level).
+Interface languages: **English, Turkish** and **Italian**. When the interface and the learning language match, Word Wheel clues are definitions instead of translations.
 
 ---
 
@@ -41,6 +44,7 @@ Supported languages: **Italian** and **German** (switch from the header; one lev
 
 - Idea, game design and every product decision are mine.
 - Every change runs through lint, type checks, unit tests and SQL tests before it can reach production, and a smoke test checks the live site after each deploy.
+- Database migrations apply automatically once the SQL tests pass: additive ones before the new code ships, restrictive ones (revoking access, dropping columns) only after it is live.
 - Data access is locked down in Postgres itself: row-level security, column-level grants, and game logic in server-side functions, so the browser never sees an answer before it is played.
 - Questions, answers and clues were created with the help of AI (Claude), then checked by build scripts for duplicates and answer leaks.
 
@@ -54,9 +58,9 @@ Next.js (App Router) on Vercel, backed by Supabase (Postgres + Auth + Realtime).
 app/            Routes, layouts, server actions — auth, matchmaking, admin
 components/     UI by feature: match, matchmaking, dashboard, statistics, admin, settings
 hooks/          useGameLoop (pacing) + useServerMatchSync (staying in sync)
-lib/            Scoring, bot simulation, match-sync protocol, AI explanations, auth
+lib/            Scoring, match-sync protocol, game rules, translations, AI explanations, auth
 store/          Zustand store — all in-match state
-utils/          Supabase clients (browser, server, middleware)
+utils/          Supabase clients (browser, server, proxy)
 public/         Static assets, PWA icons, sound effects
 ```
 
@@ -77,7 +81,7 @@ Schema and migrations live outside this repo ([`supabase/README.md`](supabase/RE
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - npm
 
 ### Setup
@@ -107,7 +111,7 @@ Open [http://localhost:3000](http://localhost:3000).
 ### Useful commands
 
 ```bash
-npm run build              # production build (runs test:unit first; a failing test stops the deploy)
+npm run build              # production build (runs lint and test:unit first; a failure stops the deploy)
 npm run lint               # ESLint
 npm run audit:questions    # sanity-check the question bank for data issues
 npm test                   # every test: scripts/test-*.ts, then the SQL suite
@@ -120,13 +124,14 @@ npm run test:sql           # SQL suite only (needs the private supabase/migratio
 
 | Layer | Choice |
 | --- | --- |
-| Framework | [Next.js](https://nextjs.org/) (App Router, Server Actions) |
+| Framework | [Next.js](https://nextjs.org/) 16 (App Router, Server Actions) + React 19 |
 | Backend | [Supabase](https://supabase.com/) — Postgres, Auth, Realtime, RPC functions |
 | Client state | [Zustand](https://github.com/pmndrs/zustand) |
 | UI | Tailwind CSS + [shadcn/ui](https://ui.shadcn.com/) on [Radix](https://www.radix-ui.com/) primitives |
 | AI explanations | [Groq](https://groq.com/) (`openai/gpt-oss-120b`) for optional post-match answer explanations |
 | Push notifications | Web Push (`web-push`) + a Vercel Cron job for the daily reminder |
 | Hosting | [Vercel](https://vercel.com/) |
+| CI/CD | GitHub Actions (lint, types, unit tests, post-deploy smoke test) + Vercel Git deploys |
 
 ---
 
