@@ -487,7 +487,7 @@ export async function saveMatchResult(payload: {
   const { error: finalizeError } = await supabase.rpc("finalize_match_result", {
     p_session_id: payload.sessionId,
     p_opponent_display_name: payload.opponentDisplayName,
-    // Already marked as seen when the match was created or joined.
+    // Already marked as seen when the match page opened (getMatchSession).
     p_question_ids: [],
   });
 

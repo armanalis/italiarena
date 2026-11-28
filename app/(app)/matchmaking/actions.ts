@@ -18,8 +18,8 @@ import {
   extractQuestionIds,
   parseQuestionPlaylist,
 } from "@/lib/session-playlist";
-import { PUBLIC_QUESTION_COLUMNS } from "@/lib/resolve-match-questions";
-import type { GameSession, PublicQuestion } from "@/types/database.types";
+import { resolveQuestionsByIds } from "@/lib/resolve-match-questions";
+import type { GameSession, GameSessionInsert, PublicQuestion } from "@/types/database.types";
 import type { UserProfile } from "@/lib/types";
 
 type MatchmakingSuccess = {
@@ -71,28 +71,14 @@ export async function getPlayerDisplayName(userId: string): Promise<string> {
   return typeof data === "string" && data.trim() ? data.trim() : "Player";
 }
 
-/** Playlist questions WITHOUT answers — this is what reaches the browser. */
+/**
+ * Playlist questions WITHOUT answers, in playlist order — this is what reaches
+ * the browser. Quarantined ones too: a question pulled from play mid-match must
+ * keep its round, or every later round shows the wrong question.
+ */
 async function fetchQuestionsByIds(ids: string[]): Promise<PublicQuestion[]> {
-  if (ids.length === 0) {
-    return [];
-  }
-
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("questions_active")
-    .select(PUBLIC_QUESTION_COLUMNS)
-    .in("id", ids);
-
-  if (error || !data) {
-    return [];
-  }
-
-  const byId = new Map(
-    (data as PublicQuestion[]).map((question) => [question.id, question])
-  );
-  return ids
-    .map((id) => byId.get(id))
-    .filter((question): question is PublicQuestion => Boolean(question));
+  const byId = await resolveQuestionsByIds(await createClient(), ids);
+  return ids.flatMap((id) => byId.get(id) ?? []);
 }
 
 async function resolveSessionQuestions(questionIds: string[]) {
@@ -140,17 +126,22 @@ async function getQuestionRotationContext(userId: string, language: string) {
   };
 }
 
+/**
+ * The 10 questions of a new match. They count as seen only when the match page
+ * opens (getMatchSession): a lobby nobody joins showed nothing.
+ */
 async function generateMatchQuestions(
   userId: string,
   language: string,
   level: string
-) {
+): Promise<PublicQuestion[]> {
   const supabase = await createClient();
   const [{ data: pool, error: poolError }, { seenIds, recentIds }] =
     await Promise.all([
+      // Ids and categories only: a level holds hundreds of questions, a match needs 10.
       supabase
         .from("questions_active")
-        .select(PUBLIC_QUESTION_COLUMNS)
+        .select("id, category")
         .eq("language", language)
         .eq("level", level),
       getQuestionRotationContext(userId, language),
@@ -160,27 +151,59 @@ async function generateMatchQuestions(
     throw new Error(poolError.message);
   }
 
-  const regular = buildMatchPlaylist(
-    (pool ?? []) as PublicQuestion[],
+  const picked = buildMatchPlaylist(
+    (pool ?? []) as Pick<PublicQuestion, "id" | "category">[],
     recentIds,
     seenIds
   );
+  const regular = await fetchQuestionsByIds(picked.map((question) => question.id));
 
   if (regular.length < REGULAR_MATCH_QUESTIONS) {
     throw new Error(insufficientQuestionsMessage(language, level));
   }
 
-  const sessionIds = regular.map((question) => question.id);
-  await markQuestionsSeen(userId, sessionIds);
-
-  return {
-    regular,
-    sessionIds,
-  };
+  return regular;
 }
 
 function insufficientQuestionsMessage(language: string, level: string) {
   return `Add at least ${REGULAR_MATCH_QUESTIONS} ${language} questions for ${level} before playing.`;
+}
+
+/**
+ * A new session with fresh questions, hosted by `playerId`. Service role:
+ * players cannot create sessions, so they cannot choose a match's question
+ * ids (see answer-secrecy-2-lockdown-2026-10.sql).
+ */
+async function createSession(
+  playerId: string,
+  language: NonNullable<GameSession["language"]>,
+  level: NonNullable<GameSession["level"]>,
+  columns: Omit<GameSessionInsert, "player_a_id" | "language" | "level" | "question_playlist">
+): Promise<{ sessionId: string; playlist: PublicQuestion[] } | { error: string }> {
+  let playlist: PublicQuestion[];
+  try {
+    playlist = await generateMatchQuestions(playerId, language, level);
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : insufficientQuestionsMessage(language, level),
+    };
+  }
+
+  const { data, error } = await createAdminClient()
+    .from("game_sessions")
+    .insert({
+      player_a_id: playerId,
+      language,
+      level,
+      question_playlist: buildQuestionPlaylistPayload(playlist.map((question) => question.id)),
+      ...columns,
+    })
+    .select("id")
+    .single();
+
+  return error || !data
+    ? { error: error?.message ?? "Could not start the match. Try again." }
+    : { sessionId: data.id, playlist };
 }
 
 async function abandonOwnWaitingSession(
@@ -339,9 +362,9 @@ export async function searchForMatch(
         );
       }
 
-      const questionIds = extractQuestionIds(joinedSession.question_playlist);
-      const playlist = await resolveSessionQuestions(questionIds);
-      await markQuestionsSeen(profile.id, questionIds);
+      const playlist = await resolveSessionQuestions(
+        extractQuestionIds(joinedSession.question_playlist)
+      );
 
       return {
         success: true,
@@ -374,47 +397,17 @@ export async function searchForMatch(
     };
   }
 
-  let matchQuestions;
-
-  try {
-    matchQuestions = await generateMatchQuestions(profile.id, language, level);
-  } catch (error) {
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : insufficientQuestionsMessage(language, level),
-    };
-  }
-
-  // Service role: players cannot create sessions themselves, so they cannot
-  // choose a match's question ids (see answer-secrecy-2-lockdown-2026-10.sql).
-  const { data: createdSession, error: createError } = await createAdminClient()
-    .from("game_sessions")
-    .insert({
-      player_a_id: profile.id,
-      status: "waiting",
-      language,
-      level,
-      question_playlist: buildQuestionPlaylistPayload(matchQuestions.sessionIds),
-    })
-    .select("*")
-    .single();
-
-  if (createError || !createdSession) {
-    return {
-      success: false,
-      error: createError?.message ?? "Could not create match session.",
-    };
+  const created = await createSession(profile.id, language, level, { status: "waiting" });
+  if ("error" in created) {
+    return { success: false, error: created.error };
   }
 
   return {
     success: true,
     data: {
-      sessionId: createdSession.id,
+      sessionId: created.sessionId,
       status: "waiting",
-      playlist: matchQuestions.regular,
+      playlist: created.playlist,
       opponent: null,
     },
   };
@@ -443,51 +436,23 @@ export async function startBotMatch(
     .eq("player_b_id", GHOST_PLAYER_ID)
     .eq("status", "active");
 
-  let matchQuestions;
-
-  try {
-    matchQuestions = await generateMatchQuestions(profile.id, language, level);
-  } catch (error) {
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : insufficientQuestionsMessage(language, level),
-    };
-  }
-
-  // Service role, as above. The bot tier is stored so the server can play
-  // the bot (reveal_round_answer) and a refresh keeps the right tier.
-  const { data: createdSession, error: createError } = await createAdminClient()
-    .from("game_sessions")
-    .insert({
-      player_a_id: profile.id,
-      player_b_id: GHOST_PLAYER_ID,
-      status: "active",
-      language,
-      level,
-      question_playlist: buildQuestionPlaylistPayload(matchQuestions.sessionIds),
-      bot_difficulty: botDifficulty,
-    })
-    .select("*")
-    .single();
-
-  if (createError || !createdSession) {
-    return {
-      success: false,
-      error:
-        createError?.message ??
-        "Could not start the bot match. Try again.",
-    };
+  // The bot tier is stored so the server can play the bot
+  // (reveal_round_answer) and a refresh keeps the right tier.
+  const created = await createSession(profile.id, language, level, {
+    player_b_id: GHOST_PLAYER_ID,
+    status: "active",
+    bot_difficulty: botDifficulty,
+  });
+  if ("error" in created) {
+    return { success: false, error: created.error };
   }
 
   return {
     success: true,
     data: {
-      sessionId: createdSession.id,
+      sessionId: created.sessionId,
       status: "active",
-      playlist: matchQuestions.regular,
+      playlist: created.playlist,
       opponent: {
         id: GHOST_PLAYER_ID,
         isGhost: true,
@@ -527,37 +492,14 @@ export async function createChallenge(
     .eq("status", "waiting")
     .eq("is_private", true);
 
-  let matchQuestions;
-  try {
-    matchQuestions = await generateMatchQuestions(profile.id, language, level);
-  } catch (error) {
-    return {
-      success: false,
-      error:
-        error instanceof Error ? error.message : insufficientQuestionsMessage(language, level),
-    };
-  }
-
-  // Service role, as for every new session (players cannot pick question ids).
-  const { data, error } = await createAdminClient()
-    .from("game_sessions")
-    .insert({
-      player_a_id: profile.id,
-      status: "waiting",
-      language,
-      level,
-      question_playlist: buildQuestionPlaylistPayload(matchQuestions.sessionIds),
-      is_private: true,
-      challenged_id: friendId,
-    })
-    .select("id")
-    .single();
-
-  if (error || !data) {
-    return { success: false, error: error?.message ?? "Could not create the challenge." };
-  }
-
-  return { success: true, sessionId: data.id };
+  const created = await createSession(profile.id, language, level, {
+    status: "waiting",
+    is_private: true,
+    challenged_id: friendId,
+  });
+  return "error" in created
+    ? { success: false, error: created.error }
+    : { success: true, sessionId: created.sessionId };
 }
 
 /**
@@ -586,7 +528,6 @@ export async function joinChallenge(sessionId: string): Promise<ChallengeResult>
     };
   }
 
-  await markQuestionsSeen(auth.profile.id, extractQuestionIds(playlist));
   return { success: true, sessionId };
 }
 
@@ -628,58 +569,33 @@ export async function offerRematch(
 
   const state = data as RematchState;
   if (state.session_id) {
-    // The other player started it: its questions count as seen for us too.
-    const { data: rematch } = await supabase
-      .from("game_sessions")
-      .select("question_playlist")
-      .eq("id", state.session_id)
-      .maybeSingle();
-    await markQuestionsSeen(auth.profile.id, extractQuestionIds(rematch?.question_playlist));
     return { success: true, sessionId: state.session_id };
   }
   if (!state.both) {
     return { success: true, sessionId: null };
   }
 
-  let matchQuestions;
-  try {
-    matchQuestions = await generateMatchQuestions(auth.profile.id, state.language, state.level);
-  } catch (generateError) {
-    return {
-      success: false,
-      error:
-        generateError instanceof Error
-          ? generateError.message
-          : insufficientQuestionsMessage(state.language, state.level),
-    };
-  }
-
-  // Service role, as for every new session. Both players are in, so it starts
-  // active. We host: we arrive first, and the host must start round 1 within
-  // 5 s (claim_silent_opponent); the other screen follows within a check-in.
-  const admin = createAdminClient();
-  const { data: created, error: createError } = await admin
-    .from("game_sessions")
-    .insert({
-      player_a_id: auth.profile.id,
-      player_b_id:
-        auth.profile.id === state.player_a_id ? state.player_b_id : state.player_a_id,
+  // Both players are in, so it starts active. We host: we arrive first, and
+  // the host must start round 1 within 5 s (claim_silent_opponent); the other
+  // screen follows within a check-in.
+  const created = await createSession(
+    auth.profile.id,
+    state.language as NonNullable<GameSession["language"]>,
+    state.level as NonNullable<GameSession["level"]>,
+    {
+      player_b_id: auth.profile.id === state.player_a_id ? state.player_b_id : state.player_a_id,
       status: "active",
-      language: state.language as GameSession["language"],
-      level: state.level as GameSession["level"],
-      question_playlist: buildQuestionPlaylistPayload(matchQuestions.sessionIds),
       joined_at: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
-
-  if (createError || !created) {
-    return { success: false, error: createError?.message ?? "Could not start the rematch." };
+    }
+  );
+  if ("error" in created) {
+    return { success: false, error: created.error };
   }
 
+  const admin = createAdminClient();
   const { data: linked } = await admin
     .from("game_sessions")
-    .update({ rematch_session_id: created.id })
+    .update({ rematch_session_id: created.sessionId })
     .eq("id", previousSessionId)
     .is("rematch_session_id", null)
     .select("id")
@@ -687,7 +603,7 @@ export async function offerRematch(
 
   if (!linked) {
     // Both screens saw "both" at once and the other one linked first: use theirs.
-    await admin.from("game_sessions").delete().eq("id", created.id);
+    await admin.from("game_sessions").delete().eq("id", created.sessionId);
     const { data: previous } = await admin
       .from("game_sessions")
       .select("rematch_session_id")
@@ -696,7 +612,7 @@ export async function offerRematch(
     return { success: true, sessionId: previous?.rematch_session_id ?? null };
   }
 
-  return { success: true, sessionId: created.id };
+  return { success: true, sessionId: created.sessionId };
 }
 
 /** Joins a challenge by the 6-digit code its host shared. */
@@ -781,8 +697,12 @@ export async function getMatchSession(sessionId: string) {
     session.question_playlist
   );
   // Full playlist (no slice): a sudden-death tiebreaker question may have
-  // been appended as an 11th entry mid-match.
-  const playlist = await fetchQuestionsByIds(questionIds);
+  // been appended as an 11th entry mid-match. The questions count as seen
+  // once the match is on screen (a reload marks them again, harmlessly).
+  const [playlist] = await Promise.all([
+    fetchQuestionsByIds(questionIds),
+    session.status === "active" ? markQuestionsSeen(auth.profile.id, questionIds) : null,
+  ]);
   const opponentId =
     session.player_a_id === auth.profile.id
       ? session.player_b_id

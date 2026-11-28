@@ -50,13 +50,16 @@ export function normalizeQuestionCategory(value: string): QuestionCategory {
   return "grammar";
 }
 
-function pickFromPool(
-  pool: PublicQuestion[],
+/** All the picker reads of a question: the full rows are loaded after the pick. */
+type Pickable = Pick<PublicQuestion, "id" | "category">;
+
+function pickFromPool<Q extends Pickable>(
+  pool: Q[],
   count: number,
   recentIds: ReadonlySet<string>,
   seenIds: ReadonlySet<string>,
   usedIds: ReadonlySet<string>
-): PublicQuestion[] {
+): Q[] {
   if (count <= 0 || pool.length === 0) {
     return [];
   }
@@ -77,7 +80,7 @@ function pickFromPool(
     ),
   ];
 
-  const picks: PublicQuestion[] = [];
+  const picks: Q[] = [];
 
   for (const bucket of buckets) {
     if (picks.length >= count) {
@@ -98,12 +101,12 @@ function pickFromPool(
   return picks;
 }
 
-export function buildMatchPlaylist(
-  pool: PublicQuestion[],
+export function buildMatchPlaylist<Q extends Pickable>(
+  pool: Q[],
   recentIds: ReadonlySet<string>,
   seenIds: ReadonlySet<string>
-): PublicQuestion[] {
-  const selected: PublicQuestion[] = [];
+): Q[] {
+  const selected: Q[] = [];
   const usedIds = new Set<string>();
 
   for (const { category, count } of MATCH_CATEGORY_QUOTA) {

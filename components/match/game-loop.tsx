@@ -25,7 +25,6 @@ import { RematchPanel } from "@/components/match/rematch-panel";
 import { ReportQuestionButton } from "@/components/match/report-question-button";
 import { SoundVolumeControl } from "@/components/sound-volume-control";
 import type { CorrectAnswer, PublicQuestion } from "@/types/database.types";
-import type { ProficiencyLevel } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useT, useUiLanguage } from "@/components/ui-language-provider";
 import { getOptionText, localizeQuestion } from "@/lib/resolve-match-questions";
@@ -35,7 +34,6 @@ type GameLoopProps = {
   localUserId: string;
   localPlayerRole: "a" | "b";
   isBotMatch: boolean;
-  proficiencyLevel: ProficiencyLevel;
   playerAName: string;
   playerBName: string;
   serverPlaylist: PublicQuestion[];
@@ -53,7 +51,6 @@ export function GameLoop({
   localUserId,
   localPlayerRole,
   isBotMatch,
-  proficiencyLevel,
   playerAName,
   playerBName,
   serverPlaylist,
@@ -94,7 +91,6 @@ export function GameLoop({
     localUserId,
     localPlayerRole,
     isBotMatch,
-    proficiencyLevel,
     serverPlaylist,
   });
   const uiLanguage = useUiLanguage();

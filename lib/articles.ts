@@ -262,13 +262,24 @@ export type SprintStart = {
   msLeft: number;
   /** The Sprint's full length. Older replies omit it; the article game is 60 s. */
   ms?: number;
-  /** Added to the clock every 5 right in a row. Older replies omit it; articles are 1 s. */
+  /** Added to the clock every 5 right in a row. Older replies omit it; articles are 5 s. */
   bonusMs?: number;
   /** The day this Sprint belongs to. Older replies omit it. */
   date?: string;
   kind?: SprintKind;
   cards: ArticleCard[];
+  /** What a resumed run saved before the reload; the game goes on from there. Older replies omit it. */
+  answers?: string[];
 };
+
+/** Right answers in a row at the end of `answers`: a resumed Sprint keeps its bonus streak. */
+export function trailingStreak(cards: readonly ArticleCard[], answers: readonly string[]): number {
+  let streak = 0;
+  while (streak < answers.length && answers[answers.length - 1 - streak] === cards[answers.length - 1 - streak]?.article) {
+    streak += 1;
+  }
+  return streak;
+}
 
 export type SprintHistory = { today: string; days: Record<string, number> };
 

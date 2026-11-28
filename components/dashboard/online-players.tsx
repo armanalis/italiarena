@@ -13,16 +13,23 @@ import { createClient } from "@/utils/supabase/client";
 const ONLINE_HEARTBEAT_MS = 60_000;
 const ONLINE_REFRESH_MS = 30_000;
 
-/** Marks this player as online once a minute while the app is open. */
+/** Marks this player as online once a minute while the app is on screen (a tab left in the background is not). */
 export function OnlineHeartbeat() {
   useEffect(() => {
     const supabase = createClient();
-    // `.then` is what sends the request.
-    const beat = () => void supabase.rpc("mark_online").then(() => undefined);
+    const beat = () => {
+      // `.then` is what sends the request.
+      if (!document.hidden) void supabase.rpc("mark_online").then(() => undefined);
+    };
 
     beat();
     const interval = window.setInterval(beat, ONLINE_HEARTBEAT_MS);
-    return () => window.clearInterval(interval);
+    // Back on screen: online again at once, not at the next tick.
+    document.addEventListener("visibilitychange", beat);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", beat);
+    };
   }, []);
 
   return null;

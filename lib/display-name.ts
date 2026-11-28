@@ -1,10 +1,9 @@
+import { isGuestAuthEmail } from "@/lib/guest-auth";
 import type { UserProfile } from "@/lib/types";
 
+/** The app's one guest rule (lib/guest-auth.ts), as in get_public_display_name. */
 function isGuestProfile(profile: { email: string; is_guest?: boolean }) {
-  const localPart = profile.email.split("@")[0]?.trim();
-  return Boolean(
-    profile.is_guest || (localPart && /^guest-[0-9a-f-]+$/i.test(localPart))
-  );
+  return Boolean(profile.is_guest) || isGuestAuthEmail(profile.email);
 }
 
 /**

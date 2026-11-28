@@ -30,6 +30,7 @@ import {
   saveSprint,
   startSprint,
   toSprintArchive,
+  trailingStreak,
   withArticle,
   type ArticleCard,
   type ArticleStats,
@@ -159,13 +160,14 @@ export function ArticleGame({
       setPhase("ready");
       return;
     }
-    setAnswers([]);
+    // A reload during the scored run resumes it: the time it has left and what it saved.
+    const saved = started.value.answers ?? [];
+    setAnswers(saved);
     ended.current = false;
-    // A reload during the scored minute resumes it with the time it has left.
     deadline.current = performance.now() + started.value.msLeft;
     setSprint(started.value);
-    setIndex(0);
-    setStreak(0);
+    setIndex(saved.length);
+    setStreak(trailingStreak(started.value.cards, saved));
     setMsLeft(started.value.msLeft);
     setPhase("playing");
   }

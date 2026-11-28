@@ -18,6 +18,7 @@ import {
   nounQuestion,
   fillPreposition,
   toSprintArchive,
+  trailingStreak,
   withArticle,
 } from "../lib/articles";
 
@@ -214,6 +215,14 @@ check("the question reads in the app language, with the Turkish or Italian meani
     "Hangi artikel? casa (ev)",
     "Italian meaning is not used in Turkish"
   );
+});
+
+check("a resumed Sprint keeps the right answers in a row at the end of what it saved", () => {
+  const cards = ["der", "die", "das", "der"].map((article, id) => ({ id, noun: `N${id}`, article, meaning: null }));
+  assert.equal(trailingStreak(cards, []), 0);
+  assert.equal(trailingStreak(cards, ["der", "die", "das"]), 3);
+  assert.equal(trailingStreak(cards, ["der", "das", "das"]), 1, "a wrong answer ends the streak");
+  assert.equal(trailingStreak(cards, ["der", "die", "der"]), 0, "the last answer was wrong");
 });
 
 console.log(`\n${passed} article checks passed`);

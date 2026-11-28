@@ -58,7 +58,6 @@ export default async function MatchPage({ params }: MatchPageProps) {
         localUserId={profile.id}
         localPlayerRole={localPlayerRole}
         isBotMatch={isBotMatch}
-        proficiencyLevel={profile.proficiency_level!}
         playerAName={playerAName}
         playerBName={playerBName}
         serverPlaylist={playlist}

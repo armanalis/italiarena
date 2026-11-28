@@ -23,7 +23,6 @@ import { useGameStore } from "@/store/useGameStore";
 import { REGULAR_MATCH_QUESTIONS, shouldStartTiebreaker } from "@/lib/match";
 import { isAnswerCorrect } from "@/lib/scoring";
 import type { CorrectAnswer, PublicQuestion } from "@/types/database.types";
-import type { ProficiencyLevel } from "@/lib/constants";
 
 const ROUND_RESULT_TICK_MS = 100;
 /** ~3 s of reveal retries while the opponent's answer is still being saved. */
@@ -45,7 +44,6 @@ type UseGameLoopOptions = {
   localUserId: string;
   localPlayerRole: "a" | "b";
   isBotMatch: boolean;
-  proficiencyLevel: ProficiencyLevel;
   serverPlaylist: PublicQuestion[];
 };
 
@@ -60,7 +58,6 @@ export function useGameLoop({
   localUserId,
   localPlayerRole,
   isBotMatch,
-  proficiencyLevel,
   serverPlaylist,
 }: UseGameLoopOptions) {
   const { play } = useGameAudio();
@@ -623,14 +620,12 @@ export function useGameLoop({
       localUserId,
       localPlayerRole,
       isBotMatch,
-      proficiencyLevel,
     });
   }, [
     initGameplay,
     isBotMatch,
     localPlayerRole,
     localUserId,
-    proficiencyLevel,
   ]);
 
   const bot = useBotMatch({

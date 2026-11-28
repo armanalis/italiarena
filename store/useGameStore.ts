@@ -18,7 +18,6 @@ import {
   type MatchWinner,
 } from "@/lib/scoring";
 import type { BotDifficulty } from "@/lib/bot";
-import type { ProficiencyLevel } from "@/lib/constants";
 import type { CategoryProgress } from "@/lib/types";
 import type { CorrectAnswer, PublicQuestion } from "@/types/database.types";
 
@@ -60,7 +59,6 @@ type GameStoreState = {
   roundPhase: RoundPhase;
   localPlayerRole: "a" | "b" | null;
   localUserId: string | null;
-  proficiencyLevel: ProficiencyLevel | null;
   playerAAnswer: LockedAnswer | null;
   playerBAnswer: LockedAnswer | null;
   playerAResponseTimes: number[];
@@ -92,7 +90,6 @@ type GameStoreActions = {
     localUserId: string;
     localPlayerRole: "a" | "b";
     isBotMatch: boolean;
-    proficiencyLevel: ProficiencyLevel;
   }) => void;
   setRoundPhase: (phase: RoundPhase) => void;
   beginRound: (startedAt?: number) => void;
@@ -128,7 +125,6 @@ function getGameplayReset() {
   const {
     localPlayerRole: _role,
     localUserId: _userId,
-    proficiencyLevel: _level,
     ...reset
   } = gameplayDefaults;
   return reset;
@@ -143,7 +139,6 @@ const gameplayDefaults: Pick<
   | "roundPhase"
   | "localPlayerRole"
   | "localUserId"
-  | "proficiencyLevel"
   | "playerAAnswer"
   | "playerBAnswer"
   | "playerAResponseTimes"
@@ -169,7 +164,6 @@ const gameplayDefaults: Pick<
   roundPhase: "waiting",
   localPlayerRole: null,
   localUserId: null,
-  proficiencyLevel: null,
   playerAAnswer: null,
   playerBAnswer: null,
   playerAResponseTimes: [],
@@ -236,12 +230,11 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
           lastRoundPointsA: 0,
           lastRoundPointsB: 0,
         })),
-      initGameplay: ({ localUserId, localPlayerRole, isBotMatch, proficiencyLevel }) =>
+      initGameplay: ({ localUserId, localPlayerRole, isBotMatch }) =>
         set((state) => ({
           localUserId,
           localPlayerRole,
           isBotMatch,
-          proficiencyLevel,
           categoryProgress: normalizeCategoryProgress(state.categoryProgress),
         })),
       setRoundPhase: (phase) => set({ roundPhase: phase }),
@@ -436,7 +429,6 @@ export const useGameStore = create<GameStoreState & GameStoreActions>()(
         botDifficulty: state.botDifficulty,
         localPlayerRole: state.localPlayerRole,
         localUserId: state.localUserId,
-        proficiencyLevel: state.proficiencyLevel,
         matchSaved: state.matchSaved,
       }),
       onRehydrateStorage: () => (state) => {
